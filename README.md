@@ -1,7 +1,8 @@
 # EarthPort
-The Earth Mission Developers Portal
+The Earth Mission Developers Portal  
 
-Note: This README is currently work in progress and will be filled out over time.
+This repo and product is intentionally managed as Open Source and we aim to use this guide to light our way https://opensource.guide/.  
+Let us know how we are doing!
 
 ## How to contribute to this repo
 First off, thank you for applying your mind and time to improving this repo - it helps the Internet of Impact to save our planet!  
