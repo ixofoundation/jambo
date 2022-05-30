@@ -12,7 +12,6 @@ const Home: NextPage = () => {
 			<Head>
 				<title>EarthDay</title>
 				<meta name="description" content="EarthDay" />
-				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
 			<Header />

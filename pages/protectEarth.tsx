@@ -12,7 +12,6 @@ const ProtectEarth: NextPage = () => {
 			<Head>
 				<title>ProtectEarth</title>
 				<meta name="description" content="ProtectEarth" />
-				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
 			<Header />

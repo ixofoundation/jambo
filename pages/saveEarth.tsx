@@ -12,7 +12,6 @@ const SafeEarth: NextPage = () => {
 			<Head>
 				<title>SafeEarth</title>
 				<meta name="description" content="SafeEarth" />
-				<link rel="icon" href="/favicon.ico" />
 			</Head>
 
 			<Header />
