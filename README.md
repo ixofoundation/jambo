@@ -46,7 +46,7 @@ Deployment on Netlify can be [configured](https://docs.netlify.com/configure-bui
 3. Make your changes
 4. Connect to [Netlify](https://netlify.com) manually (the `netlify.toml` file is the one you'll need to make sure stays intact to make sure the export is done and pointed to the right stuff)
 
-## Getting Started Locally
+### Getting Started Locally
 
 1. Install dependencies
 
