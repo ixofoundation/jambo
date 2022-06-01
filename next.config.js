@@ -4,6 +4,7 @@ const nextConfig = {
 	swcMinify: true,
 	experimental: {
 		runtime: 'edge',
+		// Enable below when using React Server Components
 		// serverComponents: true,
 		// concurrentFeatures: true,
 	},
