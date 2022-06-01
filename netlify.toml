@@ -15,3 +15,7 @@
 
 [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
+
+[[edge_functions]]
+  function = "hello"
+  path = "/edges/hello"
