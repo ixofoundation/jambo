@@ -6,7 +6,7 @@ type ColorInputProps = {
 } & ChromePickerProps;
 
 const ColorInput: FC<ColorInputProps> = ({ label, ...other }) => {
-	const [show, setShow] = useState(false);
+	const [show, setShow] = useState(true);
 
 	return (
 		<label>

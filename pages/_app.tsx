@@ -1,9 +1,15 @@
-import '@styles/globals.scss';
-import '@styles/variables.scss';
 import type { AppProps } from 'next/app';
 
+import '@styles/globals.scss';
+import '@styles/variables.scss';
+import { ConfigProvider } from '@contexts/config';
+
 function MyApp({ Component, pageProps }: AppProps) {
-	return <Component {...pageProps} />;
+	return (
+		<ConfigProvider>
+			<Component {...pageProps} />
+		</ConfigProvider>
+	);
 }
 
 export default MyApp;

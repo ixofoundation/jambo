@@ -1,0 +1,11 @@
+.footer {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	height: 50px;
+	background-color: var(--footer-bg-color);
+	display: flex;
+	justify-content: space-around;
+}

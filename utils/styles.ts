@@ -34,3 +34,9 @@ export const getElementCSSVariables = (allCSSVars: Array<string>, element = docu
 	}
 	return cssVars;
 };
+
+export const getAllProperties = () => {
+	if (typeof window !== 'undefined') {
+		console.log(':root variables', getElementCSSVariables(getAllCSSVariableNames(), document.documentElement));
+	}
+};

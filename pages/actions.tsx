@@ -9,7 +9,7 @@ import Button from '@components/button/button';
 import ConfigureProperty, { PropertyInputTypes } from '@components/configure-property/configure-property';
 import { getAllCSSVariableNames, getElementCSSVariables } from '@utils/styles';
 
-const Configure: NextPage = () => {
+const Actions: NextPage = () => {
 	const getAllProperties = () => {
 		if (typeof window !== 'undefined') {
 			console.log(':root variables', getElementCSSVariables(getAllCSSVariableNames(), document.documentElement));
@@ -48,4 +48,4 @@ const Configure: NextPage = () => {
 	);
 };
 
-export default Configure;
+export default Actions;

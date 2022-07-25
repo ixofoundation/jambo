@@ -1,7 +1,15 @@
 :root {
 	--bg-color: white;
-	--accent-color: green;
+	--accent-color: purple;
+	--success-color: #22c55e;
+	--disabled-color: #d1d5db;
+	--footer-bg-color: #e5e7eb;
+	--grey-color: #9ca3af;
+	--light-grey-color: #f3f4f6;
 	--main-font-size: 16px;
 	--main-font-color: rgba(0, 0, 0, 0.9);
+	--main-font-color-inverted: rgba(255, 255, 255, 1);
 	--button-border-radius: 18px;
+	--header-display-title: true;
+	--header-display-image: true;
 }

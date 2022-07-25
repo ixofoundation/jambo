@@ -1,0 +1,13 @@
+.main {
+	padding: 0 1rem;
+	padding-top: 100px; // For navbar
+	padding-bottom: 50px; // For footer
+	height: 100vh;
+}
+
+.columnSpaceEvenlyCentered {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-evenly;
+	align-items: center;
+}

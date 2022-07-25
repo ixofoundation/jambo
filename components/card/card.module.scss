@@ -1,0 +1,12 @@
+.card {
+	border-radius: 8px;
+	background-color: var(--light-grey-color);
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	width: 100%;
+}
+
+.action {
+	width: max-content;
+}
