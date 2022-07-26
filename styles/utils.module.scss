@@ -1,8 +1,9 @@
 .main {
 	padding: 0 1rem;
-	padding-top: 100px; // For navbar
-	padding-bottom: 50px; // For footer
-	height: 100vh;
+	padding-top: 100px; // For navbar height
+	padding-bottom: 50px; // For footer height
+	height: 100%;
+	min-height: 100vh;
 }
 
 .columnSpaceEvenlyCentered {

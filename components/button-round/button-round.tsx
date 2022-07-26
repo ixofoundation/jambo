@@ -28,7 +28,7 @@ type ButtonRoundProps = {
 const ButtonRound = ({ label, children, color = BUTTON_ROUND_COLOR.accent, size = BUTTON_ROUND_SIZE.medium, className, successMark = false, ...other }: ButtonRoundProps) => {
 	return (
 		<div className={cls(styles.buttonContainer, className)}>
-			<button className={cls(styles.button, styles[color], styles[size])} {...other}>
+			<button className={cls(styles.button, styles[color as typeof BUTTON_ROUND_COLOR.grey], styles[size as typeof BUTTON_ROUND_SIZE.large])} {...other}>
 				{children}
 			</button>
 			{label && <p className={styles.label}>{label}</p>}

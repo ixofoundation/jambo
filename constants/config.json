@@ -1,4 +1,6 @@
 {
 	"siteName": "My JAMBO",
-	"setStyleDone": true
+	"setStyleDone": true,
+	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
+	"fontName": "Roboto"
 }
