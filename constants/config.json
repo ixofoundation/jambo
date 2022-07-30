@@ -4,8 +4,7 @@
 	"headerShowLogo": true,
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
 	"fontName": "Roboto",
-	"actions": [],
-	"saveActions": [
+	"actions": [
 		{
 			"name": "test",
 			"description": "test",

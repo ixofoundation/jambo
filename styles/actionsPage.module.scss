@@ -1,5 +1,5 @@
 @mixin stepCard {
-	padding: 0.6rem 0.8rem;
+	padding: 0.8rem;
 	background-color: var(--accent-color) !important;
 	color: var(--main-font-color-inverted);
 	width: 100%;
@@ -11,6 +11,10 @@
 		fill: none;
 		stroke: var(--main-font-color-inverted);
 	}
+}
+
+.title {
+	margin-bottom: 6px;
 }
 
 .actionCard {
@@ -32,6 +36,11 @@
 		grid-column: 2 / 3;
 		grid-row: 1 / 2;
 		width: 100%;
+		margin: 0;
+	}
+
+	.actionNameText {
+		margin: 6px 0;
 	}
 
 	.actionDescription {
@@ -39,12 +48,14 @@
 		grid-column: 2 / 3;
 		grid-row: 2 / 3;
 		width: 100%;
+		margin: 0;
 	}
 }
 
 .stepsCard {
 	padding: 8px;
 	width: 100%;
+	margin-bottom: 20px;
 
 	.stepCard {
 		@include stepCard;
@@ -52,8 +63,21 @@
 }
 
 .stepsModal {
-	width: 100%;
+	width: 100% !important;
+
+	& .stepsSearchInput {
+		margin-bottom: 20px;
+	}
+
 	.stepCard {
 		@include stepCard;
+	}
+}
+
+.listActions {
+	padding: 20px;
+
+	.addButton {
+		margin: 20px;
 	}
 }

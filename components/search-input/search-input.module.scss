@@ -1,0 +1,34 @@
+.searchInput {
+	width: 100%;
+	background-color: var(--light-grey-color);
+	border: none;
+	border-radius: var(--card-border-radius);
+	padding: 0.8rem;
+	padding-right: 45px;
+
+	&:focus {
+		outline: solid 1px var(--accent-color);
+	}
+
+	&::placeholder {
+		color: var(--grey-color);
+		opacity: 1;
+	}
+}
+
+.searchInputContainer {
+	width: 100%;
+	position: relative;
+
+	& svg {
+		margin: 8px;
+		position: absolute;
+		right: 0;
+		width: 25px;
+		height: 25px;
+
+		& path {
+			fill: var(--accent-color);
+		}
+	}
+}

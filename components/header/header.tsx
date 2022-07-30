@@ -7,7 +7,7 @@ import styles from './header.module.scss';
 import Reload from '@icons/reload.svg';
 import Pencil from '@icons/pencil.svg';
 import Modal from '@components/modal/modal';
-import FormInput from '@components/form-input/form-input';
+import Input from '@components/input/input';
 
 type HeaderProps = {
 	pageTitle?: string;
@@ -61,7 +61,7 @@ const Header = ({ pageTitle, configure = false }: HeaderProps) => {
 			)}
 			{showNameModal && (
 				<Modal onClose={() => setShowNameModal(false)} title="Update Name">
-					<FormInput value={siteName} onChange={handleNameChange} maxLength={20} />
+					<Input value={siteName} onChange={handleNameChange} maxLength={20} className={styles.modalInput} />
 				</Modal>
 			)}
 		</nav>

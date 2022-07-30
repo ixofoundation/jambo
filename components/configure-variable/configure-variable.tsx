@@ -1,7 +1,7 @@
 import { ChangeEvent, FC, useState, useEffect } from 'react';
 import { ColorChangeHandler, Color } from 'react-color';
 
-import FormInput from '@components/form-input/form-input';
+import FormInput from '@components/input/input';
 import ColorInput from '@components/color-input';
 
 export enum PropertyInputTypes {

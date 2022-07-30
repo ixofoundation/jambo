@@ -1,9 +1,10 @@
-.formInput {
+.textArea {
 	width: auto;
 	background-color: var(--light-grey-color);
 	border: none;
 	border-radius: var(--card-border-radius);
 	padding: 0.5rem;
+	resize: none;
 
 	&:focus {
 		outline: solid 1px var(--accent-color);
