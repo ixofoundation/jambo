@@ -1,7 +1,7 @@
 .main {
 	padding: 0 1rem;
-	padding-top: 100px; // For navbar height
-	padding-bottom: 50px; // For footer height
+	padding-top: var(--header-height); // For navbar height
+	padding-bottom: var(--footer-height); // For footer height
 	height: 100%;
 	min-height: 100vh;
 }

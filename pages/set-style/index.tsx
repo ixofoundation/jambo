@@ -29,7 +29,7 @@ const SetStyle: NextPage = () => {
 				<div className={styles.colorAndFontButtons}>
 					<Link href="/set-style/color">
 						<a>
-							<ButtonRound color={BUTTON_ROUND_COLOR.accent}>
+							<ButtonRound>
 								<PaintTray width="18px" height="18px" />
 							</ButtonRound>
 						</a>

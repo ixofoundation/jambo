@@ -1,11 +1,13 @@
+import { useContext, useState, ChangeEvent } from 'react';
 import Image from 'next/image';
-import { useContext } from 'react';
 
 import { ConfigContext } from '@contexts/config';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/button-round/button-round';
 import styles from './header.module.scss';
 import Reload from '@icons/reload.svg';
 import Pencil from '@icons/pencil.svg';
+import Modal from '@components/modal/modal';
+import FormInput from '@components/form-input/form-input';
 
 type HeaderProps = {
 	pageTitle?: string;
@@ -13,31 +15,54 @@ type HeaderProps = {
 };
 
 const Header = ({ pageTitle, configure = false }: HeaderProps) => {
-	const { config } = useContext(ConfigContext);
+	const [showNameModal, setShowNameModal] = useState(false);
+	const {
+		updateConfig,
+		config: { headerShowLogo, headerShowName, siteName },
+	} = useContext(ConfigContext);
+
+	const handleReloadButton = () => {
+		if (headerShowLogo && headerShowName) return updateConfig({ headerShowName: false });
+		else if (headerShowLogo) return updateConfig({ headerShowName: true, headerShowLogo: false });
+		else return updateConfig({ headerShowLogo: true });
+	};
+
+	const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+		updateConfig({ siteName: e.target.value });
+	};
 
 	return (
 		<nav className={styles.nav}>
-			<div className={styles.logo}>
-				<Image alt="logo" src="/images/logo.png" width="37px" height="37px" className={styles.logo} />
-				{configure && (
-					<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton}>
-						<Pencil width="9px" height="9px" />
-					</ButtonRound>
-				)}
-			</div>
-			<div className={styles.nameContainer}>
-				<p className={styles.name}>{config.siteName}</p>
-				{configure && (
-					<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton}>
-						<Pencil width="9px" height="9px" />
-					</ButtonRound>
-				)}
-			</div>
+			{headerShowLogo && (
+				<div className={headerShowName ? styles.logo : styles.logoCentered}>
+					<Image alt="logo" src="/images/logo.png" layout="fill" priority />
+					{configure && (
+						<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton}>
+							<Pencil width="9px" height="9px" />
+						</ButtonRound>
+					)}
+				</div>
+			)}
+			{headerShowName && (
+				<div className={styles.nameContainer}>
+					<h1 className={styles.name}>{siteName}</h1>
+					{configure && (
+						<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton} onClick={() => setShowNameModal(true)}>
+							<Pencil width="9px" height="9px" />
+						</ButtonRound>
+					)}
+				</div>
+			)}
 			{pageTitle && <p className={styles.subTitle}>{pageTitle}</p>}
 			{configure && (
-				<ButtonRound size={BUTTON_ROUND_SIZE.small} color={BUTTON_ROUND_COLOR.grey} className={styles.reloadButton}>
+				<ButtonRound size={BUTTON_ROUND_SIZE.small} color={BUTTON_ROUND_COLOR.grey} className={styles.reloadButton} onClick={handleReloadButton}>
 					<Reload width="12px" height="12px" />
 				</ButtonRound>
+			)}
+			{showNameModal && (
+				<Modal onClose={() => setShowNameModal(false)} title="Update Name">
+					<FormInput value={siteName} onChange={handleNameChange} maxLength={20} />
+				</Modal>
 			)}
 		</nav>
 	);

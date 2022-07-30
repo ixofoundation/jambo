@@ -6,7 +6,7 @@ import styles from '@styles/utils.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Button from '@components/button/button';
-import ConfigureProperty, { PropertyInputTypes } from '@components/configure-property/configure-property';
+import ConfigureProperty, { PropertyInputTypes } from '@components/configure-variable/configure-variable';
 import { getAllCSSVariableNames, getElementCSSVariables } from '@utils/styles';
 
 const Configure: NextPage = () => {

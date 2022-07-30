@@ -29,7 +29,7 @@ const Home: NextPage = () => {
 						</ButtonRound>
 					</a>
 				</Link>
-				<Link href="/action">
+				<Link href="/set-actions">
 					<a>
 						<ButtonRound label="Set user actions" size={BUTTON_ROUND_SIZE.large}>
 							<ManRunning width="50px" height="50px" />

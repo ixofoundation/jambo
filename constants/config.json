@@ -1,6 +1,15 @@
 {
 	"siteName": "My JAMBO",
-	"setStyleDone": true,
+	"headerShowName": true,
+	"headerShowLogo": true,
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
-	"fontName": "Roboto"
+	"fontName": "Roboto",
+	"actions": [],
+	"saveActions": [
+		{
+			"name": "test",
+			"description": "test",
+			"steps": []
+		}
+	]
 }

@@ -5,7 +5,7 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
-import ConfigureProperty, { PropertyInputTypes } from '@components/configure-property/configure-property';
+import ConfigureVariable, { PropertyInputTypes } from '@components/configure-variable/configure-variable';
 import { pushNewRoute } from '@utils/router';
 
 const SetStyle: NextPage = () => {
@@ -19,7 +19,7 @@ const SetStyle: NextPage = () => {
 			<Header pageTitle="Choose Color" />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnSpaceEvenlyCentered)}>
-				<ConfigureProperty propertyName="--accent-color" propertyInputType={PropertyInputTypes.COLOR} />
+				<ConfigureVariable propertyName="--accent-color" propertyInputType={PropertyInputTypes.COLOR} />
 			</main>
 
 			<Footer onBackUrl="/set-style" onCorrect={() => pushNewRoute('/set-style')} />

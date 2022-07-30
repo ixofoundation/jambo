@@ -10,12 +10,12 @@ export enum PropertyInputTypes {
 	COLOR = 'color',
 }
 
-export type ConfigurePropertyProps = {
+export type ConfigureVariableProps = {
 	propertyName: string;
 	propertyInputType?: PropertyInputTypes;
 };
 
-const ConfigureProperty: FC<ConfigurePropertyProps> = ({ propertyName, propertyInputType = PropertyInputTypes.TEXT }) => {
+const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyInputType = PropertyInputTypes.TEXT }) => {
 	const [mounted, setMounted] = useState(false);
 	const [property, setProperty] = useState<string | number | undefined>(undefined);
 	const [color, setColor] = useState<Color | undefined>(undefined);
@@ -51,4 +51,4 @@ const ConfigureProperty: FC<ConfigurePropertyProps> = ({ propertyName, propertyI
 	) : null;
 };
 
-export default ConfigureProperty;
+export default ConfigureVariable;
