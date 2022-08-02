@@ -1,14 +1,9 @@
 {
 	"siteName": "My JAMBO",
-	"headerShowName": true,
-	"headerShowLogo": true,
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
 	"fontName": "Roboto",
-	"actions": [
-		{
-			"name": "test",
-			"description": "test",
-			"steps": []
-		}
-	]
+	"headerShowName": true,
+	"headerShowLogo": true,
+	"setStylesDone": false,
+	"actions": []
 }

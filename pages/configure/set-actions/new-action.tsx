@@ -29,7 +29,7 @@ const NewAction: NextPage = () => {
 						</ButtonRound>
 					</a>
 				</Link>
-				<Link href="/set-actions/create-action">
+				<Link href="/configure/set-actions/create-action">
 					<a>
 						<ButtonRound label="Create a User Action" size={BUTTON_ROUND_SIZE.large}>
 							<Star width="50px" height="50px" className={styles.svgNoFill} />
@@ -38,7 +38,7 @@ const NewAction: NextPage = () => {
 				</Link>
 			</main>
 
-			<Footer onBackUrl="/set-actions" />
+			<Footer onBackUrl="/configure/set-actions" />
 		</>
 	);
 };

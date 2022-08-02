@@ -60,6 +60,13 @@
 	.stepCard {
 		@include stepCard;
 	}
+
+	.stepCardRow {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
 }
 
 .stepsModal {
@@ -75,7 +82,7 @@
 }
 
 .listActions {
-	padding: 20px;
+	padding: 0 20px;
 
 	.addButton {
 		margin: 20px;

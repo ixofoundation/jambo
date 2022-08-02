@@ -1,8 +1,9 @@
 import { ChangeEvent, FC, useState, useEffect } from 'react';
-import { ColorChangeHandler, Color } from 'react-color';
 
 import FormInput from '@components/input/input';
 import ColorInput from '@components/color-input';
+import styles from './configure-variable.module.scss';
+import { getStringColorHex, isColorNotOpacity, isColorValid } from '@utils/colors';
 
 export enum PropertyInputTypes {
 	NUMBER = 'number',
@@ -18,11 +19,17 @@ export type ConfigureVariableProps = {
 const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyInputType = PropertyInputTypes.TEXT }) => {
 	const [mounted, setMounted] = useState(false);
 	const [property, setProperty] = useState<string | number | undefined>(undefined);
-	const [color, setColor] = useState<Color | undefined>(undefined);
+	const [color, setColor] = useState<string>('');
+	const [colorText, setColorText] = useState<string>('');
 
 	useEffect(() => {
 		setMounted(true);
-		propertyInputType === PropertyInputTypes.COLOR ? setColor(getProperty() as Color) : setProperty(getProperty());
+		const originalProperty = getProperty();
+		if (propertyInputType === PropertyInputTypes.COLOR) {
+			console.log(getStringColorHex((originalProperty as string).trim()));
+			setColor(getStringColorHex((originalProperty as string).trim()));
+			setColorText(originalProperty as string);
+		} else setProperty(originalProperty);
 	}, []);
 
 	const getProperty = () => {
@@ -37,14 +44,25 @@ const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyI
 		document.documentElement.style.setProperty(propertyName, e.target.value + 'px');
 	};
 
-	const handleColorChange: ColorChangeHandler = color => {
-		setColor(color.hex);
-		document.documentElement.style.setProperty(propertyName, color.hex);
+	const handleColorChangeText = (e: ChangeEvent<HTMLInputElement>) => {
+		setColorText(e.target.value);
+		if (!isColorValid(e.target.value)) return;
+		handleColorChange(getStringColorHex(e.target.value));
+	};
+
+	const handleColorChange = (color: string) => {
+		if (!isColorNotOpacity(color)) return;
+		setColor(color);
+		setColorText(color);
+		document.documentElement.style.setProperty(propertyName, color);
 	};
 
 	return mounted ? (
 		propertyInputType === PropertyInputTypes.COLOR ? (
-			<ColorInput label={`${propertyName}: `} color={color} onChangeComplete={handleColorChange} />
+			<div className={styles.configureVariable}>
+				<ColorInput label={`${propertyName}: `} color={color} onChange={handleColorChange} className={styles.configureVariableColorInput} />
+				<FormInput onChange={handleColorChangeText} label="Hex/Name: " value={colorText} />
+			</div>
 		) : (
 			<FormInput type={propertyInputType.toString()} onChange={handleChange} label={`${propertyName} (px) : `} value={property} />
 		)

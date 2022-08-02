@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -12,9 +12,15 @@ import PaintTray from '@icons/paint_tray.svg';
 import Aa from '@icons/Aa.svg';
 import Card from '@components/card/card';
 import { ConfigContext } from '@contexts/config';
+import { pushNewRoute } from '@utils/router';
 
 const SetStyle: NextPage = () => {
-	const { config } = useContext(ConfigContext);
+	const { updateConfig } = useContext(ConfigContext);
+
+	const saveStyles = () => {
+		updateConfig({ setStylesDone: true });
+		pushNewRoute('/configure');
+	};
 
 	return (
 		<>
@@ -27,14 +33,14 @@ const SetStyle: NextPage = () => {
 
 			<main className={utilsStyles.main}>
 				<div className={styles.colorAndFontButtons}>
-					<Link href="/set-style/color">
+					<Link href="/configure/set-style/color">
 						<a>
 							<ButtonRound>
 								<PaintTray width="18px" height="18px" />
 							</ButtonRound>
 						</a>
 					</Link>
-					<Link href="/set-style/font">
+					<Link href="/configure/set-style/font">
 						<a>
 							<ButtonRound color={BUTTON_ROUND_COLOR.grey}>
 								<Aa width="18px" height="18px" />
@@ -47,7 +53,7 @@ const SetStyle: NextPage = () => {
 				</Card>
 			</main>
 
-			<Footer onBackUrl="/" onCorrect={null} />
+			<Footer onBackUrl="/configure" onCorrect={saveStyles} />
 		</>
 	);
 };

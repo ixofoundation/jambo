@@ -22,7 +22,7 @@ const SetStyle: NextPage = () => {
 				<ConfigureVariable propertyName="--accent-color" propertyInputType={PropertyInputTypes.COLOR} />
 			</main>
 
-			<Footer onBackUrl="/set-style" onCorrect={() => pushNewRoute('/set-style')} />
+			<Footer onBackUrl="/configure/set-style" onCorrect={() => pushNewRoute('/configure/set-style')} />
 		</>
 	);
 };

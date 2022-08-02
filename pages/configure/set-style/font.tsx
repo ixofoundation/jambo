@@ -38,7 +38,7 @@ const SetFont: NextPage = () => {
 				))}
 			</main>
 
-			<Footer onBackUrl="/set-style" onCorrect={() => pushNewRoute('/set-style')} />
+			<Footer onBackUrl="/configure/set-style" onCorrect={() => pushNewRoute('/configure/set-style')} />
 		</>
 	);
 };

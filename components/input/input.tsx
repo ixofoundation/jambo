@@ -9,7 +9,7 @@ type InputProps = {
 
 const Input: FC<InputProps> = ({ label, className, ...other }) => {
 	return label ? (
-		<label>
+		<label className={styles.label}>
 			{label}
 			<input className={cls(styles.input, className)} {...other} />
 		</label>

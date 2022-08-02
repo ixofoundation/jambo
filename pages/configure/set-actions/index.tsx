@@ -12,13 +12,14 @@ import Plus from '@icons/plus.svg';
 import { ConfigContext } from '@contexts/config';
 import ButtonRound from '@components/button-round/button-round';
 import ImageInput from '@components/image-input/image-input';
+import { pushNewRoute } from '@utils/router';
 
 const Actions: NextPage = () => {
-	const {
-		config: { actions, siteName },
-	} = useContext(ConfigContext);
+	const { config } = useContext(ConfigContext);
 
-	const hasActions = actions.length > 0;
+	const hasActions = config.actions.length > 0;
+
+	const checkHasActions = hasActions ? () => pushNewRoute('/configure') : null;
 
 	return (
 		<>
@@ -31,16 +32,16 @@ const Actions: NextPage = () => {
 
 			<main className={cls(utilsStyles.main, { [utilsStyles.columnSpaceEvenlyCentered]: !hasActions })}>
 				<div className={styles.listActions}>
-					{actions.map(action => (
+					{config.actions.map(action => (
 						<div key={action.name} className={styles.actionCard}>
 							<ImageInput placeholder="Tap to upload image" className={styles.actionImage} />
 							<h3 className={cls(styles.actionName, styles.actionNameText)}>{action.name}</h3>
 							<p className={styles.actionDescription}>{action.description}</p>
 						</div>
 					))}
-					<Link href="/set-actions/new-action">
+					<Link href="/configure/set-actions/new-action">
 						<a>
-							<ButtonRound label={hasActions ? undefined : `Create user actions for ${siteName}`} className={styles.addButton}>
+							<ButtonRound label={hasActions ? undefined : `Create user actions for ${config.siteName}`} className={styles.addButton}>
 								<Plus width="22px" height="22px" />
 							</ButtonRound>
 						</a>
@@ -48,7 +49,7 @@ const Actions: NextPage = () => {
 				</div>
 			</main>
 
-			<Footer onBackUrl="/" onCorrect={null} />
+			<Footer onBackUrl="/configure" onCorrect={checkHasActions} />
 		</>
 	);
 };

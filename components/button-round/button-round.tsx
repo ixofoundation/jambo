@@ -30,13 +30,13 @@ const ButtonRound = ({ label, children, color = BUTTON_ROUND_COLOR.accent, size 
 		<div className={cls(styles.buttonContainer, className)}>
 			<button className={cls(styles.button, styles[color as typeof BUTTON_ROUND_COLOR.grey], styles[size as typeof BUTTON_ROUND_SIZE.large])} {...other}>
 				{children}
+				{successMark && (
+					<div className={styles.successMark}>
+						<Correct />
+					</div>
+				)}
 			</button>
 			{label && <p className={styles.label}>{label}</p>}
-			{successMark && (
-				<div className={styles.successMark}>
-					<Correct />
-				</div>
-			)}
 		</div>
 	);
 };
