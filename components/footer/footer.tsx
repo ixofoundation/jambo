@@ -3,20 +3,39 @@ import styles from './footer.module.scss';
 import ArrowLeft from '@icons/arrow_left.svg';
 import ArrowRight from '@icons/arrow_right.svg';
 import Correct from '@icons/correct.svg';
+import Account from '@icons/account.svg';
+import Document from '@icons/document.svg';
 import { replaceRoute } from '@utils/router';
+import Link from 'next/link';
 
 type FooterProps = {
 	onBackUrl?: string;
 	onCorrect?: (() => void) | null;
 	onForward?: (() => void) | null;
+	showAccountButton?: boolean;
+	showAboutButton?: boolean;
 };
 
 /**
  * If [onForward] or [onCorrect] is undefined then no button, if null then disabled button.
  */
-const Footer = ({ onBackUrl, onCorrect, onForward }: FooterProps) => {
+const Footer = ({ onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
 	return (
 		<footer className={styles.footer}>
+			{showAccountButton && (
+				<ButtonRound onClick={() => replaceRoute('/')}>
+					<Account width="20px" height="20px" />
+				</ButtonRound>
+			)}
+			{showAboutButton && (
+				<Link href="/about">
+					<a>
+						<ButtonRound>
+							<Document width="20px" height="20px" />
+						</ButtonRound>
+					</a>
+				</Link>
+			)}
 			{onBackUrl && (
 				<ButtonRound onClick={() => replaceRoute(onBackUrl)}>
 					<ArrowLeft width="20px" height="20px" />

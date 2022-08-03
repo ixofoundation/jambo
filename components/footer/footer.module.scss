@@ -8,4 +8,8 @@
 	background-color: var(--footer-bg-color);
 	display: flex;
 	justify-content: space-around;
+
+	a {
+		margin: auto 0;
+	}
 }
