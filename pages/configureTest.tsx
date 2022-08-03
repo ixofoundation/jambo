@@ -7,15 +7,9 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Button from '@components/button/button';
 import ConfigureProperty, { PropertyInputTypes } from '@components/configure-variable/configure-variable';
-import { getAllCSSVariableNames, getElementCSSVariables } from '@utils/styles';
+import { getAllCSSVariableNames, getAllVariables, getElementCSSVariables } from '@utils/styles';
 
 const Configure: NextPage = () => {
-	const getAllProperties = () => {
-		if (typeof window !== 'undefined') {
-			console.log(':root variables', getElementCSSVariables(getAllCSSVariableNames(), document.documentElement));
-		}
-	};
-
 	return (
 		<>
 			<Head>
@@ -40,7 +34,7 @@ const Configure: NextPage = () => {
 				<ConfigureProperty propertyName="--button-border-radius" propertyInputType={PropertyInputTypes.NUMBER} />
 				<ConfigureProperty propertyName="--accent-color" propertyInputType={PropertyInputTypes.COLOR} />
 				<br />
-				<Button label="console.log new variables" onClick={getAllProperties} />
+				<Button label="console.log new variables" onClick={getAllVariables} />
 			</main>
 
 			<Footer />

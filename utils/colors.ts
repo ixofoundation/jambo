@@ -6,7 +6,6 @@ export const isColorValid = (color: string) => CSS.supports('color', color);
 export const isColorNotOpacity = (color: string) => color.length == 4 || color.length == 7;
 
 export const getStringColorHex = (color: string): string => {
-	console.log({ color });
 	if (typeof stringColors[color] != 'undefined') return stringColors[color.toLowerCase()] as string;
 	return color;
 };

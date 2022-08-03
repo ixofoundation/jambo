@@ -4,6 +4,7 @@ import FormInput from '@components/input/input';
 import ColorInput from '@components/color-input';
 import styles from './configure-variable.module.scss';
 import { getStringColorHex, isColorNotOpacity, isColorValid } from '@utils/colors';
+import { getCSSVariable, setCSSVariable } from '@utils/styles';
 
 export enum PropertyInputTypes {
 	NUMBER = 'number',
@@ -24,24 +25,19 @@ const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyI
 
 	useEffect(() => {
 		setMounted(true);
-		const originalProperty = getProperty();
+		const originalProperty = getCSSVariable(propertyName) || '';
 		if (propertyInputType === PropertyInputTypes.COLOR) {
-			console.log(getStringColorHex((originalProperty as string).trim()));
-			setColor(getStringColorHex((originalProperty as string).trim()));
-			setColorText(originalProperty as string);
-		} else setProperty(originalProperty);
+			setColor(getStringColorHex(originalProperty.trim()));
+			setColorText(originalProperty);
+		} else {
+			if (propertyInputType === PropertyInputTypes.NUMBER) setProperty(Number(originalProperty.replaceAll('px', '').replaceAll('em', '').replaceAll('rem', '')));
+			else setProperty(originalProperty);
+		}
 	}, []);
-
-	const getProperty = () => {
-		if (typeof window !== 'undefined') {
-			let value = getComputedStyle(document.documentElement).getPropertyValue(propertyName);
-			return propertyInputType === PropertyInputTypes.NUMBER ? Number(value.replaceAll('px', '').replaceAll('em', '').replaceAll('rem', '')) : value;
-		} else return '';
-	};
 
 	const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
 		setProperty(e.target.value);
-		document.documentElement.style.setProperty(propertyName, e.target.value + 'px');
+		setCSSVariable(propertyName, e.target.value + 'px');
 	};
 
 	const handleColorChangeText = (e: ChangeEvent<HTMLInputElement>) => {
@@ -54,7 +50,7 @@ const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyI
 		if (!isColorNotOpacity(color)) return;
 		setColor(color);
 		setColorText(color);
-		document.documentElement.style.setProperty(propertyName, color);
+		setCSSVariable(propertyName, color);
 	};
 
 	return mounted ? (

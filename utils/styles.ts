@@ -1,4 +1,5 @@
 import { IObjectKeys } from 'types/general';
+import { getLocalStorage, setLocalStorage } from './persistence';
 
 // could pass in an array of specific stylesheets for optimization
 export const getAllCSSVariableNames = (styleSheets = document.styleSheets) => {
@@ -35,8 +36,32 @@ export const getElementCSSVariables = (allCSSVars: Array<string>, element = docu
 	return cssVars;
 };
 
-export const getAllProperties = () => {
+export const getAllVariables = () => {
 	if (typeof window !== 'undefined') {
 		console.log(':root variables', getElementCSSVariables(getAllCSSVariableNames(), document.documentElement));
+		return getElementCSSVariables(getAllCSSVariableNames(), document.documentElement);
+	}
+};
+
+export const setCSSVariable = (key: string, value: string) => {
+	if (typeof window !== 'undefined') {
+		document.documentElement.style.setProperty(key, value);
+		const variables = getAllVariables();
+		if (!variables) return;
+		setLocalStorage('cssVariables', variables);
+	}
+};
+
+export const getCSSVariable = (key: string) => {
+	if (typeof window !== 'undefined') {
+		return getComputedStyle(document.documentElement).getPropertyValue(key);
+	}
+};
+
+export const getPersistedCSSVariable = () => {
+	if (typeof window !== 'undefined') {
+		const variables = getLocalStorage<IObjectKeys>('cssVariables');
+		if (!variables) return;
+		Object.entries(variables).forEach(([key, value]) => document.documentElement.style.setProperty(key, value?.toString() || null));
 	}
 };

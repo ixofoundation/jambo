@@ -46,7 +46,7 @@ const Configure: NextPage = () => {
 						</ButtonRound>
 					</a>
 				</Link>
-				<Link href="">
+				<Link href="#">
 					<a>
 						<ButtonRound label="Set Description" size={BUTTON_ROUND_SIZE.large} successMark={setDescriptionDone} onClick={() => setSetDescriptionDone(true)}>
 							<Document width="50px" height="50px" />
