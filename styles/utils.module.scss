@@ -12,3 +12,9 @@
 	justify-content: space-evenly;
 	align-items: center;
 }
+
+.columnJustifyCenter {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}

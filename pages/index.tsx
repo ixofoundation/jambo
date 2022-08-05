@@ -7,6 +7,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import { ConfigContext } from '@contexts/config';
+import CustomSwiper from '@components/swiper/swiper';
 
 const Home: NextPage = () => {
 	const { config } = useContext(ConfigContext);
@@ -20,8 +21,8 @@ const Home: NextPage = () => {
 
 			<Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnSpaceEvenlyCentered)}>
-				<h1>Home</h1>
+			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
+				<CustomSwiper actions={config.actions} />
 			</main>
 
 			<Footer showAboutButton showAccountButton />
