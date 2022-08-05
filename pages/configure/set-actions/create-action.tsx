@@ -2,6 +2,9 @@ import { ChangeEvent, useContext, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import cls from 'classnames';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, MouseSensor, TouchSensor, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/actionsPage.module.scss';
@@ -20,6 +23,7 @@ import SearchInput from '@components/search-input/search-input';
 import Cross from '@icons/cross.svg';
 import { ACTION } from 'types/actions';
 import { pushNewRoute } from '@utils/router';
+import Sortable from '@components/drag-and-drop/sortable';
 
 const CreateAction: NextPage = () => {
 	const [action, setAction] = useState<Partial<ACTION>>({ steps: [] });
@@ -41,6 +45,22 @@ const CreateAction: NextPage = () => {
 			  }
 			: null;
 
+	const sensors = useSensors(
+		useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+		useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+	);
+
+	function handleDragEnd(event: DragEndEvent) {
+		const { active, over } = event;
+
+		if (over?.id && active.id !== over.id)
+			setAction({
+				...action,
+				steps: arrayMove(action.steps!, Number.parseInt(active.id.toString()), Number.parseInt(over.id.toString())),
+			});
+	}
+
 	return (
 		<>
 			<Head>
@@ -58,17 +78,24 @@ const CreateAction: NextPage = () => {
 				</div>
 
 				<h2 className={styles.title}>Steps:</h2>
-				<Card className={styles.stepsCard}>
-					{action.steps?.map((step, i) => (
-						<Card key={step.name + i} className={cls(styles.stepCard, styles.stepCardRow)}>
-							{step.name}
-							<Cross color="white" onClick={() => handleRemoveStep(i)} />
+
+				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}>
+					<SortableContext items={action.steps?.map((s, i) => i.toString()) ?? []} strategy={verticalListSortingStrategy}>
+						<Card className={styles.stepsCard}>
+							{action.steps?.map((step, i) => (
+								<Sortable key={step.name + i} id={i.toString()}>
+									<Card className={cls(styles.stepCard, styles.stepCardRow)}>
+										{step.name}
+										<Cross color="white" onClick={() => handleRemoveStep(i)} />
+									</Card>
+								</Sortable>
+							))}
+							<ButtonRound onClick={() => setShowModal(true)}>
+								<Plus width="22px" height="22px" />
+							</ButtonRound>
 						</Card>
-					))}
-					<ButtonRound onClick={() => setShowModal(true)}>
-						<Plus width="22px" height="22px" />
-					</ButtonRound>
-				</Card>
+					</SortableContext>
+				</DndContext>
 			</main>
 
 			<Footer onBackUrl="/configure/set-actions/new-action" onCorrect={checkActionSaveable} />
