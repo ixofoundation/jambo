@@ -1,7 +1,7 @@
 import { ChangeEvent, FC, useState, useEffect } from 'react';
 
 import FormInput from '@components/input/input';
-import ColorInput from '@components/color-input';
+import { HexColorPicker } from 'react-colorful';
 import styles from './configure-variable.module.scss';
 import { getStringColorHex, isColorNotOpacity, isColorValid } from '@utils/colors';
 import { getCSSVariable, setCSSVariable } from '@utils/styles';
@@ -56,7 +56,7 @@ const ConfigureVariable: FC<ConfigureVariableProps> = ({ propertyName, propertyI
 	return mounted ? (
 		propertyInputType === PropertyInputTypes.COLOR ? (
 			<div className={styles.configureVariable}>
-				<ColorInput label={`${propertyName}: `} color={color} onChange={handleColorChange} className={styles.configureVariableColorInput} />
+				<HexColorPicker color={color} onChange={handleColorChange} className={styles.configureVariableColorInput} />
 				<FormInput onChange={handleColorChangeText} label="Hex/Name: " value={colorText} />
 			</div>
 		) : (

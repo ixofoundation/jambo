@@ -7,3 +7,7 @@ export const pushNewRoute = (path: string) => {
 export const replaceRoute = (path: string) => {
 	Router.replace(path);
 };
+
+export const backRoute = () => {
+	Router.back();
+};

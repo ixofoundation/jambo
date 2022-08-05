@@ -5,7 +5,7 @@ import ArrowRight from '@icons/arrow_right.svg';
 import Correct from '@icons/correct.svg';
 import Account from '@icons/account.svg';
 import Document from '@icons/document.svg';
-import { replaceRoute } from '@utils/router';
+import { backRoute, replaceRoute } from '@utils/router';
 import Link from 'next/link';
 
 type FooterProps = {
@@ -23,9 +23,13 @@ const Footer = ({ onBackUrl, onCorrect, onForward, showAccountButton, showAboutB
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
-				<ButtonRound onClick={() => replaceRoute('/')}>
-					<Account width="20px" height="20px" />
-				</ButtonRound>
+				<Link href="/login">
+					<a>
+						<ButtonRound onClick={() => replaceRoute('/')}>
+							<Account width="20px" height="20px" />
+						</ButtonRound>
+					</a>
+				</Link>
 			)}
 			{showAboutButton && (
 				<Link href="/about">
@@ -36,8 +40,8 @@ const Footer = ({ onBackUrl, onCorrect, onForward, showAccountButton, showAboutB
 					</a>
 				</Link>
 			)}
-			{onBackUrl && (
-				<ButtonRound onClick={() => replaceRoute(onBackUrl)}>
+			{(onBackUrl || onBackUrl === '') && (
+				<ButtonRound onClick={() => (onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl))}>
 					<ArrowLeft width="20px" height="20px" />
 				</ButtonRound>
 			)}
