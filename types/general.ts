@@ -4,3 +4,6 @@ export interface IObjectKeys {
 
 // Makes certain fields on Type optional eg: type OptionalNameAgeDeveloper = MakeOptional<Developer, 'name' | 'age>
 export type MakeOptional<Type, Key extends keyof Type> = Omit<Type, Key> & Partial<Pick<Type, Key>>;
+
+// Get type in array type
+export type ArrayElement<ArrayType> = ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
