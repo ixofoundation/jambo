@@ -32,10 +32,10 @@ const CreateAction: NextPage = () => {
 	const { updateConfig, config } = useContext(ConfigContext);
 
 	const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => setStepsSearch(e.target.value);
-	const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => setAction({ ...action, name: e.target.value });
-	const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => setAction({ ...action, description: e.target.value });
-	const handleAddStep = (step: STEP) => setAction({ ...action, steps: [...action.steps!, step] });
-	const handleRemoveStep = (index: number) => setAction({ ...action, steps: action.steps!.filter((s, i) => i != index) });
+	const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => setAction(currentAction => ({ ...currentAction, name: e.target.value }));
+	const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => setAction(currentAction => ({ ...currentAction, description: e.target.value }));
+	const handleAddStep = (step: STEP) => setAction(currentAction => ({ ...currentAction, steps: [...currentAction.steps!, step] }));
+	const handleRemoveStep = (index: number) => setAction(currentAction => ({ ...currentAction, steps: currentAction.steps!.filter((s, i) => i != index) }));
 
 	const checkActionSaveable =
 		action.name && action.name.trim().length > 0 && action.description && action.description.trim().length > 0 && action.steps && action.steps.length > 0
@@ -55,10 +55,10 @@ const CreateAction: NextPage = () => {
 		const { active, over } = event;
 
 		if (over?.id && active.id !== over.id)
-			setAction({
-				...action,
-				steps: arrayMove(action.steps!, Number.parseInt(active.id.toString()), Number.parseInt(over.id.toString())),
-			});
+			setAction(currentAction => ({
+				...currentAction,
+				steps: arrayMove(currentAction.steps!, Number.parseInt(active.id.toString()), Number.parseInt(over.id.toString())),
+			}));
 	}
 
 	return (

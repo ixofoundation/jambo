@@ -13,18 +13,22 @@ export const ConfigContext = createContext({ config: localConfig as ConfigInfo, 
 
 export const ConfigProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [config, setConfig] = useState<ConfigInfo>(localConfig);
+	const [loadedConfig, setLoadedConfig] = useState<boolean>(false);
 
 	const updateConfig = (newConfig: PartialConfigInfo) => {
-		setConfig({ ...config, ...newConfig });
-		setLocalStorage('config', { ...config, ...newConfig });
+		setConfig(currentConfig => ({ ...currentConfig, ...newConfig }));
 	};
 
 	useEffect(() => {
-		// console.log({ config });
+		if (loadedConfig) setLocalStorage('config', config);
+	}, [config]);
+
+	useEffect(() => {
 		getPersistedCSSVariable();
 		// Comment out below to reset config
 		// setLocalStorage('config', localConfig);
 		const persistedConfig = getLocalStorage<ConfigInfo>('config');
+		setLoadedConfig(true);
 		if (!persistedConfig) return;
 		setConfig(persistedConfig);
 	}, []);

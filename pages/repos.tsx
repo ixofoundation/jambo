@@ -60,11 +60,11 @@ const Repos: NextPage = () => {
 								</div>
 							</Card>
 						))}
-						<a href={newForkNetlifyAddress()} target="_blank" rel="noreferrer noopener">
+						{/* <a href={newForkNetlifyAddress()} target="_blank" rel="noreferrer noopener">
 							<ButtonRound label={`New dApp on Netlify`} className={styles.repoAddButton}>
 								<Plus width="22px" height="22px" />
 							</ButtonRound>
-						</a>
+						</a> */}
 						<ButtonRound label={`Fork Earthport`} className={styles.repoAddButton} onClick={() => forkEarthPort(session)}>
 							<Plus width="22px" height="22px" />
 						</ButtonRound>

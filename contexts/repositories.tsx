@@ -14,7 +14,7 @@ export const ReposProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [repositories, setRepositories] = useState<ListRepositoriesResponseDataType>([]);
 
 	const updateRepositories = (clear: boolean, repos: ListRepositoriesResponseDataType) => {
-		setRepositories(clear ? repos : [...repositories, ...repos]);
+		setRepositories(currentRepos => (clear ? repos : [...currentRepos, ...repos]));
 	};
 
 	const value = { repositories, updateRepositories };

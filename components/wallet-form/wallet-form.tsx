@@ -33,7 +33,7 @@ const WalletForm = ({ onSubmit, submitRef }: HeaderProps) => {
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = event.target;
-		setFormFields({ ...formFields, [name]: value });
+		setFormFields(currentFields => ({ ...currentFields, [name]: value }));
 	};
 
 	return (

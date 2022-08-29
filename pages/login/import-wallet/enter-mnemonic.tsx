@@ -21,7 +21,7 @@ const EnterMnemonic: NextPage = () => {
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = event.target;
-		setWords(words.map((word, i) => (i.toString() === name ? value : word)));
+		setWords(currentWords => currentWords.map((word, i) => (i.toString() === name ? value : word)));
 	};
 
 	const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -37,8 +37,8 @@ const EnterMnemonic: NextPage = () => {
 			.split(' ')
 			.map(w => w.trim().replaceAll(',', '').toLocaleLowerCase());
 		if (list.length < 1) return;
-		if (list.length === 1) return setWords(words.map((w, i) => (i === index ? list[0] : w)));
-		setWords(words.map((w, i) => (i < list.length ? list[i] : '')));
+		if (list.length === 1) return setWords(currentWords => currentWords.map((w, i) => (i === index ? list[0] : w)));
+		setWords(currentWords => currentWords.map((w, i) => (i < list.length ? list[i] : '')));
 	};
 
 	return (

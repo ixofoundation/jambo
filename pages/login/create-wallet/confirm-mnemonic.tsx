@@ -29,7 +29,7 @@ const ConfirmMnemonic: NextPage = () => {
 		const droppableWord = over?.data.current?.word;
 		const draggableWord = active.data.current?.word;
 		if (droppableWord && droppableWord === draggableWord) {
-			setDragWords(dragWords.filter(word => word !== draggableWord));
+			setDragWords(currentWords => currentWords.filter(word => word !== draggableWord));
 		}
 	}
 
