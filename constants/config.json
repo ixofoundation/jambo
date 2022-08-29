@@ -5,5 +5,9 @@
 	"headerShowName": true,
 	"headerShowLogo": true,
 	"setStylesDone": false,
-	"actions": []
+	"actions": [],
+	"gitRepositoryOwner": "silent-sybber",
+	"gitRepositoryName": "earthport",
+	"gitRepositoryBranch": "architecture/styling",
+	"gitRepositoryUserAgent": "Earthport"
 }

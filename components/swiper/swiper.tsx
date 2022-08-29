@@ -10,7 +10,7 @@ type SwipersProps = {
 };
 
 const CustomSwiper = ({ actions }: SwipersProps) => {
-	const [active, setActive] = useState(1);
+	const [active, setActive] = useState(0);
 
 	const selectedAction = actions[active];
 

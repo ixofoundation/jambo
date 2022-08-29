@@ -22,6 +22,8 @@ export const ConfigProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	useEffect(() => {
 		// console.log({ config });
 		getPersistedCSSVariable();
+		// Comment out below to reset config
+		// setLocalStorage('config', localConfig);
 		const persistedConfig = getLocalStorage<ConfigInfo>('config');
 		if (!persistedConfig) return;
 		setConfig(persistedConfig);

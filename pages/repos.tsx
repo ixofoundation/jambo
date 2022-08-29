@@ -1,35 +1,30 @@
 import { useEffect, useContext } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import cls from 'classnames';
-import { Octokit } from '@octokit/rest';
 import { useSession, signIn, signOut } from 'next-auth/react';
 
 import utilsStyles from '@styles/utils.module.scss';
+import styles from '@styles/reposPage.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import { ReposContext } from '@contexts/repositories';
+import { ConfigContext } from '@contexts/config';
+import { forkEarthPort, getEartportForkedGithubRepos, newForkNetlifyAddress, updateRepoConfig, updateRepoVariables } from '@utils/repositories';
+import Button from '@components/button/button';
+import Card from '@components/card/card';
+import ButtonRound from '@components/button-round/button-round';
+import Plus from '@icons/plus.svg';
+import ExternalLink from '@icons/external_link.svg';
 
 const Repos: NextPage = () => {
 	const { repositories, updateRepositories } = useContext(ReposContext);
+	const { config } = useContext(ConfigContext);
 	const { data: session, status } = useSession<false>();
 
 	const getGithubRepos = async () => {
-		if (!session?.accessToken) return;
-		const octokit = new Octokit({ auth: session?.accessToken, userAgent: 'earthport' });
-		const forks = await octokit.rest.repos.listForks({ owner: 'silent-sybber', repo: 'earthport' });
-		const data = await octokit.rest.repos.listForAuthenticatedUser({ since: '2022-05-01T00:00:00' });
-		updateRepositories(
-			true,
-			data.data.filter(repo => repo.fork == true && forks.data.some(fork => fork.id == repo.id)),
-		);
-	};
-
-	const forkEarthPort = async () => {
-		if (!session?.accessToken) return;
-		const octokit = new Octokit({ auth: session?.accessToken, userAgent: 'earthport' });
-		const data = await octokit.rest.repos.createFork({ owner: 'silent-sybber', repo: 'earthport', name: 'earthport-fork-test' });
-		console.log({ data });
+		const repos = await getEartportForkedGithubRepos(session);
+		// console.log({ repos });
+		updateRepositories(true, repos ?? []);
 	};
 
 	useEffect(() => {
@@ -45,26 +40,40 @@ const Repos: NextPage = () => {
 
 			<Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
+			<main className={utilsStyles.main}>
 				{session ? (
-					<div>
-						<p>Signed in {session.user?.name}</p>
-						{repositories.map(repo => (
-							<p key={repo.name}>{repo.name}</p>
+					<>
+						<span>Hi {session.user?.name} </span>
+						<Button label="SIGN OUT" onClick={() => signOut()} />
+						<h2 className={styles.repoTitle}>Earthport Forks:</h2>
+						{repositories.map((repo, i) => (
+							<Card key={repo.name + i} className={styles.repoCard}>
+								<div className={styles.repoCardTitleContainer}>
+									<h3 className={styles.repoCardTitle}>{repo.name}</h3>
+									<a href={repo.html_url} target="_blank" rel="noreferrer noopener">
+										<ExternalLink width="22px" height="22px" />
+									</a>
+								</div>
+								<div>
+									<Button label="Update Config" onClick={() => updateRepoConfig(session, repo, config)} />
+									<Button label="Update Variables" onClick={() => updateRepoVariables(session, repo)} />
+								</div>
+							</Card>
 						))}
-						<button onClick={() => signOut()}>SIGN OUT</button>
-						<br />
-						<br />
-						<button onClick={getGithubRepos}>GET DATA</button>
-						<br />
-						<br />
-						<button onClick={forkEarthPort}>Fork Eartport</button>
-					</div>
+						<a href={newForkNetlifyAddress()} target="_blank" rel="noreferrer noopener">
+							<ButtonRound label={`New dApp on Netlify`} className={styles.repoAddButton}>
+								<Plus width="22px" height="22px" />
+							</ButtonRound>
+						</a>
+						<ButtonRound label={`Fork Earthport`} className={styles.repoAddButton} onClick={() => forkEarthPort(session)}>
+							<Plus width="22px" height="22px" />
+						</ButtonRound>
+					</>
 				) : (
-					<div>
-						<p>Not signed in</p>
-						<button onClick={() => signIn('github')}>SIGN IN</button>
-					</div>
+					<>
+						<p>Not signed in </p>
+						<Button label="SIGN IN" onClick={() => signIn('github')} />
+					</>
 				)}
 			</main>
 
