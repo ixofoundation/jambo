@@ -1,0 +1,9 @@
+.dropdown {
+	width: 100%;
+
+	div[class$='control'] {
+		background-color: var(--light-grey-color);
+		border: none;
+		border-radius: var(--card-border-radius);
+	}
+}

@@ -19,11 +19,12 @@ import FormTextArea from '@components/text-area/text-area';
 import Card from '@components/card/card';
 import Modal from '@components/modal/modal';
 import { STEP, steps as allSteps } from 'types/steps';
-import SearchInput from '@components/search-input/search-input';
 import Cross from '@icons/cross.svg';
 import { ACTION } from 'types/actions';
 import { pushNewRoute } from '@utils/router';
 import Sortable from '@components/drag-and-drop/sortable';
+import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-suffix-icon';
+import Search from '@icons/search.svg';
 
 const CreateAction: NextPage = () => {
 	const [action, setAction] = useState<Partial<ACTION>>({ steps: [] });
@@ -102,7 +103,7 @@ const CreateAction: NextPage = () => {
 
 			{showModal && (
 				<Modal onClose={() => setShowModal(false)} title="Steps library" className={styles.stepsModal}>
-					<SearchInput value={stepsSearch} onChange={handleSearchChange} className={styles.stepsSearchInput} />
+					<InputWithSufficIcon name="search" required onChange={handleSearchChange} value={stepsSearch} Icon={Search} className={styles.stepsSearchInput} />
 					{Object.entries(allSteps).map(
 						([stepEnum, step], i) =>
 							step.name.toLocaleLowerCase().includes(stepsSearch.toLocaleLowerCase()) && (

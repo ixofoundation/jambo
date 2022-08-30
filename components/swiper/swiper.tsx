@@ -4,6 +4,7 @@ import 'swiper/css';
 
 import styles from './swiper.module.scss';
 import { ACTION } from 'types/actions';
+import { pushNewRoute } from '@utils/router';
 
 type SwipersProps = {
 	actions: ACTION[];
@@ -15,7 +16,7 @@ const CustomSwiper = ({ actions }: SwipersProps) => {
 	const selectedAction = actions[active];
 
 	return (
-		<div>
+		<div onClick={() => pushNewRoute(`/${actions[active].name}`)}>
 			<Swiper spaceBetween={20} slidesPerView="auto" onSlideChange={s => setActive(s.activeIndex)} centeredSlides className={styles.swiper}>
 				{actions.map((action, i) => (
 					<SwiperSlide className={styles.swiperSlide} key={action.description}>

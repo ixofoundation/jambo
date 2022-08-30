@@ -24,7 +24,8 @@
 			"@assets/*": ["assets/*"],
 			"@icons/*": ["assets/icons/*"],
 			"@constants/*": ["constants/*"],
-			"@contexts/*": ["contexts/*"]
+			"@contexts/*": ["contexts/*"],
+			"@steps/*": ["steps/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

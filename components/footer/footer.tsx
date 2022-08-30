@@ -10,6 +10,7 @@ import Link from 'next/link';
 
 type FooterProps = {
 	onBackUrl?: string;
+	onBack?: (() => void) | null;
 	onCorrect?: (() => void) | null;
 	onForward?: (() => void) | null;
 	showAccountButton?: boolean;
@@ -19,7 +20,7 @@ type FooterProps = {
 /**
  * If [onForward] or [onCorrect] is undefined then no button, if null then disabled button.
  */
-const Footer = ({ onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
+const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
@@ -40,8 +41,8 @@ const Footer = ({ onBackUrl, onCorrect, onForward, showAccountButton, showAboutB
 					</a>
 				</Link>
 			)}
-			{(onBackUrl || onBackUrl === '') && (
-				<ButtonRound onClick={() => (onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl))}>
+			{(onBack || onBackUrl || onBackUrl === '') && (
+				<ButtonRound onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}>
 					<ArrowLeft width="20px" height="20px" />
 				</ButtonRound>
 			)}

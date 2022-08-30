@@ -2,6 +2,7 @@ import { useContext, useState, ChangeEvent } from 'react';
 import Image from 'next/image';
 
 import { ConfigContext } from '@contexts/config';
+import { pushNewRoute } from '@utils/router';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/button-round/button-round';
 import styles from './header.module.scss';
 import Reload from '@icons/reload.svg';
@@ -12,9 +13,10 @@ import Input from '@components/input/input';
 type HeaderProps = {
 	pageTitle?: string;
 	configure?: boolean;
+	header?: string;
 };
 
-const Header = ({ pageTitle, configure = false }: HeaderProps) => {
+const Header = ({ pageTitle, configure = false, header }: HeaderProps) => {
 	const [showNameModal, setShowNameModal] = useState(false);
 	const {
 		updateConfig,
@@ -33,8 +35,8 @@ const Header = ({ pageTitle, configure = false }: HeaderProps) => {
 
 	return (
 		<nav className={styles.nav}>
-			{headerShowLogo && (
-				<div className={headerShowName ? styles.logo : styles.logoCentered}>
+			{!header && headerShowLogo && (
+				<div className={headerShowName ? styles.logo : styles.logoCentered} onClick={() => (configure ? null : pushNewRoute('/'))}>
 					<Image alt="logo" src="/images/logo.png" layout="fill" priority />
 					{configure && (
 						<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton}>
@@ -43,9 +45,9 @@ const Header = ({ pageTitle, configure = false }: HeaderProps) => {
 					)}
 				</div>
 			)}
-			{headerShowName && (
-				<div className={styles.nameContainer}>
-					<h1 className={styles.name}>{siteName}</h1>
+			{(header || headerShowName) && (
+				<div className={styles.nameContainer} onClick={() => (configure ? null : pushNewRoute('/'))}>
+					<h1 className={styles.name}>{header ?? siteName}</h1>
 					{configure && (
 						<ButtonRound size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.grey} className={styles.configureButton} onClick={() => setShowNameModal(true)}>
 							<Pencil width="9px" height="9px" />

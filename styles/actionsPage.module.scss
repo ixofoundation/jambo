@@ -72,8 +72,10 @@
 .stepsModal {
 	width: 100% !important;
 
-	& .stepsSearchInput {
-		margin-bottom: 20px;
+	.stepsSearchInput {
+		input {
+			margin-bottom: 20px;
+		}
 	}
 
 	.stepCard {
