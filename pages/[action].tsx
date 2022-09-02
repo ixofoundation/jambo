@@ -21,8 +21,9 @@ const ActionExecution: NextPage = () => {
 
 	useEffect(() => {
 		if (!id) return;
-		const action = config.actions.find(a => a.name.toLocaleLowerCase() === (id as string).toLocaleLowerCase());
-		if (action) setAction(action);
+		const fethedAction = config.actions.find(a => a.id === id);
+		console.log({ fethedAction });
+		if (fethedAction) setAction(fethedAction);
 	}, [id]);
 
 	function handleOnNext<T>(data: StepDataType<T>) {

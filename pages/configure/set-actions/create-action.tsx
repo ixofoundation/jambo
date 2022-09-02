@@ -1,10 +1,12 @@
-import { ChangeEvent, useContext, useState } from 'react';
+import { ChangeEvent, useContext, useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import cls from 'classnames';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, MouseSensor, TouchSensor, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, useSensor, useSensors, MouseSensor, TouchSensor, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import shortUUID from 'short-uuid';
+import { useRouter } from 'next/router';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/actionsPage.module.scss';
@@ -27,19 +29,29 @@ import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-s
 import Search from '@icons/search.svg';
 
 const CreateAction: NextPage = () => {
-	const [action, setAction] = useState<Partial<ACTION>>({ steps: [] });
+	const [action, setAction] = useState<Partial<ACTION>>({ id: shortUUID.generate(), steps: [] });
 	const [showModal, setShowModal] = useState(false);
 	const [stepsSearch, setStepsSearch] = useState('');
 	const { updateConfig, config } = useContext(ConfigContext);
+	const router = useRouter();
+	const { id } = router.query;
+
+	useEffect(() => {
+		if (!id) return;
+		const fetchAction = config.actions.find(a => a.id === id);
+		if (fetchAction) setAction(fetchAction);
+	}, [id]);
+	console.log({ action });
 
 	const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => setStepsSearch(e.target.value);
+	const handleImageChange = (image: string) => setAction(currentAction => ({ ...currentAction, image }));
 	const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => setAction(currentAction => ({ ...currentAction, name: e.target.value }));
 	const handleDescriptionChange = (e: ChangeEvent<HTMLTextAreaElement>) => setAction(currentAction => ({ ...currentAction, description: e.target.value }));
 	const handleAddStep = (step: STEP) => setAction(currentAction => ({ ...currentAction, steps: [...currentAction.steps!, step] }));
 	const handleRemoveStep = (index: number) => setAction(currentAction => ({ ...currentAction, steps: currentAction.steps!.filter((s, i) => i != index) }));
 
 	const checkActionSaveable =
-		action.name && action.name.trim().length > 0 && action.description && action.description.trim().length > 0 && action.steps && action.steps.length > 0
+		action.name && action.name.trim().length > 0 && action.description && action.description.trim().length > 0 && action.steps && action.steps.length > 0 && !!action.image
 			? () => {
 					updateConfig({ actions: [...config.actions, action as ACTION] });
 					pushNewRoute('/configure/set-actions');
@@ -73,9 +85,9 @@ const CreateAction: NextPage = () => {
 
 			<main className={utilsStyles.main}>
 				<div className={styles.actionCard}>
-					<ImageInput placeholder="Tap to upload image" className={styles.actionImage} />
-					<Input placeholder="Action name" className={styles.actionName} onChange={handleNameChange} />
-					<FormTextArea placeholder="Add a short description" className={styles.actionDescription} rows={3} maxLength={140} onChange={handleDescriptionChange} />
+					<ImageInput placeholder="Tap to upload image" className={styles.actionImage} onImageUploaded={handleImageChange} image={action.image} />
+					<Input placeholder="Action name" className={styles.actionName} onChange={handleNameChange} value={action.name ?? ''} />
+					<FormTextArea placeholder="Add a short description" className={styles.actionDescription ?? ''} rows={3} maxLength={140} onChange={handleDescriptionChange} value={action.description} />
 				</div>
 
 				<h2 className={styles.title}>Steps:</h2>

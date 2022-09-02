@@ -33,11 +33,13 @@ const Actions: NextPage = () => {
 			<main className={cls(utilsStyles.main, { [utilsStyles.columnSpaceEvenlyCentered]: !hasActions })}>
 				<div className={styles.listActions}>
 					{config.actions.map(action => (
-						<div key={action.name} className={styles.actionCard}>
-							<ImageInput placeholder="Tap to upload image" className={styles.actionImage} />
-							<h3 className={cls(styles.actionName, styles.actionNameText)}>{action.name}</h3>
-							<p className={styles.actionDescription}>{action.description}</p>
-						</div>
+						<Link href={`/configure/set-actions/create-action?id=${action.id}`} key={action.name}>
+							<a className={styles.actionCard}>
+								<ImageInput placeholder="Tap to upload image" className={styles.actionImage} image={action.image} />
+								<h3 className={cls(styles.actionName, styles.actionNameText)}>{action.name}</h3>
+								<p className={styles.actionDescription}>{action.description}</p>
+							</a>
+						</Link>
 					))}
 					<Link href="/configure/set-actions/new-action">
 						<a>
