@@ -26,7 +26,7 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 			{showAccountButton && (
 				<Link href="/login">
 					<a>
-						<ButtonRound onClick={() => replaceRoute('/')}>
+						<ButtonRound>
 							<Account width="20px" height="20px" />
 						</ButtonRound>
 					</a>

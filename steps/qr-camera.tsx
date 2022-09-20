@@ -5,7 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Footer from '@components/footer/footer';
 import QRScanner from '@components/qr-scanner/qr-scanner';
-import useWindowDimensions from '@utils/window-dimensions';
+import useWindowDimensions from '@hooks/window-dimensions';
 
 type QRCameraProps = {
 	onSuccess: (text: string) => void;

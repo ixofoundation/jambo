@@ -1,9 +1,9 @@
-import { useContext, useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-import { ConfigContext } from '@contexts/config';
+import config from '@constants/config.json';
 import { StepDataType, STEP, STEPS } from 'types/steps';
 import EmptySteps from '@steps/empty';
 import ReceiverAddress from '@steps/receiver_address';
@@ -11,17 +11,17 @@ import DefineAmountToken from '@steps/define_amount_token';
 import ReviewAndSign from '@steps/review_and_sign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
+import { ConfigData } from 'types/config';
 
 const ActionExecution: NextPage = () => {
 	const [count, setCount] = useState(0);
 	const [action, setAction] = useState<ACTION | null>(null);
-	const { config } = useContext(ConfigContext);
 	const router = useRouter();
 	const id = router.query.action;
 
 	useEffect(() => {
 		if (!id) return;
-		const fethedAction = config.actions.find(a => a.id === id);
+		const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
 		console.log({ fethedAction });
 		if (fethedAction) setAction(fethedAction);
 	}, [id]);

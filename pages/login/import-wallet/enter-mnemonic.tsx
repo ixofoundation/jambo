@@ -9,7 +9,6 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import { pushNewRoute } from '@utils/router';
 import Paste from '@icons/paste.svg';
-import { pasteFromClipboard } from '@utils/persistence';
 import Input from '@components/input/input';
 
 const finalWords = ['List', 'Football', 'Vehicle', 'Lounge', 'Guitar', 'Name', 'Chair', 'Autumn', 'Keyboard', 'Superconductor', 'Good', 'Girl'];

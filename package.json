@@ -5,7 +5,7 @@
 	"author": "ixo",
 	"license": "MIT",
 	"scripts": {
-		"dev": "next dev",
+		"dev": "next dev -p 3006",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint"
@@ -15,19 +15,13 @@
 		"@dnd-kit/modifiers": "^6.0.0",
 		"@dnd-kit/sortable": "^7.0.1",
 		"@dnd-kit/utilities": "^3.2.0",
-		"@octokit/rest": "^19.0.3",
-		"@octokit/types": "^6.41.0",
 		"@svgr/webpack": "^6.3.1",
 		"classnames": "^2.3.1",
 		"html5-qrcode": "^2.2.1",
 		"next": "12.1.6",
-		"next-auth": "^4.10.3",
 		"react": "18.1.0",
-		"react-colorful": "^5.5.1",
 		"react-dom": "18.1.0",
 		"react-select": "^5.4.0",
-		"react-webcam": "^7.0.1",
-		"short-uuid": "^4.2.0",
 		"swiper": "^8.3.2"
 	},
 	"devDependencies": {
