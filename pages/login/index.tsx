@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import cls from 'classnames';
@@ -9,8 +10,12 @@ import Link from 'next/link';
 import ButtonRound, { BUTTON_ROUND_SIZE } from '@components/button-round/button-round';
 import StartFull from '@icons/star_full.svg';
 import Download from '@icons/download.svg';
+import { WalletContext } from '@contexts/wallet';
+import Wallets from '@components/wallets/wallets';
 
 const Login: NextPage = () => {
+	const { wallet, updateWallet } = useContext(WalletContext);
+
 	return (
 		<>
 			<Head>
@@ -21,6 +26,10 @@ const Login: NextPage = () => {
 			<Header pageTitle="Login" />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnSpaceEvenlyCentered)}>
+				{/* {wallet.user ? <p>user</p> : wallet.walletType ? <p>Please sign in with {wallet.walletType}</p> : <Wallets onSelected={type => updateWallet({ walletType: type })} />} */}
+				<Wallets onSelected={type => updateWallet({ walletType: type })} />
+			</main>
+			{/* <main className={cls(utilsStyles.main, utilsStyles.columnSpaceEvenlyCentered)}>
 				<Link href="/login/create-wallet">
 					<a>
 						<ButtonRound label="Create new wallet" size={BUTTON_ROUND_SIZE.large}>
@@ -35,7 +44,7 @@ const Login: NextPage = () => {
 						</ButtonRound>
 					</a>
 				</Link>
-			</main>
+			</main> */}
 
 			<Footer onBackUrl="/" />
 		</>

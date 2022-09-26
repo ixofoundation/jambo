@@ -1,4 +1,5 @@
 import type { NextPage } from 'next';
+import { useContext } from 'react';
 import Head from 'next/head';
 import cls from 'classnames';
 
@@ -7,8 +8,13 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import CustomSwiper from '@components/swiper/swiper';
 import config from '@constants/config.json';
+import { ACTION } from 'types/actions';
+import { WalletContext } from '@contexts/wallet';
+import { successToast } from '@components/toast/toast';
 
 const Home: NextPage = () => {
+	const { wallet } = useContext(WalletContext);
+
 	return (
 		<>
 			<Head>
@@ -19,7 +25,8 @@ const Home: NextPage = () => {
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
-				<CustomSwiper actions={config.actions} />
+				<p onClick={() => successToast('test')}>{wallet.user?.name ?? 'loged out'}</p>
+				<CustomSwiper actions={config.actions as ACTION[]} />
 			</main>
 
 			<Footer showAboutButton showAccountButton />
