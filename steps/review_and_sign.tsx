@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useContext, useEffect, useState } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -6,7 +6,13 @@ import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
+import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { STEP, StepDataType, STEPS, TokenOptionType } from 'types/steps';
+import { WalletContext } from '@contexts/wallet';
+import { defaultTrxFee } from '@utils/transactions';
+import { TRX_MSG } from 'types/transactions';
+import { broadCastMessages } from '@utils/wallets';
+import { getMicroAmount } from '@utils/encoding';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -16,6 +22,7 @@ type ReviewAndSignProps = {
 };
 
 const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header }) => {
+	const { wallet } = useContext(WalletContext);
 	const [amount, setAmount] = useState(0);
 	const [token, setToken] = useState<TokenOptionType>(null);
 	const [address, setAddress] = useState('');
@@ -31,6 +38,33 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			}
 		});
 	}, [steps]);
+
+	// const generateTXRequestMSG = (): TRX_MSG => ({
+	// 	typeUrl: '/cosmos.bank.v1beta1.MsgSend',
+	// 	value: MsgSend.fromPartial({
+	// 		fromAddress: wallet.user?.address,
+	// 		toAddress: address,
+	// 		amount: [{ amount: getMicroAmount(amount.toString()), denom: 'uixo' }],
+	// 	}),
+	// });
+
+	const generateTXRequestMSG = (): TRX_MSG => ({
+		type: '/cosmos/tx/v1beta1/txs',
+		// type: 'cosmos-sdk/MsgSend',
+		value: {
+			amount: [{ amount: getMicroAmount(amount.toString()), denom: 'uixo' }],
+			from_address: wallet.user?.address,
+			to_address: address,
+		},
+	});
+
+	const signTX = async (): Promise<void> => {
+		const hash = await broadCastMessages(wallet, [generateTXRequestMSG()], undefined, defaultTrxFee);
+		console.log({ hash });
+		if (hash) {
+			onSuccess({ done: true });
+		}
+	};
 
 	return (
 		<>
@@ -53,7 +87,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				</form>
 			</main>
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={() => onSuccess({ done: true })} />
+			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={signTX} />
 		</>
 	);
 };

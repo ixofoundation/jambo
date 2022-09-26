@@ -16,7 +16,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	const initializeWallets = async () => {
 		const user = await initializeWallet(wallet);
-		// console.log({ user });
+		console.log({ user });
 		updateWallet({ user });
 	};
 

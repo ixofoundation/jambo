@@ -3,8 +3,14 @@ export type USER = {
 	pubKey: Uint8Array | string;
 	address: string;
 	algo?: string;
-	did?: string;
+	didDoc?: DidDoc;
 	ledgered: boolean;
 	accountNumber?: string;
 	sequence?: string;
+};
+
+export type DidDoc = {
+	did: string;
+	pubKey: string;
+	credentials?: unknown[];
 };

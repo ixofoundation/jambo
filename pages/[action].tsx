@@ -22,7 +22,7 @@ const ActionExecution: NextPage = () => {
 	useEffect(() => {
 		if (!id) return;
 		const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
-		console.log({ fethedAction });
+		// console.log({ fethedAction });
 		if (fethedAction) setAction(fethedAction);
 	}, [id]);
 
