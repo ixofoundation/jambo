@@ -13,6 +13,7 @@ import { defaultTrxFee } from '@utils/transactions';
 import { TRX_MSG } from 'types/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
+import { Coin } from '@client-sdk/codec/cosmos/coin';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -39,27 +40,19 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 		});
 	}, [steps]);
 
-	// const generateTXRequestMSG = (): TRX_MSG => ({
-	// 	typeUrl: '/cosmos.bank.v1beta1.MsgSend',
-	// 	value: MsgSend.fromPartial({
-	// 		fromAddress: wallet.user?.address,
-	// 		toAddress: address,
-	// 		amount: [{ amount: getMicroAmount(amount.toString()), denom: 'uixo' }],
-	// 	}),
-	// });
-
 	const generateTXRequestMSG = (): TRX_MSG => ({
-		type: '/cosmos/tx/v1beta1/txs',
-		// type: 'cosmos-sdk/MsgSend',
-		value: {
-			amount: [{ amount: getMicroAmount(amount.toString()), denom: 'uixo' }],
-			from_address: wallet.user?.address,
-			to_address: address,
-		},
+		typeUrl: '/cosmos.bank.v1beta1.MsgSend',
+		value: MsgSend.fromPartial({
+			fromAddress: wallet.user?.address,
+			toAddress: address,
+			amount: [Coin.fromPartial({ amount: getMicroAmount(amount.toString()), denom: 'uixo' })],
+		}),
 	});
 
 	const signTX = async (): Promise<void> => {
-		const hash = await broadCastMessages(wallet, [generateTXRequestMSG()], undefined, defaultTrxFee);
+		const trx = generateTXRequestMSG();
+		console.log({ trx });
+		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
 		console.log({ hash });
 		if (hash) {
 			onSuccess({ done: true });

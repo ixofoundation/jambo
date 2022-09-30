@@ -26,9 +26,10 @@ const Login: NextPage = () => {
 
 			blocksyncApi.utils
 				.getSignData(payload, 'did/AddDid', payload.pubKey)
-				.then((response: any) => {
+				.then(async (response: any) => {
 					if (response.sign_bytes && response.fee) {
-						getKeysafe().requestSigning(
+						const keysafe = await getKeysafe();
+						keysafe.requestSigning(
 							response.sign_bytes,
 							(error: any, signature: any) => {
 								if (!error) {
