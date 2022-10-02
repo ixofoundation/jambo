@@ -13,7 +13,6 @@ import { MsgDeposit } from 'cosmjs-types/cosmos/gov/v1beta1/tx';
 import { MsgWithdrawDelegatorReward, MsgSetWithdrawAddress } from 'cosmjs-types/cosmos/distribution/v1beta1/tx';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 // const { makeWallet, makeClient } = require('@ixo/client-sdk');
-import { LegacyClient } from 'ixo/client-sdk/src';
 import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
 
 import * as Toast from '@components/toast/toast';

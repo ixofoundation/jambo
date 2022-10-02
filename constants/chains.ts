@@ -96,4 +96,3 @@ export const CHAINS = {
 export const CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID ?? Object.keys(CHAINS)[0];
 export const BLOCKCHAIN_REST_URL = CHAINS[CHAIN_ID].rest as string;
 export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
-export const BLOCKCHAIN_GRPC_REST_URL = CHAINS[CHAIN_ID].rpc.replace('/rpc/', '') as string;

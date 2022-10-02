@@ -15,11 +15,9 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 	const [loaded, setLoaded] = useState(false);
 	const keplrWallet = getKeplr();
 	const operaWallet = getOpera();
-	console.log({ operaWallet });
 
 	useEffect(() => {
 		setLoaded(true);
-		console.log({ operaWallet });
 	}, []);
 
 	return loaded ? (
@@ -27,7 +25,6 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 			<p>Choose wallet</p>
 			{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keysafe)} />}
 			{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
-			<Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />
 		</div>
 	) : (
 		<p>loading</p>

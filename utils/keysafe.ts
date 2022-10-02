@@ -1,4 +1,4 @@
-import { BLOCKCHAIN_GRPC_REST_URL, BLOCKCHAIN_REST_URL, CHAIN_ID } from '@constants/chains';
+import { BLOCKCHAIN_REST_URL, CHAIN_ID } from '@constants/chains';
 import axios from 'axios';
 import { DirectSignResponse, OfflineDirectSigner, AccountData, OfflineSigner } from '@cosmjs/proto-signing';
 import { SigningStargateClient } from '@client-sdk/utils/customClient';
@@ -25,8 +25,7 @@ export const getKeysafe = async (): Promise<any> => {
 		const ixoInpageProvider = new IxoInpageProvider();
 
 		if (ixoInpageProvider) {
-			type getAccounts = () => Promise<readonly AccountData[]>;
-			const getAccounts: getAccounts = async () => {
+			const getAccounts = async (): Promise<readonly AccountData[]> => {
 				return await new Promise<readonly AccountData[]>(resolve => {
 					ixoInpageProvider.getInfo(async (error: any, response: any) => {
 						// console.log({ response });

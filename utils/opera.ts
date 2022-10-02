@@ -1,9 +1,17 @@
 import * as amino from '@cosmjs/amino';
 import * as base58 from 'bs58';
 import * as crypto from '@cosmjs/crypto';
-import { b58_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
+import { DirectSignResponse, OfflineDirectSigner, AccountData, OfflineSigner } from '@cosmjs/proto-signing';
+import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
+import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
+
+import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
 import blocksyncApi from './blocksync';
+import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import * as Toast from '@components/toast/toast';
+import { initCustomStargateClient, sendTransaction } from './client';
+import { CHAIN_ID } from '@constants/chains';
 
 const addressIndex = 0;
 const signMethod = 'secp256k1';
@@ -11,7 +19,7 @@ const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
 
 interface InterchainWallet {
 	getDidDoc: (index: number) => string;
-	signMessage: (hexStdSignDoc: string, signMethod: string, addressIndex: string) => string;
+	signMessage: (hexStdSignDoc: string, signMethod: string, addressIndex: number) => string;
 }
 
 export interface OperaInterchain {
@@ -22,6 +30,63 @@ export const getOpera = (): InterchainWallet | undefined => {
 	if (typeof window !== 'undefined' && window.interchain) return window.interchain;
 	return undefined;
 };
+
+export const getAccounts = async (): Promise<readonly AccountData[]> => {
+	const user = await initializeOpera();
+	if (!user) return [];
+	else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
+};
+
+export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
+	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
+	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
+
+	const opera = getOpera();
+	const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
+	const hexValue = Buffer.from(sha256msg).toString('hex');
+	const signature = await opera!.signMessage(hexValue, signMethod, addressIndex);
+	const transformedSignature = transformSignature(signature ?? '');
+	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
+	console.log({ signature, transformedSignature });
+
+	const stdSignature = {
+		pub_key: {
+			type: amino.pubkeyType.secp256k1,
+			value: uint8Arr_to_b64(account.pubkey),
+		},
+		signature: transformedSignature,
+	};
+
+	return { signed: signDoc, signature: stdSignature };
+};
+
+export function transformSignature(signature: string): string | undefined {
+	const rawArray = b64_to_uint8Arr(signature);
+
+	let signatureCosmjsBase64 = '';
+	if (rawArray.length < 64 || rawArray.length > 66) {
+		console.log('operahelper.invalid length');
+		return;
+	} else if (rawArray.length == 64) {
+		signatureCosmjsBase64 = signature;
+	} else if (rawArray.length == 65) {
+		if (rawArray[0] == 0x00) {
+			signatureCosmjsBase64 = uint8Arr_to_b64(rawArray.slice(1, 65));
+		} else if (rawArray[32] == 0x00) {
+			signatureCosmjsBase64 = uint8Arr_to_b64(new Uint8Array([...rawArray.slice(0, 32), ...rawArray.slice(33, 65)]));
+		} else {
+			console.log('operahelper.invalid signature array, length 65');
+		}
+	} else if (rawArray.length == 66) {
+		if (rawArray[0] == 0x00 && rawArray[33] == 0x00) {
+			signatureCosmjsBase64 = uint8Arr_to_b64(new Uint8Array([...rawArray.slice(1, 33), ...rawArray.slice(34, 66)]));
+		} else {
+			console.log('operahelper.invalid signature array, length 66');
+		}
+	}
+	console.log('operahelper.signatureCosmjsBase64', signatureCosmjsBase64);
+	return signatureCosmjsBase64 || undefined;
+}
 
 export const getDIDDocJSON = () => {
 	const didDoc = getOpera()?.getDidDoc(0);
@@ -62,48 +127,42 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	return { pubKey: pubkeyBase64, address, ledgered };
 };
 
-// export async function sign(stdSignDoc: amino.StdSignDoc, signMethod, addressIndex) {
-// 	const sha256msg = crypto.sha256(amino.serializeSignDoc(stdSignDoc));
-// 	const hexValue = Buffer.from(sha256msg).toString('hex');
-// 	const signature = await window.interchain.signMessage(hexValue, signMethod, addressIndex);
-// 	return signature;
-// }
+export const operaBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+	const trx_fail = () => {
+		Toast.errorToast(`Transaction Failed`);
+		return null;
+	};
 
-// export async function sign(stdSignDoc: amino.StdSignDoc) {
-// 	let signature = await operahelper.sign(stdSignDoc, signMethod, addressIndex);
-// 	signature = transformSignature(signature);
-// 	return { signed: stdSignDoc, signature: signature };
-// }
+	const [accounts, offlineSigner] = await connectOperaAccount();
+	if (!accounts || !offlineSigner) return trx_fail();
+	const address = accounts[0].address;
+	const client = await initCustomStargateClient(offlineSigner);
 
-// /* With thanks to Benzhe of Opera!
-//  */
-// export function transformSignature(signature) {
-// 	const rawArray = Base64.toUint8Array(signature);
+	const payload = {
+		msgs,
+		chain_id: CHAIN_ID,
+		fee,
+		memo,
+	};
 
-// 	if (rawArray.length < 64 || rawArray.length > 66) {
-// 		console.log('operahelper.invalid length');
-// 		return;
-// 	}
+	try {
+		const result = await sendTransaction(client, address, payload);
+		if (result) {
+			Toast.successToast(`Transaction Successful`);
+			return result.transactionHash;
+		} else {
+			throw 'transaction failed';
+		}
+	} catch (e) {
+		return trx_fail();
+	}
+};
 
-// 	let signatureCosmjsBase64 = '';
+export const connectOperaAccount = async (): Promise<any> => {
+	const opera = getOpera();
+	if (!opera) return [null, null];
 
-// 	if (rawArray.length == 64) {
-// 		signatureCosmjsBase64 = signature;
-// 	} else if (rawArray.length == 65) {
-// 		if (rawArray[0] == 0x00) {
-// 			signatureCosmjsBase64 = Base64.fromUint8Array(rawArray.slice(1, 65));
-// 		} else if (rawArray[32] == 0x00) {
-// 			signatureCosmjsBase64 = Base64.fromUint8Array([rawArray.slice(0, 32), rawArray.slice(33, 65)]);
-// 		} else {
-// 			console.log('operahelper.invalid signature array, length 65');
-// 		}
-// 	} else if (rawArray.length == 66) {
-// 		if (rawArray[0] == 0x00 && rawArray[33] == 0x00) {
-// 			signatureCosmjsBase64 = Base64.fromUint8Array([rawArray.slice(1, 33), rawArray.slice(34, 66)]);
-// 		} else {
-// 			console.log('operahelper.invalid signature array, length 66');
-// 		}
-// 	}
-// 	console.log('operahelper.signatureCosmjsBase64', signatureCosmjsBase64);
-// 	return signatureCosmjsBase64;
-// }
+	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	const accounts = await getAccounts();
+	return [accounts, offlineSigner];
+};

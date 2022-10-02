@@ -1,6 +1,6 @@
 import * as base58 from 'bs58';
 import { BigNumber } from 'bignumber.js';
-import { toBase64 } from '@cosmjs/encoding';
+import { toBase64, fromBase64 } from '@cosmjs/encoding';
 
 export const utf16_to_b64 = (str: string) => {
 	return Buffer.from(str, 'utf8').toString('base64');
@@ -29,13 +29,16 @@ export const uint8Arr_to_b64 = (array: Uint8Array): string => {
 	return toBase64(array);
 };
 
+export const b64_to_uint8Arr = (str: string): Uint8Array => {
+	return fromBase64(str);
+};
+
 export const getMicroAmount = (amount: string): string => {
 	return new BigNumber(amount).times(new BigNumber(10).pow(6)).toString();
 };
 
 export const strToArray = (str: string): Uint8Array => {
-	const ret = new Uint8Array(Buffer.from(str));
-	return ret;
+	return new Uint8Array(Buffer.from(str));
 };
 
 const Utf8ArrayToStr = (array: Uint8Array) => {
