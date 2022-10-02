@@ -1,7 +1,6 @@
 import * as amino from '@cosmjs/amino';
 import * as base58 from 'bs58';
 import * as crypto from '@cosmjs/crypto';
-// import { Base64 } from 'js-base64';
 import { b58_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
 import blocksyncApi from './blocksync';
