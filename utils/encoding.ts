@@ -1,6 +1,6 @@
 import * as base58 from 'bs58';
 import { BigNumber } from 'bignumber.js';
-import { Base64 } from 'js-base64';
+const { Base64 } = require('js-base64');
 
 export const utf16_to_b64 = (str: string) => {
 	return Buffer.from(str, 'utf8').toString('base64');
