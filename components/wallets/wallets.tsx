@@ -3,7 +3,7 @@ import cls from 'classnames';
 
 import styles from './wallets.module.scss';
 import { getKeplr } from '@utils/kepl';
-import { getKeysafe } from '@utils/keysafe';
+import { getOpera } from '@utils/opera';
 import { WALLET_TYPE } from 'types/wallet';
 import Button from '@components/button/button';
 
@@ -14,7 +14,7 @@ type WalletsProps = {
 const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 	const [loaded, setLoaded] = useState(false);
 	const keplrWallet = getKeplr();
-	const keysafeWallet = getKeysafe();
+	const operaWallet = getOpera();
 
 	useEffect(() => {
 		setLoaded(true);
@@ -28,9 +28,9 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 					<p>KeySafe</p>
 				</Button>
 			)}
-			{keysafeWallet && (
-				<Button label="Kepl" onClick={() => onSelected(WALLET_TYPE.keplr)}>
-					<p>Kepl</p>
+			{operaWallet && (
+				<Button label="Kepl" onClick={() => onSelected(WALLET_TYPE.opera)}>
+					<p>Opera</p>
 				</Button>
 			)}
 		</div>

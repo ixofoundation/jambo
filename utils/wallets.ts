@@ -5,6 +5,7 @@ import { USER } from 'types/user';
 import { WALLET, WALLET_TYPE } from 'types/wallet';
 import { initializeKeplr, keplrBroadCastMessage } from './kepl';
 import { initializeKeysafe, keysafeBroadCastMessage } from './keysafe';
+import { initializeOpera } from './opera';
 
 export const initializeWallet = async (wallet: WALLET): Promise<USER | undefined> => {
 	switch (wallet.walletType) {
@@ -12,6 +13,8 @@ export const initializeWallet = async (wallet: WALLET): Promise<USER | undefined
 			return await initializeKeplr();
 		case WALLET_TYPE.keysafe:
 			return await initializeKeysafe(wallet);
+		case WALLET_TYPE.opera:
+			return await initializeOpera();
 		default:
 			return;
 	}

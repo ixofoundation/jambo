@@ -1,5 +1,5 @@
 export type USER = {
-	name: string;
+	name?: string;
 	pubKey: Uint8Array | string;
 	address: string;
 	algo?: string;

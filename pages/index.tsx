@@ -25,7 +25,7 @@ const Home: NextPage = () => {
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
-				<p onClick={() => successToast('test')}>{wallet.user?.name ?? 'loged out'}</p>
+				<p onClick={() => successToast('test')}>{wallet.user?.pubKey ? wallet.user.name || 'Hello there' : 'loged out'}</p>
 				<CustomSwiper actions={config.actions as ACTION[]} />
 			</main>
 

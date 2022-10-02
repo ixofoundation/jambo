@@ -19,35 +19,6 @@ import { strToArray, uint8ArrayToStr, utf16_to_b64 } from './encoding';
 import { initCustomStargateClient, sendTransaction } from './client';
 import { accountFromAny } from '@client-sdk/utils/EdAccountHandler';
 
-// const getKeysafeDidDoc = async (): Promise<any> => {
-// 	return new Promise(resolve => {
-// 		keysafe.getInfo((error: any, response: any) => {
-// 			if (!error && response) {
-// 				const { didDoc } = response;
-// 				resolve(didDoc);
-// 			} else {
-// 				resolve(undefined);
-// 			}
-// 		});
-// 	});
-// };
-// const createSignature = async (payload: any): Promise<Uint8Array> => {
-// 	return new Promise(resolve => {
-// 		keysafe.requestSigning(
-// 			JSON.stringify(payload),
-// 			async (error: any, signature: any) => {
-// 				if (error || !signature) {
-// 					resolve(new Uint8Array());
-// 				} else {
-// 					console.log('signature', signature);
-// 					resolve(fromBase64(signature.signatureValue));
-// 				}
-// 			},
-// 			'base64',
-// 		);
-// 	});
-// };
-
 export const getKeysafe = async (): Promise<any> => {
 	if (typeof window !== 'undefined' && window['ixoKs']) {
 		const IxoInpageProvider = window['ixoKs'];
@@ -215,53 +186,6 @@ export const keysafeBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo 
 		return trx_fail();
 	}
 };
-
-// export const keysafeBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<void> => {
-// 	await messageSendKeysafe(user.address, msgs, fee);
-// 	console.log('done!!!!!!!');
-// };
-
-// export const keysafeBroadCastMessage = (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> =>
-// 	new Promise(async resolve => {
-// 		const payload = {
-// 			msgs,
-// 			chain_id: CHAIN_ID,
-// 			fee,
-// 			memo,
-// 			account_number: String(user.accountNumber),
-// 			sequence: String(user.sequence),
-// 		};
-
-// 		const trx_fail = () => {
-// 			Toast.errorToast(`Transaction Failed`);
-// 			resolve(null);
-// 		};
-
-// 		const keysafe = await getKeysafe();
-// 		keysafe.requestSigning(
-// 			JSON.stringify(sortObject(payload)),
-// 			(error: any, signature: any) => {
-// 				if (error) trx_fail();
-// 				axios
-// 					.post(`${BLOCKCHAIN_GRPC_REST_URL}/cosmos/tx/v1beta1/txs`, {
-// 						tx: generateKeysafeTx(payload.msgs, signature, payload.account_number, payload.sequence),
-// 						mode: 'BROADCAST_MODE_SYNC',
-// 					})
-// 					.then(response => {
-// 						if (response.data.txhash) {
-// 							if (response.data.code === 4) return trx_fail();
-// 							Toast.successToast(`Transaction Successful`);
-// 							resolve(response.data.txhash);
-// 						}
-// 						trx_fail();
-// 					})
-// 					.catch(() => {
-// 						trx_fail();
-// 					});
-// 			},
-// 			'base64',
-// 		);
-// 	});
 
 const getKeysafeDidDoc = async (): Promise<any> => {
 	return new Promise(resolve => {

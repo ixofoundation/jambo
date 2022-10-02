@@ -1,8 +1,9 @@
 import { USER } from './user';
 
 export enum WALLET_TYPE {
-	keysafe = 'keysafe',
+	opera = 'opera',
 	keplr = 'keplr',
+	keysafe = 'keysafe',
 }
 
 export type WALLET = {
