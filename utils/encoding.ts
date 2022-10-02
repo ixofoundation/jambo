@@ -1,6 +1,6 @@
 import * as base58 from 'bs58';
 import { BigNumber } from 'bignumber.js';
-import { Base64 } from 'js-base64';
+// import { Base64 } from 'js-base64';
 
 export const utf16_to_b64 = (str: string) => {
 	return Buffer.from(str, 'utf8').toString('base64');
@@ -26,7 +26,8 @@ export const b58_to_uint8Arr = (str: string): Uint8Array => {
 };
 
 export const uint8Arr_to_b64 = (array: Uint8Array): string => {
-	return Base64.fromUint8Array(array);
+	// return Base64.fromUint8Array(array);
+	return 'test';
 };
 
 export const getMicroAmount = (amount: string): string => {
