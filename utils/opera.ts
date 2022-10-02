@@ -37,7 +37,9 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 		const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
 		console.log({ getDidDoc });
 		if (!(getDidDoc as any)?.error) ledgered = true;
-	} catch (error) {}
+	} catch (error) {
+		console.log({ error });
+	}
 
 	const verificationMethod = didDocJSON.verificationMethod.find((x: any) => x.type == pubKeyType);
 	const pubkeyBase58 = verificationMethod.publicKeyBase58;
