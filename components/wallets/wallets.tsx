@@ -33,6 +33,9 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 					<p>Opera</p>
 				</Button>
 			)}
+			<Button label="Kepl" onClick={() => onSelected(WALLET_TYPE.opera)}>
+				<p>Opera</p>
+			</Button>
 		</div>
 	) : (
 		<p>loading</p>
