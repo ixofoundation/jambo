@@ -159,10 +159,12 @@ export const operaBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 };
 
 export const connectOperaAccount = async (): Promise<any> => {
+	console.log('start connectOperaAccount');
 	const opera = getOpera();
 	if (!opera) return [null, null];
 
 	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
 	const accounts = await getAccounts();
+	console.log('end connectOperaAccount');
 	return [accounts, offlineSigner];
 };

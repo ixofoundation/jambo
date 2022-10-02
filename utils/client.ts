@@ -28,11 +28,13 @@ export const initStargateClient = async (offlineSigner: any): Promise<SigningSta
 };
 
 export const initCustomStargateClient = async (offlineSigner: any): Promise<CustomSigningStargateClient> => {
+	console.log('start initCustomStargateClient');
 	const registry = new Registry(defaultStargateTypes);
 	registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
 
 	const cosmJS: CustomSigningStargateClient = await CustomSigningStargateClient.connectWithSigner(BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry, accountParser: accountFromAny });
 
+	console.log('end initCustomStargateClient');
 	return cosmJS;
 };
 
