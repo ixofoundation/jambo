@@ -10,8 +10,6 @@ const addressIndex = 0;
 const signMethod = 'secp256k1';
 const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
 
-let didDocJSON;
-
 interface InterchainWallet {
 	getDidDoc: (index: number) => string;
 	signMessage: (hexStdSignDoc: string, signMethod: string, addressIndex: string) => string;
@@ -28,7 +26,7 @@ export const getOpera = (): InterchainWallet | undefined => {
 
 export const getDIDDocJSON = () => {
 	const didDoc = getOpera()?.getDidDoc(0);
-	didDocJSON = JSON.parse(didDoc ?? '{}');
+	const didDocJSON = JSON.parse(didDoc ?? '{}');
 	return didDocJSON;
 };
 
