@@ -37,6 +37,28 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
 	else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
 };
 
+// export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
+// 	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
+// 	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
+
+// 	const opera = getOpera();
+// 	const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
+// 	const hexValue = Buffer.from(sha256msg).toString('hex');
+// 	const signature = await opera!.signMessage(hexValue, signMethod, addressIndex);
+// 	const transformedSignature = transformSignature(signature ?? '');
+// 	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
+// 	console.log({ signature, transformedSignature });
+
+// 	const stdSignature = {
+// 		pub_key: {
+// 			type: amino.pubkeyType.secp256k1,
+// 			value: uint8Arr_to_b64(account.pubkey),
+// 		},
+// 		signature: transformedSignature,
+// 	};
+
+// 	return { signed: signDoc, signature: stdSignature };
+// };
 export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
 	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
 	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
@@ -117,13 +139,7 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	};
 	const address = amino.pubkeyToAddress(pubkey, 'ixo');
 
-	console.log('operaSECP256k1helper.didDocJSON', didDocJSON);
-	console.log('operaSECP256k1helper.verificationMethod', verificationMethod);
-	console.log('operaSECP256k1helper.pubkeyBase58', pubkeyBase58);
-	console.log('operaSECP256k1helper.pubkeyByteArray', pubkeyByteArray);
-	console.log('operaSECP256k1helper.pubkeyBase64', pubkeyBase64);
-	console.log('operaSECP256k1helper.address', address);
-
+	console.log({ didDocJSON, pubkeyBase64, address });
 	return { pubKey: pubkeyBase64, address, ledgered };
 };
 
