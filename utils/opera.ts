@@ -13,8 +13,6 @@ import * as Toast from '@components/toast/toast';
 import { initCustomStargateClient, initStargateClient, sendTransaction } from './client';
 import { CHAIN_ID } from '@constants/chains';
 
-const addressIndex = 0;
-const signMethod = 'secp256k1';
 const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
 
 interface InterchainWallet {
@@ -141,7 +139,7 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	const address = amino.pubkeyToAddress(pubkey, 'ixo');
 
 	console.log({ didDocJSON, pubkeyBase64, address });
-	return { pubKey: pubkeyBase64, address, ledgered };
+	return { pubKey: pubkeyByteArray, address, ledgered };
 };
 
 export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
