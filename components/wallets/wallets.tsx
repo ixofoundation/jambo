@@ -23,7 +23,7 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 	return loaded ? (
 		<div className={cls(className)} {...other}>
 			<p>Choose wallet</p>
-			{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keysafe)} />}
+			{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
 			{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
 		</div>
 	) : (

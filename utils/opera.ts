@@ -127,15 +127,15 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	return { pubKey: pubkeyBase64, address, ledgered };
 };
 
-export const operaBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);
 		return null;
 	};
 
-	const [accounts, offlineSigner] = await connectOperaAccount();
-	if (!accounts || !offlineSigner) return trx_fail();
-	const address = accounts[0].address;
+	const address = user.address;
+	const offlineSigner = await getOfflineSigner();
+	if (!address || !offlineSigner) return trx_fail();
 	const client = await initCustomStargateClient(offlineSigner);
 
 	const payload = {
@@ -158,13 +158,9 @@ export const operaBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 	}
 };
 
-export const connectOperaAccount = async (): Promise<any> => {
-	console.log('start connectOperaAccount');
+export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
 	const opera = getOpera();
-	if (!opera) return [null, null];
-
+	if (!opera) return null;
 	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
-	const accounts = await getAccounts();
-	console.log('end connectOperaAccount');
-	return [accounts, offlineSigner];
+	return offlineSigner;
 };

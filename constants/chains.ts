@@ -2,8 +2,8 @@ export const CHAINS = {
 	'pandora-5': {
 		chainId: 'pandora-5',
 		chainName: 'ixo Testnet',
-		rpc: 'https://testnet.ixo.world/rpc/',
-		rest: 'https://testnet.ixo.world/rest/',
+		rpc: 'https://testnet.ixo.earth/rpc/',
+		rest: 'https://testnet.ixo.earth/rest/',
 		bip44: {
 			coinType: 118,
 		},
@@ -48,8 +48,8 @@ export const CHAINS = {
 	'impacthub-3': {
 		chainId: 'impacthub-3',
 		chainName: 'Impact Hub',
-		rpc: 'https://impacthub.ixo.world/rpc/',
-		rest: 'https://impacthub.ixo.world/rest/',
+		rpc: 'https://impacthub.ixo.earth/rpc/',
+		rest: 'https://impacthub.ixo.earth/rest/',
 		bip44: {
 			coinType: 118,
 		},
