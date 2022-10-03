@@ -10,7 +10,7 @@ import { USER } from 'types/user';
 import blocksyncApi from './blocksync';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import * as Toast from '@components/toast/toast';
-import { initCustomStargateClient, sendTransaction } from './client';
+import { initCustomStargateClient, initStargateClient, sendTransaction } from './client';
 import { CHAIN_ID } from '@constants/chains';
 
 const addressIndex = 0;
@@ -37,28 +37,28 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
 	else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
 };
 
-export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
-	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
-	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
+// export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
+// 	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
+// 	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
 
-	const opera = getOpera();
-	// const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
-	// const hexValue = Buffer.from(sha256msg).toString('hex');
-	const signature = await opera!.signMessage(SignDoc as any, signMethod, addressIndex);
-	const transformedSignature = transformSignature(signature ?? '');
-	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
-	console.log({ signature, transformedSignature });
+// 	const opera = getOpera();
+// 	// const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
+// 	// const hexValue = Buffer.from(sha256msg).toString('hex');
+// 	const signature = await opera!.signMessage(SignDoc as any, signMethod, addressIndex);
+// 	const transformedSignature = transformSignature(signature ?? '');
+// 	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
+// 	console.log({ signature, transformedSignature });
 
-	const stdSignature = {
-		pub_key: {
-			type: amino.pubkeyType.secp256k1,
-			value: uint8Arr_to_b64(account.pubkey),
-		},
-		signature: transformedSignature,
-	};
+// 	const stdSignature = {
+// 		pub_key: {
+// 			type: amino.pubkeyType.secp256k1,
+// 			value: uint8Arr_to_b64(account.pubkey),
+// 		},
+// 		signature: transformedSignature,
+// 	};
 
-	return { signed: signDoc, signature: stdSignature };
-};
+// 	return { signed: signDoc, signature: stdSignature };
+// };
 
 export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
 	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
@@ -153,7 +153,7 @@ export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = 
 	const address = user.address;
 	const offlineSigner = await getOfflineSigner();
 	if (!address || !offlineSigner) return trx_fail();
-	const client = await initCustomStargateClient(offlineSigner);
+	const client = await initStargateClient(offlineSigner);
 
 	const payload = {
 		msgs,
@@ -175,16 +175,16 @@ export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = 
 	}
 };
 
-export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
-	const opera = getOpera();
-	if (!opera) return null;
-	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-	return offlineSigner;
-};
-
-// export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
+// export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
 // 	const opera = getOpera();
 // 	if (!opera) return null;
-// 	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+// 	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
 // 	return offlineSigner;
 // };
+
+export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
+	const opera = getOpera();
+	if (!opera) return null;
+	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	return offlineSigner;
+};
