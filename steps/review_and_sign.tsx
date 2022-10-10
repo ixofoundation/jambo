@@ -12,6 +12,7 @@ import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx } from '@utils/client';
+import Loader from '@components/loader/loader';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -22,6 +23,7 @@ type ReviewAndSignProps = {
 
 const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header }) => {
 	const { wallet } = useContext(WalletContext);
+	const [loading, setLoading] = useState(false);
 	const [amount, setAmount] = useState(0);
 	const [token, setToken] = useState<TokenOptionType>(null);
 	const [address, setAddress] = useState('');
@@ -39,12 +41,14 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 	}, [steps]);
 
 	const signTX = async (): Promise<void> => {
+		setLoading(true);
 		const trx = generateBankSendTrx({ fromAddress: wallet.user!.address, toAddress: address, denom: 'uixo', amount: getMicroAmount(amount.toString()) });
 		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
 		// console.log({ hash });
 		if (hash) {
 			onSuccess({ done: true });
 		}
+		setLoading(false);
 	};
 
 	return (
@@ -52,20 +56,24 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			<Header pageTitle="Review and sign" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				<form className={styles.stepsForm} autoComplete="none">
-					<p>I am sending</p>
-					<div className={styles.amountAndTokenInputs}>
-						<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-						<Input name="token" required value={token?.label} disabled className={styles.tokenInput} size={8} />
-					</div>
-					<br />
+				{loading ? (
+					<Loader />
+				) : (
+					<form className={styles.stepsForm} autoComplete="none">
+						<p>I am sending</p>
+						<div className={styles.amountAndTokenInputs}>
+							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
+							<Input name="token" required value={token?.label} disabled className={styles.tokenInput} size={8} />
+						</div>
+						<br />
 
-					<p>to the address:</p>
-					<Input name="address" required value={address} className={styles.stepInput} disabled />
-					<br />
+						<p>to the address:</p>
+						<Input name="address" required value={address} className={styles.stepInput} disabled />
+						<br />
 
-					<p>Sign?</p>
-				</form>
+						<p>Sign?</p>
+					</form>
+				)}
 			</main>
 
 			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={signTX} />
