@@ -5,6 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
+import Loader from '@components/loader/loader';
 
 type EmptyStepsProps = {
 	loading?: boolean;
@@ -15,7 +16,7 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading }) => {
 		<>
 			<Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>{loading ? <p>loading...</p> : <p>Sorry this url doesn't exist</p>}</main>
+			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>{loading ? <Loader /> : <p>Sorry this url doesn't exist</p>}</main>
 
 			<Footer onBackUrl="/" />
 		</>

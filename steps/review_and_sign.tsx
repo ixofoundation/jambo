@@ -63,7 +63,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 						<p>I am sending</p>
 						<div className={styles.amountAndTokenInputs}>
 							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label} disabled className={styles.tokenInput} size={8} />
+							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
 						</div>
 						<br />
 

@@ -6,7 +6,6 @@ import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
 import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { Coin } from '@client-sdk/codec/cosmos/coin';
-import { getMicroAmount } from './encoding';
 
 export const initStargateClient = async (offlineSigner: any): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);

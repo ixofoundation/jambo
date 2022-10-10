@@ -8,7 +8,7 @@ export const WalletContext = createContext({ wallet: {} as WALLET, updateWallet:
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [wallet, setWallet] = useState<WALLET>({});
-	// const [loaded, setLoaded] = useState<boolean>(false);
+	const [loaded, setLoaded] = useState<boolean>(false);
 
 	const updateWallet = (newWallet: {}) => {
 		setWallet(currentWallet => ({ ...currentWallet, ...newWallet }));
@@ -20,23 +20,21 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		updateWallet({ user });
 	};
 
-	// useEffect(() => {
-	// if (loaded) setLocalStorage('wallet', wallet);
-	// console.log({ wallet });
-	// }, [wallet]);
+	useEffect(() => {
+		if (loaded) setLocalStorage('wallet', wallet);
+	}, [wallet]);
 
 	useEffect(() => {
-		// if (loaded && wallet.walletType) initializeWallets();
-		if (wallet.walletType) initializeWallets();
+		if (loaded && wallet.walletType) initializeWallets();
 	}, [wallet.walletType]);
 
-	// useEffect(() => {
-	// Comment out below to reset config
-	// setLocalStorage('wallet', {});
-	// const persistedWallet = getLocalStorage<WALLET>('wallet');
-	// setLoaded(true);
-	// if (persistedWallet) setWallet(persistedWallet);
-	// }, []);
+	useEffect(() => {
+		// Comment out below to reset config
+		// setLocalStorage('wallet', {});
+		const persistedWallet = getLocalStorage<WALLET>('wallet');
+		setLoaded(true);
+		if (persistedWallet) setWallet(persistedWallet);
+	}, []);
 
 	const value = { wallet, updateWallet };
 	return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

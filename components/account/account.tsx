@@ -1,5 +1,4 @@
 import { HTMLAttributes, useState, useContext } from 'react';
-import cls from 'classnames';
 
 import styles from './account.module.scss';
 import { ChainOptions, ChainOptionType } from 'types/wallet';
