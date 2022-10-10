@@ -6,17 +6,13 @@ import { SigningStargateClient } from '@client-sdk/utils/customClient';
 import { toBech32, toBase64, fromBase64 } from '@cosmjs/encoding';
 import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
 import { serializeSignDoc, pubkeyType } from '@cosmjs/amino';
-// const sovrin = require("sovrin-did");
-// import sovrin from 'sovrin-did';
 
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { WALLET } from 'types/wallet';
 import blocksyncApi from './blocksync';
-import { generateKeysafeTx, sortObject } from './transactions';
 import * as Toast from '@components/toast/toast';
-import { strToArray, uint8ArrayToStr, utf16_to_b64 } from './encoding';
-import { initCustomStargateClient, sendTransaction } from './client';
+import { initStargateClient, sendTransaction } from './client';
 import { accountFromAny } from '@client-sdk/utils/EdAccountHandler';
 
 export const getKeysafe = async (): Promise<any> => {
@@ -65,9 +61,9 @@ export const getKeysafe = async (): Promise<any> => {
 					);
 				});
 				if (!signature) throw new Error('No signature, signing failed');
-				console.log('signature length: ' + signature.length);
+				// console.log('signature length: ' + signature.length);
 				const stdSignature = encodeEd25519Signature(account.pubkey, signature.slice(0, 64));
-				console.log({ signature });
+				// console.log({ signature });
 
 				return { signed: signDoc, signature: stdSignature };
 			};
@@ -114,7 +110,7 @@ export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefin
 					const address = addressResponse.data.result;
 
 					const accountResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/auth/accounts/${address}`);
-					console.log({ accountResponse });
+					// console.log({ accountResponse });
 
 					let account = accountResponse.data.result.value;
 					resolve({ ...baseUser, address: account.address, sequence: account.sequence, accountNumber: account.account_number ?? account.accountNumber });
@@ -137,14 +133,12 @@ export const keysafeBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo 
 	};
 
 	const keysafe = await getKeysafe();
-	console.log({ keysafe });
 
 	// const [accounts, offlineSigner] = await connectKeplrAccount();
 	// if (!accounts || !offlineSigner) return trx_fail();
 	// const address = accounts[0].address;
-	// const client = await initStargateClient(keysafe.offlineSigner);
-	const client = await initCustomStargateClient(keysafe.offlineSigner);
-	console.log({ client });
+	const client = await initStargateClient(keysafe.offlineSigner);
+	// const client = await initCustomStargateClient(keysafe.offlineSigner);
 
 	const payload = {
 		msgs,
@@ -186,7 +180,6 @@ const createSignature = async (payload: any): Promise<Uint8Array> => {
 				if (error || !signature) {
 					resolve(new Uint8Array());
 				} else {
-					console.log('signature', signature);
 					resolve(fromBase64(signature.signatureValue));
 				}
 			},
@@ -234,7 +227,6 @@ export const messageSend = async (signer: any, fromAddress: string, msgs: any, f
 
 export const messageSendKeysafe = async (fromAddress: string, msgs: any, fee: any): Promise<void> => {
 	const { pubKey } = await getKeysafeDidDoc();
-	console.log('pubKey', pubKey);
 	const getAccounts = (): Promise<AccountData[]> => {
 		return new Promise(resolve => {
 			resolve([
@@ -248,8 +240,6 @@ export const messageSendKeysafe = async (fromAddress: string, msgs: any, fee: an
 	};
 	const signDirect = async (address: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
 		const signature = await createSignature(msgs);
-
-		console.log('createSignature', signature);
 
 		const signatureBytes = new Uint8Array(signature.slice(0, 64));
 		const stdSignature = encodeEd25519Signature1(pubKey, signatureBytes);

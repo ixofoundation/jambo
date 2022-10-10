@@ -13,6 +13,7 @@ export enum BUTTON_ROUND_COLOR {
 
 export enum BUTTON_ROUND_SIZE {
 	large = 'large',
+	mediumLarge = 'mediumLarge',
 	medium = '',
 	small = 'small',
 	xsmall = 'xsmall',

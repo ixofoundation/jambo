@@ -96,7 +96,7 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 
 	try {
 		const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
-		console.log({ getDidDoc });
+		// console.log({ getDidDoc });
 		if (!(getDidDoc as any)?.error) ledgered = true;
 	} catch (error) {
 		console.log({ error });

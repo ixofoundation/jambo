@@ -29,13 +29,9 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
-				// <Link href="/login">
-				// 	<a>
 				<ButtonRound onClick={() => setShowModal(true)}>
 					<AccountImg width="20px" height="20px" />
 				</ButtonRound>
-				// 	</a>
-				// </Link>
 			)}
 			{showAboutButton && (
 				<Link href="/about">
@@ -62,7 +58,7 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 				</ButtonRound>
 			)}
 			{showModal && (
-				<Modal onClose={() => setShowModal(false)} title="Update Name">
+				<Modal onClose={() => setShowModal(false)}>
 					<Account />
 				</Modal>
 			)}

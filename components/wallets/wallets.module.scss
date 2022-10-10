@@ -1,3 +1,7 @@
-.action {
-	width: max-content;
+.wallets {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	flex: 1;
 }
