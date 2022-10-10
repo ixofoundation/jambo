@@ -1,10 +1,10 @@
-import { BLOCKCHAIN_RPC_URL, CHAINS, CHAIN_ID } from '@constants/chains';
+import { CHAINS, CHAIN_ID } from '@constants/chains';
 import { Keplr } from '@keplr-wallet/types';
 import { USER } from 'types/user';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 
 import * as Toast from '@components/toast/toast';
-import { sendTransaction, initCustomStargateClient } from './client';
+import { sendTransaction, initStargateClient } from './client';
 
 export const getKeplr = (): Keplr | undefined => {
 	if (typeof window !== 'undefined' && window.keplr) return window.keplr;
@@ -45,7 +45,7 @@ export const keplrBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 	const [accounts, offlineSigner] = await connectKeplrAccount();
 	if (!accounts || !offlineSigner) return trx_fail();
 	const address = accounts[0].address;
-	const client = await initCustomStargateClient(offlineSigner);
+	const client = await initStargateClient(offlineSigner);
 
 	const payload = {
 		msgs,

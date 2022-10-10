@@ -49,27 +49,6 @@ export const getKeysafe = async (): Promise<any> => {
 				});
 			};
 
-			const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
-				const account = (await getAccounts()).find(({ address }) => address === signerAddress);
-				if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
-				console.log({ account, signerAddress });
-
-				const signature = await new Promise<any>(resolve => {
-					ixoInpageProvider.requestSigning(
-						JSON.stringify(signDoc),
-						(error: any, signature: any) => {
-							if (error || !signature) resolve(null);
-							resolve(fromBase64(signature.signatureValue));
-						},
-						'base64',
-					);
-				});
-				if (!signature) throw new Error('No signature, signing failed');
-				const stdSignature = encodeEd25519Signature(account.pubkey, signature.slice(0, 64));
-				console.log({ signature });
-				return { signed: signDoc, signature: stdSignature };
-			};
-
 			const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
 				const account = (await getAccounts()).find(({ address }) => address === signerAddress);
 				if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
@@ -86,6 +65,7 @@ export const getKeysafe = async (): Promise<any> => {
 					);
 				});
 				if (!signature) throw new Error('No signature, signing failed');
+				console.log('signature length: ' + signature.length);
 				const stdSignature = encodeEd25519Signature(account.pubkey, signature.slice(0, 64));
 				console.log({ signature });
 

@@ -1,19 +1,20 @@
 import * as amino from '@cosmjs/amino';
-import * as base58 from 'bs58';
 import * as crypto from '@cosmjs/crypto';
-import { DirectSignResponse, OfflineDirectSigner, AccountData, OfflineSigner } from '@cosmjs/proto-signing';
+import { AccountData } from '@cosmjs/proto-signing';
 import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
-import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
 
 import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
 import blocksyncApi from './blocksync';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import * as Toast from '@components/toast/toast';
-import { initCustomStargateClient, initStargateClient, sendTransaction } from './client';
+import { initStargateClient, sendTransaction } from './client';
 import { CHAIN_ID } from '@constants/chains';
 
 const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
+
+export let address: string;
+export let pubkeyByteArray: Uint8Array;
 
 interface InterchainWallet {
 	getDidDoc: (index: number) => string;
@@ -35,33 +36,7 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
 	else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
 };
 
-// export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
-// 	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
-// 	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
-
-// 	const opera = getOpera();
-// 	// const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
-// 	// const hexValue = Buffer.from(sha256msg).toString('hex');
-// 	const signature = await opera!.signMessage(SignDoc as any, signMethod, addressIndex);
-// 	const transformedSignature = transformSignature(signature ?? '');
-// 	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
-// 	console.log({ signature, transformedSignature });
-
-// 	const stdSignature = {
-// 		pub_key: {
-// 			type: amino.pubkeyType.secp256k1,
-// 			value: uint8Arr_to_b64(account.pubkey),
-// 		},
-// 		signature: transformedSignature,
-// 	};
-
-// 	return { signed: signDoc, signature: stdSignature };
-// };
-
 export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
-	const account = (await getAccounts()).find(({ address }) => address === signerAddress);
-	if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
-
 	const opera = getOpera();
 	const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
 	const hexValue = Buffer.from(sha256msg).toString('hex');
@@ -73,7 +48,7 @@ export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Pro
 	const stdSignature = {
 		pub_key: {
 			type: amino.pubkeyType.secp256k1,
-			value: uint8Arr_to_b64(account.pubkey),
+			value: uint8Arr_to_b64(pubkeyByteArray),
 		},
 		signature: transformedSignature,
 	};
@@ -129,17 +104,24 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 
 	const verificationMethod = didDocJSON.verificationMethod.find((x: any) => x.type == pubKeyType);
 	const pubkeyBase58 = verificationMethod.publicKeyBase58;
-	const pubkeyByteArray = b58_to_uint8Arr(pubkeyBase58);
+	pubkeyByteArray = b58_to_uint8Arr(pubkeyBase58);
 	const pubkeyBase64 = uint8Arr_to_b64(pubkeyByteArray);
 
 	const pubkey = {
 		type: amino.pubkeyType.secp256k1,
 		value: pubkeyBase64,
 	};
-	const address = amino.pubkeyToAddress(pubkey, 'ixo');
+	address = amino.pubkeyToAddress(pubkey, 'ixo');
 
-	console.log({ didDocJSON, pubkeyBase64, address });
+	// console.log({ didDocJSON, pubkeyBase64, address });
 	return { pubKey: pubkeyByteArray, address, ledgered };
+};
+
+export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
+	const opera = getOpera();
+	if (!opera) return null;
+	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	return offlineSigner;
 };
 
 export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
@@ -148,7 +130,6 @@ export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = 
 		return null;
 	};
 
-	const address = user.address;
 	const offlineSigner = await getOfflineSigner();
 	if (!address || !offlineSigner) return trx_fail();
 	const client = await initStargateClient(offlineSigner);
@@ -171,18 +152,4 @@ export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = 
 	} catch (e) {
 		return trx_fail();
 	}
-};
-
-// export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
-// 	const opera = getOpera();
-// 	if (!opera) return null;
-// 	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-// 	return offlineSigner;
-// };
-
-export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
-	const opera = getOpera();
-	if (!opera) return null;
-	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
-	return offlineSigner;
 };

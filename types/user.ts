@@ -1,6 +1,6 @@
 export type USER = {
 	name?: string;
-	pubKey: Uint8Array | string;
+	pubKey: Uint8Array;
 	address: string;
 	algo?: string;
 	didDoc?: DidDoc;

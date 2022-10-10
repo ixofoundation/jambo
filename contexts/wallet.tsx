@@ -32,10 +32,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	useEffect(() => {
 		// Comment out below to reset config
 		// setLocalStorage('wallet', {});
-		const persistedUser = getLocalStorage<WALLET>('wallet');
+		const persistedWallet = getLocalStorage<WALLET>('wallet');
 		setLoaded(true);
-		if (!persistedUser) return;
-		setWallet(persistedUser);
+		if (persistedWallet) setWallet(persistedWallet);
 	}, []);
 
 	const value = { wallet, updateWallet };

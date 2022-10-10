@@ -3,10 +3,13 @@ import styles from './footer.module.scss';
 import ArrowLeft from '@icons/arrow_left.svg';
 import ArrowRight from '@icons/arrow_right.svg';
 import Correct from '@icons/correct.svg';
-import Account from '@icons/account.svg';
+import AccountImg from '@icons/account.svg';
 import Document from '@icons/document.svg';
 import { backRoute, replaceRoute } from '@utils/router';
 import Link from 'next/link';
+import { useState } from 'react';
+import Modal from '@components/modal/modal';
+import Account from '@components/account/account';
 
 type FooterProps = {
 	onBackUrl?: string;
@@ -21,16 +24,18 @@ type FooterProps = {
  * If [onForward] or [onCorrect] is undefined then no button, if null then disabled button.
  */
 const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
+	const [showModal, setShowModal] = useState(false);
+
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
-				<Link href="/login">
-					<a>
-						<ButtonRound>
-							<Account width="20px" height="20px" />
-						</ButtonRound>
-					</a>
-				</Link>
+				// <Link href="/login">
+				// 	<a>
+				<ButtonRound onClick={() => setShowModal(true)}>
+					<AccountImg width="20px" height="20px" />
+				</ButtonRound>
+				// 	</a>
+				// </Link>
 			)}
 			{showAboutButton && (
 				<Link href="/about">
@@ -55,6 +60,11 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 				<ButtonRound color={onForward ? undefined : BUTTON_ROUND_COLOR.disabled} onClick={onForward ?? undefined}>
 					<ArrowRight width="20px" height="20px" />
 				</ButtonRound>
+			)}
+			{showModal && (
+				<Modal onClose={() => setShowModal(false)} title="Update Name">
+					<Account />
+				</Modal>
 			)}
 		</footer>
 	);

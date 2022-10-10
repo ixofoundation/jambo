@@ -313,7 +313,7 @@ export class SigningStargateClient extends StargateClient {
 			throw new Error('Failed to retrieve account from signer');
 		}
 		const pubkey = encodePubkey({
-			type: pubkeyType.secp256k1,
+			type: pubkeyType.ed25519,
 			value: toBase64(accountFromSigner.pubkey),
 		});
 		const signMode = SignMode.SIGN_MODE_LEGACY_AMINO_JSON;

@@ -1,37 +1,19 @@
-import { BLOCKCHAIN_RPC_URL, CHAINS, CHAIN_ID } from '@constants/chains';
-import { Keplr } from '@keplr-wallet/types';
-import { USER } from 'types/user';
-import { TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
+import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
 import { assertIsDeliverTxSuccess, SigningStargateClient } from '@cosmjs/stargate';
 import { SigningStargateClient as CustomSigningStargateClient } from '@client-sdk/utils/customClient';
 import { Registry } from '@cosmjs/proto-signing';
-import { MsgDelegate, MsgUndelegate, MsgBeginRedelegate } from 'cosmjs-types/cosmos/staking/v1beta1/tx';
-import { MsgVote, MsgSubmitProposal } from 'cosmjs-types/cosmos/gov/v1beta1/tx';
-import { TextProposal } from 'cosmjs-types/cosmos/gov/v1beta1/gov';
-import { MsgSend, MsgMultiSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
-import { MsgDeposit } from 'cosmjs-types/cosmos/gov/v1beta1/tx';
-import { MsgWithdrawDelegatorReward, MsgSetWithdrawAddress } from 'cosmjs-types/cosmos/distribution/v1beta1/tx';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
-// const { makeWallet, makeClient } = require('@ixo/client-sdk');
 import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
-
-import * as Toast from '@components/toast/toast';
-import { accountFromAny } from '@client-sdk/utils/EdAccountHandler';
+import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
+import { Coin } from '@client-sdk/codec/cosmos/coin';
+import { getMicroAmount } from './encoding';
 
 export const initStargateClient = async (offlineSigner: any): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);
-	registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
+	// registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
 
 	const cosmJS: SigningStargateClient = await SigningStargateClient.connectWithSigner(BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry });
 
-	return cosmJS;
-};
-
-export const initCustomStargateClient = async (offlineSigner: any): Promise<CustomSigningStargateClient> => {
-	const registry = new Registry(defaultStargateTypes);
-	registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
-
-	const cosmJS: CustomSigningStargateClient = await CustomSigningStargateClient.connectWithSigner(BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry, accountParser: accountFromAny });
 	return cosmJS;
 };
 
@@ -46,15 +28,20 @@ export const sendTransaction = async (
 	},
 ): Promise<any> => {
 	try {
-		console.log('start sendTransaction');
 		const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, payload.fee, payload.memo);
-		console.log({ result });
-		console.log('end sendTransaction');
 		assertIsDeliverTxSuccess(result);
-		console.log('asserted sendTransaction');
 		return result;
 	} catch (e) {
 		console.error('sendTransaction', e);
 		throw e;
 	}
 };
+
+export const generateBankSendTrx = ({ fromAddress, toAddress, denom, amount }: { fromAddress: string; toAddress: string; denom: string; amount: string }): TRX_MSG => ({
+	typeUrl: '/cosmos.bank.v1beta1.MsgSend',
+	value: MsgSend.fromPartial({
+		fromAddress,
+		toAddress,
+		amount: [Coin.fromPartial({ amount, denom })],
+	}),
+});

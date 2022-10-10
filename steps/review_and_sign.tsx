@@ -6,14 +6,12 @@ import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
-import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { STEP, StepDataType, STEPS, TokenOptionType } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { defaultTrxFee } from '@utils/transactions';
-import { TRX_MSG } from 'types/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
-import { Coin } from '@client-sdk/codec/cosmos/coin';
+import { generateBankSendTrx } from '@utils/client';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -40,17 +38,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 		});
 	}, [steps]);
 
-	const generateTXRequestMSG = (): TRX_MSG => ({
-		typeUrl: '/cosmos.bank.v1beta1.MsgSend',
-		value: MsgSend.fromPartial({
-			fromAddress: wallet.user?.address,
-			toAddress: address,
-			amount: [Coin.fromPartial({ amount: getMicroAmount(amount.toString()), denom: 'uixo' })],
-		}),
-	});
-
 	const signTX = async (): Promise<void> => {
-		const trx = generateTXRequestMSG();
+		const trx = generateBankSendTrx({ fromAddress: wallet.user!.address, toAddress: address, denom: 'uixo', amount: getMicroAmount(amount.toString()) });
 		console.log({ trx });
 		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
 		console.log({ hash });
