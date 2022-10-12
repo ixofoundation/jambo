@@ -40,9 +40,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 
 	const signTX = async (): Promise<void> => {
 		const trx = generateBankSendTrx({ fromAddress: wallet.user!.address, toAddress: address, denom: 'uixo', amount: getMicroAmount(amount.toString()) });
-		console.log({ trx });
 		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
-		console.log({ hash });
+		// console.log({ hash });
 		if (hash) {
 			onSuccess({ done: true });
 		}

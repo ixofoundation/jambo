@@ -7,3 +7,14 @@
 		border-radius: var(--card-border-radius);
 	}
 }
+
+.imageOption {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+
+	p {
+		margin: 0;
+		margin-left: 10px;
+	}
+}

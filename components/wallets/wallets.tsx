@@ -21,14 +21,14 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 	}, []);
 
 	return loaded ? (
-		<div className={cls(className)} {...other}>
-			<p>Choose wallet</p>
+		<div className={cls(styles.wallets, className)} {...other}>
+			<h3>Choose wallet</h3>
 			{/* {keplrWallet && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
 			{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
 			{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
 		</div>
 	) : (
-		<p>loading</p>
+		<div />
 	);
 };
 

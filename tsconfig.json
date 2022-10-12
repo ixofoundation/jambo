@@ -24,6 +24,7 @@
 			"@utils/*": ["utils/*"],
 			"@assets/*": ["assets/*"],
 			"@icons/*": ["assets/icons/*"],
+			"@images/*": ["assets/images/*"],
 			"@constants/*": ["constants/*"],
 			"@contexts/*": ["contexts/*"],
 			"@steps/*": ["steps/*"],

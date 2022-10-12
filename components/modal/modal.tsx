@@ -18,8 +18,8 @@ function Modal({ onClose, children, title, className, ...other }: ModalProps) {
 	useEffect(() => {
 		setIsBrowser(true);
 
-		window.addEventListener('click', backDropHandler);
-		return () => window.removeEventListener('click', backDropHandler);
+		window.addEventListener('click', backDropHandler, true);
+		return () => window.removeEventListener('click', backDropHandler, true);
 	}, []);
 
 	const backDropHandler = (e: MouseEvent) => {

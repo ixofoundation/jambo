@@ -1,21 +1,24 @@
-import { HTMLAttributes, useState, useEffect, useContext } from 'react';
+import { HTMLAttributes, useState, useContext } from 'react';
 import cls from 'classnames';
 
 import styles from './account.module.scss';
-import { getKeplr } from '@utils/kepl';
-import { getOpera } from '@utils/opera';
-import { WALLET_TYPE } from 'types/wallet';
-import Button from '@components/button/button';
+import { ChainOptions, ChainOptionType } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
 import Wallets from '@components/wallets/wallets';
+import Dropdown from '@components/dropdown/dropdown';
+import Card from '@components/card/card';
+import AddressActionButton from '@components/address-action-button/address-action-button';
+import QR from '@icons/qr_code.svg';
+import Envelope from '@icons/envelope.svg';
+import { ActionMeta } from 'react-select';
+// import QRCode from 'react-qr-code';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
 const Account = ({ className, ...other }: AccountProps) => {
+	const [showQR, setShowQR] = useState(false);
+	const [selectedOption, setSelectedOption] = useState<ChainOptionType>(ChainOptions[0]);
 	const { wallet, updateWallet } = useContext(WalletContext);
-	const [loaded, setLoaded] = useState(false);
-	const keplrWallet = getKeplr();
-	const operaWallet = getOpera();
 
 	const handleLedgerDid = (): void => {
 		// if (wallet.user?.didDoc) {
@@ -54,14 +57,35 @@ const Account = ({ className, ...other }: AccountProps) => {
 		// }
 	};
 
-	useEffect(() => {
-		setLoaded(true);
-	}, []);
+	const onChainSelected = (option: any, actionMeta: ActionMeta<unknown>) => {
+		setSelectedOption(option as ChainOptionType);
+	};
 
 	return (
 		<div className={styles.account}>
-			{wallet.user ? <p>{wallet.user?.name ?? 'Hi'}</p> : wallet.walletType ? <p>Please sign in with {wallet.walletType}</p> : <Wallets onSelected={type => updateWallet({ walletType: type })} />}
-			<Wallets onSelected={type => updateWallet({ walletType: type })} />
+			{wallet.user ? (
+				<>
+					<p className={styles.name}>{wallet.user.name ?? 'Hi'}</p>
+					{showQR ? (
+						<div className={styles.qrContainer}>
+							{/* <QRCode value={wallet.user.address} size={150} /> */}
+							<AddressActionButton address={wallet.user.address} ButtonLogo={Envelope} buttonOnClick={() => setShowQR(true)} />
+						</div>
+					) : (
+						<>
+							<AddressActionButton address={wallet.user.address} ButtonLogo={QR} buttonOnClick={() => setShowQR(true)} />
+							<p className={styles.label}>Select chain:</p>
+							<Dropdown defaultValue={selectedOption} onChange={onChainSelected} options={ChainOptions} placeholder={null} name="chain" withChainLogos={true} />
+							<p className={styles.label}>Available:</p>
+							<Card>
+								<p>Available ...</p>
+							</Card>
+						</>
+					)}
+				</>
+			) : (
+				<Wallets onSelected={type => updateWallet({ walletType: type })} />
+			)}
 			{/* {wallet.user?.ledgered ? <p>Ledgered</p> : <Button label="Ledger" onClick={handleLedgerDid} />} */}
 		</div>
 	);
