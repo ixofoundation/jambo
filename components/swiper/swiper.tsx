@@ -21,7 +21,7 @@ const CustomSwiper = ({ actions }: SwipersProps) => {
 			<Swiper spaceBetween={20} slidesPerView="auto" onSlideChange={s => setActive(s.activeIndex)} centeredSlides className={styles.swiper}>
 				{actions.map((action, i) => (
 					<SwiperSlide className={styles.swiperSlide} key={action.id}>
-						{action.image ? <Image src={action.image} layout="fill" className={styles.actionImage} /> : <div className={styles.actionImage} />}
+						{action.image ? <Image src={action.image} alt={action.name} layout="fill" className={styles.actionImage} /> : <div className={styles.actionImage} />}
 					</SwiperSlide>
 				))}
 				<div className={styles.leftGradient} />
