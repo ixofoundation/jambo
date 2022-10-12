@@ -77,7 +77,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 							<Dropdown defaultValue={selectedOption} onChange={onChainSelected} options={ChainOptions} placeholder={null} name="chain" withChainLogos={true} />
 							<p className={styles.label}>Available:</p>
 							<Card>
-								<p>Available ...</p>
+								<p className={styles.comingSoon}>Coming soon</p>
 							</Card>
 						</>
 					)}

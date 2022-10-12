@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 
 import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
+import { StepDataType, STEP, STEPS, ReviewStepsTypes } from 'types/steps';
 import EmptySteps from '@steps/empty';
 import ReceiverAddress from '@steps/receiver_address';
 import DefineAmountToken from '@steps/define_amount_token';
@@ -12,6 +12,7 @@ import ReviewAndSign from '@steps/review_and_sign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import { ConfigData } from 'types/config';
+import ValidatorAddress from '@steps/validator_address';
 
 const ActionExecution: NextPage = () => {
 	const [count, setCount] = useState(0);
@@ -41,10 +42,13 @@ const ActionExecution: NextPage = () => {
 		switch (step.id) {
 			case STEPS.get_receiver_address:
 				return <ReceiverAddress onSuccess={handleOnNext<STEPS.get_receiver_address>} onBack={handleBack} data={step.data as StepDataType<STEPS.get_receiver_address>} header={action?.name} />;
+			case STEPS.get_validator_address:
+				return <ValidatorAddress onSuccess={handleOnNext<STEPS.get_receiver_address>} onBack={handleBack} data={step.data as StepDataType<STEPS.get_receiver_address>} header={action?.name} />;
 			case STEPS.select_token_and_amount:
 				return <DefineAmountToken onSuccess={handleOnNext<STEPS.select_token_and_amount>} onBack={handleBack} data={step.data as StepDataType<STEPS.select_token_and_amount>} header={action?.name} />;
-			case STEPS.review_and_sign:
-				return <ReviewAndSign onSuccess={handleOnNext<STEPS.review_and_sign>} onBack={handleBack} steps={action!.steps} header={action?.name} />;
+			case STEPS.bank_MsgSend:
+			case STEPS.staking_MsgDelegate:
+				return <ReviewAndSign onSuccess={handleOnNext<STEPS.review_and_sign>} onBack={handleBack} steps={action!.steps} header={action?.name} message={step.id} />;
 			default:
 				return <EmptySteps loading={true} />;
 		}

@@ -2,7 +2,7 @@ import { HTMLAttributes, useState, useEffect } from 'react';
 import cls from 'classnames';
 
 import styles from './wallets.module.scss';
-import { getKeplr } from '@utils/kepl';
+import { getKeplr } from '@utils/keplr';
 import { getOpera } from '@utils/opera';
 import { WALLET_TYPE } from 'types/wallet';
 import Button from '@components/button/button';

@@ -3,7 +3,7 @@
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { WALLET, WALLET_TYPE } from 'types/wallet';
-import { initializeKeplr, keplrBroadCastMessage } from './kepl';
+import { initializeKeplr, keplrBroadCastMessage } from './keplr';
 import { initializeKeysafe, keysafeBroadCastMessage } from './keysafe';
 import { initializeOpera, operaBroadCastMessage } from './opera';
 
