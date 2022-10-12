@@ -40,7 +40,9 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 					<p>Select token to be sent:</p>
-					<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenOptionType)} options={TokenOptions} placeholder={null} name="token" />
+					<div className={styles.alignLeft}>
+						<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenOptionType)} options={TokenOptions} placeholder={null} name="token" />
+					</div>
 					<br />
 					<p>Enter Amount:</p>
 					<Input name="address" type="number" required onChange={handleChange} value={amount} className={styles.stepInput} />

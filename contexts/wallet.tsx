@@ -22,7 +22,6 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	useEffect(() => {
 		if (loaded) setLocalStorage('wallet', wallet);
-		// console.log({ wallet });
 	}, [wallet]);
 
 	useEffect(() => {
