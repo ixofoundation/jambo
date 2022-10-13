@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "yarn run build"
   publish = ".next"
   base = "."
 
@@ -15,3 +15,4 @@
 
 [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
+  NETLIFY_USE_YARN = "true"
