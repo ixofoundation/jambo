@@ -6,6 +6,7 @@ import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
 import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { Coin } from '@client-sdk/codec/cosmos/coin';
+import { MsgDelegate } from '@client-sdk/codec/external/cosmos/staking/v1beta1/tx';
 
 export const initStargateClient = async (offlineSigner: any): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);
@@ -42,5 +43,14 @@ export const generateBankSendTrx = ({ fromAddress, toAddress, denom, amount }: {
 		fromAddress,
 		toAddress,
 		amount: [Coin.fromPartial({ amount, denom })],
+	}),
+});
+
+export const generateDelegateTrx = ({ delegatorAddress, validatorAddress, denom, amount }: { delegatorAddress: string; validatorAddress: string; denom: string; amount: string }): TRX_MSG => ({
+	typeUrl: '/cosmos.staking.v1beta1.MsgDelegate',
+	value: MsgDelegate.fromPartial({
+		delegatorAddress,
+		validatorAddress,
+		amount: Coin.fromPartial({ amount, denom }),
 	}),
 });

@@ -59,7 +59,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				throw new Error('Unsupported review type');
 		}
 		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
-		// console.log({ hash });
+		console.log({ hash });
 		if (hash) {
 			onSuccess({ done: true });
 		}

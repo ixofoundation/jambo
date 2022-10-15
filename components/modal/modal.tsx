@@ -20,6 +20,7 @@ function Modal({ onClose, children, title, className, ...other }: ModalProps) {
 
 		window.addEventListener('click', backDropHandler, true);
 		return () => window.removeEventListener('click', backDropHandler, true);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const backDropHandler = (e: MouseEvent) => {

@@ -10,7 +10,7 @@ import { serializeSignDoc, pubkeyType } from '@cosmjs/amino';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { WALLET } from 'types/wallet';
-import blocksyncApi from './blocksync';
+// import blocksyncApi from './blocksync';
 import * as Toast from '@components/toast/toast';
 import { initStargateClient, sendTransaction } from './client';
 import { accountFromAny } from '@client-sdk/utils/EdAccountHandler';
@@ -100,9 +100,9 @@ export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefin
 				let baseUser = { name: response.name, pubKey: response.didDoc.pubKey, address: '', didDoc: response.didDoc, ledgered: false };
 
 				try {
-					const getDidDoc = await blocksyncApi.user.getDidDoc(response.didDoc.did);
+					// const getDidDoc = await blocksyncApi.user.getDidDoc(response.didDoc.did);
 					// console.log({ getDidDoc });
-					if (!(getDidDoc as any)?.error) baseUser.ledgered = true;
+					// if (!(getDidDoc as any)?.error) baseUser.ledgered = true;
 
 					// if (wallet.user?.pubKey !== baseUser.pubKey || wallet.user?.ledgered !== baseUser.ledgered || wallet.user?.accountNumber == undefined || wallet.user?.address == undefined) {
 					const addressResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/pubKeyToAddr/${response.didDoc.pubKey}`);
