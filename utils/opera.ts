@@ -5,7 +5,7 @@ import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } fr
 
 import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
-import blocksyncApi from './blocksync';
+// import blocksyncApi from './blocksync';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import * as Toast from '@components/toast/toast';
 import { initStargateClient, sendTransaction } from './client';
@@ -95,9 +95,9 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	const didDocJSON = getDIDDocJSON();
 
 	try {
-		const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
+		// const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
 		// console.log({ getDidDoc });
-		if (!(getDidDoc as any)?.error) ledgered = true;
+		// if (!(getDidDoc as any)?.error) ledgered = true;
 	} catch (error) {
 		console.log({ error });
 	}
