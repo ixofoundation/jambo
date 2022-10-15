@@ -10,7 +10,7 @@ import AddressActionButton from '@components/address-action-button/address-actio
 import QR from '@icons/qr_code.svg';
 import Envelope from '@icons/envelope.svg';
 import { ActionMeta } from 'react-select';
-// import QRCode from 'react-qr-code';
+import QRCode from 'react-qr-code';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -67,7 +67,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 					<p className={styles.name}>{wallet.user.name ?? 'Hi'}</p>
 					{showQR ? (
 						<div className={styles.qrContainer}>
-							{/* <QRCode value={wallet.user.address} size={150} /> */}
+							<QRCode value={wallet.user.address} size={150} />
 							<AddressActionButton address={wallet.user.address} ButtonLogo={Envelope} buttonOnClick={() => setShowQR(true)} />
 						</div>
 					) : (
