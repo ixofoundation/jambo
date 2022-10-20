@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
-	swcMinify: true,
+	swcMinify: false,
 	experimental: {
 		runtime: 'edge',
 		// Enable below when using React Server Components
