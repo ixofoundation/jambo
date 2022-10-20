@@ -20,58 +20,58 @@ export const getKeysafe = async (): Promise<any> => {
 		const IxoInpageProvider = window['ixoKs'];
 		const ixoInpageProvider = new IxoInpageProvider();
 
-		if (ixoInpageProvider) {
-			const getAccounts = async (): Promise<readonly AccountData[]> => {
-				return await new Promise<readonly AccountData[]>(resolve => {
-					ixoInpageProvider.getInfo(async (error: any, response: any) => {
-						// console.log({ response });
-						if (response) {
-							try {
-								const addressResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/pubKeyToAddr/${response.didDoc.pubKey}`);
-								// console.log({ addressResponse });
-								const address = addressResponse.data.result;
+		// if (ixoInpageProvider) {
+		// 	const getAccounts = async (): Promise<readonly AccountData[]> => {
+		// 		return await new Promise<readonly AccountData[]>(resolve => {
+		// 			ixoInpageProvider.getInfo(async (error: any, response: any) => {
+		// 				// console.log({ response });
+		// 				if (response) {
+		// 					try {
+		// 						const addressResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/pubKeyToAddr/${response.didDoc.pubKey}`);
+		// 						// console.log({ addressResponse });
+		// 						const address = addressResponse.data.result;
 
-								const accountResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/auth/accounts/${address}`);
-								// console.log({ accountResponse });
+		// 						const accountResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/auth/accounts/${address}`);
+		// 						// console.log({ accountResponse });
 
-								resolve([{ address, algo: 'ed25519', pubkey: fromBase64(response.didDoc.pubKey) }]);
-							} catch (error) {
-								resolve([]);
-								console.log('Error blocksyncApi.user.getDidDoc: ' + error);
-							}
-						}
-						resolve([]);
-					});
-				});
-			};
+		// 						resolve([{ address, algo: 'ed25519', pubkey: fromBase64(response.didDoc.pubKey) }]);
+		// 					} catch (error) {
+		// 						resolve([]);
+		// 						console.log('Error blocksyncApi.user.getDidDoc: ' + error);
+		// 					}
+		// 				}
+		// 				resolve([]);
+		// 			});
+		// 		});
+		// 	};
 
-			const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
-				const account = (await getAccounts()).find(({ address }) => address === signerAddress);
-				if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
-				// console.log({ account, signerAddress });
+		// 	const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
+		// 		const account = (await getAccounts()).find(({ address }) => address === signerAddress);
+		// 		if (!account) throw new Error(`Address ${signerAddress} not found in wallet`);
+		// 		// console.log({ account, signerAddress });
 
-				const signature = await new Promise<Uint8Array | null>(resolve => {
-					ixoInpageProvider.requestSigning(
-						JSON.stringify(signDoc),
-						(error: any, signature: any) => {
-							if (error || !signature) resolve(null);
-							resolve(fromBase64(signature.signatureValue));
-						},
-						'base64',
-					);
-				});
-				if (!signature) throw new Error('No signature, signing failed');
-				// console.log('signature length: ' + signature.length);
-				const stdSignature = encodeEd25519Signature(account.pubkey, signature.slice(0, 64));
-				// console.log({ signature });
+		// 		const signature = await new Promise<Uint8Array | null>(resolve => {
+		// 			ixoInpageProvider.requestSigning(
+		// 				JSON.stringify(signDoc),
+		// 				(error: any, signature: any) => {
+		// 					if (error || !signature) resolve(null);
+		// 					resolve(fromBase64(signature.signatureValue));
+		// 				},
+		// 				'base64',
+		// 			);
+		// 		});
+		// 		if (!signature) throw new Error('No signature, signing failed');
+		// 		// console.log('signature length: ' + signature.length);
+		// 		const stdSignature = encodeEd25519Signature(account.pubkey, signature.slice(0, 64));
+		// 		// console.log({ signature });
 
-				return { signed: signDoc, signature: stdSignature };
-			};
+		// 		return { signed: signDoc, signature: stdSignature };
+		// 	};
 
-			const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
-			// const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-			ixoInpageProvider.offlineSigner = offlineSigner;
-		}
+		// 	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+		// 	// const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
+		// 	ixoInpageProvider.offlineSigner = offlineSigner;
+		// }
 
 		if (ixoInpageProvider) return ixoInpageProvider;
 	}
@@ -98,19 +98,19 @@ export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefin
 			if (response) {
 				// console.log({ response });
 				let baseUser = { name: response.name, pubKey: response.didDoc.pubKey, address: '', didDoc: response.didDoc, ledgered: false };
-
+				console.log({ response });
 				try {
 					// const getDidDoc = await blocksyncApi.user.getDidDoc(response.didDoc.did);
-					// console.log({ getDidDoc });
 					// if (!(getDidDoc as any)?.error) baseUser.ledgered = true;
+					// console.log({ getDidDoc });
 
 					// if (wallet.user?.pubKey !== baseUser.pubKey || wallet.user?.ledgered !== baseUser.ledgered || wallet.user?.accountNumber == undefined || wallet.user?.address == undefined) {
 					const addressResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/pubKeyToAddr/${response.didDoc.pubKey}`);
-					// console.log({ addressResponse });
+					console.log({ addressResponse });
 					const address = addressResponse.data.result;
 
 					const accountResponse = await axios.get(`${BLOCKCHAIN_REST_URL}/auth/accounts/${address}`);
-					// console.log({ accountResponse });
+					console.log({ accountResponse });
 
 					let account = accountResponse.data.result.value;
 					resolve({ ...baseUser, address: account.address, sequence: account.sequence, accountNumber: account.account_number ?? account.accountNumber });

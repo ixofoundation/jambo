@@ -93,6 +93,7 @@ export const getDIDDocJSON = () => {
 export const initializeOpera = async (): Promise<USER | undefined> => {
 	let ledgered = false;
 	const didDocJSON = getDIDDocJSON();
+	console.log({ didDocJSON });
 
 	try {
 		// const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);

@@ -17,6 +17,7 @@ export const initializeKeplr = async (): Promise<USER | undefined> => {
 		await keplr?.experimentalSuggestChain(CHAINS[CHAIN_ID]);
 		await keplr?.enable(CHAIN_ID);
 		const key = await keplr?.getKey(CHAIN_ID);
+		console.log({ key });
 		return key ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true } : undefined;
 	} catch (error) {
 		console.error('Error initializing Kepl: ' + error);

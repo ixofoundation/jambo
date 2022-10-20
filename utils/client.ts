@@ -8,11 +8,11 @@ import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { Coin } from '@client-sdk/codec/cosmos/coin';
 import { MsgDelegate } from '@client-sdk/codec/external/cosmos/staking/v1beta1/tx';
 
-export const initStargateClient = async (offlineSigner: any): Promise<SigningStargateClient> => {
+export const initStargateClient = async (offlineSigner: any, endpoint?: string): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);
 	// registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
 
-	const cosmJS: SigningStargateClient = await SigningStargateClient.connectWithSigner(BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry });
+	const cosmJS: SigningStargateClient = await SigningStargateClient.connectWithSigner(endpoint || BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry });
 
 	return cosmJS;
 };
