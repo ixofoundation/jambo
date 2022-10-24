@@ -13,5 +13,5 @@ import { OperaInterchain } from '@utils/opera';
 
 declare global {
 	interface Window extends KeplrWindow {}
-	interface Window extends OperaInterchain {}
+	// interface Window extends OperaInterchain {}
 }
