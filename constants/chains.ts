@@ -94,7 +94,11 @@ export const CHAINS = {
 	'impacthub-3': {
 		chainId: 'impacthub-3',
 		chainName: 'Impact Hub',
-		rpc: 'https://impacthub.ixo.world/rpc/',
+		rpc: 'https://impacthub-rpc.lavenderfive.com/',
+		// rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
+		// rpc: 'https://proxies.sifchain.finance/api/impacthub-3/rpc',
+		// rpc: 'https://rpc-impacthub.keplr.app/', // CORS ERROR 404 ERROR
+		// rpc: 'https://impacthub.ixo.world/rpc/',  // CORS ERROR
 		rest: 'https://impacthub.ixo.world/rest/',
 		bip44: {
 			coinType: 118,

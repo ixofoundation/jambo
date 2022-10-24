@@ -1,7 +1,8 @@
 import * as amino from '@cosmjs/amino';
 import * as crypto from '@cosmjs/crypto';
-import { AccountData } from '@cosmjs/proto-signing';
+import { AccountData, DirectSignResponse, makeSignBytes, OfflineDirectSigner } from '@cosmjs/proto-signing';
 import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
+import { SignDoc } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
 
 import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
@@ -54,6 +55,28 @@ export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Pro
 	};
 
 	return { signed: signDoc, signature: stdSignature };
+};
+
+export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
+	const opera = getOpera();
+	const signBytes = makeSignBytes(signDoc);
+	const sha256msg = crypto.sha256(signBytes);
+	const hexValue = Buffer.from(sha256msg).toString('hex');
+	const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
+	const transformedSignature = transformSignature(signature ?? '');
+	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
+	console.log({ signature, transformedSignature });
+
+	return {
+		signed: signDoc,
+		signature: {
+			pub_key: {
+				type: amino.pubkeyType.secp256k1,
+				value: uint8Arr_to_b64(pubkeyByteArray),
+			},
+			signature: transformedSignature,
+		},
+	};
 };
 
 export function transformSignature(signature: string): string | undefined {
@@ -114,14 +137,15 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	};
 	address = amino.pubkeyToAddress(pubkey, 'ixo');
 
-	// console.log({ didDocJSON, pubkeyBase64, address });
+	console.log({ didDocJSON, pubkeyBase64, address });
 	return { pubKey: pubkeyByteArray, address, ledgered };
 };
 
-export const getOfflineSigner = async (): Promise<OfflineAminoSigner | null> => {
+export const getOfflineSigner = async (): Promise<OfflineAminoSigner | OfflineDirectSigner | null> => {
 	const opera = getOpera();
 	if (!opera) return null;
-	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
+	// const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
 	return offlineSigner;
 };
 

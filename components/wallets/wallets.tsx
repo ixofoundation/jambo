@@ -17,20 +17,22 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 
 	return (
 		<div className={cls(styles.wallets, className)} {...other}>
-			{/* {keplrWallet || operaWallet ? (
-				<> */}
-			<h3>Choose wallet</h3>
-			{/* {keplrWallet && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
-			<Button label="Wallet Connect" onClick={() => onSelected(WALLET_TYPE.walletConnect)} />
-			{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
-			{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
-			{/* </>
+			{operaWallet || keplrWallet ? (
+				<>
+					<h3>Choose wallet</h3>
+					{/* {keysafe && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
+					{/* <Button label="Wallet Connect" onClick={() => onSelected(WALLET_TYPE.walletConnect)} /> */}
+					{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
+					{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
+				</>
 			) : (
 				<div>
 					<h3>No Wallet Detected</h3>
-					<p>Please install the kepler extension or use the dApp on an android mobile Opera browser.</p>
+					<p>Please ensure to use the dApp on an Android mobile Opera browser.</p>
+					<p>Sorry for the inconvenience, more wallets are being added soon.</p>
+					{/* <p>Please install the kepler extension or use the dApp on an android mobile Opera browser.</p> */}
 				</div>
-			)} */}
+			)}
 		</div>
 	);
 };
