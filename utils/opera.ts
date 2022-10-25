@@ -60,9 +60,10 @@ export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Pro
 export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
 	const opera = getOpera();
 	const signBytes = makeSignBytes(signDoc);
-	// const sha256msg = crypto.sha256(signBytes);
 	console.log({ signBytes });
-	const hexValue = Buffer.from(signBytes).toString('hex');
+	const sha256msg = crypto.sha256(signBytes);
+	console.log({ sha256msg });
+	const hexValue = Buffer.from(sha256msg).toString('hex');
 	console.log({ hexValue });
 	const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
 	console.log({ signature });
@@ -120,7 +121,6 @@ export const getDIDDocJSON = () => {
 export const initializeOpera = async (): Promise<USER | undefined> => {
 	let ledgered = false;
 	const didDocJSON = getDIDDocJSON();
-	console.log({ didDocJSON });
 
 	try {
 		// const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
