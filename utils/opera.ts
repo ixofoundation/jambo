@@ -60,10 +60,14 @@ export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Pro
 export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
 	const opera = getOpera();
 	const signBytes = makeSignBytes(signDoc);
-	const sha256msg = crypto.sha256(signBytes);
-	const hexValue = Buffer.from(sha256msg).toString('hex');
+	// const sha256msg = crypto.sha256(signBytes);
+	console.log({ signBytes });
+	const hexValue = Buffer.from(signBytes).toString('hex');
+	console.log({ hexValue });
 	const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
+	console.log({ signature });
 	const transformedSignature = transformSignature(signature ?? '');
+	console.log({ transformedSignature });
 	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
 	console.log({ signature, transformedSignature });
 
@@ -144,8 +148,8 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 export const getOfflineSigner = async (): Promise<OfflineAminoSigner | OfflineDirectSigner | null> => {
 	const opera = getOpera();
 	if (!opera) return null;
-	// const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
+	// const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
 	return offlineSigner;
 };
 
