@@ -113,7 +113,7 @@ export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefin
 					console.log({ accountResponse });
 
 					let account = accountResponse.data.result.value;
-					resolve({ ...baseUser, address: account.address, sequence: account.sequence, accountNumber: account.account_number ?? account.accountNumber });
+					resolve({ ...baseUser, address: account.address });
 					// }
 					resolve(wallet?.user);
 				} catch (error) {

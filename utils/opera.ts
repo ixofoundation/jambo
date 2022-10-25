@@ -138,14 +138,14 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	address = amino.pubkeyToAddress(pubkey, 'ixo');
 
 	console.log({ didDocJSON, pubkeyBase64, address });
-	return { pubKey: pubkeyByteArray, address, ledgered };
+	return { pubKey: pubkeyByteArray, address, ledgered, algo: 'secp256k1', did: didDocJSON.id };
 };
 
 export const getOfflineSigner = async (): Promise<OfflineAminoSigner | OfflineDirectSigner | null> => {
 	const opera = getOpera();
 	if (!opera) return null;
-	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-	// const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
+	// const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
+	const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
 	return offlineSigner;
 };
 
