@@ -1,112 +1,70 @@
-import { FC, useContext, useEffect, useState } from 'react';
+// Page not finished please dont use yet
+
+import { ChangeEvent, FC, FormEvent, lazy, Suspense, useState } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
-import Input from '@components/input/input';
-import { ReviewStepsTypes, STEP, StepDataType, STEPS, TokenOptionType } from 'types/steps';
-import { WalletContext } from '@contexts/wallet';
-import { defaultTrxFee } from '@utils/transactions';
-import { broadCastMessages } from '@utils/wallets';
-import { getMicroAmount } from '@utils/encoding';
-import { generateBankSendTrx, generateDelegateTrx } from '@utils/client';
-import Loader from '@components/loader/loader';
-import { TRX_MSG } from 'types/transactions';
+import QRScan from '@icons/qr_scan.svg';
+import Paste from '@icons/paste.svg';
+import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-suffix-icon';
+import { StepDataType, STEPS } from 'types/steps';
+import EmptySteps from './empty';
 
-type ReviewAndSignProps = {
-	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
+const QRCamera = lazy(() => import('./qr-camera'));
+
+type ValidatorAddressProps = {
+	onSuccess: (data: StepDataType<STEPS.get_receiver_address>) => void;
 	onBack?: () => void;
-	steps: STEP[];
+	data?: StepDataType<STEPS.get_receiver_address>;
 	header?: string;
-	message: ReviewStepsTypes;
 };
 
-const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
-	const { wallet } = useContext(WalletContext);
-	const [loading, setLoading] = useState(false);
-	const [amount, setAmount] = useState(0);
-	const [token, setToken] = useState<TokenOptionType | null>(null);
-	const [address, setAddress] = useState('');
+const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header }) => {
+	const [showQRCamera, setShowQRCamera] = useState(false);
+	const [address, setAddress] = useState(data?.address ?? '');
 
-	useEffect(() => {
-		steps.forEach(s => {
-			if (s.id === STEPS.select_token_and_amount) {
-				setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
-				setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
-			}
-			if (s.id === STEPS.get_receiver_address) {
-				setAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
-			}
-			if (s.id === STEPS.get_validator_address) {
-				setAddress((s.data as StepDataType<STEPS.get_validator_address>)?.address ?? '');
-			}
-		});
-	}, [steps]);
+	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+		setAddress(event.target.value);
+	};
 
-	const signTX = async (): Promise<void> => {
-		setLoading(true);
-		let trx: TRX_MSG;
-		switch (message) {
-			case STEPS.bank_MsgSend:
-				trx = generateBankSendTrx({ fromAddress: wallet.user!.address, toAddress: address, denom: 'uixo', amount: getMicroAmount(amount.toString()) });
-				break;
-			case STEPS.staking_MsgDelegate:
-				trx = generateDelegateTrx({ delegatorAddress: wallet.user!.address, validatorAddress: address, denom: 'uixo', amount: getMicroAmount(amount.toString()) });
-				break;
-			default:
-				throw new Error('Unsupported review type');
-		}
-		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
-		console.log({ hash });
-		if (hash) {
-			onSuccess({ done: true });
-		}
-		setLoading(false);
+	const formIsValid = () => address.length > 8;
+
+	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
+		event?.preventDefault();
+		if (!formIsValid()) return alert('Address must be longer than 8 characters');
+		onSuccess({ address });
 	};
 
 	return (
 		<>
-			<Header pageTitle="Review and sign" header={header} />
+			{showQRCamera ? (
+				<Suspense fallback={<EmptySteps loading={true} />}>
+					<QRCamera onSuccess={address => onSuccess({ address })} onBack={() => setShowQRCamera(false)} />
+				</Suspense>
+			) : (
+				<>
+					<Header pageTitle="Who is the receiver" header={header} />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				{loading ? (
-					<Loader />
-				) : message === STEPS.bank_MsgSend ? (
-					<form className={styles.stepsForm} autoComplete="none">
-						<p>I am sending</p>
-						<div className={styles.amountAndTokenInputs}>
-							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
+					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+						<div onClick={() => setShowQRCamera(true)}>
+							<QRScan width="100px" height="100px" className={styles.qrScan} />
+							<p>Scan address</p>
 						</div>
-						<br />
-						<p>to the address:</p>
-						<Input name="address" required value={address} className={styles.stepInput} disabled />
-						<br />
-						<p>Sign?</p>
-					</form>
-				) : message === STEPS.staking_MsgDelegate ? (
-					<form className={styles.stepsForm} autoComplete="none">
-						<p>I want to stake</p>
-						<div className={styles.amountAndTokenInputs}>
-							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
-						</div>
-						<br />
-						<p>at validator:</p>
-						<Input name="address" required value={address} className={styles.stepInput} disabled />
-						<br />
-						<p>Sign?</p>
-					</form>
-				) : (
-					<p>Unsupported review type</p>
-				)}
-			</main>
+						<p>or</p>
+						<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
+							<p>Paste address here</p>
+							<InputWithSufficIcon name="address" required onChange={handleChange} value={address} Icon={Paste} />
+						</form>
+					</main>
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={signTX} />
+					<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+				</>
+			)}
 		</>
 	);
 };
 
-export default ReviewAndSign;
+export default ValidatorAddress;

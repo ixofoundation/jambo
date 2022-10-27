@@ -4,12 +4,25 @@
 	align-items: center;
 	justify-content: center;
 
-	.card {
-		padding: 4px 6px;
-		max-width: 47vw;
-		text-overflow: ellipsis;
-		overflow: hidden;
-		font-size: 0.86rem;
+	.column {
+		display: flex;
+		flex-direction: column;
+
+		.copied {
+			margin: 0;
+			font-size: 0.8rem;
+			color: var(--accent-color);
+			text-align: center;
+		}
+
+		.card {
+			padding: 4px 6px;
+			max-width: 47vw;
+			text-overflow: ellipsis;
+			overflow: hidden;
+			font-size: 0.86rem;
+			cursor: pointer;
+		}
 	}
 
 	.button {

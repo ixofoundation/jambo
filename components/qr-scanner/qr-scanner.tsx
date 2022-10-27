@@ -12,15 +12,24 @@ type QRScannerProps = {
 	qrbox?: number;
 	width?: string;
 	height?: string;
+	ErrorDisplay?: () => JSX.Element;
 	qrCodeSuccessCallback: (text: string) => void;
 	qrCodeErrorCallback: (error: string) => void;
 };
 
 class QRScanner extends React.Component<QRScannerProps> {
+	constructor(props: QRScannerProps) {
+		super(props);
+		this.state = { error: false };
+	}
+
 	html5Qrcode: Html5Qrcode | undefined;
 
 	render() {
-		return <div id={qrcodeRegionId} style={{ width: this.props.width || 'auto', height: this.props.height || 'auto' }} />;
+		const ErrorDisplay = this.props.ErrorDisplay;
+		// @ts-ignore
+		const error = this.state.error;
+		return error && ErrorDisplay ? <p>{error}</p> : <div id={qrcodeRegionId} style={{ width: this.props.width || 'auto', height: this.props.height || 'auto' }} />;
 	}
 
 	componentWillUnmount() {
@@ -41,9 +50,10 @@ class QRScanner extends React.Component<QRScannerProps> {
 
 		if (this.html5Qrcode != undefined) return;
 		this.html5Qrcode = new Html5Qrcode(qrcodeRegionId, this.props.verbose);
+		//@ts-ignore
 		this.html5Qrcode.start({ facingMode: 'environment' }, config, this.props.qrCodeSuccessCallback, this.props.qrCodeErrorCallback).catch(err => {
-			// Start failed, handle it.
-			console.log('start error');
+			this.setState({ error: err });
+			console.log('QR Scanner error: ' + err);
 		});
 	}
 }

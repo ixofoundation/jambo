@@ -5,4 +5,10 @@ export type USER = {
 	algo?: string;
 	ledgered: boolean;
 	did?: string;
+	balances?: Currency[];
+};
+
+export type Currency = {
+	amount: number;
+	denom: string;
 };

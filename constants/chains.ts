@@ -146,3 +146,41 @@ export const CHAINS = {
 export const CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID ?? Object.keys(CHAINS)[0];
 export const BLOCKCHAIN_REST_URL = CHAINS[CHAIN_ID].rest as string;
 export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
+
+export const ASSETS = {
+	$schema: '../assetlist.schema.json',
+	chain_name: 'impacthub',
+	assets: [
+		{
+			description: 'The native token of IXO Chain',
+			denom_units: [
+				{
+					denom: 'uixo',
+					exponent: 0,
+				},
+				{
+					denom: 'ixo',
+					exponent: 6,
+				},
+			],
+			base: 'uixo',
+			name: 'IXO',
+			display: 'ixo',
+			symbol: 'IXO',
+			logo_URIs: {
+				png: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/impacthub/images/ixo.png',
+			},
+			coingecko_id: 'ixo',
+		},
+	],
+};
+
+export const ChainDropdownOptions = [CHAINS[CHAIN_ID]].map((chain: any) => {
+	const asset = ASSETS.assets.find((asset: any) => asset.coingecko_id === chain.stakeCurrency.coinGeckoId);
+
+	return {
+		value: chain.chainId,
+		label: chain.chainName,
+		img: Object.values(asset?.logo_URIs ?? {})[0],
+	};
+});

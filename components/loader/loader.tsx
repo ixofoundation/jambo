@@ -9,7 +9,7 @@ type LoaderProps = {
 const Loader = ({ size = 50, className, ...other }: LoaderProps) => {
 	const accentColor = getCSSVariable('--accent-color') ?? 'blue';
 
-	return <TailSpin height={size} width={size} color={accentColor} />;
+	return <TailSpin height={size} width={size} color={accentColor} wrapperClass={className} />;
 };
 
 export default Loader;

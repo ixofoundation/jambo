@@ -6,7 +6,7 @@ import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
-import { ReviewStepsTypes, STEP, StepDataType, STEPS, TokenOptionType } from 'types/steps';
+import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
@@ -14,6 +14,7 @@ import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx, generateDelegateTrx } from '@utils/client';
 import Loader from '@components/loader/loader';
 import { TRX_MSG } from 'types/transactions';
+import { TokenDropdownType } from '@utils/currency';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -27,7 +28,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 	const { wallet } = useContext(WalletContext);
 	const [loading, setLoading] = useState(false);
 	const [amount, setAmount] = useState(0);
-	const [token, setToken] = useState<TokenOptionType | null>(null);
+	const [token, setToken] = useState<TokenDropdownType | null>(null);
 	const [address, setAddress] = useState('');
 
 	useEffect(() => {

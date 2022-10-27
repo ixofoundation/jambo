@@ -1,7 +1,6 @@
 import * as amino from '@cosmjs/amino';
 import * as crypto from '@cosmjs/crypto';
 import { AccountData, DirectSignResponse, makeSignBytes, OfflineDirectSigner } from '@cosmjs/proto-signing';
-import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
 import { SignDoc } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
 
 import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
@@ -19,7 +18,7 @@ export let pubkeyByteArray: Uint8Array;
 
 interface InterchainWallet {
 	getDidDoc: (index: number) => string;
-	signMessage: (hexStdSignDoc: string, signMethod: string, addressIndex: number) => Promise<string>;
+	signMessage: (hexSignDoc: string, signMethod: string, addressIndex: number) => Promise<string>;
 }
 
 export interface OperaInterchain {
@@ -37,40 +36,14 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
 	else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
 };
 
-export const signAmino = async (signerAddress: string, signDoc: StdSignDoc): Promise<AminoSignResponse> => {
-	const opera = getOpera();
-	const sha256msg = crypto.sha256(amino.serializeSignDoc(signDoc));
-	const hexValue = Buffer.from(sha256msg).toString('hex');
-	const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
-	const transformedSignature = transformSignature(signature ?? '');
-	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
-	console.log({ signature, transformedSignature });
-
-	const stdSignature = {
-		pub_key: {
-			type: amino.pubkeyType.secp256k1,
-			value: uint8Arr_to_b64(pubkeyByteArray),
-		},
-		signature: transformedSignature,
-	};
-
-	return { signed: signDoc, signature: stdSignature };
-};
-
 export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
 	const opera = getOpera();
 	const signBytes = makeSignBytes(signDoc);
-	console.log({ signBytes });
 	const sha256msg = crypto.sha256(signBytes);
-	console.log({ sha256msg });
 	const hexValue = Buffer.from(sha256msg).toString('hex');
-	console.log({ hexValue });
 	const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
-	console.log({ signature });
 	const transformedSignature = transformSignature(signature ?? '');
-	console.log({ transformedSignature });
 	if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
-	console.log({ signature, transformedSignature });
 
 	return {
 		signed: signDoc,
@@ -145,11 +118,10 @@ export const initializeOpera = async (): Promise<USER | undefined> => {
 	return { pubKey: pubkeyByteArray, address, ledgered, algo: 'secp256k1', did: didDocJSON.id };
 };
 
-export const getOfflineSigner = async (): Promise<OfflineAminoSigner | OfflineDirectSigner | null> => {
+export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
 	const opera = getOpera();
 	if (!opera) return null;
 	const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-	// const offlineSigner: OfflineAminoSigner = { getAccounts, signAmino };
 	return offlineSigner;
 };
 

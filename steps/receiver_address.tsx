@@ -28,11 +28,11 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 		setAddress(event.target.value);
 	};
 
-	const formIsValid = () => address.length > 8;
+	const formIsValid = () => address.length > 0;
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
-		if (!formIsValid()) return alert('Address must be longer than 8 characters');
+		if (!formIsValid()) return alert('Address must be provided');
 		onSuccess({ address });
 	};
 
