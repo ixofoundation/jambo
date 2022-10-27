@@ -28,7 +28,7 @@ const QRCamera: FC<QRCameraProps> = ({ onSuccess, onBack }) => {
 						// qrbox={220}
 						width={width + 'px'}
 						height={height - footerHeight + 'px'}
-						aspectRatio={width / (height - footerHeight)}
+						// aspectRatio={width / (height - footerHeight)}
 						ErrorDisplay={errorDisplay}
 					/>
 				) : (
