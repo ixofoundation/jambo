@@ -40,7 +40,7 @@ class QRScanner extends React.Component<QRScannerProps> {
 		function createConfig(props: QRScannerProps) {
 			var config: IObjectKeys = { supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA], formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE] };
 			if (props.fps) config.fps = props.fps;
-			if (props.qrbox) config.qrbox = props.qrbox;
+			if (props.qrbox) config.qrbox = { width: props.qrbox, height: props.qrbox };
 			if (props.aspectRatio) config.aspectRatio = props.aspectRatio;
 			if (props.disableFlip !== undefined) config.disableFlip = props.disableFlip;
 			return config;
