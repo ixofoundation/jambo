@@ -24,7 +24,7 @@ const QRCamera: FC<QRCameraProps> = ({ onSuccess, onBack }) => {
 				{width != null && height != null ? (
 					<QRScanner
 						qrCodeSuccessCallback={onSuccess}
-						qrCodeErrorCallback={e => (onBack ? onBack() : null)}
+						qrCodeErrorCallback={e => {}}
 						qrbox={220}
 						width={width + 'px'}
 						height={height - footerHeight + 'px'}
