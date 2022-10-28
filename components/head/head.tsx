@@ -29,9 +29,9 @@ const Head: FC<HeadProps> = props => {
 				</>
 			)}
 
-			{/* <link rel="canonical" href={config.siteUrl} /> */}
-			{/* <meta property="og:url" content={config.siteUrl} /> */}
-			{/* <meta name="twitter:url" content={config.siteUrl} /> */}
+			<link rel="canonical" href={config.siteUrl + router.asPath} />
+			<meta property="og:url" content={config.siteUrl + router.asPath} />
+			<meta name="twitter:url" content={config.siteUrl + router.asPath} />
 
 			<meta property="og:type" content="website" />
 			<meta name="twitter:card" content="summary_large_image" />
