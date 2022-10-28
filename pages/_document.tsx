@@ -10,6 +10,20 @@ class MyDocument extends Document {
 					<meta name="description" content="JAMBO" />
 					<link rel="icon" href="/favicon.ico" />
 
+					{/* social */}
+					<link rel="canonical" href={config.siteUrl} />
+					<meta property="og:site_name" content={config.siteName} />
+					<meta property="og:type" content="website" />
+					<meta property="og:title" content={config.siteName} />
+					<meta property="og:description" content={config.about} />
+					<meta property="og:url" content={config.siteUrl} />
+					<meta property="og:image" content={config.siteName + '/images/social/social.png'} />
+					<meta name="twitter:title" content={config.siteName} />
+					<meta name="twitter:description" content={config.about} />
+					<meta name="twitter:url" content={config.siteUrl} />
+					<meta name="twitter:card" content="summary_large_image" />
+					<meta name="twitter:image" content={config.siteName + '/images/social/social.png'} />
+
 					{/* Font Setup */}
 					<link rel="preconnect" href="https://fonts.googleapis.com" />
 					<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />

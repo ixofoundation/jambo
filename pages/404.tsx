@@ -1,5 +1,4 @@
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import cls from 'classnames';
 import LottieLight from 'react-lottie-player/dist/LottiePlayerLight';
 
@@ -8,14 +7,12 @@ import styles from '@styles/aboutPage.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import animation from '@assets/lotties/404_error.json';
+import Head from '@components/head/head';
 
 const Page404: NextPage = () => {
 	return (
 		<>
-			<Head>
-				<title>404 Not Found</title>
-				<meta name="description" content="404 Not Found" />
-			</Head>
+			<Head title="404 Not Found" description="404 Not Found" />
 
 			<Header pageTitle="Page not found" />
 

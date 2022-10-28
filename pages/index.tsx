@@ -1,5 +1,4 @@
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -8,14 +7,12 @@ import Footer from '@components/footer/footer';
 import CustomSwiper from '@components/swiper/swiper';
 import config from '@constants/config.json';
 import { ACTION } from 'types/actions';
+import Head from '@components/head/head';
 
 const Home: NextPage = () => {
 	return (
 		<>
-			<Head>
-				<title>{config.siteName}</title>
-				<meta name="description" content={config.siteName + ' dApp'} />
-			</Head>
+			<Head title={config.siteName} description={config.siteName + ' dApp'} />
 
 			<Header />
 

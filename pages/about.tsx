@@ -1,5 +1,4 @@
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -7,14 +6,12 @@ import styles from '@styles/aboutPage.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import config from '@constants/config.json';
+import Head from '@components/head/head';
 
 const About: NextPage = () => {
 	return (
 		<>
-			<Head>
-				<title>About</title>
-				<meta name="description" content={config.about} />
-			</Head>
+			<Head title="About" description={config.about} />
 
 			<Header />
 

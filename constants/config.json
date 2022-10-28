@@ -1,5 +1,8 @@
 {
 	"siteName": "IXO Send",
+	"siteUrl": "https://delicate-scone-cc1f91.netlify.app",
+	"siteTitleMeta": "IXO Send",
+	"siteDescriptionMeta": "Send tokens to your friends on the cosmos network.",
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
 	"fontName": "Roboto",
 	"headerShowName": true,

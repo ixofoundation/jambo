@@ -1,6 +1,5 @@
-import { useState, useEffect, Suspense, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
-import Head from 'next/head';
 
 import config from '@constants/config.json';
 import { StepDataType, STEP, STEPS } from 'types/steps';
@@ -12,6 +11,7 @@ import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/validator_address';
 import { WalletContext } from '@contexts/wallet';
+import Head from '@components/head/head';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -61,10 +61,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 
 	return (
 		<>
-			<Head>
-				<title>{actionData.name}</title>
-				<meta name="description" content={actionData.description} />
-			</Head>
+			<Head title={actionData.name} description={actionData.description} />
 
 			{!signedIn ? <EmptySteps signedIn={false} /> : (action?.steps?.length ?? 0) < 1 ? <EmptySteps /> : getStepComponent(action!.steps[count])}
 		</>
