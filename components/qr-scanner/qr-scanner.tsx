@@ -1,5 +1,5 @@
 import React from 'react';
-import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats, Html5QrcodeScanner } from 'html5-qrcode';
 import { IObjectKeys } from 'types/general';
 
 const qrcodeRegionId = 'html5qr-code-ixo';
@@ -12,6 +12,7 @@ type QRScannerProps = {
 	qrbox?: number;
 	width?: string;
 	height?: string;
+	useDialog?: boolean;
 	ErrorDisplay?: () => JSX.Element;
 	qrCodeSuccessCallback: (text: string) => void;
 	qrCodeErrorCallback: (error: string) => void;
@@ -24,16 +25,22 @@ class QRScanner extends React.Component<QRScannerProps> {
 	}
 
 	html5Qrcode: Html5Qrcode | undefined;
+	Html5QrcodeScanner: Html5QrcodeScanner | undefined;
 
 	render() {
 		const ErrorDisplay = this.props.ErrorDisplay;
 		// @ts-ignore
 		const error = this.state.error;
-		return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} style={{ width: this.props.width || 'auto', height: this.props.height || 'auto' }} />;
+		return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} />;
+		// return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} style={{ width: this.props.width || 'auto', height: this.props.height || 'auto' }} />;
 	}
 
 	componentWillUnmount() {
-		if (this.html5Qrcode?.isScanning) this.html5Qrcode?.stop().catch(e => console.log('Error stoping html5Qrcode: ' + e));
+		if (this.props.useDialog) {
+			this.Html5QrcodeScanner?.clear().catch(e => console.log('Error stoping html5Qrcode: ' + e));
+		} else {
+			if (this.html5Qrcode?.isScanning) this.html5Qrcode?.stop().catch(e => console.log('Error stoping html5Qrcode: ' + e));
+		}
 	}
 
 	componentDidMount() {
@@ -48,13 +55,25 @@ class QRScanner extends React.Component<QRScannerProps> {
 
 		var config = createConfig(this.props);
 
-		if (this.html5Qrcode != undefined) return;
-		this.html5Qrcode = new Html5Qrcode(qrcodeRegionId, this.props.verbose);
-		//@ts-ignore
-		this.html5Qrcode.start({ facingMode: 'environment' }, config, this.props.qrCodeSuccessCallback, this.props.qrCodeErrorCallback).catch(err => {
-			this.setState({ error: err });
-			console.log('QR Scanner error: ' + err);
-		});
+		if (this.props.useDialog) {
+			if (this.Html5QrcodeScanner != undefined) return;
+			//@ts-ignore
+			this.Html5QrcodeScanner = new Html5QrcodeScanner(qrcodeRegionId, config, this.props.verbose);
+			try {
+				this.Html5QrcodeScanner.render(this.props.qrCodeSuccessCallback, this.props.qrCodeErrorCallback);
+			} catch (error) {
+				this.setState({ error: error });
+				console.log('QR Scanner error: ' + error);
+			}
+		} else {
+			if (this.html5Qrcode != undefined) return;
+			this.html5Qrcode = new Html5Qrcode(qrcodeRegionId, this.props.verbose);
+			//@ts-ignore
+			this.html5Qrcode.start({ facingMode: 'environment' }, config, this.props.qrCodeSuccessCallback, this.props.qrCodeErrorCallback).catch(err => {
+				this.setState({ error: err });
+				console.log('QR Scanner error: ' + err);
+			});
+		}
 	}
 }
 
