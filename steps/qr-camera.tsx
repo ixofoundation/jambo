@@ -26,10 +26,10 @@ const QRCamera: FC<QRCameraProps> = ({ onSuccess, onBack }) => {
 				{width != null && height != null ? (
 					<QRScanner
 						qrCodeSuccessCallback={onSuccess}
-						qrCodeErrorCallback={e => console.log('error')}
+						qrCodeErrorCallback={e => {}}
 						qrbox={250}
-						width={width + 'px'}
-						height={height - footerHeight + 'px'}
+						// width={width + 'px'}
+						// height={height - footerHeight + 'px'}
 						// aspectRatio={width / (height - footerHeight)}
 						ErrorDisplay={errorDisplay}
 						useDialog={true}

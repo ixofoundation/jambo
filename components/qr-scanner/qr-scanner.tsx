@@ -31,7 +31,7 @@ class QRScanner extends React.Component<QRScannerProps> {
 		const ErrorDisplay = this.props.ErrorDisplay;
 		// @ts-ignore
 		const error = this.state.error;
-		return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} />;
+		return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} style={{ minWidth: '300px', flex: 1 }} />;
 		// return error && ErrorDisplay ? <ErrorDisplay /> : <div id={qrcodeRegionId} style={{ width: this.props.width || 'auto', height: this.props.height || 'auto' }} />;
 	}
 
