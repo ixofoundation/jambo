@@ -14,15 +14,15 @@ class MyDocument extends Document {
 					<link rel="canonical" href={config.siteUrl} />
 					<meta property="og:site_name" content={config.siteName} />
 					<meta property="og:type" content="website" />
-					<meta property="og:title" content={config.siteName} />
-					<meta property="og:description" content={config.about} />
+					<meta property="og:title" content={config.siteTitleMeta} />
+					<meta property="og:description" content={config.siteDescriptionMeta} />
 					<meta property="og:url" content={config.siteUrl} />
-					<meta property="og:image" content={config.siteName + '/images/social/social.png'} />
-					<meta name="twitter:title" content={config.siteName} />
-					<meta name="twitter:description" content={config.about} />
+					<meta property="og:image" content={config.siteUrl + '/images/social/social.png'} />
+					<meta name="twitter:title" content={config.siteTitleMeta} />
+					<meta name="twitter:description" content={config.siteDescriptionMeta} />
 					<meta name="twitter:url" content={config.siteUrl} />
 					<meta name="twitter:card" content="summary_large_image" />
-					<meta name="twitter:image" content={config.siteName + '/images/social/social.png'} />
+					<meta name="twitter:image" content={config.siteUrl + '/images/social/social.png'} />
 
 					{/* Font Setup */}
 					<link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -38,8 +38,8 @@ const Head: FC<HeadProps> = props => {
 
 			{props.image && (
 				<>
-					<meta property="og:image" content={config.siteName + props.image} />
-					<meta name="twitter:image" content={config.siteName + props.image} />
+					<meta property="og:image" content={config.siteUrl + props.image} />
+					<meta name="twitter:image" content={config.siteUrl + props.image} />
 				</>
 			)}
 		</Header>
