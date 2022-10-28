@@ -26,7 +26,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 		// if (!id) return;
 		// const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
 		// if (fethedAction) setAction(fethedAction);
-	}, []);
+	}, [actionData]);
 
 	function handleOnNext<T>(data: StepDataType<T>) {
 		setAction(a => (!a ? a : { ...a, steps: a.steps.map((step, index) => (index === count ? { ...step, data } : step)) }));
