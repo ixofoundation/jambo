@@ -58,7 +58,7 @@ export const keplrBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 	try {
 		const result = await sendTransaction(client, address, payload);
 		if (result) {
-			Toast.successToast(`Transaction Successful`);
+			// Toast.successToast(`Transaction Successful`);
 			return result.transactionHash;
 		} else {
 			throw 'transaction failed';

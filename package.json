@@ -1,5 +1,5 @@
 {
-	"name": "earthport",
+	"name": "jambo-client",
 	"version": "0.0.1",
 	"private": true,
 	"author": "ixo",
@@ -38,9 +38,9 @@
 		"react-copy-to-clipboard": "^5.1.0",
 		"react-dom": "18.1.0",
 		"react-loader-spinner": "^5.3.4",
+		"react-lottie-player": "^1.5.0",
 		"react-qr-code": "^2.0.8",
 		"react-select": "5.5.0",
-		"react-share": "^4.4.1",
 		"react-toastify": "9.0.8",
 		"sovrin-did": "1.4.0",
 		"swiper": "8.4.4"

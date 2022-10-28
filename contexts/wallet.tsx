@@ -1,12 +1,12 @@
 import { createContext, useState, useEffect, HTMLAttributes } from 'react';
 
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
-import { WALLET } from 'types/wallet';
+import { BALANCES, WALLET } from 'types/wallet';
 import { initializeWallet } from '@utils/wallets';
 import { getBalances } from '@utils/client';
 import { USER } from 'types/user';
 
-export const WalletContext = createContext({ wallet: {} as WALLET, updateWallet: (newWallet: WALLET) => {} });
+export const WalletContext = createContext({ wallet: {} as WALLET, updateWallet: (newWallet: WALLET) => {}, fetchAssets: () => {} });
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [wallet, setWallet] = useState<WALLET>({});
@@ -21,6 +21,11 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		else setWallet(currentWallet => ({ ...currentWallet, user: currentWallet.user ? { ...currentWallet.user, ...newUser } : newUser }));
 	};
 
+	const updateBalances = (newBalances: BALANCES, override: boolean = false) => {
+		if (override) setWallet(currentWallet => ({ ...currentWallet, balances: newBalances }));
+		else setWallet(currentWallet => ({ ...currentWallet, balances: currentWallet.balances ? { ...currentWallet.balances, ...newBalances } : newBalances }));
+	};
+
 	const initializeWallets = async () => {
 		const user = await initializeWallet(wallet);
 		updateWallet({ user });
@@ -28,8 +33,13 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	const fetchAssets = async () => {
 		if (!wallet.user?.address) return;
-		const balances = await getBalances(wallet.user.address);
-		updateUser({ ...wallet.user, balances });
+		updateBalances({ loading: true, error: undefined });
+		try {
+			const balances = await getBalances(wallet.user.address);
+			updateBalances({ balances, loading: false });
+		} catch (error) {
+			updateBalances({ error: error as string, loading: false });
+		}
 	};
 
 	useEffect(() => {
@@ -38,7 +48,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	useEffect(() => {
 		if (loaded) setLocalStorage('wallet', wallet);
-		if (loaded) console.log({ wallet });
+		// if (loaded) console.log({ wallet });
 	}, [wallet]);
 
 	useEffect(() => {
@@ -53,6 +63,6 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		if (persistedWallet) setWallet(persistedWallet);
 	}, []);
 
-	const value = { wallet, updateWallet };
+	const value = { wallet, updateWallet, fetchAssets };
 	return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 };

@@ -47,6 +47,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 					<Header pageTitle="Who is the receiver" header={header} />
 
 					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+						<div className={utilsStyles.spacer} />
 						<div onClick={() => setShowQRCamera(true)}>
 							<QRScan width="100px" height="100px" className={styles.qrScan} />
 							<p>Scan address</p>
@@ -56,6 +57,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 							<p>Paste address here</p>
 							<InputWithSufficIcon name="address" required onChange={handleChange} value={address} Icon={Paste} />
 						</form>
+						<div className={utilsStyles.spacer} />
 					</main>
 
 					<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />

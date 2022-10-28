@@ -129,7 +129,7 @@ export const WCBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '',
 	try {
 		const result = await sendTransaction(client, address, payload);
 		if (result) {
-			Toast.successToast(`Transaction Successful`);
+			// Toast.successToast(`Transaction Successful`);
 			return result.transactionHash;
 		} else {
 			throw 'transaction failed';

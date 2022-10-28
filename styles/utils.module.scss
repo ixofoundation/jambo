@@ -18,3 +18,14 @@
 	flex-direction: column;
 	justify-content: center;
 }
+
+.columnJustifyAlignCenter {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.spacer {
+	height: 30px;
+}

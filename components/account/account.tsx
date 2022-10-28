@@ -1,4 +1,4 @@
-import { HTMLAttributes, useState, useContext } from 'react';
+import { HTMLAttributes, useState, useContext, useEffect } from 'react';
 
 import styles from './account.module.scss';
 import { WalletContext } from '@contexts/wallet';
@@ -14,16 +14,19 @@ import TokenCard from '@components/token-card/token-card';
 import { ChainDropdownOptions } from '@constants/chains';
 import { ArrayElement } from 'types/general';
 import Loader from '@components/loader/loader';
-// import { WhatsappShareButton } from 'react-share';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
 const Account = ({ className, ...other }: AccountProps) => {
 	const [showQR, setShowQR] = useState(false);
 	const [selectedOption, setSelectedOption] = useState<ArrayElement<typeof ChainDropdownOptions>>(ChainDropdownOptions[0]);
-	const { wallet, updateWallet } = useContext(WalletContext);
+	const { wallet, updateWallet, fetchAssets } = useContext(WalletContext);
 
 	const onChainSelected = (option: any) => setSelectedOption(option);
+
+	useEffect(() => {
+		fetchAssets();
+	}, []);
 
 	return (
 		<div className={styles.account}>
@@ -42,7 +45,15 @@ const Account = ({ className, ...other }: AccountProps) => {
 							<p className={styles.label}>Select chain:</p>
 							<Dropdown defaultValue={selectedOption} onChange={onChainSelected} options={ChainDropdownOptions} placeholder={null} name="chain" withLogos={true} />
 							<p className={styles.label}>Available:</p>
-							<Card className={styles.available}>{wallet.user.balances ? wallet.user.balances.map(token => <TokenCard token={token} key={token.denom} />) : <Loader size={30} className={styles.loader} />}</Card>
+							<Card className={styles.available}>
+								{wallet.balances?.balances ? (
+									wallet.balances.balances.map(token => <TokenCard token={token} key={token.denom} />)
+								) : wallet.balances?.loading ? (
+									<Loader size={30} className={styles.loader} />
+								) : (
+									<p className={styles.noBalances}>No Balances to Show</p>
+								)}
+							</Card>
 						</>
 					)}
 				</>

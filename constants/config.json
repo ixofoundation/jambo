@@ -1,5 +1,5 @@
 {
-	"siteName": "My JAMBO",
+	"siteName": "IXO Send",
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto&display=swap",
 	"fontName": "Roboto",
 	"headerShowName": true,
@@ -24,48 +24,8 @@
 				}
 			],
 			"name": "Send",
-			"description": "Send flow",
-			"image": ""
-		},
-		{
-			"id": "eKXPPhewkJDLbE1bq1ibo8",
-			"steps": [
-				{
-					"id": "get_receiver_address",
-					"name": "Get receiver address"
-				},
-				{
-					"id": "select_token_and_amount",
-					"name": "Select token and amount"
-				},
-				{
-					"id": "review_and_sign",
-					"name": "Review and sign"
-				}
-			],
-			"name": "Swap",
-			"description": "Swap flow",
-			"image": ""
-		},
-		{
-			"id": "eKXPPhewkJDLbE1bq1iboa",
-			"steps": [
-				{
-					"id": "get_validator_address",
-					"name": "Get validator address"
-				},
-				{
-					"id": "select_token_and_amount",
-					"name": "Select token and amount"
-				},
-				{
-					"id": "staking_MsgDelegate",
-					"name": "Review and sign"
-				}
-			],
-			"name": "Stake",
-			"description": "Stake flow",
-			"image": ""
+			"description": "Send flow description",
+			"image": "eKXPPhewkJDLbE1bq1ibo7.png"
 		}
 	]
 }

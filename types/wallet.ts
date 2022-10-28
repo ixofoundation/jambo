@@ -10,4 +10,16 @@ export enum WALLET_TYPE {
 export type WALLET = {
 	walletType?: WALLET_TYPE;
 	user?: USER;
+	balances?: BALANCES;
+};
+
+export type BALANCES = {
+	loading?: boolean;
+	error?: string;
+	balances?: Currency[];
+};
+
+export type Currency = {
+	amount: number;
+	denom: string;
 };

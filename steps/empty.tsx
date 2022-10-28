@@ -16,7 +16,11 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading }) => {
 		<>
 			<Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>{loading ? <Loader /> : <p>Sorry this url doesn't exist</p>}</main>
+			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+				<div className={utilsStyles.spacer} />
+				{loading ? <Loader /> : <p>Sorry, there is no steps for this action</p>}
+				<div className={utilsStyles.spacer} />
+			</main>
 
 			<Footer onBackUrl="/" />
 		</>

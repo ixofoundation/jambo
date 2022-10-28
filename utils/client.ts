@@ -9,7 +9,7 @@ import { Coin } from '@client-sdk/codec/cosmos/coin';
 import { MsgDelegate } from '@client-sdk/codec/external/cosmos/staking/v1beta1/tx';
 import axios from 'axios';
 import { apiCurrencyToCurrency } from './currency';
-import { Currency } from 'types/user';
+import { Currency } from 'types/wallet';
 
 export const initStargateClient = async (offlineSigner: any, endpoint?: string): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);
@@ -65,6 +65,7 @@ export const getBalances = async (address: string): Promise<Currency[]> => {
 		balances = res.data.balances.map((coin: any) => apiCurrencyToCurrency(coin));
 	} catch (error) {
 		console.log('/cosmos/bank/v1beta1/balances/', error);
+		throw error;
 	}
 	return balances;
 };

@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useContext, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useEffect, useState } from 'react';
 import { FC } from 'react';
 import cls from 'classnames';
 
@@ -11,6 +11,8 @@ import Dropdown from '@components/dropdown/dropdown';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { formatTokenAmount, generateUserTokensDropdown, TokenDropdownType, validateAmountAgainstBalance } from '@utils/currency';
+import IconText from '@components/icon-text/icon-text';
+import SadFace from '@icons/sad_face.svg';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
@@ -22,7 +24,11 @@ type DefineAmountTokenProps = {
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
 	const [amount, setAmount] = useState(data?.amount?.toString() ?? '');
 	const [selectedOption, setSelectedOption] = useState<TokenDropdownType | null>(data?.token || null);
-	const { wallet } = useContext(WalletContext);
+	const { wallet, fetchAssets } = useContext(WalletContext);
+
+	useEffect(() => {
+		fetchAssets();
+	}, []);
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		setAmount(event.target.value);
@@ -36,14 +42,21 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 		onSuccess({ amount: Number.parseFloat(amount), token: selectedOption! });
 	};
 
-	const TokenDropdownOptions = generateUserTokensDropdown(wallet.user?.balances ?? []);
+	const handleMaxClicked = () => {
+		if (!selectedOption?.amount) return;
+		const tokenAmount = selectedOption?.amount / 10 ** 6;
+		setAmount(tokenAmount.toString());
+	};
+
+	const TokenDropdownOptions = generateUserTokensDropdown(wallet.balances?.balances ?? []);
 
 	return (
 		<>
 			<Header pageTitle="Define amount to be sent" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				{wallet.user?.balances ? (
+				<div className={utilsStyles.spacer} />
+				{wallet.balances?.balances ? (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<p>Select token to be sent:</p>
 						<div className={styles.alignLeft}>
@@ -51,12 +64,15 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 						</div>
 						<br />
 						<p className={styles.titleWithSubtext}>Enter Amount:</p>
-						<p className={cls(styles.subtext, styles.alignRight)}>Balance: {selectedOption ? `${formatTokenAmount(selectedOption?.amount)} ${selectedOption.label}` : '-'}</p>
+						<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
+							Max: {selectedOption ? `${formatTokenAmount(selectedOption?.amount)} ${selectedOption.label}` : '-'}
+						</p>
 						<Input name="walletAddress" type="number" required onChange={handleChange} value={amount} className={cls(styles.stepInput, styles.alignRight)} />
 					</form>
 				) : (
-					<p>You don't have any balances at the moments.</p>
+					<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
 				)}
+				<div className={utilsStyles.spacer} />
 			</main>
 
 			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />

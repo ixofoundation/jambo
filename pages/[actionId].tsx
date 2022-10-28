@@ -1,31 +1,32 @@
 import { useState, useEffect, Suspense } from 'react';
-import type { NextPage } from 'next';
+import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 
 import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS, ReviewStepsTypes } from 'types/steps';
+import { StepDataType, STEP, STEPS } from 'types/steps';
 import EmptySteps from '@steps/empty';
 import ReceiverAddress from '@steps/receiver_address';
 import DefineAmountToken from '@steps/define_amount_token';
 import ReviewAndSign from '@steps/review_and_sign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
-import { ConfigData } from 'types/config';
 import ValidatorAddress from '@steps/validator_address';
 
-const ActionExecution: NextPage = () => {
+type ActionPageProps = {
+	actionData: ACTION;
+};
+
+const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	const [count, setCount] = useState(0);
 	const [action, setAction] = useState<ACTION | null>(null);
-	const router = useRouter();
-	const id = router.query.action;
 
 	useEffect(() => {
-		if (!id) return;
-		const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
-		// console.log({ fethedAction });
-		if (fethedAction) setAction(fethedAction);
-	}, [id]);
+		setAction(actionData);
+		// console.log({ id });
+		// if (!id) return;
+		// const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
+		// if (fethedAction) setAction(fethedAction);
+	}, []);
 
 	function handleOnNext<T>(data: StepDataType<T>) {
 		setAction(a => (!a ? a : { ...a, steps: a.steps.map((step, index) => (index === count ? { ...step, data } : step)) }));
@@ -57,13 +58,36 @@ const ActionExecution: NextPage = () => {
 	return (
 		<>
 			<Head>
-				<title>EarthDay</title>
-				<meta name="description" content="EarthDay" />
+				<title>{actionData.name}</title>
+				<meta name="description" content={actionData.description} />
 			</Head>
 
-			<Suspense fallback={<EmptySteps loading={true} />}>{(action?.steps?.length ?? 0) < 1 ? <EmptySteps loading={!id} /> : getStepComponent(action!.steps[count])}</Suspense>
+			{(action?.steps?.length ?? 0) < 1 ? <EmptySteps loading={false} /> : getStepComponent(action!.steps[count])}
 		</>
 	);
 };
 
 export default ActionExecution;
+
+type PathsParams = {
+	actionId: string;
+};
+
+export const getStaticPaths: GetStaticPaths<PathsParams> = async () => {
+	const paths = config.actions.map(a => ({ params: { actionId: a.id } }));
+
+	return {
+		paths,
+		fallback: false,
+	};
+};
+
+export const getStaticProps = async ({ params }: GetStaticPropsContext<PathsParams>): Promise<GetStaticPropsResult<ActionPageProps>> => {
+	const actionData = config.actions.find(a => params!.actionId == a.id);
+
+	return {
+		props: {
+			actionData: actionData as ACTION,
+		},
+	};
+};

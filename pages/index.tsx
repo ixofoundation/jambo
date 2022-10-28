@@ -13,14 +13,16 @@ const Home: NextPage = () => {
 	return (
 		<>
 			<Head>
-				<title>EarthDay</title>
-				<meta name="description" content="EarthDay" />
+				<title>{config.siteName}</title>
+				<meta name="description" content={config.siteName + ' dApp'} />
 			</Head>
 
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
+				<div className={utilsStyles.spacer} />
 				<CustomSwiper actions={config.actions as ACTION[]} />
+				<div className={utilsStyles.spacer} />
 			</main>
 
 			<Footer showAboutButton showAccountButton />

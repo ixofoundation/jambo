@@ -1,6 +1,6 @@
 import { ASSETS } from '@constants/chains';
 import { ArrayElement } from 'types/general';
-import { Currency } from 'types/user';
+import { Currency } from 'types/wallet';
 
 export const apiCurrencyToCurrency = (currency: any): Currency => ({
 	amount: currency.amount ? parseInt(currency.amount, 10) : 0,
@@ -39,5 +39,5 @@ export const generateUserTokensDropdown = (balances: Currency[]) => {
 
 export const validateAmountAgainstBalance = (amount: number, balance: number, balanceMicroUnits: boolean = true) => {
 	const realBalance = balanceMicroUnits ? balance / 10 ** 6 : balance;
-	return amount < realBalance;
+	return amount <= realBalance;
 };

@@ -7,7 +7,7 @@ class MyDocument extends Document {
 		return (
 			<Html>
 				<Head>
-					<meta name="description" content="EarthDay" />
+					<meta name="description" content="JAMBO" />
 					<link rel="icon" href="/favicon.ico" />
 
 					{/* Font Setup */}

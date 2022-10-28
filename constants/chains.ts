@@ -184,3 +184,44 @@ export const ChainDropdownOptions = [CHAINS[CHAIN_ID]].map((chain: any) => {
 		img: Object.values(asset?.logo_URIs ?? {})[0],
 	};
 });
+
+// {
+//   "id": "eKXPPhewkJDLbE1bq1ibo8",
+//   "steps": [
+//     {
+//       "id": "get_receiver_address",
+//       "name": "Get receiver address"
+//     },
+//     {
+//       "id": "select_token_and_amount",
+//       "name": "Select token and amount"
+//     },
+//     {
+//       "id": "review_and_sign",
+//       "name": "Review and sign"
+//     }
+//   ],
+//   "name": "Swap",
+//   "description": "Swap flow",
+//   "image": ""
+// },
+// {
+//   "id": "eKXPPhewkJDLbE1bq1iboa",
+//   "steps": [
+//     {
+//       "id": "get_validator_address",
+//       "name": "Get validator address"
+//     },
+//     {
+//       "id": "select_token_and_amount",
+//       "name": "Select token and amount"
+//     },
+//     {
+//       "id": "staking_MsgDelegate",
+//       "name": "Review and sign"
+//     }
+//   ],
+//   "name": "Stake",
+//   "description": "Stake flow",
+//   "image": ""
+// }

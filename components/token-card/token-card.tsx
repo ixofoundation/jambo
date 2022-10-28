@@ -2,10 +2,10 @@ import { HTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './token-card.module.scss';
-import { Currency } from 'types/user';
 import { ASSETS } from '@constants/chains';
-import { formatTokenAmount, formatterToken, formatterUSD } from '@utils/currency';
+import { formatTokenAmount } from '@utils/currency';
 import ImageWithFallback from '@components/image-fallback/image-fallback';
+import { Currency } from 'types/wallet';
 
 type TokenCardProps = { token: Currency } & HTMLAttributes<HTMLDivElement>;
 

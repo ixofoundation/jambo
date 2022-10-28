@@ -12,8 +12,8 @@ const About: NextPage = () => {
 	return (
 		<>
 			<Head>
-				<title>EarthDay</title>
-				<meta name="description" content="EarthDay" />
+				<title>About</title>
+				<meta name="description" content={config.about} />
 			</Head>
 
 			<Header />
