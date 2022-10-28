@@ -7,9 +7,10 @@ import AccountImg from '@icons/account.svg';
 import Document from '@icons/document.svg';
 import { backRoute, replaceRoute } from '@utils/router';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useContext } from 'react';
 import Modal from '@components/modal/modal';
 import Account from '@components/account/account';
+import { WalletContext } from '@contexts/wallet';
 
 type FooterProps = {
 	onBackUrl?: string;
@@ -24,12 +25,12 @@ type FooterProps = {
  * If [onForward] or [onCorrect] is undefined then no button, if null then disabled button.
  */
 const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
-	const [showModal, setShowModal] = useState(false);
+	const { wallet, updateWallet } = useContext(WalletContext);
 
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
-				<ButtonRound onClick={() => setShowModal(true)}>
+				<ButtonRound onClick={() => updateWallet({ showWalletModal: true })}>
 					<AccountImg width="20px" height="20px" />
 				</ButtonRound>
 			)}
@@ -57,8 +58,9 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 					<ArrowRight width="20px" height="20px" />
 				</ButtonRound>
 			)}
-			{showModal && (
-				<Modal onClose={() => setShowModal(false)}>
+
+			{wallet.showWalletModal && (
+				<Modal onClose={() => updateWallet({ showWalletModal: false })}>
 					<Account />
 				</Modal>
 			)}

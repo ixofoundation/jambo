@@ -18,13 +18,13 @@ const About: NextPage = () => {
 
 			<Header />
 
-			<main className={cls(utilsStyles.main)}>
+			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
 				<h2 className={styles.title}>About</h2>
 				<p className={styles.text}>{config.about}</p>
 				{/* <h2 className={styles.title}>Account History</h2> */}
-			</main>
 
-			<Footer onBackUrl="/" />
+				<Footer onBackUrl="/" />
+			</main>
 		</>
 	);
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 import Head from 'next/head';
 
@@ -11,6 +11,7 @@ import ReviewAndSign from '@steps/review_and_sign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/validator_address';
+import { WalletContext } from '@contexts/wallet';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -19,9 +20,12 @@ type ActionPageProps = {
 const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	const [count, setCount] = useState(0);
 	const [action, setAction] = useState<ACTION | null>(null);
+	const { wallet, updateWallet } = useContext(WalletContext);
+	const signedIn = wallet.user?.address;
 
 	useEffect(() => {
 		setAction(actionData);
+		if (!signedIn) updateWallet({ showWalletModal: true });
 		// console.log({ id });
 		// if (!id) return;
 		// const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
@@ -62,7 +66,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 				<meta name="description" content={actionData.description} />
 			</Head>
 
-			{(action?.steps?.length ?? 0) < 1 ? <EmptySteps loading={false} /> : getStepComponent(action!.steps[count])}
+			{!signedIn ? <EmptySteps signedIn={false} /> : (action?.steps?.length ?? 0) < 1 ? <EmptySteps /> : getStepComponent(action!.steps[count])}
 		</>
 	);
 };

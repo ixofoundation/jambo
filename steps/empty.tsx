@@ -9,20 +9,21 @@ import Loader from '@components/loader/loader';
 
 type EmptyStepsProps = {
 	loading?: boolean;
+	signedIn?: boolean;
 };
 
-const EmptySteps: FC<EmptyStepsProps> = ({ loading }) => {
+const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) => {
 	return (
 		<>
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				<div className={utilsStyles.spacer} />
-				{loading ? <Loader /> : <p>Sorry, there is no steps for this action</p>}
+				{loading ? <Loader /> : !signedIn ? <p>Please sign in</p> : <p>Sorry, there is no steps for this action</p>}
 				<div className={utilsStyles.spacer} />
-			</main>
 
-			<Footer onBackUrl="/" />
+				<Footer onBackUrl="/" />
+			</main>
 		</>
 	);
 };

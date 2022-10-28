@@ -1,18 +1,25 @@
 .swiper {
-	width: 100%;
+	width: auto;
+	margin: 0 auto;
 }
 
 .swiperSlide {
 	transform: translateZ(0);
 	width: 200px;
 	height: 200px;
+	border-radius: 16px;
+	overflow: hidden;
+	cursor: pointer;
+}
+
+.center {
+	margin: 0 auto;
 }
 
 .actionImage {
 	width: 100%;
 	height: 100%;
 	background: lightgrey;
-	border-radius: 16px;
 	text-align: center;
 }
 

@@ -38,7 +38,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
-		if (!formIsValid()) return alert('A token is required and smount must be bigger than 0 and less than balance.');
+		if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
 		onSuccess({ amount: Number.parseFloat(amount), token: selectedOption! });
 	};
 
@@ -73,9 +73,9 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 					<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
 				)}
 				<div className={utilsStyles.spacer} />
-			</main>
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+			</main>
 		</>
 	);
 };

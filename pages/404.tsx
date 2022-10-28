@@ -25,9 +25,9 @@ const Page404: NextPage = () => {
 				<p className={styles.notFound}>Error 404</p>
 				<p className={styles.notFound}>We can&apos;t find the page you are looking for.</p>
 				<div className={utilsStyles.spacer} />
-			</main>
 
-			<Footer onBackUrl="/" />
+				<Footer onBackUrl="/" />
+			</main>
 		</>
 	);
 };

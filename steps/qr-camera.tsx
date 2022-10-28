@@ -36,9 +36,9 @@ const QRCamera: FC<QRCameraProps> = ({ onSuccess, onBack }) => {
 				) : (
 					<Loader />
 				)}
-			</main>
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} />
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} />
+			</main>
 		</>
 	);
 };

@@ -58,9 +58,9 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 							<InputWithSufficIcon name="address" required onChange={handleChange} value={address} Icon={Paste} />
 						</form>
 						<div className={utilsStyles.spacer} />
-					</main>
 
-					<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+						<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+					</main>
 				</>
 			)}
 		</>

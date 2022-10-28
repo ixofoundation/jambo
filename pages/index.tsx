@@ -21,11 +21,11 @@ const Home: NextPage = () => {
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
 				<div className={utilsStyles.spacer} />
-				<CustomSwiper actions={config.actions as ACTION[]} />
+				<CustomSwiper actions={config.actions as ACTION[]} swiper={false} />
 				<div className={utilsStyles.spacer} />
-			</main>
 
-			<Footer showAboutButton showAccountButton />
+				<Footer showAboutButton showAccountButton />
+			</main>
 		</>
 	);
 };

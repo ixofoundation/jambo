@@ -105,9 +105,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				) : (
 					<p>Unsupported review type</p>
 				)}
-			</main>
 
-			<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
+				<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
+			</main>
 		</>
 	);
 };
