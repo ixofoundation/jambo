@@ -13,7 +13,6 @@ type HeadProps = {
 
 const Head: FC<HeadProps> = props => {
 	const router = useRouter();
-	console.log({ router });
 
 	return (
 		<Header>
