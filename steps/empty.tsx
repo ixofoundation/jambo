@@ -24,19 +24,7 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) =
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				<div className={utilsStyles.spacer} />
-				{loading ? (
-					<Loader />
-				) : !signedIn ? (
-					<>
-						<WalletImg width={58} height={58} />
-						<h3>No Wallet Connected</h3>
-						<p>Please connect a Wallet to use Actions.</p>
-						<br />
-						<WalletCard name="Connect now" Img={WalletImg} onClick={() => updateWallet({ showWalletModal: true })} />
-					</>
-				) : (
-					<p>Sorry, there is no steps for this action</p>
-				)}
+				{loading ? <Loader /> : !signedIn ? <WalletCard name="Connect now" Img={WalletImg} onClick={() => updateWallet({ showWalletModal: true })} /> : <p>Sorry, there is no steps for this action</p>}
 				<div className={utilsStyles.spacer} />
 
 				<Footer onBackUrl="/" />

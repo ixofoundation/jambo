@@ -34,7 +34,7 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 					<div className={styles.flex2} />
 					<WalletImg width={58} height={58} />
 					<h3>No Wallet Detected</h3>
-					<p>Please ensure to use the dApp on an Android mobile Opera browser.</p>
+					<p>Please use the dApp on Android with the Opera browser.</p>
 					<p>Sorry for the inconvenience, more wallets are being added soon!</p>
 					<div className={styles.flex3} />
 				</>
