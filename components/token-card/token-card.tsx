@@ -2,7 +2,7 @@ import { HTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './token-card.module.scss';
-import { ASSETS } from '@constants/chains';
+import { findTokenFromDenom } from '@constants/chains';
 import { formatTokenAmount } from '@utils/currency';
 import ImageWithFallback from '@components/image-fallback/image-fallback';
 import { Currency } from 'types/wallet';
@@ -10,18 +10,16 @@ import { Currency } from 'types/wallet';
 type TokenCardProps = { token: Currency } & HTMLAttributes<HTMLDivElement>;
 
 const TokenCard = ({ className, token, ...other }: TokenCardProps) => {
-	const asset = ASSETS.assets.find((asset: any) => asset.base === token.denom);
+	const asset = findTokenFromDenom(token.denom);
 
-	return asset ? (
+	return (
 		<div className={cls(styles.tokenCard)}>
 			<div className={styles.token}>
-				<ImageWithFallback src={Object.values(asset.logo_URIs)[0]} alt={token.denom} fallbackSrc="/images/chain-logos/fallback.png" width={20} height={20} />
-				<p className={styles.label}>{asset.symbol}</p>
+				<ImageWithFallback src={asset?.coinImageUrl ?? ''} alt={token.denom} fallbackSrc="/images/chain-logos/fallback.png" width={20} height={20} />
+				<p className={styles.label}>{asset?.coinDenom || token.denom}</p>
 			</div>
 			<p>{formatTokenAmount(token.amount!)}</p>
 		</div>
-	) : (
-		<div />
 	);
 };
 

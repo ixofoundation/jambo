@@ -1,4 +1,4 @@
-import { ASSETS } from '@constants/chains';
+import { findTokenFromDenom } from '@constants/chains';
 import { ArrayElement } from 'types/general';
 import { Currency } from 'types/wallet';
 
@@ -25,13 +25,23 @@ export const formatterToken = new Intl.NumberFormat('en-US', {
 
 export type TokenDropdownType = ArrayElement<ReturnType<typeof generateUserTokensDropdown>>;
 
+export type TOKEN_ASSET = {
+	coinDenom: string;
+	coinMinimalDenom: string;
+	coinDecimals: number;
+	coinGeckoId: string;
+	coinImageUrl: string;
+	isStakeCurrency?: boolean;
+	isFeeCurrency?: boolean;
+};
+
 export const generateUserTokensDropdown = (balances: Currency[]) => {
 	return balances.map(b => {
-		const asset = ASSETS.assets.find((asset: any) => asset.base === b.denom);
+		const asset = findTokenFromDenom(b.denom);
 		return {
 			value: b.denom,
-			label: asset?.symbol ?? '',
-			img: Object.values(asset?.logo_URIs ?? {})[0],
+			label: asset?.coinDenom ?? b.denom,
+			img: asset?.coinImageUrl,
 			amount: b.amount,
 		};
 	});
