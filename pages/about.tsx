@@ -11,14 +11,15 @@ import Head from '@components/head/head';
 const About: NextPage = () => {
 	return (
 		<>
-			<Head title="About" description={config.about} />
+			<Head title="About" description={config.siteDescriptionMeta} />
 
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
 				<div className={utilsStyles.spacerFlex} />
 				<h2 className={styles.title}>About</h2>
-				<p className={styles.text}>{config.about}</p>
+				<p className={styles.text} dangerouslySetInnerHTML={{ __html: config.about }} />
+
 				{/* <h2 className={styles.title}>Account History</h2> */}
 
 				<Footer onBackUrl="/" />
