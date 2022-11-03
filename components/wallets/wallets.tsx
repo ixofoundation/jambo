@@ -18,14 +18,14 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 
 	return (
 		<div className={cls(styles.wallets, className)} {...other}>
-			{operaWallet || keplrWallet ? (
+			{operaWallet ? (
 				<>
 					<div className={styles.flex2} />
 					<WalletImg width={58} height={58} />
 					<h3>Choose Wallet</h3>
 					{/* {keysafe && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
 					{/* <Button label="Wallet Connect" onClick={() => onSelected(WALLET_TYPE.walletConnect)} /> */}
-					{keplrWallet && <WalletCard name="Keplr Wallet" img="/images/wallets/keplr.png" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
+					{/* {keplrWallet && <WalletCard name="Keplr Wallet" img="/images/wallets/keplr.png" onClick={() => onSelected(WALLET_TYPE.keplr)} />} */}
 					{operaWallet && <WalletCard name="Opera Wallet" img="/images/wallets/opera.png" onClick={() => onSelected(WALLET_TYPE.opera)} />}
 					<div className={styles.flex3} />
 				</>
