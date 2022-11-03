@@ -17,6 +17,7 @@ export const initializeKeplr = async (): Promise<USER | undefined> => {
 		await keplr?.experimentalSuggestChain(CHAINS[CHAIN_ID]);
 		await keplr?.enable(CHAIN_ID);
 		const key = await keplr?.getKey(CHAIN_ID);
+		// console.log({ key });
 		return key ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true } : undefined;
 	} catch (error) {
 		console.error('Error initializing Kepl: ' + error);
@@ -57,7 +58,7 @@ export const keplrBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 	try {
 		const result = await sendTransaction(client, address, payload);
 		if (result) {
-			Toast.successToast(`Transaction Successful`);
+			// Toast.successToast(`Transaction Successful`);
 			return result.transactionHash;
 		} else {
 			throw 'transaction failed';

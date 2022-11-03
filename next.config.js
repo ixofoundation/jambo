@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	reactStrictMode: true,
-	swcMinify: true,
+	swcMinify: false,
 	experimental: {
 		runtime: 'edge',
 		// Enable below when using React Server Components
@@ -23,6 +23,9 @@ const nextConfig = {
 		// your project has type errors.
 		// !! WARN !!
 		ignoreBuildErrors: true,
+	},
+	images: {
+		domains: ['raw.githubusercontent.com', 'app.osmosis.zone'],
 	},
 };
 

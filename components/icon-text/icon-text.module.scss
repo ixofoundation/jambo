@@ -1,0 +1,12 @@
+.container {
+	margin: 10px auto;
+	text-align: center;
+
+	p {
+		margin: 0;
+	}
+
+	p:nth-of-type(1) {
+		margin-top: 10px;
+	}
+}

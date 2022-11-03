@@ -1,6 +1,4 @@
-# EarthPort
-
-The Earth Mission Developers Portal
+# JAMBO Client
 
 This repo and product is intentionally managed as Open Source and we aim to use this guide to light our way https://opensource.guide/.  
 Let us know how we are doing!
@@ -10,7 +8,7 @@ Let us know how we are doing!
 First off, thank you for applying your mind and time to improving this repo - it helps the Internet of Impact to save our planet!  
 Whether you are contributing in your own space-time or following a bounty; we are grateful!
 
-1. Fork the EarthPort repo or submodule.
+1. Fork the repo or submodule.
 2. Ensure that you sync the fork often.
 3. Clone your fork and create a branch that conforms to Github naming conventions.
 4. Implement your changes one at a time and commit regularly to your fork.
@@ -41,7 +39,7 @@ Deployment on Netlify can be [configured](https://docs.netlify.com/configure-bui
 
 **Option two:** Manual clone
 
-1. Clone this repo: `git clone https://github.com/EarthProgram/Earthport.git`
+1. Clone this repo: `git clone https://github.com/ixofoundation/ixo-jambo-client.git`
 2. Navigate to the directory and run `npm run dev`
 3. Make your changes
 4. Connect to [Netlify](https://netlify.com) manually (the `netlify.toml` file is the one you'll need to make sure stays intact to make sure the export is done and pointed to the right stuff)

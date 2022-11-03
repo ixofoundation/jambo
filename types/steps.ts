@@ -1,4 +1,4 @@
-import { ArrayElement } from './general';
+import { TokenDropdownType } from '@utils/currency';
 
 export enum STEPS {
 	check_user_balance = 'check_user_balance',
@@ -44,7 +44,7 @@ interface Get_validator_address {
 	address: string;
 }
 interface Select_token_and_amount {
-	token: TokenOptionType;
+	token: TokenDropdownType;
 	amount: number;
 }
 interface Define_amount {
@@ -79,6 +79,3 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
 	: T extends STEPS.claim
 	? Claim
 	: never;
-
-export const TokenOptions = [{ value: 'ixo', label: 'IXO' }];
-export type TokenOptionType = ArrayElement<typeof TokenOptions>;

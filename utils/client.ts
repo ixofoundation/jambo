@@ -1,4 +1,4 @@
-import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
+import { BLOCKCHAIN_REST_URL, BLOCKCHAIN_RPC_URL } from '@constants/chains';
 import { assertIsDeliverTxSuccess, SigningStargateClient } from '@cosmjs/stargate';
 import { SigningStargateClient as CustomSigningStargateClient } from '@client-sdk/utils/customClient';
 import { Registry } from '@cosmjs/proto-signing';
@@ -7,12 +7,15 @@ import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
 import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
 import { Coin } from '@client-sdk/codec/cosmos/coin';
 import { MsgDelegate } from '@client-sdk/codec/external/cosmos/staking/v1beta1/tx';
+import axios from 'axios';
+import { apiCurrencyToCurrency } from './currency';
+import { Currency } from 'types/wallet';
 
-export const initStargateClient = async (offlineSigner: any): Promise<SigningStargateClient> => {
+export const initStargateClient = async (offlineSigner: any, endpoint?: string): Promise<SigningStargateClient> => {
 	const registry = new Registry(defaultStargateTypes);
 	// registry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
 
-	const cosmJS: SigningStargateClient = await SigningStargateClient.connectWithSigner(BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry });
+	const cosmJS: SigningStargateClient = await SigningStargateClient.connectWithSigner(endpoint || BLOCKCHAIN_RPC_URL, offlineSigner, { registry: registry });
 
 	return cosmJS;
 };
@@ -54,3 +57,15 @@ export const generateDelegateTrx = ({ delegatorAddress, validatorAddress, denom,
 		amount: Coin.fromPartial({ amount, denom }),
 	}),
 });
+
+export const getBalances = async (address: string): Promise<Currency[]> => {
+	let balances = [];
+	try {
+		const res = await axios.get(BLOCKCHAIN_REST_URL + '/cosmos/bank/v1beta1/balances/' + address);
+		balances = res.data.balances.map((coin: any) => apiCurrencyToCurrency(coin));
+	} catch (error) {
+		console.log('/cosmos/bank/v1beta1/balances/', error);
+		throw error;
+	}
+	return balances;
+};

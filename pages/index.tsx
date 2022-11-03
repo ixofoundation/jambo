@@ -1,5 +1,4 @@
 import type { NextPage } from 'next';
-import Head from 'next/head';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -8,22 +7,22 @@ import Footer from '@components/footer/footer';
 import CustomSwiper from '@components/swiper/swiper';
 import config from '@constants/config.json';
 import { ACTION } from 'types/actions';
+import Head from '@components/head/head';
 
 const Home: NextPage = () => {
 	return (
 		<>
-			<Head>
-				<title>EarthDay</title>
-				<meta name="description" content="EarthDay" />
-			</Head>
+			<Head title={config.siteName} description={config.siteName + ' dApp'} />
 
 			<Header />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
-				<CustomSwiper actions={config.actions as ACTION[]} />
-			</main>
+				<div className={utilsStyles.spacer} />
+				<CustomSwiper actions={config.actions as ACTION[]} swiper={false} />
+				<div className={utilsStyles.spacer} />
 
-			<Footer showAboutButton showAccountButton />
+				<Footer showAboutButton showAccountButton />
+			</main>
 		</>
 	);
 };

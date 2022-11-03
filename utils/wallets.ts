@@ -6,6 +6,7 @@ import { WALLET, WALLET_TYPE } from 'types/wallet';
 import { initializeKeplr, keplrBroadCastMessage } from './keplr';
 import { initializeKeysafe, keysafeBroadCastMessage } from './keysafe';
 import { initializeOpera, operaBroadCastMessage } from './opera';
+import { initializeWC, WCBroadCastMessage } from './walletConnect';
 
 export const initializeWallet = async (wallet: WALLET): Promise<USER | undefined> => {
 	switch (wallet.walletType) {
@@ -15,6 +16,8 @@ export const initializeWallet = async (wallet: WALLET): Promise<USER | undefined
 			return await initializeKeysafe(wallet);
 		case WALLET_TYPE.opera:
 			return await initializeOpera();
+		case WALLET_TYPE.walletConnect:
+			return await initializeWC();
 		default:
 			return;
 	}
@@ -28,6 +31,8 @@ export const broadCastMessages = async (wallet: WALLET, msgs: TRX_MSG[], memo: s
 			return await keysafeBroadCastMessage(wallet.user!, msgs, memo, fee);
 		case WALLET_TYPE.opera:
 			return await operaBroadCastMessage(wallet.user!, msgs, memo, fee);
+		case WALLET_TYPE.walletConnect:
+			return await WCBroadCastMessage(wallet.user!, msgs, memo, fee);
 		default:
 			return null;
 	}

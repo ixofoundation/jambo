@@ -1,11 +1,12 @@
-import { HTMLAttributes, useState, useEffect } from 'react';
+import { HTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './wallets.module.scss';
 import { getKeplr } from '@utils/keplr';
 import { getOpera } from '@utils/opera';
 import { WALLET_TYPE } from 'types/wallet';
-import Button from '@components/button/button';
+import WalletImg from '@icons/wallet.svg';
+import { WalletCard } from '@components/card/card';
 
 type WalletsProps = {
 	onSelected: (type: WALLET_TYPE) => void;
@@ -17,18 +18,26 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 
 	return (
 		<div className={cls(styles.wallets, className)} {...other}>
-			{keplrWallet || operaWallet ? (
+			{operaWallet ? (
 				<>
-					<h3>Choose wallet</h3>
-					{/* {keplrWallet && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
-					{keplrWallet && <Button label="Keplr" onClick={() => onSelected(WALLET_TYPE.keplr)} />}
-					{operaWallet && <Button label="Opera" onClick={() => onSelected(WALLET_TYPE.opera)} />}
+					<div className={styles.flex2} />
+					<WalletImg width={58} height={58} />
+					<h3>Choose Wallet</h3>
+					{/* {keysafe && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
+					{/* <Button label="Wallet Connect" onClick={() => onSelected(WALLET_TYPE.walletConnect)} /> */}
+					{/* {keplrWallet && <WalletCard name="Keplr Wallet" img="/images/wallets/keplr.png" onClick={() => onSelected(WALLET_TYPE.keplr)} />} */}
+					{operaWallet && <WalletCard name="Opera Wallet" img="/images/wallets/opera.png" onClick={() => onSelected(WALLET_TYPE.opera)} />}
+					<div className={styles.flex3} />
 				</>
 			) : (
-				<div>
+				<>
+					<div className={styles.flex2} />
+					<WalletImg width={58} height={58} />
 					<h3>No Wallet Detected</h3>
-					<p>Please install the kepler extension or use the dApp on an android mobile Opera browser.</p>
-				</div>
+					<p>Please use the dApp on Android with the Opera browser.</p>
+					<p>Sorry for the inconvenience, more wallets are being added soon!</p>
+					<div className={styles.flex3} />
+				</>
 			)}
 		</div>
 	);

@@ -28,11 +28,11 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 		setAddress(event.target.value);
 	};
 
-	const formIsValid = () => address.length > 8;
+	const formIsValid = () => address.length > 0;
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
-		if (!formIsValid()) return alert('Address must be longer than 8 characters');
+		if (!formIsValid()) return alert('Address must be provided');
 		onSuccess({ address });
 	};
 
@@ -47,18 +47,20 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 					<Header pageTitle="Who is the receiver" header={header} />
 
 					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-						<div onClick={() => setShowQRCamera(true)}>
+						<div className={utilsStyles.spacer} />
+						{/* <div onClick={() => setShowQRCamera(true)}>
 							<QRScan width="100px" height="100px" className={styles.qrScan} />
 							<p>Scan address</p>
 						</div>
-						<p>or</p>
+						<p>or</p> */}
 						<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 							<p>Paste address here</p>
 							<InputWithSufficIcon name="address" required onChange={handleChange} value={address} Icon={Paste} />
 						</form>
-					</main>
+						<div className={utilsStyles.spacer} />
 
-					<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+						<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+					</main>
 				</>
 			)}
 		</>

@@ -9,6 +9,16 @@
 	display: flex;
 	justify-content: space-around;
 
+	@media only screen and (min-width: 760px) {
+		position: relative;
+		display: flex;
+		justify-content: space-around;
+		background-color: #0000;
+		height: auto;
+		width: 500px;
+		margin: 50px auto 30px;
+	}
+
 	a {
 		margin: auto 0;
 	}

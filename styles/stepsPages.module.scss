@@ -27,6 +27,21 @@
 		.alignLeft {
 			text-align: left;
 		}
+
+		.alignRight {
+			text-align: right;
+		}
+
+		.titleWithSubtext {
+			margin-bottom: 4px;
+		}
+
+		.subtext {
+			font-size: 0.8rem;
+			color: var(--grey-color);
+			opacity: 0.8;
+			margin: 4px 0;
+		}
 	}
 }
 

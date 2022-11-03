@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useContext, useEffect, useState } from 'react';
 import { FC } from 'react';
 import cls from 'classnames';
 
@@ -8,7 +8,11 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
 import Dropdown from '@components/dropdown/dropdown';
-import { StepDataType, STEPS, TokenOptions, TokenOptionType } from 'types/steps';
+import { StepDataType, STEPS } from 'types/steps';
+import { WalletContext } from '@contexts/wallet';
+import { formatTokenAmount, generateUserTokensDropdown, TokenDropdownType, validateAmountAgainstBalance } from '@utils/currency';
+import IconText from '@components/icon-text/icon-text';
+import SadFace from '@icons/sad_face.svg';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
@@ -19,37 +23,59 @@ type DefineAmountTokenProps = {
 
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
 	const [amount, setAmount] = useState(data?.amount?.toString() ?? '');
-	const [selectedOption, setSelectedOption] = useState<TokenOptionType>(data?.token ?? null);
+	const [selectedOption, setSelectedOption] = useState<TokenDropdownType | null>(data?.token || null);
+	const { wallet, fetchAssets } = useContext(WalletContext);
+
+	useEffect(() => {
+		fetchAssets();
+	}, []);
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		setAmount(event.target.value);
 	};
 
-	const formIsValid = () => Number.parseFloat(amount) > 0 && !!selectedOption;
+	const formIsValid = () => !!selectedOption && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), selectedOption.amount);
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
-		if (!formIsValid()) return alert('Amount must be bigger than 0 and a token is required');
-		onSuccess({ amount: Number.parseFloat(amount), token: selectedOption });
+		if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
+		onSuccess({ amount: Number.parseFloat(amount), token: selectedOption! });
 	};
+
+	const handleMaxClicked = () => {
+		if (!selectedOption?.amount) return;
+		const tokenAmount = selectedOption?.amount / 10 ** 6;
+		setAmount(tokenAmount.toString());
+	};
+
+	const TokenDropdownOptions = generateUserTokensDropdown(wallet.balances?.balances ?? []);
 
 	return (
 		<>
 			<Header pageTitle="Define amount to be sent" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-					<p>Select token to be sent:</p>
-					<div className={styles.alignLeft}>
-						<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenOptionType)} options={TokenOptions} placeholder={null} name="token" />
-					</div>
-					<br />
-					<p>Enter Amount:</p>
-					<Input name="address" type="number" required onChange={handleChange} value={amount} className={styles.stepInput} />
-				</form>
-			</main>
+				<div className={utilsStyles.spacer} />
+				{wallet.balances?.balances ? (
+					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
+						<p>Select token to be sent:</p>
+						<div className={styles.alignLeft}>
+							<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenDropdownType)} options={TokenDropdownOptions} placeholder={null} name="token" withLogos={true} />
+						</div>
+						<br />
+						<p className={styles.titleWithSubtext}>Enter Amount:</p>
+						<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
+							Max: {selectedOption ? `${formatTokenAmount(selectedOption?.amount)} ${selectedOption.label}` : '-'}
+						</p>
+						<Input name="walletAddress" type="number" required onChange={handleChange} value={amount} className={cls(styles.stepInput, styles.alignRight)} />
+					</form>
+				) : (
+					<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
+				)}
+				<div className={utilsStyles.spacer} />
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+			</main>
 		</>
 	);
 };

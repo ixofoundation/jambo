@@ -6,7 +6,7 @@ import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
-import { ReviewStepsTypes, STEP, StepDataType, STEPS, TokenOptionType } from 'types/steps';
+import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
@@ -14,6 +14,9 @@ import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx, generateDelegateTrx } from '@utils/client';
 import Loader from '@components/loader/loader';
 import { TRX_MSG } from 'types/transactions';
+import { TokenDropdownType } from '@utils/currency';
+import IconText from '@components/icon-text/icon-text';
+import Success from '@icons/success.svg';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -25,9 +28,10 @@ type ReviewAndSignProps = {
 
 const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
 	const { wallet } = useContext(WalletContext);
+	const [success, setSuccess] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [amount, setAmount] = useState(0);
-	const [token, setToken] = useState<TokenOptionType | null>(null);
+	const [token, setToken] = useState<TokenDropdownType | null>(null);
 	const [address, setAddress] = useState('');
 
 	useEffect(() => {
@@ -59,10 +63,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				throw new Error('Unsupported review type');
 		}
 		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
-		// console.log({ hash });
-		if (hash) {
-			onSuccess({ done: true });
-		}
+		if (hash) setSuccess(true);
 		setLoading(false);
 	};
 
@@ -73,6 +74,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				{loading ? (
 					<Loader />
+				) : success ? (
+					<IconText text="Transaction successful!" Img={Success} imgSize={50} />
 				) : message === STEPS.bank_MsgSend ? (
 					<form className={styles.stepsForm} autoComplete="none">
 						<p>I am sending</p>
@@ -102,9 +105,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				) : (
 					<p>Unsupported review type</p>
 				)}
-			</main>
 
-			<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={signTX} />
+				<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
+			</main>
 		</>
 	);
 };

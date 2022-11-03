@@ -4,6 +4,10 @@
 	padding-bottom: var(--footer-height); // For footer height
 	height: 100%;
 	min-height: 100vh;
+
+	@media only screen and (min-width: 760px) {
+		padding-bottom: 0;
+	}
 }
 
 .columnSpaceEvenlyCentered {
@@ -17,4 +21,20 @@
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
+}
+
+.columnJustifyAlignCenter {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.spacer {
+	height: 30px;
+}
+
+.spacerFlex {
+	height: 30px;
+	flex: 1;
 }
