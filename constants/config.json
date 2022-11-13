@@ -3,6 +3,7 @@
 	"siteUrl": "config.siteUrl",
 	"siteTitleMeta": "config.siteTitleMeta",
 	"siteDescriptionMeta": "config.siteDescriptionMeta",
+	"wcNamespace": "ixo",
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
 	"fontName": "Roboto",
 	"headerShowName": true,

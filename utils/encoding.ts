@@ -1,6 +1,7 @@
 import * as base58 from 'bs58';
 import { BigNumber } from 'bignumber.js';
-import { toBase64, fromBase64 } from '@cosmjs/encoding';
+import { toBase64, fromBase64, toHex } from '@cosmjs/encoding';
+import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
 
 export const utf16_to_b64 = (str: string) => {
 	return Buffer.from(str, 'utf8').toString('base64');
@@ -26,6 +27,9 @@ export const b58_to_uint8Arr = (str: string): Uint8Array => {
 };
 
 export const uint8Arr_to_b64 = (array: Uint8Array): string => {
+	console.log({ array });
+	const b64 = toBase64(array);
+	console.log({ b64 });
 	return toBase64(array);
 };
 
@@ -83,4 +87,8 @@ const Utf8ArrayToStr = (array: Uint8Array) => {
 export const uint8ArrayToStr = (data: Uint8Array): string => {
 	const decodedData = Utf8ArrayToStr(data);
 	return decodedData;
+};
+
+export const stringifySignDoc = (signDoc: SignDoc) => {
+	return Object.assign(Object.assign({}, signDoc), { bodyBytes: toHex(signDoc.bodyBytes), authInfoBytes: toHex(signDoc.authInfoBytes), accountNumber: signDoc.accountNumber.toString(16) });
 };
