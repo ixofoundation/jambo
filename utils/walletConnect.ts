@@ -11,7 +11,7 @@ import config from '@constants/config.json';
 import { SessionTypes } from '@walletconnect/types';
 import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
 import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
-import { uint8Arr_to_b64, stringifySignDoc } from './encoding';
+import { uint8Arr_to_b64, stringifySignDoc, b64_to_uint8Arr } from './encoding';
 
 let signClient: SignClient;
 export let address: string;
@@ -114,9 +114,8 @@ const onSessionConnected = async (): Promise<USER | undefined> => {
 		const accounts = await getAccounts();
 		if (accounts.length) {
 			address = accounts[0].address;
-			pubkeyByteArray = accounts[0].pubkey;
-			console.log({ pubkeyByteArray });
-			console.log(uint8Arr_to_b64(pubkeyByteArray));
+			// pubkeyByteArray = b64_to_uint8Arr(uint8Arr_to_b64(Object.values(accounts[0].pubkey) as any));
+			// console.log({ pubkeyByteArray });
 			return { pubKey: pubkeyByteArray, address, algo: accounts[0].algo };
 		}
 	} catch (error) {
@@ -159,7 +158,6 @@ export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promi
 	const namespaceAccount = _session.namespaces[config.wcNamespace].accounts[0];
 	const [namespace, reference, address] = namespaceAccount.split(':');
 	const chainId = `${namespace}:${reference}`;
-	// console.log('ran!!!!!!!!!!!!!');
 	let result: { signature: string };
 	try {
 		result = await signClient.request<typeof result>({
@@ -170,25 +168,22 @@ export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promi
 				params: { signerAddress, signDoc },
 			},
 		});
-		// console.log('1ran!!!!!!!!!!!!!');
 		if (!result.signature) throw new Error();
 	} catch (error) {
 		console.log('Error signDirect: ', error);
 		throw new Error('Error signDirect: ');
 	}
-	console.log({ pubkeyByteArray });
-	console.log(uint8Arr_to_b64(pubkeyByteArray));
 
-	console.log({
-		signed: signDoc,
-		signature: {
-			pub_key: {
-				type: amino.pubkeyType.secp256k1,
-				value: uint8Arr_to_b64(pubkeyByteArray),
-			},
-			signature: result.signature,
-		},
-	});
+	// console.log({
+	// 	signed: signDoc,
+	// 	signature: {
+	// 		pub_key: {
+	// 			type: amino.pubkeyType.secp256k1,
+	// 			value: uint8Arr_to_b64(pubkeyByteArray),
+	// 		},
+	// 		signature: result.signature,
+	// 	},
+	// });
 
 	return {
 		signed: signDoc,

@@ -1,0 +1,13 @@
+.walletCard {
+	margin-bottom: 10px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 15px;
+	max-width: 400px;
+	cursor: pointer;
+
+	p {
+		margin: 0 5px 0 15px;
+	}
+}

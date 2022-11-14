@@ -7,8 +7,8 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Loader from '@components/loader/loader';
 import WalletImg from '@icons/wallet.svg';
-import { WalletCard } from '@components/card/card';
 import { WalletContext } from '@contexts/wallet';
+import WalletCard from '@components/card-wallet/card-wallet';
 
 type EmptyStepsProps = {
 	loading?: boolean;
