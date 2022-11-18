@@ -6,6 +6,7 @@ import { StepDataType, STEP, STEPS } from 'types/steps';
 import EmptySteps from '@steps/empty';
 import ReceiverAddress from '@steps/receiver_address';
 import DefineAmountToken from '@steps/define_amount_token';
+import DefineAmountDelegate from '@steps/define_amount_delegate';
 import ReviewAndSign from '@steps/review_and_sign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
@@ -33,27 +34,67 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	}, [actionData]);
 
 	function handleOnNext<T>(data: StepDataType<T>) {
-		setAction(a => (!a ? a : { ...a, steps: a.steps.map((step, index) => (index === count ? { ...step, data } : step)) }));
+		setAction((a) =>
+			!a ? a : { ...a, steps: a.steps.map((step, index) => (index === count ? { ...step, data } : step)) },
+		);
 		if (count + 1 === action?.steps.length) return replaceRoute('/');
-		setCount(c => c + 1);
+		setCount((c) => c + 1);
 	}
 
 	const handleBack = () => {
 		if (count === 0) return backRoute();
-		setCount(c => c - 1);
+		setCount((c) => c - 1);
 	};
 
 	const getStepComponent = (step: STEP) => {
 		switch (step.id) {
 			case STEPS.get_receiver_address:
-				return <ReceiverAddress onSuccess={handleOnNext<STEPS.get_receiver_address>} onBack={handleBack} data={step.data as StepDataType<STEPS.get_receiver_address>} header={action?.name} />;
+				return (
+					<ReceiverAddress
+						onSuccess={handleOnNext<STEPS.get_receiver_address>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.get_receiver_address>}
+						header={action?.name}
+					/>
+				);
 			case STEPS.get_validator_address:
-				return <ValidatorAddress onSuccess={handleOnNext<STEPS.get_receiver_address>} onBack={handleBack} data={step.data as StepDataType<STEPS.get_receiver_address>} header={action?.name} />;
+				return (
+					<ValidatorAddress
+						onSuccess={handleOnNext<STEPS.get_receiver_address>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.get_receiver_address>}
+						header={action?.name}
+					/>
+				);
 			case STEPS.select_token_and_amount:
-				return <DefineAmountToken onSuccess={handleOnNext<STEPS.select_token_and_amount>} onBack={handleBack} data={step.data as StepDataType<STEPS.select_token_and_amount>} header={action?.name} />;
+				return (
+					<DefineAmountToken
+						onSuccess={handleOnNext<STEPS.select_token_and_amount>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.select_token_and_amount>}
+						header={action?.name}
+					/>
+				);
+			case STEPS.select_delegate_amount:
+				return (
+					<DefineAmountDelegate
+						onSuccess={handleOnNext<STEPS.select_delegate_amount>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.select_delegate_amount>}
+						header={action?.name}
+					/>
+				);
 			case STEPS.bank_MsgSend:
 			case STEPS.staking_MsgDelegate:
-				return <ReviewAndSign onSuccess={handleOnNext<STEPS.review_and_sign>} onBack={handleBack} steps={action!.steps} header={action?.name} message={step.id} />;
+				return (
+					<ReviewAndSign
+						onSuccess={handleOnNext<STEPS.review_and_sign>}
+						onBack={handleBack}
+						steps={action!.steps}
+						header={action?.name}
+						message={step.id}
+					/>
+				);
 			default:
 				return <EmptySteps loading={true} />;
 		}
@@ -63,7 +104,13 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 		<>
 			<Head title={actionData.name} description={actionData.description} />
 
-			{!signedIn ? <EmptySteps signedIn={false} /> : (action?.steps?.length ?? 0) < 1 ? <EmptySteps /> : getStepComponent(action!.steps[count])}
+			{!signedIn ? (
+				<EmptySteps signedIn={false} />
+			) : (action?.steps?.length ?? 0) < 1 ? (
+				<EmptySteps />
+			) : (
+				getStepComponent(action!.steps[count])
+			)}
 		</>
 	);
 };
@@ -75,7 +122,7 @@ type PathsParams = {
 };
 
 export const getStaticPaths: GetStaticPaths<PathsParams> = async () => {
-	const paths = config.actions.map(a => ({ params: { actionId: a.id } }));
+	const paths = config.actions.map((a) => ({ params: { actionId: a.id } }));
 
 	return {
 		paths,
@@ -83,8 +130,10 @@ export const getStaticPaths: GetStaticPaths<PathsParams> = async () => {
 	};
 };
 
-export const getStaticProps = async ({ params }: GetStaticPropsContext<PathsParams>): Promise<GetStaticPropsResult<ActionPageProps>> => {
-	const actionData = config.actions.find(a => params!.actionId == a.id);
+export const getStaticProps = async ({
+	params,
+}: GetStaticPropsContext<PathsParams>): Promise<GetStaticPropsResult<ActionPageProps>> => {
+	const actionData = config.actions.find((a) => params!.actionId == a.id);
 
 	return {
 		props: {

@@ -54,3 +54,111 @@
 .qrCameraMain {
 	padding-top: 0 !important;
 }
+
+.filtersWrapper {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 10px;
+}
+
+.filterButton {
+	background: none;
+	cursor: pointer;
+	border: none;
+	outline: none;
+	color: var(--grey-color);
+	font-weight: 500;
+	font-size: 0.9rem;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+
+	& svg {
+		margin: 0 0 0 3px;
+		width: 18px;
+		height: 18px;
+
+		& path {
+			fill: var(--grey-color);
+		}
+	}
+}
+.activeFilterButton {
+	color: var(--accent-color);
+
+	& svg > path {
+		fill: var(--accent-color);
+	}
+}
+
+.validatorWrapper {
+	// cursor: pointer;
+	width: 100%;
+	background-color: var(--light-grey-color);
+	border: none;
+	border-radius: var(--card-border-radius);
+	padding: 0.7rem;
+	margin: 5px 0;
+	text-align: initial;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+
+	&.clickable {
+		cursor: pointer;
+	}
+
+	.validatorRank {
+		font-weight: 500;
+		margin-right: 0.7rem;
+		// font-size: 1.2rem;
+	}
+
+	.validatorAvatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		margin-right: 0.7rem;
+		background-color: var(--grey-color);
+	}
+
+	.validatorMoniker {
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		flex: 1;
+	}
+
+	.validatorCommission {
+		font-weight: 500;
+		margin-left: 0.7rem;
+	}
+}
+
+.inputRow {
+	width: 100%;
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+
+	& .amountWrapper {
+		flex: 1;
+	}
+
+	& .tokenWrapper {
+		flex: 1;
+	}
+}
+
+.tokenWrapper {
+	max-width: 68px;
+	margin-left: 10px;
+	background-color: var(--light-grey-color);
+	border: none;
+	border-radius: var(--card-border-radius);
+	padding: 0.7rem;
+}

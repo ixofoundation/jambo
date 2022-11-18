@@ -11,23 +11,23 @@
 	"about": "config.about",
 	"actions": [
 		{
-			"id": "dummy",
+			"id": "eKXPPhewkJDLbE1bq1iboa",
 			"steps": [
 				{
-					"id": "get_receiver_address",
-					"name": "Get receiver address"
+					"id": "get_validator_address",
+					"name": "Get validator address"
 				},
 				{
-					"id": "select_token_and_amount",
-					"name": "Select token and amount"
+					"id": "select_delegate_amount",
+					"name": "DEfine amount to delegate"
 				},
 				{
-					"id": "bank_MsgSend",
+					"id": "staking_MsgDelegate",
 					"name": "Review and sign"
 				}
 			],
-			"name": "name",
-			"description": "description (send dummy flow)",
+			"name": "Stake",
+			"description": "Stake flow",
 			"image": ""
 		}
 	]

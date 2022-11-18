@@ -1,0 +1,41 @@
+.validatorCard {
+	width: 100%;
+	background-color: var(--light-grey-color);
+	border: none;
+	border-radius: var(--card-border-radius);
+	padding: 0.7rem;
+}
+
+.headerRow {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 5px;
+
+	.validatorHeader {
+		font-size: 1.2rem;
+		font-weight: 500;
+	}
+}
+
+.validatorAvatar {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	margin-right: 0.7rem;
+	background-color: var(--grey-color);
+}
+
+.detailRow {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin: 20px 0;
+	font-size: 0.9rem;
+
+	& p {
+		margin: 0;
+		padding: 0;
+	}
+}

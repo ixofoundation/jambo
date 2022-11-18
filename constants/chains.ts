@@ -172,24 +172,24 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 //   "image": ""
 // },
 // {
-//   "id": "eKXPPhewkJDLbE1bq1iboa",
-//   "steps": [
-//     {
-//       "id": "get_validator_address",
-//       "name": "Get validator address"
-//     },
-//     {
-//       "id": "select_token_and_amount",
-//       "name": "Select token and amount"
-//     },
-//     {
-//       "id": "staking_MsgDelegate",
-//       "name": "Review and sign"
-//     }
-//   ],
-//   "name": "Stake",
-//   "description": "Stake flow",
-//   "image": ""
+// 	"id": "eKXPPhewkJDLbE1bq1iboa",
+// 	"steps": [
+// 		{
+// 			"id": "get_validator_address",
+// 			"name": "Get validator address"
+// 		},
+// 		{
+// 			"id": "select_delegate_amount",
+// 			"name": "DEfine amount to delegate"
+// 		},
+// 		{
+// 			"id": "staking_MsgDelegate",
+// 			"name": "Review and sign"
+// 		}
+// 	],
+// 	"name": "Stake",
+// 	"description": "Stake flow",
+// 	"image": ""
 // }
 
 export const ChainInfos = (
@@ -2244,9 +2244,10 @@ export const ChainInfos = (
 
 export const findTokenFromDenom = (denom: string): TOKEN_ASSET | undefined => {
 	let token: TOKEN_ASSET;
-	ChainInfos.find(c => {
-		const currency = c.currencies.find(cur => cur.coinMinimalDenom.toLowerCase() === denom.toLowerCase());
-		if (currency) token = { ...currency, coinImageUrl: 'https://app.osmosis.zone' + currency.coinImageUrl } as TOKEN_ASSET;
+	ChainInfos.find((c) => {
+		const currency = c.currencies.find((cur) => cur.coinMinimalDenom.toLowerCase() === denom.toLowerCase());
+		if (currency)
+			token = { ...currency, coinImageUrl: 'https://app.osmosis.zone' + currency.coinImageUrl } as TOKEN_ASSET;
 		return currency;
 	});
 	// @ts-ignore
@@ -2254,7 +2255,7 @@ export const findTokenFromDenom = (denom: string): TOKEN_ASSET | undefined => {
 };
 
 export const ChainDropdownOptions = [CHAINS[CHAIN_ID]].map((chain: any) => {
-	const stakeCurrency = ChainInfos.find(c => c.chainId === 'impacthub-3')?.stakeCurrency;
+	const stakeCurrency = ChainInfos.find((c) => c.chainId === 'impacthub-3')?.stakeCurrency;
 
 	return {
 		value: chain.chainId,

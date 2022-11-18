@@ -32,7 +32,17 @@ export const sendTransaction = async (
 	}
 };
 
-export const generateBankSendTrx = ({ fromAddress, toAddress, denom, amount }: { fromAddress: string; toAddress: string; denom: string; amount: string }): TRX_MSG => ({
+export const generateBankSendTrx = ({
+	fromAddress,
+	toAddress,
+	denom,
+	amount,
+}: {
+	fromAddress: string;
+	toAddress: string;
+	denom: string;
+	amount: string;
+}): TRX_MSG => ({
 	typeUrl: '/cosmos.bank.v1beta1.MsgSend',
 	value: cosmos.bank.v1beta1.MsgSend.fromPartial({
 		fromAddress,
@@ -41,7 +51,17 @@ export const generateBankSendTrx = ({ fromAddress, toAddress, denom, amount }: {
 	}),
 });
 
-export const generateDelegateTrx = ({ delegatorAddress, validatorAddress, denom, amount }: { delegatorAddress: string; validatorAddress: string; denom: string; amount: string }): TRX_MSG => ({
+export const generateDelegateTrx = ({
+	delegatorAddress,
+	validatorAddress,
+	denom,
+	amount,
+}: {
+	delegatorAddress: string;
+	validatorAddress: string;
+	denom: string;
+	amount: string;
+}): TRX_MSG => ({
 	typeUrl: '/cosmos.staking.v1beta1.MsgDelegate',
 	value: cosmos.staking.v1beta1.MsgDelegate.fromPartial({
 		delegatorAddress,
@@ -53,6 +73,7 @@ export const generateDelegateTrx = ({ delegatorAddress, validatorAddress, denom,
 export const getBalances = async (address: string): Promise<Currency[]> => {
 	let balances = [];
 	try {
+		// TODO: SDK
 		const res = await axios.get(BLOCKCHAIN_REST_URL + '/cosmos/bank/v1beta1/balances/' + address);
 		balances = res.data.balances.map((coin: any) => apiCurrencyToCurrency(coin));
 	} catch (error) {

@@ -1,0 +1,44 @@
+.validatorWrapper {
+	// cursor: pointer;
+	width: 100%;
+	background-color: var(--light-grey-color);
+	border: none;
+	border-radius: var(--card-border-radius);
+	padding: 0.7rem;
+	margin: 5px 0;
+	text-align: initial;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+
+	&.clickable {
+		cursor: pointer;
+	}
+
+	.validatorRank {
+		font-weight: 500;
+		margin-right: 0.7rem;
+		// font-size: 1.2rem;
+	}
+
+	.validatorAvatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		margin-right: 0.7rem;
+		background-color: var(--grey-color);
+	}
+
+	.validatorMoniker {
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		flex: 1;
+	}
+
+	.validatorCommission {
+		font-weight: 500;
+		margin-left: 0.7rem;
+	}
+}
