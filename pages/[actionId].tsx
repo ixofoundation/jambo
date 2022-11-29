@@ -13,6 +13,7 @@ import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/validator_address';
 import { WalletContext } from '@contexts/wallet';
 import Head from '@components/head/head';
+import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -58,12 +59,14 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					/>
 				);
 			case STEPS.get_validator_address:
+			case STEPS.get_delegation_validator_address:
 				return (
 					<ValidatorAddress
-						onSuccess={handleOnNext<STEPS.get_receiver_address>}
+						onSuccess={handleOnNext<STEPS.get_validator_address>}
 						onBack={handleBack}
-						data={step.data as StepDataType<STEPS.get_receiver_address>}
+						data={step.data as StepDataType<STEPS.get_validator_address>}
 						header={action?.name}
+						config={VALIDATOR_CONFIGS[step.id] ?? VALIDATOR_CONFIGS.default}
 					/>
 				);
 			case STEPS.select_token_and_amount:
@@ -76,16 +79,26 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					/>
 				);
 			case STEPS.select_delegate_amount:
+			case STEPS.select_undelegate_amount:
 				return (
 					<DefineAmountDelegate
 						onSuccess={handleOnNext<STEPS.select_delegate_amount>}
 						onBack={handleBack}
 						data={step.data as StepDataType<STEPS.select_delegate_amount>}
 						header={action?.name}
+						config={VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default}
+						validator={
+							(
+								action?.steps.find((step) =>
+									[STEPS.get_validator_address, STEPS.get_delegation_validator_address].includes(step.id),
+								)?.data as StepDataType<STEPS.get_validator_address>
+							)?.validator || null
+						}
 					/>
 				);
 			case STEPS.bank_MsgSend:
 			case STEPS.staking_MsgDelegate:
+			case STEPS.staking_MsgUndelegate:
 				return (
 					<ReviewAndSign
 						onSuccess={handleOnNext<STEPS.review_and_sign>}

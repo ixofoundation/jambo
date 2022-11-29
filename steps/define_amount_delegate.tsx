@@ -7,17 +7,27 @@ import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import Input from '@components/input/input';
+import ValidatorListItem from '@components/validator-list-item/validator-list-item';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
-import { formatTokenAmount, validateAmountAgainstBalance } from '@utils/currency';
+import {
+	formatTokenAmount,
+	validateAmountAgainstBalance,
+	generateUserTokensDropdown,
+	TokenDropdownType,
+} from '@utils/currency';
 import IconText from '@components/icon-text/icon-text';
 import SadFace from '@icons/sad_face.svg';
+import { VALIDATOR, ValidatorAmountConfig } from 'types/validators';
+import { Currency } from 'types/wallet';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_delegate_amount>) => void;
 	onBack?: () => void;
 	data?: StepDataType<STEPS.select_delegate_amount>;
 	header?: string;
+	validator: VALIDATOR | null;
+	config: ValidatorAmountConfig;
 };
 
 const TOKEN = {
@@ -27,12 +37,27 @@ const TOKEN = {
 	value: 'uixo',
 };
 
-const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
+const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header, validator, config }) => {
+	const delegated = !!validator?.delegation?.shares;
 	const [amount, setAmount] = useState(data?.amount?.toString() ?? '');
+	const [max, setMax] = useState<TokenDropdownType | null>(null);
 	const { wallet, fetchAssets } = useContext(WalletContext);
 
 	useEffect(() => {
 		fetchAssets();
+
+		const ixoCurrency =
+			config.source === 'wallet'
+				? wallet?.balances?.balances?.find((balance: Currency) => balance.denom === 'uixo')
+				: config.source === 'validator'
+				? validator?.delegation?.balance
+				: null;
+
+		const tokenDropdown = generateUserTokensDropdown(ixoCurrency ? [ixoCurrency] : []);
+
+		if (tokenDropdown.length) {
+			setMax(tokenDropdown[0]);
+		}
 	}, []);
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -40,12 +65,12 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 	};
 
 	const formIsValid = () =>
-		!!TOKEN && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), TOKEN.amount);
+		!!max && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), max.amount);
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
 		if (!formIsValid()) return alert('Amount must be bigger than 0 and less than balance.');
-		onSuccess({ amount: Number.parseFloat(amount), token: TOKEN });
+		onSuccess({ amount: Number.parseFloat(amount), token: max as TokenDropdownType });
 	};
 
 	const handleMaxClicked = () => {
@@ -56,17 +81,25 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 
 	return (
 		<>
-			<Header pageTitle="Define amount to delegate" header={header} />
+			<Header pageTitle={config.pageTitle} header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				<div className={utilsStyles.spacer} />
-				{wallet.balances?.balances?.length ? (
+				{!validator ? (
+					<IconText text="Something went wrong. Please try again." Img={SadFace} imgSize={50} />
+				) : wallet.balances?.balances?.length ? (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-						<p>Enter amount to delegate:</p>
+						{delegated && (
+							<>
+								<ValidatorListItem validator={validator} onClick={() => () => {}} />
+								<div className={utilsStyles.spacer} />
+							</>
+						)}
+						<p>{delegated ? config.label : config.defaultLabel}</p>
 						<div className={styles.inputRow}>
 							<div className={styles.amountWrapper}>
 								<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
-									Max: {TOKEN ? `${formatTokenAmount(TOKEN?.amount)} ${TOKEN.label}` : '-'}
+									Max: {max ? `${formatTokenAmount(max.amount)} ${max.label}` : '-'}
 								</p>
 								<Input
 									name="walletAddress"
@@ -79,7 +112,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 							</div>
 							<div className={styles.tokenWrapper}>{TOKEN.label}</div>
 						</div>
-						<p>Your tokens will be locked for 21 days.</p>
+						{config.sub ? <p>{config.sub}</p> : null}
 						<div className={utilsStyles.spacer} />
 					</form>
 				) : (

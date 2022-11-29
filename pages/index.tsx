@@ -18,7 +18,7 @@ const Home: NextPage = () => {
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
 				<div className={utilsStyles.spacer} />
-				<CustomSwiper actions={config.actions as ACTION[]} swiper={false} />
+				<CustomSwiper actions={config.actions as ACTION[]} swiper />
 				<div className={utilsStyles.spacer} />
 
 				<Footer showAboutButton showAccountButton />

@@ -15,22 +15,43 @@ import { StepDataType, STEPS } from 'types/steps';
 // import EmptySteps from './empty';
 import { WalletContext } from '@contexts/wallet';
 import ValidatorCard from '@components/validator-card/validator-card';
-import { VALIDATOR } from 'types/validators';
+import { DELEGATION, VALIDATOR, ValidatorConfig } from 'types/validators';
 import ValidatorListItem from '@components/validator-list-item/validator-list-item';
-// import { cosmos } from '@ixo/impactxclient-sdk';
+import { VALIDATOR_FILTERS } from '@utils/filters';
+import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
+import Loader from '@components/loader/loader';
+
+const DUMMY_DATA = [
+	{
+		address: 'ixovaloper1c2p6gt94zklklz63q6zv4p5a665myng7y47g8j',
+		moniker: 'ixo-tester',
+		identity: '',
+		avatarUrl: null,
+		description: '',
+		commission: 10,
+		votingPower: '99.87',
+		votingRank: 1,
+		delegation: null,
+	},
+	{
+		address: 'ixovaloper1skya94ncr7u2276dxnkxrsuwwhrwd9sze7wg30',
+		moniker: 'Forbole',
+		identity: '2861F5EE06627224',
+		avatarUrl: null,
+		description: 'Co-building the Interchain',
+		commission: 10,
+		votingPower: '0.13',
+		votingRank: 2,
+		delegation: null,
+	},
+];
 
 type ValidatorAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.get_validator_address>) => void;
 	onBack?: () => void;
 	data?: StepDataType<STEPS.get_validator_address>;
 	header?: string;
-};
-
-const FILTERS = {
-	VOTING_ASC: 'voting_asc',
-	VOTING_DESC: 'voting_desc',
-	COMMISSION_ASC: 'commission_asc',
-	COMMISSION_DESC: 'commission_desc',
+	config: ValidatorConfig;
 };
 
 const filterValidators = (validators: VALIDATOR[], filter: string, search: string) => {
@@ -47,38 +68,38 @@ const filterValidators = (validators: VALIDATOR[], filter: string, search: strin
 		);
 	}
 
-	if (filter === FILTERS.VOTING_ASC) {
-		return validatorsToFilter.sort((a: VALIDATOR, b: VALIDATOR) =>
-			a.votingPower !== b.votingPower ? (a.votingPower > b.votingPower ? 1 : -1) : a.commission > b.commission ? 1 : -1,
-		);
-	}
-	if (filter === FILTERS.VOTING_DESC) {
-		return validatorsToFilter.sort((a: VALIDATOR, b: VALIDATOR) =>
-			a.votingPower !== b.votingPower ? (a.votingPower > b.votingPower ? -1 : 1) : a.commission > b.commission ? -1 : 1,
-		);
-	}
-	if (filter === FILTERS.COMMISSION_ASC) {
-		return validatorsToFilter.sort((a: VALIDATOR, b: VALIDATOR) =>
-			a.commission !== b.commission ? (a.commission > b.commission ? 1 : -1) : a.votingPower > b.votingPower ? 1 : -1,
-		);
-	}
-	if (filter === FILTERS.COMMISSION_DESC) {
-		return validatorsToFilter.sort((a: VALIDATOR, b: VALIDATOR) =>
-			a.commission !== b.commission ? (a.commission > b.commission ? -1 : 1) : a.votingPower > b.votingPower ? -1 : 1,
-		);
-	}
-
-	console.error(`Invalid filter provided to sort validators - ${filter}`);
-	return validatorsToFilter;
+	return validatorsToFilter.sort(VALIDATOR_FILTERS[filter]);
 };
 
-const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header }) => {
+const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header, config }) => {
 	const [validatorsData, setValidatorsData] = useState<VALIDATOR[]>([]);
 	const [validatorList, setValidatorList] = useState<VALIDATOR[]>([]);
 	const [search, setSearch] = useState<string>('');
 	const [filter, setFilter] = useState<string>(FILTERS.VOTING_DESC);
 	const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
-	const { queryClient } = useContext(WalletContext);
+	const { queryClient, wallet } = useContext(WalletContext);
+
+	const fetchDelegatorDelegations = async () => {
+		try {
+			const { delegationResponses = [] } = await queryClient.cosmos.staking.v1beta1.delegatorDelegations({
+				delegatorAddr: wallet.user?.address ?? '',
+			});
+
+			const delegatorDelegations: DELEGATION[] = delegationResponses.map((delegation: any) => ({
+				delegatorAddress: delegation.delegation.delegatorAddress,
+				validatorAddress: delegation.delegation.validatorAddress,
+				shares: Number(delegation.delegation.shares || 0),
+				balance: {
+					denom: delegation.balance.denom,
+					amount: Number(delegation.balance.amount || 0),
+				},
+			}));
+
+			return Promise.resolve(delegatorDelegations);
+		} catch (error) {
+			return Promise.resolve([]);
+		}
+	};
 
 	const fetchValidators = async () => {
 		try {
@@ -87,17 +108,20 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 			}
 
 			const { validators = [] } = await queryClient.cosmos.staking.v1beta1.validators({ status: 'BOND_STATUS_BONDED' });
+			const delegatorDelegations = await fetchDelegatorDelegations();
 			const totalTokens = validators.reduce((result: number, validator: any) => {
 				return result + Number(validator.tokens || 0);
 			}, 0);
 
 			let newValidatorList = validators.map((validator: any) => {
-				// const avatarUrl = await validatorAvatarUrl(val.description.identity);
-
 				const validatorVotingPower = (
 					(Number(validator.tokens) / Math.pow(10, 6) / (totalTokens / Math.pow(10, 6))) *
 					100
 				).toFixed(2);
+
+				const delegation = delegatorDelegations.find(
+					(delegation) => delegation.validatorAddress === validator.operatorAddress,
+				);
 
 				return {
 					address: validator.operatorAddress,
@@ -108,15 +132,20 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 					commission: validator.commission.commissionRates.rate / 10000000000000000,
 					votingPower: validatorVotingPower,
 					votingRank: 0,
+					delegation: delegation ?? null,
 				};
 			});
 
+			newValidatorList = newValidatorList.concat(DUMMY_DATA); // TODO: remove this concat
 			newValidatorList = filterValidators(newValidatorList, FILTERS.VOTING_DESC, '');
-
 			newValidatorList = newValidatorList.map((validator: VALIDATOR, index: number) => ({
 				...validator,
 				votingRank: index + 1,
 			}));
+
+			if (config.delegatedValidatorsOnly) {
+				newValidatorList = newValidatorList.filter((validator: VALIDATOR) => !!validator.delegation?.shares);
+			}
 
 			setValidatorsData(newValidatorList ?? []);
 		} catch (error) {
@@ -126,20 +155,17 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 
 	useEffect(() => {
 		fetchValidators();
-
-		// TODO: Check delegated validators
-		// (async () => {
-		// 	try {
-		// 		const res = await queryClient.
-		// 	} catch (error) {
-		// 		console.error(error)
-		// 	}
-		// })()
 	}, []);
 
 	useEffect(() => {
 		setValidatorList(filterValidators(validatorsData, filter, search));
 	}, [validatorsData, search]);
+
+	useEffect(() => {
+		if (!config.showValidatorDetails && formIsValid()) {
+			handleSubmit(null);
+		}
+	}, [selectedValidator]);
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
 		setSearch(event.target.value);
@@ -167,86 +193,99 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 		setSelectedValidator(null);
 	};
 
-	// const handleAvatarFetched = (validatorIndex: number) => (avatarUrl: string) => {
-	// 	setValidatorsData(prevState => {
-	// 		const newState = [...prevState.]
-	// 	})
-	// }
+	const handleAvatarFetched = (validatorIndex: number) => (avatarUrl: string) => {
+		setValidatorsData((prevState: VALIDATOR[]) => [
+			...prevState.slice(0, validatorIndex),
+			{ ...prevState[validatorIndex], avatarUrl },
+			...prevState.slice(validatorIndex + 1),
+		]);
+	};
+
+	if (config.showValidatorDetails && selectedValidator?.address)
+		return (
+			<>
+				<Header pageTitle="Validator details" header={header} />
+
+				<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+					<div className={utilsStyles.spacer} />
+					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
+						<ValidatorCard validator={selectedValidator} />
+					</form>
+					<div className={utilsStyles.spacer} />
+
+					<Footer
+						onBack={unselectValidator}
+						onBackUrl={onBack ? undefined : ''}
+						onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+					/>
+				</main>
+			</>
+		);
 
 	return (
 		<>
-			{selectedValidator?.address ? (
-				<>
-					<Header pageTitle="VAlidator details" header={header} />
+			<Header pageTitle={config.pageTitle} header={header} />
 
-					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-						<div className={utilsStyles.spacer} />
-						<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-							<ValidatorCard validator={selectedValidator} />
-						</form>
-						<div className={utilsStyles.spacer} />
+			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+				<div className={utilsStyles.spacer} />
+				{!validatorsData.length ? (
+					<Loader />
+				) : (
+					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
+						<p>{config.label}</p>
+						{config.allowFilters && (
+							<>
+								<InputWithSufficIcon name="address" onChange={handleChange} value={search} Icon={Search} />
 
-						<Footer
-							onBack={unselectValidator}
-							onBackUrl={onBack ? undefined : ''}
-							onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-						/>
-					</main>
-				</>
-			) : (
-				<>
-					<Header pageTitle="Choose validator" header={header} />
+								<div className={utilsStyles.spacer} />
 
-					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-						<div className={utilsStyles.spacer} />
-						<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-							<p>Choose validator</p>
-							<InputWithSufficIcon name="address" onChange={handleChange} value={search} Icon={Search} />
+								<div className={styles.filtersWrapper}>
+									<button
+										className={`${styles.filterButton} ${
+											[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
+										}`}
+										onClick={handleFilterClick(
+											filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
+										)}
+									>
+										Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
+									</button>
+									<button
+										className={`${styles.filterButton} ${
+											[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter)
+												? styles.activeFilterButton
+												: ''
+										}`}
+										onClick={handleFilterClick(
+											filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
+										)}
+									>
+										Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
+									</button>
+								</div>
+							</>
+						)}
 
-							<div className={utilsStyles.spacer} />
+						{validatorList.map((validator: any, index: number) => {
+							return (
+								<ValidatorListItem
+									key={validator.address}
+									validator={validator}
+									onClick={handleValidatorClick}
+									onAvatarFetched={handleAvatarFetched(index)}
+								/>
+							);
+						})}
+					</form>
+				)}
+				<div className={utilsStyles.spacer} />
 
-							<div className={styles.filtersWrapper}>
-								<button
-									className={`${styles.filterButton} ${
-										[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
-									}`}
-									onClick={handleFilterClick(filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC)}
-								>
-									Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
-								</button>
-								<button
-									className={`${styles.filterButton} ${
-										[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter) ? styles.activeFilterButton : ''
-									}`}
-									onClick={handleFilterClick(
-										filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
-									)}
-								>
-									Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
-								</button>
-							</div>
-
-							{validatorList.map((validator: any) => {
-								return (
-									<ValidatorListItem
-										key={validator.address}
-										validator={validator}
-										onClick={handleValidatorClick}
-										onAvatarFetched={console.log}
-									/>
-								);
-							})}
-						</form>
-						<div className={utilsStyles.spacer} />
-
-						<Footer
-							onBack={onBack}
-							onBackUrl={onBack ? undefined : ''}
-							onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-						/>
-					</main>
-				</>
-			)}
+				<Footer
+					onBack={onBack}
+					onBackUrl={onBack ? undefined : ''}
+					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+				/>
+			</main>
 		</>
 	);
 };
