@@ -89,6 +89,42 @@ export const generateUndelegateTrx = ({
 	}),
 });
 
+export const generateRedelegateTrx = ({
+	delegatorAddress,
+	validatorSrcAddress,
+	validatorDstAddress,
+	denom,
+	amount,
+}: {
+	delegatorAddress: string;
+	validatorSrcAddress: string;
+	validatorDstAddress: string;
+	denom: string;
+	amount: string;
+}): TRX_MSG => ({
+	typeUrl: '/cosmos.staking.v1beta1.MsgBeginRedelegate',
+	value: cosmos.staking.v1beta1.MsgBeginRedelegate.fromPartial({
+		delegatorAddress,
+		validatorSrcAddress,
+		validatorDstAddress,
+		amount: cosmos.base.v1beta1.Coin.fromPartial({ amount, denom }),
+	}),
+});
+
+export const generateWithdrawRewardTrx = ({
+	delegatorAddress,
+	validatorAddress,
+}: {
+	delegatorAddress: string;
+	validatorAddress: string;
+}): TRX_MSG => ({
+	typeUrl: '/cosmos.staking.v1beta1.MsgWithdrawDelegatorReward',
+	value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
+		delegatorAddress,
+		validatorAddress,
+	}),
+});
+
 export const getBalances = async (address: string): Promise<Currency[]> => {
 	let balances = [];
 	try {

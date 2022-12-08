@@ -8,12 +8,26 @@ export const VALIDATOR_CONFIGS = {
 		allowFilters: true,
 		label: 'Choose validator:',
 	},
-	[STEPS.get_delegation_validator_address]: {
+	[STEPS.get_delegated_validator_undelegate]: {
 		pageTitle: 'Undelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
 		allowFilters: false,
 		label: 'Choose validator:',
+	},
+	[STEPS.get_delegated_validator_redelegate]: {
+		pageTitle: 'Redelegate',
+		delegatedValidatorsOnly: true,
+		showValidatorDetails: false,
+		allowFilters: false,
+		label: 'Choose stake to redelegate:',
+	},
+	[STEPS.get_validator_redelegate]: {
+		pageTitle: 'Define validator to redelegate to',
+		delegatedValidatorsOnly: false,
+		showValidatorDetails: false,
+		allowFilters: true,
+		label: 'I want to redelegate to:',
 	},
 	default: {
 		pageTitle: 'Choose validator',
@@ -37,6 +51,13 @@ export const VALIDATOR_AMOUNT_CONFIGS = {
 		defaultLabel: 'Enter amount to undelegate:',
 		label: 'I want to undelegate:',
 		sub: 'Your tokens will be available after 21 days.',
+		source: 'validator',
+	},
+	[STEPS.select_redelegate_amount]: {
+		pageTitle: 'Define amount to redelegate',
+		defaultLabel: 'Enter amount to undelegate:',
+		label: 'I want to redelegate:',
+		sub: 'Your tokens will be redelegated instantly.',
 		source: 'validator',
 	},
 	default: {

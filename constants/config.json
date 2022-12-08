@@ -34,7 +34,7 @@
 			"id": "eKXPPhewkJDLbE1bq1ibob",
 			"steps": [
 				{
-					"id": "get_delegation_validator_address",
+					"id": "get_delegated_validator_undelegate",
 					"name": "Get delegation validator address"
 				},
 				{
@@ -54,15 +54,15 @@
 			"id": "eKXPPhewkJDLbE1bq1iboc",
 			"steps": [
 				{
-					"id": "get_delegation_validator_address",
+					"id": "get_delegated_validator_redelegate",
 					"name": "Get delegation validator address"
 				},
 				{
-					"id": "select_delegate_amount",
+					"id": "select_redelegate_amount",
 					"name": "Define amount to redelegate"
 				},
 				{
-					"id": "get_validator_address",
+					"id": "get_validator_redelegate",
 					"name": "Get validator address"
 				},
 				{
@@ -78,11 +78,7 @@
 			"id": "eKXPPhewkJDLbE1bq1ibod",
 			"steps": [
 				{
-					"id": "get_delegation_rewards",
-					"name": "Get delegation validator address"
-				},
-				{
-					"id": "staking_MsgRewards",
+					"id": "distribution_MsgWithdrawDelegatorReward",
 					"name": "Review and sign"
 				}
 			],

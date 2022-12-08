@@ -3,10 +3,16 @@ import { b58_to_b64 } from './encoding';
 
 export const defaultTrxFee: TRX_FEE = {
 	amount: [{ amount: String(5000), denom: 'uixo' }],
-	gas: String(200000),
+	gas: String(300000),
 };
 
-export const generateKeysafeTx = (msgs: TRX_MSG[], signature: any, account_number: string, sequence: string, fee = defaultTrxFee) => {
+export const generateKeysafeTx = (
+	msgs: TRX_MSG[],
+	signature: any,
+	account_number: string,
+	sequence: string,
+	fee = defaultTrxFee,
+) => {
 	return {
 		msg: msgs,
 		fee: fee,
@@ -37,7 +43,7 @@ export const sortObject = (obj: any): any => {
 	}
 	const sortedKeys = Object.keys(obj).sort();
 	const result = {};
-	sortedKeys.forEach(key => {
+	sortedKeys.forEach((key) => {
 		result[key] = sortObject(obj[key]);
 	});
 

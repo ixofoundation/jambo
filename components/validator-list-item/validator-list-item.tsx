@@ -7,7 +7,7 @@ import Image from 'next/image';
 
 type ValidatorListItemProps = {
 	validator: VALIDATOR;
-	onClick: (validator: VALIDATOR) => () => void;
+	onClick?: (validator: VALIDATOR) => () => void;
 	onAvatarFetched?: (url: string) => void;
 };
 
@@ -38,7 +38,7 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick, onA
 		<div
 			key={validator.address}
 			className={`${styles.validatorWrapper} ${styles.clickable} ${delegated ? styles.delegatedValidator : ''}`}
-			onClick={onClick(validator)}
+			onClick={onClick ? onClick(validator) : () => {}}
 		>
 			<div className={styles.row}>
 				<div className={styles.validatorRank}>{validator.votingRank}</div>

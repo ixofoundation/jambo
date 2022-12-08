@@ -14,6 +14,7 @@ import ValidatorAddress from '@steps/validator_address';
 import { WalletContext } from '@contexts/wallet';
 import Head from '@components/head/head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import ValidatorRewards from '@steps/claim_rewards';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -48,6 +49,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	};
 
 	const getStepComponent = (step: STEP) => {
+		console.log({ step });
 		switch (step.id) {
 			case STEPS.get_receiver_address:
 				return (
@@ -59,7 +61,9 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					/>
 				);
 			case STEPS.get_validator_address:
-			case STEPS.get_delegation_validator_address:
+			case STEPS.get_delegated_validator_undelegate:
+			case STEPS.get_delegated_validator_redelegate:
+			case STEPS.get_validator_redelegate:
 				return (
 					<ValidatorAddress
 						onSuccess={handleOnNext<STEPS.get_validator_address>}
@@ -80,6 +84,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 				);
 			case STEPS.select_delegate_amount:
 			case STEPS.select_undelegate_amount:
+			case STEPS.select_redelegate_amount:
 				return (
 					<DefineAmountDelegate
 						onSuccess={handleOnNext<STEPS.select_delegate_amount>}
@@ -90,15 +95,30 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						validator={
 							(
 								action?.steps.find((step) =>
-									[STEPS.get_validator_address, STEPS.get_delegation_validator_address].includes(step.id),
+									[
+										STEPS.get_validator_address,
+										STEPS.get_delegated_validator_undelegate,
+										STEPS.get_delegated_validator_redelegate,
+									].includes(step.id),
 								)?.data as StepDataType<STEPS.get_validator_address>
 							)?.validator || null
 						}
 					/>
 				);
+			case STEPS.distribution_MsgWithdrawDelegatorReward:
+				return (
+					<ValidatorRewards
+						onSuccess={handleOnNext<STEPS.get_validator_address>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.get_validator_address>}
+						header={action?.name}
+						message={step.id}
+					/>
+				);
 			case STEPS.bank_MsgSend:
 			case STEPS.staking_MsgDelegate:
 			case STEPS.staking_MsgUndelegate:
+			case STEPS.staking_MsgRedelegate:
 				return (
 					<ReviewAndSign
 						onSuccess={handleOnNext<STEPS.review_and_sign>}

@@ -195,7 +195,7 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // 	"id": "eKXPPhewkJDLbE1bq1ibob",
 // 	"steps": [
 // 		{
-// 			"id": "get_delegation_validator_address",
+// 			"id": "get_delegated_validator_undelegate",
 // 			"name": "Get delegation validator address"
 // 		},
 // 		{
@@ -215,7 +215,7 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // 	"id": "eKXPPhewkJDLbE1bq1iboc",
 // 	"steps": [
 // 		{
-// 			"id": "get_delegation_validator_address",
+// 			"id": "get_delegated_validator_undelegate",
 // 			"name": "Get delegation validator address"
 // 		},
 // 		{
@@ -238,10 +238,6 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // {
 // 	"id": "eKXPPhewkJDLbE1bq1ibod",
 // 	"steps": [
-// 		{
-// 			"id": "get_delegation_rewards",
-// 			"name": "Get delegation validator address"
-// 		},
 // 		{
 // 			"id": "staking_MsgRewards",
 // 			"name": "Review and sign"

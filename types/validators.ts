@@ -5,6 +5,7 @@ export type DELEGATION = {
 	validatorAddress: string;
 	shares: number;
 	balance: Currency;
+	rewards?: Currency[];
 };
 
 export type VALIDATOR = {

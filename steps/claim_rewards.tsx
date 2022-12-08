@@ -1,18 +1,13 @@
 // Page not finished please dont use yet
 
-import { ChangeEvent, FC, FormEvent, useState, useEffect, useContext } from 'react';
+import { FC, FormEvent, useState, useEffect, useContext } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
-import Search from '@icons/search.svg';
-import FilterAsc from '@icons/filter_asc.svg';
-import FilterDesc from '@icons/filter_desc.svg';
-import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-suffix-icon';
-import { StepDataType, STEPS } from 'types/steps';
-// import EmptySteps from './empty';
+import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import ValidatorCard from '@components/validator-card/validator-card';
 import { DELEGATION, VALIDATOR, ValidatorConfig } from 'types/validators';
@@ -20,38 +15,18 @@ import ValidatorListItem from '@components/validator-list-item/validator-list-it
 import { VALIDATOR_FILTERS } from '@utils/filters';
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
 import Loader from '@components/loader/loader';
-
-// const DUMMY_DATA = [
-// 	{
-// 		address: 'ixovaloper1c2p6gt94zklklz63q6zv4p5a665myng7y47g8j',
-// 		moniker: 'ixo-tester',
-// 		identity: '',
-// 		avatarUrl: null,
-// 		description: '',
-// 		commission: 10,
-// 		votingPower: '99.87',
-// 		votingRank: 1,
-// 		delegation: null,
-// 	},
-// 	{
-// 		address: 'ixovaloper1skya94ncr7u2276dxnkxrsuwwhrwd9sze7wg30',
-// 		moniker: 'Forbole',
-// 		identity: '2861F5EE06627224',
-// 		avatarUrl: null,
-// 		description: 'Co-building the Interchain',
-// 		commission: 10,
-// 		votingPower: '0.13',
-// 		votingRank: 2,
-// 		delegation: null,
-// 	},
-// ];
+import IconText from '@components/icon-text/icon-text';
+import { TRX_MSG } from 'types/transactions';
+import { defaultTrxFee } from '@utils/transactions';
+import { generateWithdrawRewardTrx } from '@utils/client';
+import { broadCastMessages } from '@utils/wallets';
 
 type ValidatorAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.get_validator_address>) => void;
 	onBack?: () => void;
 	data?: StepDataType<STEPS.get_validator_address>;
 	header?: string;
-	config: ValidatorConfig;
+	message: ReviewStepsTypes;
 };
 
 const filterValidators = (validators: VALIDATOR[], filter: string, search: string) => {
@@ -71,12 +46,24 @@ const filterValidators = (validators: VALIDATOR[], filter: string, search: strin
 	return validatorsToFilter.sort(VALIDATOR_FILTERS[filter]);
 };
 
-const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header, config }) => {
+const calculateAccumulatedRewards = (validators: VALIDATOR[]) => {
+	let total = 0;
+
+	validators.forEach((validator: VALIDATOR) => {
+		if (validator.delegation?.rewards?.length) {
+			validator.delegation.rewards.forEach((reward) => (total += Number(reward.amount) ?? 0));
+		}
+	});
+
+	return total / Math.pow(10, 6);
+};
+
+const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header, message }) => {
 	const [validatorsData, setValidatorsData] = useState<VALIDATOR[]>([]);
 	const [validatorList, setValidatorList] = useState<VALIDATOR[]>([]);
-	const [search, setSearch] = useState<string>('');
-	const [filter, setFilter] = useState<string>(FILTERS.VOTING_DESC);
-	const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
+	const [success, setSuccess] = useState(false);
+	const [loading, setLoading] = useState(false);
+	const [rewards, setRewards] = useState<number>(0);
 	const { queryClient, wallet } = useContext(WalletContext);
 
 	const fetchDelegatorDelegations = async () => {
@@ -155,16 +142,14 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 				};
 			});
 
-			// newValidatorList = newValidatorList.concat(DUMMY_DATA); // TODO: remove this concat
 			newValidatorList = filterValidators(newValidatorList, FILTERS.VOTING_DESC, '');
 			newValidatorList = newValidatorList.map((validator: VALIDATOR, index: number) => ({
 				...validator,
 				votingRank: index + 1,
 			}));
+			newValidatorList = newValidatorList.filter((validator: VALIDATOR) => !!validator.delegation?.shares);
 
-			if (config.delegatedValidatorsOnly) {
-				newValidatorList = newValidatorList.filter((validator: VALIDATOR) => !!validator.delegation?.shares);
-			}
+			console.log({ delegatorDelegations, validators: newValidatorList });
 
 			setValidatorsData(newValidatorList ?? []);
 		} catch (error) {
@@ -177,39 +162,21 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 	}, []);
 
 	useEffect(() => {
-		setValidatorList(filterValidators(validatorsData, filter, search));
-	}, [validatorsData, search]);
+		if (validatorList?.length) {
+			setRewards(calculateAccumulatedRewards(validatorList));
+		}
+	}, [validatorList]);
 
 	useEffect(() => {
-		if (!config.showValidatorDetails && formIsValid()) {
-			handleSubmit(null);
-		}
-	}, [selectedValidator]);
+		setValidatorList(filterValidators(validatorsData, FILTERS.VOTING_DESC, ''));
+	}, [validatorsData]);
 
-	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-		setSearch(event.target.value);
-	};
-
-	const formIsValid = () => selectedValidator?.address?.length;
+	const formIsValid = () => !!rewards;
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
 		if (!formIsValid()) return alert('A validator must be selected');
-		onSuccess({ validator: selectedValidator as VALIDATOR });
-	};
-
-	const handleValidatorClick = (validator: VALIDATOR) => () => {
-		setSelectedValidator(validator);
-	};
-
-	const handleFilterClick = (filterType: string) => (event: any) => {
-		event?.preventDefault();
-		setFilter(filterType);
-		setValidatorList(filterValidators(validatorsData, filterType, search));
-	};
-
-	const unselectValidator = () => {
-		setSelectedValidator(null);
+		onSuccess({ validator: null! });
 	};
 
 	const handleAvatarFetched = (validatorIndex: number) => (avatarUrl: string) => {
@@ -220,87 +187,51 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 		]);
 	};
 
-	if (config.showValidatorDetails && selectedValidator?.address)
-		return (
-			<>
-				<Header pageTitle="Validator details" header={header} />
-
-				<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-					<div className={utilsStyles.spacer} />
-					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-						<ValidatorCard validator={selectedValidator} />
-					</form>
-					<div className={utilsStyles.spacer} />
-
-					<Footer
-						onBack={unselectValidator}
-						onBackUrl={onBack ? undefined : ''}
-						onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-					/>
-				</main>
-			</>
-		);
+	const signTX = async (): Promise<void> => {
+		setLoading(true);
+		// const trx: TRX_MSG = generateWithdrawRewardTrx({
+		// 	delegatorAddress: wallet.user!.address,
+		// 	validatorAddress:
+		// });
+		// const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
+		// if (hash) setSuccess(true);
+		setLoading(false);
+	};
 
 	return (
 		<>
-			<Header pageTitle={config.pageTitle} header={header} />
+			<Header pageTitle="Claim rewards" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				<div className={utilsStyles.spacer} />
-				{!validatorsData.length ? (
+				{loading || !validatorList.length ? (
 					<Loader />
+				) : success ? (
+					<IconText text="transaction successful!" Img={success} imgSize={50} />
 				) : (
+					// ) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-						<p>{config.label}</p>
-						{config.allowFilters && (
-							<>
-								<InputWithSufficIcon name="address" onChange={handleChange} value={search} Icon={Search} />
-
-								<div className={utilsStyles.spacer} />
-
-								<div className={styles.filtersWrapper}>
-									<button
-										className={`${styles.filterButton} ${
-											[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
-										}`}
-										onClick={handleFilterClick(
-											filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
-										)}
-									>
-										Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
-									</button>
-									<button
-										className={`${styles.filterButton} ${
-											[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter)
-												? styles.activeFilterButton
-												: ''
-										}`}
-										onClick={handleFilterClick(
-											filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
-										)}
-									>
-										Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
-									</button>
-								</div>
-							</>
-						)}
-
+						<p>Your delegations</p>
 						{validatorList.map((validator: any, index: number) => {
 							return (
 								<ValidatorListItem
 									key={validator.address}
 									validator={validator}
-									onClick={handleValidatorClick}
 									onAvatarFetched={handleAvatarFetched(index)}
 								/>
 							);
 						})}
+						<div className={utilsStyles.spacer} />
+						<p>Combined Rewards:</p>
+						<p className={styles.rewardListItem}>{rewards} IXO</p>
+						<div className={utilsStyles.spacer} />
+						<p>Claim?</p>
 					</form>
 				)}
-				<div className={utilsStyles.spacer} />
-
+				{/* : (
+					<p>Unsupported review type</p>
+				)} */}
 				<Footer
-					onBack={onBack}
+					onBack={loading || success ? null : onBack}
 					onBackUrl={onBack ? undefined : ''}
 					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
 				/>
@@ -309,4 +240,4 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, 
 	);
 };
 
-export default ValidatorAddress;
+export default ClaimRewards;
