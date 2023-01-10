@@ -132,6 +132,8 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
 	? Send_token_to_receiver
 	: T extends STEPS.review_and_sign
 	? Review_and_sign
+	: T extends STEPS.distribution_MsgWithdrawDelegatorReward
+	? Review_and_sign
 	: T extends STEPS.claim
 	? Claim
 	: never;

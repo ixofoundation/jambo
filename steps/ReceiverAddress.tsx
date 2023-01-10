@@ -9,9 +9,9 @@ import QRScan from '@icons/qr_scan.svg';
 import Paste from '@icons/paste.svg';
 import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-suffix-icon';
 import { StepDataType, STEPS } from 'types/steps';
-import EmptySteps from './empty';
+import EmptySteps from './EmptySteps';
 
-const QRCamera = lazy(() => import('./qr-camera'));
+const QRCamera = lazy(() => import('./QRCamera'));
 
 type ReceiverAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.get_receiver_address>) => void;
@@ -40,7 +40,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 		<>
 			{showQRCamera ? (
 				<Suspense fallback={<EmptySteps loading={true} />}>
-					<QRCamera onSuccess={address => onSuccess({ address })} onBack={() => setShowQRCamera(false)} />
+					<QRCamera onSuccess={(address) => onSuccess({ address })} onBack={() => setShowQRCamera(false)} />
 				</Suspense>
 			) : (
 				<>
@@ -59,7 +59,11 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 						</form>
 						<div className={utilsStyles.spacer} />
 
-						<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+						<Footer
+							onBack={onBack}
+							onBackUrl={onBack ? undefined : ''}
+							onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+						/>
 					</main>
 				</>
 			)}

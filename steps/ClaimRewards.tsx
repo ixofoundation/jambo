@@ -9,7 +9,6 @@ import Header from '@components/header/header';
 import Footer from '@components/footer/footer';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
-import ValidatorCard from '@components/validator-card/validator-card';
 import { DELEGATION, VALIDATOR, ValidatorConfig } from 'types/validators';
 import ValidatorListItem from '@components/validator-list-item/validator-list-item';
 import { VALIDATOR_FILTERS } from '@utils/filters';
@@ -20,9 +19,10 @@ import { TRX_MSG } from 'types/transactions';
 import { defaultTrxFee } from '@utils/transactions';
 import { generateWithdrawRewardTrx } from '@utils/client';
 import { broadCastMessages } from '@utils/wallets';
+import SadFace from '@icons/sad_face.svg';
 
 type ValidatorAddressProps = {
-	onSuccess: (data: StepDataType<STEPS.get_validator_address>) => void;
+	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
 	onBack?: () => void;
 	data?: StepDataType<STEPS.get_validator_address>;
 	header?: string;
@@ -55,14 +55,14 @@ const calculateAccumulatedRewards = (validators: VALIDATOR[]) => {
 		}
 	});
 
-	return total / Math.pow(10, 6);
+	return total / Math.pow(10, 18);
 };
 
 const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, header, message }) => {
 	const [validatorsData, setValidatorsData] = useState<VALIDATOR[]>([]);
 	const [validatorList, setValidatorList] = useState<VALIDATOR[]>([]);
 	const [success, setSuccess] = useState(false);
-	const [loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(true);
 	const [rewards, setRewards] = useState<number>(0);
 	const { queryClient, wallet } = useContext(WalletContext);
 
@@ -91,10 +91,6 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 					});
 
 					delegatorDelegations[i].rewards = rewards;
-					// const delegatorWithdrawAddress = await queryClient.cosmos.distribution.v1beta1.delegatorWithdrawAddress({
-					// 	delegatorAddress: wallet.user?.address ?? '',
-					// 	validatorAddress: delegation.validatorAddress,
-					// });
 				} catch (error) {
 					console.error('Failed to query delegation rewards:', error);
 				}
@@ -135,7 +131,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 					identity: validator.description.identity,
 					avatarUrl: null,
 					description: validator.description.details,
-					commission: validator.commission.commissionRates.rate / 10000000000000000,
+					commission: validator.commission.commissionRates.rate / Math.pow(10, 16),
 					votingPower: validatorVotingPower,
 					votingRank: 0,
 					delegation: delegation ?? null,
@@ -152,8 +148,10 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 			console.log({ delegatorDelegations, validators: newValidatorList });
 
 			setValidatorsData(newValidatorList ?? []);
+			setLoading(false);
 		} catch (error) {
 			console.error(error);
+			setLoading(false);
 		}
 	};
 
@@ -171,14 +169,6 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 		setValidatorList(filterValidators(validatorsData, FILTERS.VOTING_DESC, ''));
 	}, [validatorsData]);
 
-	const formIsValid = () => !!rewards;
-
-	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
-		event?.preventDefault();
-		if (!formIsValid()) return alert('A validator must be selected');
-		onSuccess({ validator: null! });
-	};
-
 	const handleAvatarFetched = (validatorIndex: number) => (avatarUrl: string) => {
 		setValidatorsData((prevState: VALIDATOR[]) => [
 			...prevState.slice(0, validatorIndex),
@@ -188,13 +178,16 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 	};
 
 	const signTX = async (): Promise<void> => {
+		if (!validatorList) return;
 		setLoading(true);
-		// const trx: TRX_MSG = generateWithdrawRewardTrx({
-		// 	delegatorAddress: wallet.user!.address,
-		// 	validatorAddress:
-		// });
-		// const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFee);
-		// if (hash) setSuccess(true);
+		const trxs: TRX_MSG[] = validatorList.map((validator) =>
+			generateWithdrawRewardTrx({
+				delegatorAddress: wallet.user!.address,
+				validatorAddress: validator.address,
+			}),
+		);
+		const hash = await broadCastMessages(wallet, trxs, undefined, defaultTrxFee);
+		if (hash) setSuccess(true);
 		setLoading(false);
 	};
 
@@ -203,37 +196,39 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, data, head
 			<Header pageTitle="Claim rewards" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				{loading || !validatorList.length ? (
+				{loading ? (
 					<Loader />
 				) : success ? (
 					<IconText text="transaction successful!" Img={success} imgSize={50} />
+				) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
+					validatorList?.length ? (
+						<form className={styles.stepsForm} autoComplete="none">
+							<p>Your delegations</p>
+							{validatorList.map((validator: any, index: number) => {
+								return (
+									<ValidatorListItem
+										key={validator.address}
+										validator={validator}
+										onAvatarFetched={handleAvatarFetched(index)}
+									/>
+								);
+							})}
+							<div className={utilsStyles.spacer} />
+							<p>Combined Rewards:</p>
+							<p className={styles.rewardListItem}>{rewards} IXO</p>
+							<div className={utilsStyles.spacer} />
+							<p>Claim?</p>
+						</form>
+					) : (
+						<IconText text="You don't have any tokens delegated yet." Img={SadFace} imgSize={50} />
+					)
 				) : (
-					// ) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
-					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-						<p>Your delegations</p>
-						{validatorList.map((validator: any, index: number) => {
-							return (
-								<ValidatorListItem
-									key={validator.address}
-									validator={validator}
-									onAvatarFetched={handleAvatarFetched(index)}
-								/>
-							);
-						})}
-						<div className={utilsStyles.spacer} />
-						<p>Combined Rewards:</p>
-						<p className={styles.rewardListItem}>{rewards} IXO</p>
-						<div className={utilsStyles.spacer} />
-						<p>Claim?</p>
-					</form>
-				)}
-				{/* : (
 					<p>Unsupported review type</p>
-				)} */}
+				)}
 				<Footer
 					onBack={loading || success ? null : onBack}
 					onBackUrl={onBack ? undefined : ''}
-					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
 				/>
 			</main>
 		</>

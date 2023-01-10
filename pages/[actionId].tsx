@@ -3,18 +3,18 @@ import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsCont
 
 import config from '@constants/config.json';
 import { StepDataType, STEP, STEPS } from 'types/steps';
-import EmptySteps from '@steps/empty';
-import ReceiverAddress from '@steps/receiver_address';
-import DefineAmountToken from '@steps/define_amount_token';
-import DefineAmountDelegate from '@steps/define_amount_delegate';
-import ReviewAndSign from '@steps/review_and_sign';
+import EmptySteps from '@steps/EmptySteps';
+import ReceiverAddress from '@steps/ReceiverAddress';
+import DefineAmountToken from '@steps/DefineAmountToken';
+import DefineAmountDelegate from '@steps/DefineAmountDelegate';
+import ReviewAndSign from '@steps/ReviewAndSign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
-import ValidatorAddress from '@steps/validator_address';
+import ValidatorAddress from '@steps/ValidatorAddress';
 import { WalletContext } from '@contexts/wallet';
 import Head from '@components/head/head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
-import ValidatorRewards from '@steps/claim_rewards';
+import ValidatorRewards from '@steps/ClaimRewards';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -108,7 +108,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 			case STEPS.distribution_MsgWithdrawDelegatorReward:
 				return (
 					<ValidatorRewards
-						onSuccess={handleOnNext<STEPS.get_validator_address>}
+						onSuccess={handleOnNext<STEPS.review_and_sign>}
 						onBack={handleBack}
 						data={step.data as StepDataType<STEPS.get_validator_address>}
 						header={action?.name}
