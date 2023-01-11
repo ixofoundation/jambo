@@ -11,12 +11,7 @@ import Input from '@components/Input/Input';
 import SadFace from '@icons/sad_face.svg';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
-import {
-	formatTokenAmount,
-	generateUserTokensDropdown,
-	TokenDropdownType,
-	validateAmountAgainstBalance,
-} from '@utils/currency';
+import { formatTokenAmount, generateUserTokensDropdown, TokenDropdownType, validateAmountAgainstBalance } from '@utils/currency';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
@@ -38,10 +33,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 		setAmount(event.target.value);
 	};
 
-	const formIsValid = () =>
-		!!selectedOption &&
-		Number.parseFloat(amount) > 0 &&
-		validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount));
+	const formIsValid = () => !!selectedOption && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount));
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
@@ -67,42 +59,21 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<p>Select token to be sent:</p>
 						<div className={styles.alignLeft}>
-							<Dropdown
-								defaultValue={selectedOption}
-								onChange={(option) => setSelectedOption(option as TokenDropdownType)}
-								options={TokenDropdownOptions}
-								placeholder={null}
-								name="token"
-								withLogos={true}
-							/>
+							<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenDropdownType)} options={TokenDropdownOptions} placeholder={null} name="token" withLogos={true} />
 						</div>
 						<br />
 						<p className={styles.titleWithSubtext}>Enter Amount:</p>
 						<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
-							Max:{' '}
-							{selectedOption
-								? `${formatTokenAmount(Number(selectedOption?.amount ?? 0))} ${selectedOption.label}`
-								: '-'}
+							Max: {selectedOption ? `${formatTokenAmount(Number(selectedOption?.amount ?? 0))} ${selectedOption.label}` : '-'}
 						</p>
-						<Input
-							name="walletAddress"
-							type="number"
-							required
-							onChange={handleChange}
-							value={amount}
-							className={cls(styles.stepInput, styles.alignRight)}
-						/>
+						<Input name="walletAddress" type="number" required onChange={handleChange} value={amount} className={cls(styles.stepInput, styles.alignRight)} />
 					</form>
 				) : (
 					<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
 				)}
 				<div className={utilsStyles.spacer} />
 
-				<Footer
-					onBack={onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-				/>
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
 			</main>
 		</>
 	);

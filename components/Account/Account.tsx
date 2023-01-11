@@ -13,15 +13,13 @@ import QRCode from 'react-qr-code';
 import TokenCard from '@components/TokenCard/TokenCard';
 import { ChainDropdownOptions } from '@constants/chains';
 import { ArrayElement } from 'types/general';
-import TailSpinLoader from '@components/loader/loader';
+import TailSpinLoader from '@components/Loader/loader';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
 const Account = ({ className, ...other }: AccountProps) => {
 	const [showQR, setShowQR] = useState(false);
-	const [selectedOption, setSelectedOption] = useState<ArrayElement<typeof ChainDropdownOptions>>(
-		ChainDropdownOptions[0],
-	);
+	const [selectedOption, setSelectedOption] = useState<ArrayElement<typeof ChainDropdownOptions>>(ChainDropdownOptions[0]);
 	const { wallet, updateWallet, fetchAssets } = useContext(WalletContext);
 
 	const onChainSelected = (option: any) => setSelectedOption(option);
@@ -43,24 +41,13 @@ const Account = ({ className, ...other }: AccountProps) => {
 						</div>
 					) : (
 						<>
-							<AddressActionButton
-								address={wallet.user.address}
-								ButtonLogo={QR}
-								buttonOnClick={() => setShowQR(true)}
-							/>
+							<AddressActionButton address={wallet.user.address} ButtonLogo={QR} buttonOnClick={() => setShowQR(true)} />
 							<p className={styles.label}>Select chain:</p>
-							<Dropdown
-								defaultValue={selectedOption}
-								onChange={onChainSelected}
-								options={ChainDropdownOptions}
-								placeholder={null}
-								name="chain"
-								withLogos={true}
-							/>
+							<Dropdown defaultValue={selectedOption} onChange={onChainSelected} options={ChainDropdownOptions} placeholder={null} name="chain" withLogos={true} />
 							<p className={styles.label}>Available:</p>
 							<Card className={styles.available}>
 								{wallet.balances?.balances?.length ? (
-									wallet.balances.balances.map((token) => <TokenCard token={token} key={token.denom} />)
+									wallet.balances.balances.map(token => <TokenCard token={token} key={token.denom} />)
 								) : wallet.balances?.loading ? (
 									<TailSpinLoader size={30} className={styles.loader} />
 								) : (
@@ -71,7 +58,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 					)}
 				</>
 			) : (
-				<Wallets onSelected={(type) => updateWallet({ walletType: type })} />
+				<Wallets onSelected={type => updateWallet({ walletType: type })} />
 			)}
 		</div>
 	);

@@ -6,7 +6,7 @@ import styles from '@styles/stepsPages.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/loader/loader';
+import Loader from '@components/Loader/loader';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
@@ -61,7 +61,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 	const signTX = async (): Promise<void> => {
 		if (!validatorList) return;
 		setLoading(true);
-		const trxs: TRX_MSG[] = validatorList.map((validator) =>
+		const trxs: TRX_MSG[] = validatorList.map(validator =>
 			generateWithdrawRewardTrx({
 				delegatorAddress: wallet.user!.address,
 				validatorAddress: validator.address,
@@ -103,11 +103,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 				) : (
 					<p>Unsupported review type</p>
 				)}
-				<Footer
-					onBack={loading || success ? null : onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
-				/>
+				<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
 			</main>
 		</>
 	);

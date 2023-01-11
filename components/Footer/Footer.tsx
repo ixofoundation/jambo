@@ -49,10 +49,7 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 				</ButtonRound>
 			)}
 			{onCorrect !== undefined && (
-				<ButtonRound
-					color={onCorrect ? BUTTON_ROUND_COLOR.success : BUTTON_ROUND_COLOR.disabled}
-					onClick={onCorrect ?? undefined}
-				>
+				<ButtonRound color={onCorrect ? BUTTON_ROUND_COLOR.success : BUTTON_ROUND_COLOR.disabled} onClick={onCorrect ?? undefined}>
 					<Correct width="20px" height="20px" />
 				</ButtonRound>
 			)}

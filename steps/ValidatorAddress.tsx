@@ -8,7 +8,7 @@ import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorCard from '@components/ValidatorCard/ValidatorCard';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/loader/loader';
+import Loader from '@components/Loader/loader';
 import Footer from '@components/Footer/Footer';
 import FilterDesc from '@icons/filter_desc.svg';
 import FilterAsc from '@icons/filter_asc.svg';
@@ -98,11 +98,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 					</form>
 					<div className={utilsStyles.spacer} />
 
-					<Footer
-						onBack={unselectValidator}
-						onBackUrl={onBack ? undefined : ''}
-						onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-					/>
+					<Footer onBack={unselectValidator} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
 				</main>
 			</>
 		);
@@ -128,24 +124,14 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
 								<div className={styles.filtersWrapper}>
 									<button
-										className={`${styles.filterButton} ${
-											[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
-										}`}
-										onClick={handleFilterClick(
-											filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
-										)}
+										className={`${styles.filterButton} ${[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''}`}
+										onClick={handleFilterClick(filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC)}
 									>
 										Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
 									<button
-										className={`${styles.filterButton} ${
-											[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter)
-												? styles.activeFilterButton
-												: ''
-										}`}
-										onClick={handleFilterClick(
-											filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
-										)}
+										className={`${styles.filterButton} ${[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter) ? styles.activeFilterButton : ''}`}
+										onClick={handleFilterClick(filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC)}
 									>
 										Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
@@ -160,11 +146,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 				)}
 				<div className={utilsStyles.spacer} />
 
-				<Footer
-					onBack={onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-				/>
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
 			</main>
 		</>
 	);

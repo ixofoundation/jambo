@@ -13,12 +13,7 @@ import styles from '@styles/stepsPages.module.scss';
 import { VALIDATOR, ValidatorAmountConfig } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
-import {
-	formatTokenAmount,
-	validateAmountAgainstBalance,
-	generateUserTokensDropdown,
-	TokenDropdownType,
-} from '@utils/currency';
+import { formatTokenAmount, validateAmountAgainstBalance, generateUserTokensDropdown, TokenDropdownType } from '@utils/currency';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_delegate_amount>) => void;
@@ -38,12 +33,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 	useEffect(() => {
 		fetchAssets();
 
-		const ixoCurrency =
-			config.source === 'wallet'
-				? wallet?.balances?.balances?.find((balance: DecCoin) => balance.denom === 'uixo')
-				: config.source === 'validator'
-				? validator?.delegation?.balance
-				: null;
+		const ixoCurrency = config.source === 'wallet' ? wallet?.balances?.balances?.find((balance: DecCoin) => balance.denom === 'uixo') : config.source === 'validator' ? validator?.delegation?.balance : null;
 
 		const tokenDropdown = generateUserTokensDropdown(ixoCurrency ? [ixoCurrency] : []);
 
@@ -56,10 +46,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 		setAmount(event.target.value);
 	};
 
-	const formIsValid = () =>
-		!!max &&
-		Number.parseFloat(amount) > 0 &&
-		validateAmountAgainstBalance(Number.parseFloat(amount), Number(max.amount));
+	const formIsValid = () => !!max && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), Number(max.amount));
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
@@ -95,14 +82,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 								<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
 									Max: {max ? `${formatTokenAmount(Number(max.amount))} ${max.label}` : '-'}
 								</p>
-								<Input
-									name="walletAddress"
-									type="number"
-									required
-									onChange={handleChange}
-									value={amount}
-									className={cls(styles.stepInput, styles.alignRight)}
-								/>
+								<Input name="walletAddress" type="number" required onChange={handleChange} value={amount} className={cls(styles.stepInput, styles.alignRight)} />
 							</div>
 							<div className={styles.tokenWrapper}>IXO</div>
 						</div>
@@ -113,11 +93,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 					<IconText text="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
 				)}
 
-				<Footer
-					onBack={onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-				/>
+				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
 			</main>
 		</>
 	);

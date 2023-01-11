@@ -12,7 +12,7 @@ import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx, generateDelegateTrx, generateRedelegateTrx, generateUndelegateTrx } from '@utils/client';
-import Loader from '@components/loader/loader';
+import Loader from '@components/Loader/loader';
 import { TRX_MSG } from 'types/transactions';
 import { TokenDropdownType } from '@utils/currency';
 import IconText from '@components/IconText/IconText';
@@ -40,24 +40,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 	const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
 
 	useEffect(() => {
-		steps.forEach((s) => {
-			if (
-				s.id === STEPS.select_token_and_amount ||
-				s.id === STEPS.select_delegate_amount ||
-				s.id === STEPS.select_undelegate_amount ||
-				s.id === STEPS.select_redelegate_amount
-			) {
+		steps.forEach(s => {
+			if (s.id === STEPS.select_token_and_amount || s.id === STEPS.select_delegate_amount || s.id === STEPS.select_undelegate_amount || s.id === STEPS.select_redelegate_amount) {
 				setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
 				setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
 			}
 			if (s.id === STEPS.get_receiver_address) {
 				setAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
 			}
-			if (
-				s.id === STEPS.get_validator_address ||
-				s.id === STEPS.get_delegated_validator_undelegate ||
-				s.id === STEPS.get_validator_redelegate
-			) {
+			if (s.id === STEPS.get_validator_address || s.id === STEPS.get_delegated_validator_undelegate || s.id === STEPS.get_validator_redelegate) {
 				setAddress((s.data as StepDataType<STEPS.get_validator_address>)?.validator?.address ?? '');
 				setValidator((s.data as StepDataType<STEPS.get_validator_address>)?.validator);
 			}
@@ -127,13 +118,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 		<>
 			<Header
 				pageTitle={
-					message === STEPS.bank_MsgSend
-						? 'Review and sign'
-						: message === STEPS.staking_MsgDelegate
-						? 'Confirm delegation'
-						: message === STEPS.staking_MsgUndelegate
-						? 'Confirm undelegation'
-						: 'Unsupported review type'
+					message === STEPS.bank_MsgSend ? 'Review and sign' : message === STEPS.staking_MsgDelegate ? 'Confirm delegation' : message === STEPS.staking_MsgUndelegate ? 'Confirm undelegation' : 'Unsupported review type'
 				}
 				header={header}
 			/>
@@ -192,11 +177,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					<p>Unsupported review type</p>
 				)}
 
-				<Footer
-					onBack={loading || success ? null : onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
-				/>
+				<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
 			</main>
 		</>
 	);
