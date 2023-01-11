@@ -13,7 +13,7 @@ import QRCode from 'react-qr-code';
 import TokenCard from '@components/TokenCard/TokenCard';
 import { ChainDropdownOptions } from '@constants/chains';
 import { ArrayElement } from 'types/general';
-import TailSpinLoader from '@components/Loader/Loader';
+import TailSpinLoader from '@components/loader/loader';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 

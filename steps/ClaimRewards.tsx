@@ -6,7 +6,7 @@ import styles from '@styles/stepsPages.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/Loader/Loader';
+import Loader from '@components/loader/loader';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';

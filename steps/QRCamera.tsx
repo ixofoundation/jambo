@@ -6,7 +6,7 @@ import styles from '@styles/stepsPages.module.scss';
 import Footer from '@components/Footer/Footer';
 import QRScanner from '@components/QRScanner/QRScanner';
 import useWindowDimensions from '@hooks/windowDimensions';
-import Loader from '@components/Loader/Loader';
+import Loader from '@components/loader/loader';
 import SadFace from '@icons/sad_face.svg';
 import IconText from '@components/IconText/IconText';
 

@@ -12,7 +12,7 @@ import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx, generateDelegateTrx, generateRedelegateTrx, generateUndelegateTrx } from '@utils/client';
-import Loader from '@components/Loader/Loader';
+import Loader from '@components/loader/loader';
 import { TRX_MSG } from 'types/transactions';
 import { TokenDropdownType } from '@utils/currency';
 import IconText from '@components/IconText/IconText';

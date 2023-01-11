@@ -5,7 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-import Loader from '@components/Loader/Loader';
+import Loader from '@components/loader/loader';
 import WalletImg from '@icons/wallet.svg';
 import { WalletContext } from '@contexts/wallet';
 import WalletCard from '@components/CardWallet/CardWallet';

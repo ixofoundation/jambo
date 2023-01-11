@@ -8,7 +8,7 @@ import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorCard from '@components/ValidatorCard/ValidatorCard';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/Loader/Loader';
+import Loader from '@components/loader/loader';
 import Footer from '@components/Footer/Footer';
 import FilterDesc from '@icons/filter_desc.svg';
 import FilterAsc from '@icons/filter_asc.svg';
