@@ -26,13 +26,13 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 					<h3>Choose Wallet</h3>
 					{/* {keysafe && <Button label="Keysafe" onClick={() => onSelected(WALLET_TYPE.keysafe)} />} */}
 					{/* <WalletCard name="Wallet Connect" img="/images/wallets/wallet-connect.png" onClick={() => onSelected(WALLET_TYPE.walletConnect)} /> */}
-					{keplrWallet && (
+					{/* {keplrWallet && (
 						<WalletCard
 							name="Keplr Wallet"
 							img="/images/wallets/keplr.png"
 							onClick={() => onSelected(WALLET_TYPE.keplr)}
 						/>
-					)}
+					)} */}
 					{operaWallet && (
 						<WalletCard
 							name="Opera Wallet"
