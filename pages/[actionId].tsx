@@ -3,16 +3,19 @@ import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsCont
 
 import config from '@constants/config.json';
 import { StepDataType, STEP, STEPS } from 'types/steps';
-import EmptySteps from '@steps/empty';
-import ReceiverAddress from '@steps/receiver_address';
-import DefineAmountToken from '@steps/define_amount_token';
-import DefineAmountDelegate from '@steps/define_amount_delegate';
-import ReviewAndSign from '@steps/review_and_sign';
+import EmptySteps from '@steps/EmptySteps';
+import ReceiverAddress from '@steps/ReceiverAddress';
+import DefineAmountToken from '@steps/DefineAmountToken';
+import DefineAmountDelegate from '@steps/DefineAmountDelegate';
+import ReviewAndSign from '@steps/ReviewAndSign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
-import ValidatorAddress from '@steps/validator_address';
+import ValidatorAddress from '@steps/ValidatorAddress';
 import { WalletContext } from '@contexts/wallet';
-import Head from '@components/head/head';
+import Head from '@components/Head/Head';
+import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import ValidatorRewards from '@steps/ClaimRewards';
+import { ValidatorAmountConfig } from 'types/validators';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -29,8 +32,8 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 		if (!signedIn) updateWallet({ showWalletModal: true });
 		// console.log({ id });
 		// if (!id) return;
-		// const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
-		// if (fethedAction) setAction(fethedAction);
+		// const fetchedAction = (config as ConfigData).actions.find(a => a.id === id);
+		// if (fetchedAction) setAction(fetchedAction);
 	}, [actionData]);
 
 	function handleOnNext<T>(data: StepDataType<T>) {
@@ -58,12 +61,16 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					/>
 				);
 			case STEPS.get_validator_address:
+			case STEPS.get_delegated_validator_undelegate:
+			case STEPS.get_delegated_validator_redelegate:
+			case STEPS.get_validator_redelegate:
 				return (
 					<ValidatorAddress
-						onSuccess={handleOnNext<STEPS.get_receiver_address>}
+						onSuccess={handleOnNext<STEPS.get_validator_address>}
 						onBack={handleBack}
-						data={step.data as StepDataType<STEPS.get_receiver_address>}
+						data={step.data as StepDataType<STEPS.get_validator_address>}
 						header={action?.name}
+						config={VALIDATOR_CONFIGS[step.id] ?? VALIDATOR_CONFIGS.default}
 					/>
 				);
 			case STEPS.select_token_and_amount:
@@ -76,16 +83,42 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					/>
 				);
 			case STEPS.select_delegate_amount:
+			case STEPS.select_undelegate_amount:
+			case STEPS.select_redelegate_amount:
 				return (
 					<DefineAmountDelegate
 						onSuccess={handleOnNext<STEPS.select_delegate_amount>}
 						onBack={handleBack}
 						data={step.data as StepDataType<STEPS.select_delegate_amount>}
 						header={action?.name}
+						config={(VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default) as ValidatorAmountConfig}
+						validator={
+							(
+								action?.steps.find((step) =>
+									[
+										STEPS.get_validator_address,
+										STEPS.get_delegated_validator_undelegate,
+										STEPS.get_delegated_validator_redelegate,
+									].includes(step.id),
+								)?.data as StepDataType<STEPS.get_validator_address>
+							)?.validator || null
+						}
+					/>
+				);
+			case STEPS.distribution_MsgWithdrawDelegatorReward:
+				return (
+					<ValidatorRewards
+						onSuccess={handleOnNext<STEPS.review_and_sign>}
+						onBack={handleBack}
+						data={step.data as StepDataType<STEPS.get_validator_address>}
+						header={action?.name}
+						message={step.id}
 					/>
 				);
 			case STEPS.bank_MsgSend:
 			case STEPS.staking_MsgDelegate:
+			case STEPS.staking_MsgUndelegate:
+			case STEPS.staking_MsgRedelegate:
 				return (
 					<ReviewAndSign
 						onSuccess={handleOnNext<STEPS.review_and_sign>}

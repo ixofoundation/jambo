@@ -1,3 +1,4 @@
+import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 import { USER } from './user';
 
 export enum WALLET_TYPE {
@@ -17,10 +18,5 @@ export type WALLET = {
 export type BALANCES = {
 	loading?: boolean;
 	error?: string;
-	balances?: Currency[];
-};
-
-export type Currency = {
-	amount: number;
-	denom: string;
+	balances?: DecCoin[];
 };

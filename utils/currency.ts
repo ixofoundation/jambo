@@ -1,11 +1,7 @@
+import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+
 import { findTokenFromDenom } from '@constants/chains';
 import { ArrayElement } from 'types/general';
-import { Currency } from 'types/wallet';
-
-export const apiCurrencyToCurrency = (currency: any): Currency => ({
-	amount: currency.amount ? parseInt(currency.amount, 10) : 0,
-	denom: currency.denom,
-});
 
 export const formatUSDAmount = (amount: number) => formatterUSD.format(amount);
 
@@ -16,7 +12,8 @@ export const formatterUSD = new Intl.NumberFormat('en-US', {
 	//maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
 });
 
-export const formatTokenAmount = (amount: number, microUnits: boolean = true) => formatterToken.format(microUnits ? amount / 10 ** 6 : amount);
+export const formatTokenAmount = (amount: number, microUnits: boolean = true) =>
+	formatterToken.format(microUnits ? amount / Math.pow(10, 6) : amount);
 
 export const formatterToken = new Intl.NumberFormat('en-US', {
 	//minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
@@ -35,8 +32,8 @@ export type TOKEN_ASSET = {
 	isFeeCurrency?: boolean;
 };
 
-export const generateUserTokensDropdown = (balances: Currency[]) => {
-	return balances.map(b => {
+export const generateUserTokensDropdown = (balances: DecCoin[]) => {
+	return balances.map((b) => {
 		const asset = findTokenFromDenom(b.denom);
 		return {
 			value: b.denom,

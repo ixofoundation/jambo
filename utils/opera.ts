@@ -7,7 +7,7 @@ import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { USER } from 'types/user';
 // import blocksyncApi from './blocksync';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
-import * as Toast from '@components/toast/toast';
+import * as Toast from '@components/Toast/Toast';
 import { initStargateClient, sendTransaction } from './client';
 import { CHAIN_ID } from '@constants/chains';
 
@@ -125,7 +125,12 @@ export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> =>
 	return offlineSigner;
 };
 
-export const operaBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+export const operaBroadCastMessage = async (
+	user: USER,
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE,
+): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);
 		return null;

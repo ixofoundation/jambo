@@ -49,8 +49,8 @@ export const CHAINS = {
 		},
 		features: ['stargate'],
 	},
-	'pandora-5': {
-		chainId: 'pandora-5',
+	'pandora-7': {
+		chainId: 'pandora-7',
 		chainName: 'ixo Testnet',
 		rpc: 'https://testnet.ixo.earth/rpc/',
 		rest: 'https://testnet.ixo.earth/rest/',
@@ -180,16 +180,72 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // 		},
 // 		{
 // 			"id": "select_delegate_amount",
-// 			"name": "DEfine amount to delegate"
+// 			"name": "Define amount to delegate"
 // 		},
 // 		{
 // 			"id": "staking_MsgDelegate",
 // 			"name": "Review and sign"
 // 		}
 // 	],
-// 	"name": "Stake",
-// 	"description": "Stake flow",
-// 	"image": ""
+// 	"name": "Delegate",
+// 	"description": "Delegate tokens on the IXO Network",
+// 	"image": "eKXPPhewkJDLbE1bq1iboa.png"
+// },
+// {
+// 	"id": "eKXPPhewkJDLbE1bq1ibob",
+// 	"steps": [
+// 		{
+// 			"id": "get_delegated_validator_undelegate",
+// 			"name": "Get delegation validator address"
+// 		},
+// 		{
+// 			"id": "select_undelegate_amount",
+// 			"name": "Define amount to undelegate"
+// 		},
+// 		{
+// 			"id": "staking_MsgUndelegate",
+// 			"name": "Review and sign"
+// 		}
+// 	],
+// 	"name": "Undelegate",
+// 	"description": "Undelegate tokens on the IXO Network",
+// 	"image": "eKXPPhewkJDLbE1bq1ibob.png"
+// },
+// {
+// 	"id": "eKXPPhewkJDLbE1bq1iboc",
+// 	"steps": [
+// 		{
+// 			"id": "get_delegated_validator_undelegate",
+// 			"name": "Get delegation validator address"
+// 		},
+// 		{
+// 			"id": "select_delegate_amount",
+// 			"name": "Define amount to redelegate"
+// 		},
+// 		{
+// 			"id": "get_validator_address",
+// 			"name": "Get validator address"
+// 		},
+// 		{
+// 			"id": "staking_MsgRedelegate",
+// 			"name": "Review and sign"
+// 		}
+// 	],
+// 	"name": "Redelegate",
+// 	"description": "Redelegate tokens on the IXO Network",
+// 	"image": "eKXPPhewkJDLbE1bq1iboc.png"
+// },
+// {
+// 	"id": "eKXPPhewkJDLbE1bq1ibod",
+// 	"steps": [
+// 		{
+// 			"id": "staking_MsgRewards",
+// 			"name": "Review and sign"
+// 		}
+// 	],
+// 	"name": "Rewards",
+// 	"description": "Claim rewards on your delegations.",
+// 	"image": "eKXPPhewkJDLbE1bq1ibod.png"
 // }
 
 export const ChainInfos = (

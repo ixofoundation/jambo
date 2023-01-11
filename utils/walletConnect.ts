@@ -1,17 +1,17 @@
+import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
+import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
 import QRCodeModal from '@walletconnect/qrcode-modal';
 import SignClient from '@walletconnect/sign-client';
+import { SessionTypes } from '@walletconnect/types';
 import * as amino from '@cosmjs/amino';
 
-import { CHAINS, CHAIN_ID } from '@constants/chains';
-import { USER } from 'types/user';
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
-import * as Toast from '@components/toast/toast';
+import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
+import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { USER } from 'types/user';
+import { CHAINS, CHAIN_ID } from '@constants/chains';
 import config from '@constants/config.json';
-import { SessionTypes } from '@walletconnect/types';
-import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
-import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
-import { uint8Arr_to_b64, stringifySignDoc, b64_to_uint8Arr } from './encoding';
+import { uint8Arr_to_b64 } from './encoding';
 
 let signClient: SignClient;
 export let address: string;
@@ -48,7 +48,7 @@ export const initializeWC = async (): Promise<USER | undefined> => {
 		if (typeof signClient === 'undefined') {
 			throw new Error('WalletConnect is not initialized');
 		}
-		signClient.on('session_event', p => {
+		signClient.on('session_event', (p) => {
 			console.log('EVENT', 'session_event', p);
 		});
 
@@ -202,7 +202,12 @@ export const getOfflineSigner = (): OfflineDirectSigner => {
 	return offlineSigner;
 };
 
-export const WCBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+export const WCBroadCastMessage = async (
+	user: USER,
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE,
+): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);
 		return null;

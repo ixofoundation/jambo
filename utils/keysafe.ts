@@ -1,7 +1,6 @@
 import { BLOCKCHAIN_REST_URL, CHAIN_ID } from '@constants/chains';
 import axios from 'axios';
 import { DirectSignResponse, OfflineDirectSigner, AccountData, OfflineSigner } from '@cosmjs/proto-signing';
-import { SigningStargateClient } from '@client-sdk/utils/customClient';
 
 import { toBech32, toBase64, fromBase64 } from '@cosmjs/encoding';
 import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
@@ -11,9 +10,8 @@ import { TRX_FEE, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { WALLET } from 'types/wallet';
 // import blocksyncApi from './blocksync';
-import * as Toast from '@components/toast/toast';
+import * as Toast from '@components/Toast/Toast';
 import { initStargateClient, sendTransaction } from './client';
-import { accountFromAny } from '@client-sdk/utils/EdAccountHandler';
 
 export const getKeysafe = async (): Promise<any> => {
 	if (typeof window !== 'undefined' && window['ixoKs']) {
@@ -80,7 +78,10 @@ export const getKeysafe = async (): Promise<any> => {
 };
 
 function encodeEd25519Signature(pubkey: Uint8Array, signature: Uint8Array): any {
-	if (signature.length !== 64) throw new Error('Signature must be 64 bytes long. Cosmos SDK uses a 2x32 byte fixed length encoding for the Ed25519 signature integers r and s.');
+	if (signature.length !== 64)
+		throw new Error(
+			'Signature must be 64 bytes long. Cosmos SDK uses a 2x32 byte fixed length encoding for the Ed25519 signature integers r and s.',
+		);
 
 	return {
 		pub_key: {
@@ -93,11 +94,17 @@ function encodeEd25519Signature(pubkey: Uint8Array, signature: Uint8Array): any 
 
 export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefined> => {
 	const keysafe = await getKeysafe();
-	const user = await new Promise<USER | undefined>(resolve => {
+	const user = await new Promise<USER | undefined>((resolve) => {
 		keysafe.getInfo(async (error: any, response: any) => {
 			if (response) {
 				// console.log({ response });
-				let baseUser = { name: response.name, pubKey: response.didDoc.pubKey, address: '', didDoc: response.didDoc, ledgered: false };
+				let baseUser = {
+					name: response.name,
+					pubKey: response.didDoc.pubKey,
+					address: '',
+					didDoc: response.didDoc,
+					ledgered: false,
+				};
 				console.log({ response });
 				try {
 					// const getDidDoc = await blocksyncApi.user.getDidDoc(response.didDoc.did);
@@ -126,7 +133,12 @@ export const initializeKeysafe = async (wallet?: WALLET): Promise<USER | undefin
 	return user;
 };
 
-export const keysafeBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+export const keysafeBroadCastMessage = async (
+	user: USER,
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE,
+): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);
 		return null;
@@ -161,7 +173,7 @@ export const keysafeBroadCastMessage = async (user: USER, msgs: TRX_MSG[], memo 
 };
 
 const getKeysafeDidDoc = async (): Promise<any> => {
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		initKeysafe().getInfo((error: any, response: any) => {
 			if (!error && response) {
 				const { didDoc } = response;
@@ -173,7 +185,7 @@ const getKeysafeDidDoc = async (): Promise<any> => {
 	});
 };
 const createSignature = async (payload: any): Promise<Uint8Array> => {
-	return new Promise(resolve => {
+	return new Promise((resolve) => {
 		initKeysafe().requestSigning(
 			JSON.stringify(payload),
 			async (error: any, signature: any) => {
@@ -197,7 +209,9 @@ function encodeEd25519Pubkey(pubkey: any): any {
 
 function encodeEd25519Signature1(pubkey: any, signature: any): any {
 	if (signature.length !== 64) {
-		throw new Error('Signature must be 64 bytes long. Cosmos SDK uses a 2x32 byte fixed length encoding for the Ed25519 signature integers r and s.');
+		throw new Error(
+			'Signature must be 64 bytes long. Cosmos SDK uses a 2x32 byte fixed length encoding for the Ed25519 signature integers r and s.',
+		);
 	}
 	return {
 		pub_key: encodeEd25519Pubkey(pubkey),
@@ -205,21 +219,11 @@ function encodeEd25519Signature1(pubkey: any, signature: any): any {
 	};
 }
 
-import { Registry } from '@cosmjs/proto-signing';
-import { defaultRegistryTypes as defaultStargateTypes } from '@cosmjs/stargate';
-import { Coin } from '@client-sdk/codec/cosmos/coin';
-import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
-import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx';
+import { createSigningClient, SigningStargateClient } from '@ixo/impactxclient-sdk';
+import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 
 export const messageSend = async (signer: any, fromAddress: string, msgs: any, fee: any): Promise<void> => {
-	const myRegistry = new Registry(defaultStargateTypes);
-	myRegistry.register('/cosmos.bank.v1beta1.MsgSend', MsgSend);
-
-	const client = await SigningStargateClient.connectWithSigner('https://testnet.ixo.earth/rpc/', signer, {
-		registry: myRegistry,
-		accountParser: accountFromAny,
-	});
-
+	const client = await createSigningClient('https://testnet.ixo.earth/rpc/', signer);
 	const response = await client.signAndBroadcast(fromAddress, msgs, fee);
 	console.log({ response });
 	// return response;
@@ -228,7 +232,7 @@ export const messageSend = async (signer: any, fromAddress: string, msgs: any, f
 export const messageSendKeysafe = async (fromAddress: string, msgs: any, fee: any): Promise<void> => {
 	const { pubKey } = await getKeysafeDidDoc();
 	const getAccounts = (): Promise<AccountData[]> => {
-		return new Promise(resolve => {
+		return new Promise((resolve) => {
 			resolve([
 				{
 					address: fromAddress,

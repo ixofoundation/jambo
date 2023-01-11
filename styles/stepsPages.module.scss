@@ -162,3 +162,14 @@
 	border-radius: var(--card-border-radius);
 	padding: 0.7rem;
 }
+
+.rewardListItem {
+	width: 100%;
+	background-color: var(--accent-color);
+	border: none;
+	color: var(--light-grey-color);
+	border-radius: var(--card-border-radius);
+	padding: 0.7rem;
+	margin: 5px 0;
+	text-align: center;
+}
