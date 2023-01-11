@@ -13,13 +13,12 @@ type WalletsProps = {
 } & HTMLAttributes<HTMLDivElement>;
 
 const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
-	const keplrWallet = getKeplr();
+	// const keplrWallet = getKeplr();
 	const operaWallet = getOpera();
 
-	// TODO: remove keplr
 	return (
 		<div className={cls(styles.wallets, className)} {...other}>
-			{operaWallet || keplrWallet ? (
+			{operaWallet ? (
 				<>
 					<div className={styles.flex2} />
 					<WalletImg width={58} height={58} />
