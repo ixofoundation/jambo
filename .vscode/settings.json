@@ -1,5 +1,15 @@
 {
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"typescript.enablePromptUseWorkspaceTsdk": true,
-	"cSpell.words": ["impactxclient", "redelegate", "undelegate"]
+	"cSpell.words": [
+		"codegen",
+		"cosmjs",
+		"impactxclient",
+		"qrcode",
+		"redelegate",
+		"Stargate",
+		"uixo",
+		"undelegate",
+		"walletconnect"
+	]
 }

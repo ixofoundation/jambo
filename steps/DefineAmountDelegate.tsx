@@ -1,13 +1,16 @@
-import { ChangeEvent, FormEvent, useContext, useEffect, useState } from 'react';
-import { FC } from 'react';
+import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
+import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 import cls from 'classnames';
 
+import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
+import IconText from '@components/IconText/IconText';
+import Header from '@components/Header/Header';
+import Footer from '@components/Footer/Footer';
+import Input from '@components/Input/Input';
+import SadFace from '@icons/sad_face.svg';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import Header from '@components/header/header';
-import Footer from '@components/footer/footer';
-import Input from '@components/input/input';
-import ValidatorListItem from '@components/validator-list-item/validator-list-item';
+import { VALIDATOR, ValidatorAmountConfig } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import {
@@ -16,10 +19,6 @@ import {
 	generateUserTokensDropdown,
 	TokenDropdownType,
 } from '@utils/currency';
-import IconText from '@components/icon-text/icon-text';
-import SadFace from '@icons/sad_face.svg';
-import { VALIDATOR, ValidatorAmountConfig } from 'types/validators';
-import { Currency } from 'types/wallet';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_delegate_amount>) => void;
@@ -28,13 +27,6 @@ type DefineAmountTokenProps = {
 	header?: string;
 	validator: VALIDATOR | null;
 	config: ValidatorAmountConfig;
-};
-
-const TOKEN = {
-	amount: 10000000,
-	img: 'https://app.osmosis.zone/tokens/ixo.png',
-	label: 'IXO',
-	value: 'uixo',
 };
 
 const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header, validator, config }) => {
@@ -48,7 +40,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 
 		const ixoCurrency =
 			config.source === 'wallet'
-				? wallet?.balances?.balances?.find((balance: Currency) => balance.denom === 'uixo')
+				? wallet?.balances?.balances?.find((balance: DecCoin) => balance.denom === 'uixo')
 				: config.source === 'validator'
 				? validator?.delegation?.balance
 				: null;
@@ -65,7 +57,9 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 	};
 
 	const formIsValid = () =>
-		!!max && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), max.amount);
+		!!max &&
+		Number.parseFloat(amount) > 0 &&
+		validateAmountAgainstBalance(Number.parseFloat(amount), Number(max.amount));
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
@@ -74,8 +68,8 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 	};
 
 	const handleMaxClicked = () => {
-		if (!TOKEN?.amount) return;
-		const tokenAmount = TOKEN?.amount / 10 ** 6;
+		if (!max?.amount) return;
+		const tokenAmount = Number(max.amount) / Math.pow(10, 6);
 		setAmount(tokenAmount.toString());
 	};
 
@@ -99,7 +93,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 						<div className={styles.inputRow}>
 							<div className={styles.amountWrapper}>
 								<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
-									Max: {max ? `${formatTokenAmount(max.amount)} ${max.label}` : '-'}
+									Max: {max ? `${formatTokenAmount(Number(max.amount))} ${max.label}` : '-'}
 								</p>
 								<Input
 									name="walletAddress"
@@ -110,7 +104,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 									className={cls(styles.stepInput, styles.alignRight)}
 								/>
 							</div>
-							<div className={styles.tokenWrapper}>{TOKEN.label}</div>
+							<div className={styles.tokenWrapper}>IXO</div>
 						</div>
 						{config.sub ? <p>{config.sub}</p> : null}
 						<div className={utilsStyles.spacer} />

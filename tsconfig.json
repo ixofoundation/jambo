@@ -28,8 +28,7 @@
 			"@constants/*": ["constants/*"],
 			"@contexts/*": ["contexts/*"],
 			"@steps/*": ["steps/*"],
-			"@hooks/*": ["hooks/*"],
-			"@client-sdk/*": ["client-sdk/src/*"]
+			"@hooks/*": ["hooks/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

@@ -51,3 +51,20 @@ export const VALIDATOR_FILTERS = {
 			? -1
 			: 1,
 };
+
+export const filterValidators = (validators: VALIDATOR[], filter: string, search: string) => {
+	if (!validators?.length) {
+		return validators;
+	}
+
+	let validatorsToFilter = validators;
+
+	if (search?.length) {
+		const searchTerm = search.toLowerCase();
+		validatorsToFilter = validatorsToFilter.filter((validator) =>
+			validator.moniker?.toLowerCase()?.includes(searchTerm),
+		);
+	}
+
+	return validatorsToFilter.sort(VALIDATOR_FILTERS[filter]);
+};

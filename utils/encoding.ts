@@ -1,7 +1,7 @@
 import * as base58 from 'bs58';
 import { BigNumber } from 'bignumber.js';
 import { toBase64, fromBase64, toHex } from '@cosmjs/encoding';
-import { SignDoc } from '@client-sdk/codec/external/cosmos/tx/v1beta1/tx';
+import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 
 export const utf16_to_b64 = (str: string) => {
 	return Buffer.from(str, 'utf8').toString('base64');
@@ -12,12 +12,11 @@ export const file_to_b64 = (file: File): Promise<string> => {
 		const reader = new FileReader();
 		reader.readAsDataURL(file);
 		reader.onload = () => resolve(reader.result?.toString() || '');
-		reader.onerror = error => reject(error);
+		reader.onerror = (error) => reject(error);
 	});
 };
 
 export const b58_to_b64 = (str: string): string => {
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore
 	return base58.decode(str).toString('base64');
 };
@@ -90,5 +89,9 @@ export const uint8ArrayToStr = (data: Uint8Array): string => {
 };
 
 export const stringifySignDoc = (signDoc: SignDoc) => {
-	return Object.assign(Object.assign({}, signDoc), { bodyBytes: toHex(signDoc.bodyBytes), authInfoBytes: toHex(signDoc.authInfoBytes), accountNumber: signDoc.accountNumber.toString(16) });
+	return Object.assign(Object.assign({}, signDoc), {
+		bodyBytes: toHex(signDoc.bodyBytes),
+		authInfoBytes: toHex(signDoc.authInfoBytes),
+		accountNumber: signDoc.accountNumber.toString(16),
+	});
 };

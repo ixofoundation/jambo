@@ -1,24 +1,28 @@
 import { createContext, useState, useEffect, HTMLAttributes, useRef } from 'react';
-import { createQueryClient } from '@ixo/impactxclient-sdk';
 
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
 import { BALANCES, WALLET } from 'types/wallet';
 import { initializeWallet } from '@utils/wallets';
-import { getBalances } from '@utils/client';
+import { queryAllBalances } from '@utils/query';
 import { USER } from 'types/user';
-import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
+import { VALIDATOR } from 'types/validators';
+import { initializeQueryClient, queryValidators, QUERY_CLIENT } from '@utils/query';
 
 export const WalletContext = createContext({
 	wallet: {} as WALLET,
 	updateWallet: (newWallet: WALLET) => {},
 	fetchAssets: () => {},
 	queryClient: {} as any,
+	updateValidators: async () => {},
+	validators: [] as VALIDATOR[],
+	updateValidatorAvatar: (validatorAddress: string, avatarUrl: string) => {},
 });
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [wallet, setWallet] = useState<WALLET>({});
 	const [loaded, setLoaded] = useState<boolean>(false);
-	const queryClientRef = useRef<any>();
+	const [validators, setValidators] = useState<VALIDATOR[]>();
+	const queryClientRef = useRef<QUERY_CLIENT | undefined>();
 
 	const updateWallet = (newWallet: WALLET) => {
 		setWallet((currentWallet) => ({ ...currentWallet, ...newWallet }));
@@ -43,30 +47,59 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	};
 
 	const initializeWallets = async () => {
-		const user = await initializeWallet(wallet);
-		updateWallet({ user });
+		try {
+			const user = await initializeWallet(wallet);
+			updateWallet({ user });
+			const queryClient = await initializeQueryClient(queryClientRef?.current);
+			queryClientRef.current = queryClient;
+		} catch (error) {
+			console.error('Initializing wallets error:', error);
+		}
 	};
 
 	const fetchAssets = async () => {
 		if (!wallet.user?.address) return;
 		updateBalances({ loading: true, error: undefined });
 		try {
-			const balances = await getBalances(wallet.user.address);
+			const balances = await queryAllBalances(queryClientRef.current as QUERY_CLIENT, wallet.user.address);
 			updateBalances({ balances, loading: false });
 		} catch (error) {
 			updateBalances({ error: error as string, loading: false });
 		}
 	};
 
-	const initializeQueryClient = async () => {
-		if (queryClientRef.current) return;
-
+	const updateValidators = async () => {
 		try {
-			const queryClient = await createQueryClient(BLOCKCHAIN_RPC_URL);
-			queryClientRef.current = queryClient;
+			if (!queryClientRef?.current?.cosmos || !wallet?.walletType) return;
+			const validatorList = await queryValidators(queryClientRef.current, wallet);
+			setValidators((prevState) =>
+				validatorList.map((validator: VALIDATOR) => {
+					const prevValidator = prevState?.find((v) => v.address === validator.address);
+					if (prevValidator) {
+						return { ...prevValidator, ...validator, avatarUrl: prevValidator.avatarUrl };
+					}
+					return validator;
+				}),
+			);
 		} catch (error) {
 			console.error(error);
 		}
+	};
+
+	const updateValidatorAvatar = async (validatorAddress: string, avatarUrl: string) => {
+		if (!validators?.length) return;
+		const validatorIndex = validators.findIndex((v) => v.address === validatorAddress);
+		if (validatorIndex < 0) return;
+
+		setValidators((prevState: VALIDATOR[] | undefined) =>
+			!prevState
+				? prevState
+				: [
+						...prevState.slice(0, validatorIndex),
+						{ ...prevState[validatorIndex], avatarUrl },
+						...prevState.slice(validatorIndex + 1),
+				  ],
+		);
 	};
 
 	useEffect(() => {
@@ -83,7 +116,6 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	}, [wallet.walletType]);
 
 	useEffect(() => {
-		initializeQueryClient();
 		// Comment out below to reset config
 		// setLocalStorage('wallet', {});
 		const persistedWallet = getLocalStorage<WALLET>('wallet');
@@ -91,6 +123,15 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		if (persistedWallet) setWallet(persistedWallet);
 	}, []);
 
-	const value = { wallet, updateWallet, fetchAssets, queryClient: queryClientRef.current ?? {} };
+	const value = {
+		wallet,
+		updateWallet,
+		fetchAssets,
+		queryClient: queryClientRef.current ?? {},
+		updateValidators,
+		validators: validators as VALIDATOR[],
+		updateValidatorAvatar,
+	};
+
 	return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 };

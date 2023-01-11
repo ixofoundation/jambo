@@ -12,9 +12,10 @@ import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/ValidatorAddress';
 import { WalletContext } from '@contexts/wallet';
-import Head from '@components/head/head';
+import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
+import { ValidatorAmountConfig } from 'types/validators';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -31,8 +32,8 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 		if (!signedIn) updateWallet({ showWalletModal: true });
 		// console.log({ id });
 		// if (!id) return;
-		// const fethedAction = (config as ConfigData).actions.find(a => a.id === id);
-		// if (fethedAction) setAction(fethedAction);
+		// const fetchedAction = (config as ConfigData).actions.find(a => a.id === id);
+		// if (fetchedAction) setAction(fetchedAction);
 	}, [actionData]);
 
 	function handleOnNext<T>(data: StepDataType<T>) {
@@ -49,7 +50,6 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	};
 
 	const getStepComponent = (step: STEP) => {
-		console.log({ step });
 		switch (step.id) {
 			case STEPS.get_receiver_address:
 				return (
@@ -91,7 +91,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						onBack={handleBack}
 						data={step.data as StepDataType<STEPS.select_delegate_amount>}
 						header={action?.name}
-						config={VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default}
+						config={(VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default) as ValidatorAmountConfig}
 						validator={
 							(
 								action?.steps.find((step) =>

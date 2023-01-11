@@ -1,18 +1,22 @@
-import { ChangeEvent, FormEvent, useContext, useEffect, useState } from 'react';
-import { FC } from 'react';
+import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import Header from '@components/header/header';
-import Footer from '@components/footer/footer';
-import Input from '@components/input/input';
-import Dropdown from '@components/dropdown/dropdown';
+import IconText from '@components/IconText/IconText';
+import Dropdown from '@components/Dropdown/Dropdown';
+import Header from '@components/Header/Header';
+import Footer from '@components/Footer/Footer';
+import Input from '@components/Input/Input';
+import SadFace from '@icons/sad_face.svg';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
-import { formatTokenAmount, generateUserTokensDropdown, TokenDropdownType, validateAmountAgainstBalance } from '@utils/currency';
-import IconText from '@components/icon-text/icon-text';
-import SadFace from '@icons/sad_face.svg';
+import {
+	formatTokenAmount,
+	generateUserTokensDropdown,
+	TokenDropdownType,
+	validateAmountAgainstBalance,
+} from '@utils/currency';
 
 type DefineAmountTokenProps = {
 	onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
@@ -34,7 +38,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 		setAmount(event.target.value);
 	};
 
-	const formIsValid = () => !!selectedOption && Number.parseFloat(amount) > 0 && validateAmountAgainstBalance(Number.parseFloat(amount), selectedOption.amount);
+	const formIsValid = () =>
+		!!selectedOption &&
+		Number.parseFloat(amount) > 0 &&
+		validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount));
 
 	const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
 		event?.preventDefault();
@@ -44,7 +51,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 
 	const handleMaxClicked = () => {
 		if (!selectedOption?.amount) return;
-		const tokenAmount = selectedOption?.amount / 10 ** 6;
+		const tokenAmount = Number(selectedOption.amount ?? 0) / Math.pow(10, 6);
 		setAmount(tokenAmount.toString());
 	};
 
@@ -60,21 +67,42 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<p>Select token to be sent:</p>
 						<div className={styles.alignLeft}>
-							<Dropdown defaultValue={selectedOption} onChange={option => setSelectedOption(option as TokenDropdownType)} options={TokenDropdownOptions} placeholder={null} name="token" withLogos={true} />
+							<Dropdown
+								defaultValue={selectedOption}
+								onChange={(option) => setSelectedOption(option as TokenDropdownType)}
+								options={TokenDropdownOptions}
+								placeholder={null}
+								name="token"
+								withLogos={true}
+							/>
 						</div>
 						<br />
 						<p className={styles.titleWithSubtext}>Enter Amount:</p>
 						<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
-							Max: {selectedOption ? `${formatTokenAmount(selectedOption?.amount)} ${selectedOption.label}` : '-'}
+							Max:{' '}
+							{selectedOption
+								? `${formatTokenAmount(Number(selectedOption?.amount ?? 0))} ${selectedOption.label}`
+								: '-'}
 						</p>
-						<Input name="walletAddress" type="number" required onChange={handleChange} value={amount} className={cls(styles.stepInput, styles.alignRight)} />
+						<Input
+							name="walletAddress"
+							type="number"
+							required
+							onChange={handleChange}
+							value={amount}
+							className={cls(styles.stepInput, styles.alignRight)}
+						/>
 					</form>
 				) : (
 					<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
 				)}
 				<div className={utilsStyles.spacer} />
 
-				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+				<Footer
+					onBack={onBack}
+					onBackUrl={onBack ? undefined : ''}
+					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+				/>
 			</main>
 		</>
 	);

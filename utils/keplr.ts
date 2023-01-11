@@ -3,7 +3,7 @@ import { Keplr } from '@keplr-wallet/types';
 import { USER } from 'types/user';
 import { TRX_FEE, TRX_MSG } from 'types/transactions';
 
-import * as Toast from '@components/toast/toast';
+import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 
 export const getKeplr = (): Keplr | undefined => {
@@ -18,7 +18,9 @@ export const initializeKeplr = async (): Promise<USER | undefined> => {
 		await keplr?.enable(CHAIN_ID);
 		const key = await keplr?.getKey(CHAIN_ID);
 		// console.log({ key });
-		return key ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true } : undefined;
+		return key
+			? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
+			: undefined;
 	} catch (error) {
 		console.error('Error initializing Kepl: ' + error);
 	}

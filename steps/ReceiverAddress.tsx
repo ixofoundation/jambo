@@ -3,11 +3,11 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import Header from '@components/header/header';
-import Footer from '@components/footer/footer';
+import Header from '@components/Header/Header';
+import Footer from '@components/Footer/Footer';
 import QRScan from '@icons/qr_scan.svg';
 import Paste from '@icons/paste.svg';
-import InputWithSufficIcon from '@components/input-with-suffix-icon/input-with-suffix-icon';
+import InputWithSufficIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
 import { StepDataType, STEPS } from 'types/steps';
 import EmptySteps from './EmptySteps';
 

@@ -3,22 +3,22 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import Header from '@components/header/header';
-import Footer from '@components/footer/footer';
-import Input from '@components/input/input';
+import Header from '@components/Header/Header';
+import Footer from '@components/Footer/Footer';
+import Input from '@components/Input/Input';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { defaultTrxFee } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import { generateBankSendTrx, generateDelegateTrx, generateRedelegateTrx, generateUndelegateTrx } from '@utils/client';
-import Loader from '@components/loader/loader';
+import Loader from '@components/Loader/Loader';
 import { TRX_MSG } from 'types/transactions';
 import { TokenDropdownType } from '@utils/currency';
-import IconText from '@components/icon-text/icon-text';
+import IconText from '@components/IconText/IconText';
 import Success from '@icons/success.svg';
 import { VALIDATOR } from 'types/validators';
-import ValidatorListItem from '@components/validator-list-item/validator-list-item';
+import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
