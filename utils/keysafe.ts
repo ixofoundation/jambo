@@ -6,7 +6,7 @@ import { toBech32, toBase64, fromBase64 } from '@cosmjs/encoding';
 import { OfflineSigner as OfflineAminoSigner, AminoSignResponse, StdSignDoc } from '@cosmjs/launchpad';
 import { serializeSignDoc, pubkeyType } from '@cosmjs/amino';
 
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { WALLET } from 'types/wallet';
 // import blocksyncApi from './blocksync';
@@ -137,7 +137,7 @@ export const keysafeBroadCastMessage = async (
 	user: USER,
 	msgs: TRX_MSG[],
 	memo = '',
-	fee: TRX_FEE,
+	fee: TRX_FEE_OPTION,
 ): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);

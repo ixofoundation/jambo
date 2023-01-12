@@ -1,7 +1,7 @@
 import { CHAINS, CHAIN_ID } from '@constants/chains';
 import { Keplr } from '@keplr-wallet/types';
 import { USER } from 'types/user';
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
 import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
@@ -22,7 +22,7 @@ export const initializeKeplr = async (): Promise<USER | undefined> => {
 			? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
 			: undefined;
 	} catch (error) {
-		console.error('Error initializing Kepl: ' + error);
+		console.error('Error initializing Keplr: ' + error);
 	}
 	return;
 };
@@ -39,7 +39,11 @@ export const connectKeplrAccount = async (): Promise<any> => {
 	return [accounts, offlineSigner];
 };
 
-export const keplrBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
+export const keplrBroadCastMessage = async (
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE_OPTION,
+): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);
 		return null;

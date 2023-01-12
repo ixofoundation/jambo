@@ -5,9 +5,12 @@
 		"codegen",
 		"cosmjs",
 		"impactxclient",
+		"keplr",
+		"keysafe",
 		"qrcode",
 		"redelegate",
 		"Stargate",
+		"swiper",
 		"uixo",
 		"undelegate",
 		"walletconnect"

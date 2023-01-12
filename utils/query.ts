@@ -1,14 +1,13 @@
+import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 import { createQueryClient } from '@ixo/impactxclient-sdk';
 
-import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
+import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
 import { DELEGATION, VALIDATOR } from 'types/validators';
+import { QUERY_CLIENT } from 'types/query';
 import { WALLET } from 'types/wallet';
 import { filterValidators } from './filters';
-import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
-
-export type QUERY_CLIENT = Awaited<ReturnType<typeof createQueryClient>>;
 
 export const initializeQueryClient = async (queryClient?: QUERY_CLIENT) => {
 	if (queryClient) return queryClient;

@@ -11,8 +11,7 @@ import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { generateWithdrawRewardTrx } from '@utils/client';
-import { defaultTrxFee } from '@utils/transactions';
+import { defaultTrxFeeOption, generateWithdrawRewardTrx } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { filterValidators } from '@utils/filters';
 import { WalletContext } from '@contexts/wallet';
@@ -61,13 +60,13 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 	const signTX = async (): Promise<void> => {
 		if (!validatorList) return;
 		setLoading(true);
-		const trxs: TRX_MSG[] = validatorList.map(validator =>
+		const trxs: TRX_MSG[] = validatorList.map((validator) =>
 			generateWithdrawRewardTrx({
 				delegatorAddress: wallet.user!.address,
 				validatorAddress: validator.address,
 			}),
 		);
-		const hash = await broadCastMessages(wallet, trxs, undefined, defaultTrxFee);
+		const hash = await broadCastMessages(wallet, trxs, undefined, defaultTrxFeeOption);
 		if (hash) setSuccess(true);
 
 		console.table(trxs);
@@ -103,7 +102,11 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 				) : (
 					<p>Unsupported review type</p>
 				)}
-				<Footer onBack={loading || success ? null : onBack} onBackUrl={onBack ? undefined : ''} onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX} />
+				<Footer
+					onBack={loading || success ? null : onBack}
+					onBackUrl={onBack ? undefined : ''}
+					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
+				/>
 			</main>
 		</>
 	);

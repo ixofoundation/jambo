@@ -2,11 +2,28 @@ import { createSigningClient, SigningStargateClient, cosmos } from '@ixo/impactx
 import { assertIsDeliverTxSuccess } from '@cosmjs/stargate';
 
 import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { TRX_FEE, TRX_FEE_OPTION, TRX_FEE_OPTIONS, TRX_MSG } from 'types/transactions';
+import { EncodeObject } from '@cosmjs/proto-signing';
 
 export const initStargateClient = async (offlineSigner: any, endpoint?: string): Promise<SigningStargateClient> => {
 	const cosmJS = await createSigningClient(endpoint || BLOCKCHAIN_RPC_URL, offlineSigner);
 	return cosmJS;
+};
+
+export const calculateGasOptions = (gasUsed: number): TRX_FEE_OPTIONS => {
+	const gasPriceStep = {
+		low: 0.01,
+		average: 0.025,
+		high: 0.04,
+	};
+	const gas = gasUsed < 0.01 ? 0.01 : gasUsed;
+	const gasOptions = {
+		low: gas * gasPriceStep.low,
+		average: gas * gasPriceStep.average,
+		high: gas * gasPriceStep.high,
+	};
+
+	return gasOptions;
 };
 
 export const sendTransaction = async (
@@ -15,13 +32,24 @@ export const sendTransaction = async (
 	payload: {
 		msgs: TRX_MSG[];
 		chain_id: string;
-		fee: TRX_FEE;
 		memo: string;
+		fee: TRX_FEE_OPTION;
 	},
 ): Promise<any> => {
 	// console.log({ client, delegatorAddress, payload });
 	try {
-		const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, payload.fee, payload.memo);
+		const gasUsed = await client.simulate(delegatorAddress, payload.msgs as EncodeObject[], payload.memo);
+		const gasOptions = calculateGasOptions(gasUsed);
+		const fee: TRX_FEE = {
+			amount: [
+				{
+					denom: 'uixo',
+					amount: String(gasOptions[payload.fee || 'average']),
+				},
+			],
+			gas: String(Math.round(gasUsed * 1.3)),
+		};
+		const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, fee, payload.memo);
 		assertIsDeliverTxSuccess(result);
 		return result;
 	} catch (e) {
@@ -29,96 +57,3 @@ export const sendTransaction = async (
 		throw e;
 	}
 };
-
-export const generateBankSendTrx = ({
-	fromAddress,
-	toAddress,
-	denom,
-	amount,
-}: {
-	fromAddress: string;
-	toAddress: string;
-	denom: string;
-	amount: string;
-}): TRX_MSG => ({
-	typeUrl: '/cosmos.bank.v1beta1.MsgSend',
-	value: cosmos.bank.v1beta1.MsgSend.fromPartial({
-		fromAddress,
-		toAddress,
-		amount: [cosmos.base.v1beta1.Coin.fromPartial({ amount, denom })],
-	}),
-});
-
-export const generateDelegateTrx = ({
-	delegatorAddress,
-	validatorAddress,
-	denom,
-	amount,
-}: {
-	delegatorAddress: string;
-	validatorAddress: string;
-	denom: string;
-	amount: string;
-}): TRX_MSG => ({
-	typeUrl: '/cosmos.staking.v1beta1.MsgDelegate',
-	value: cosmos.staking.v1beta1.MsgDelegate.fromPartial({
-		delegatorAddress,
-		validatorAddress,
-		amount: cosmos.base.v1beta1.Coin.fromPartial({ amount, denom }),
-	}),
-});
-
-export const generateUndelegateTrx = ({
-	delegatorAddress,
-	validatorAddress,
-	denom,
-	amount,
-}: {
-	delegatorAddress: string;
-	validatorAddress: string;
-	denom: string;
-	amount: string;
-}): TRX_MSG => ({
-	typeUrl: '/cosmos.staking.v1beta1.MsgUndelegate',
-	value: cosmos.staking.v1beta1.MsgUndelegate.fromPartial({
-		delegatorAddress,
-		validatorAddress,
-		amount: cosmos.base.v1beta1.Coin.fromPartial({ amount, denom }),
-	}),
-});
-
-export const generateRedelegateTrx = ({
-	delegatorAddress,
-	validatorSrcAddress,
-	validatorDstAddress,
-	denom,
-	amount,
-}: {
-	delegatorAddress: string;
-	validatorSrcAddress: string;
-	validatorDstAddress: string;
-	denom: string;
-	amount: string;
-}): TRX_MSG => ({
-	typeUrl: '/cosmos.staking.v1beta1.MsgBeginRedelegate',
-	value: cosmos.staking.v1beta1.MsgBeginRedelegate.fromPartial({
-		delegatorAddress,
-		validatorSrcAddress,
-		validatorDstAddress,
-		amount: cosmos.base.v1beta1.Coin.fromPartial({ amount, denom }),
-	}),
-});
-
-export const generateWithdrawRewardTrx = ({
-	delegatorAddress,
-	validatorAddress,
-}: {
-	delegatorAddress: string;
-	validatorAddress: string;
-}): TRX_MSG => ({
-	typeUrl: '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
-	value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
-		delegatorAddress,
-		validatorAddress,
-	}),
-});

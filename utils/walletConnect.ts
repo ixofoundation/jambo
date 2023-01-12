@@ -7,7 +7,7 @@ import * as amino from '@cosmjs/amino';
 
 import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
 import { CHAINS, CHAIN_ID } from '@constants/chains';
 import config from '@constants/config.json';
@@ -206,7 +206,7 @@ export const WCBroadCastMessage = async (
 	user: USER,
 	msgs: TRX_MSG[],
 	memo = '',
-	fee: TRX_FEE,
+	fee: TRX_FEE_OPTION,
 ): Promise<string | null> => {
 	const trx_fail = () => {
 		Toast.errorToast(`Transaction Failed`);

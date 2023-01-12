@@ -24,6 +24,7 @@ export type ValidatorConfig = {
 	delegatedValidatorsOnly: boolean;
 	showValidatorDetails: boolean;
 	allowFilters: boolean;
+	requireFunds: boolean;
 	pageTitle: string;
 	label: string;
 };

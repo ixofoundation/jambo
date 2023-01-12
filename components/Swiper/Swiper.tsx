@@ -9,12 +9,12 @@ import { ACTION } from 'types/actions';
 import { pushNewRoute } from '@utils/router';
 import { shimmerDataUrl } from '@utils/image';
 
-type SwipersProps = {
+type SwiperProps = {
 	actions: ACTION[];
 	swiper?: boolean;
 };
 
-const CustomSwiper = ({ actions, swiper = true }: SwipersProps) => {
+const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 	const [active, setActive] = useState(0);
 
 	const selectedAction = actions[active];

@@ -35,7 +35,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 	const [search, setSearch] = useState<string>('');
 	const [filter, setFilter] = useState<string>(FILTERS.VOTING_DESC);
 	const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
-	const { updateValidators, validators } = useContext(WalletContext);
+	const { updateValidators, validators, wallet } = useContext(WalletContext);
 
 	useEffect(() => {
 		if (validators?.length && config.delegatedValidatorsOnly) {
@@ -43,7 +43,6 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 		} else {
 			setValidatorsData(validators ?? []);
 		}
-		setLoading(false);
 	}, [validators]);
 
 	useEffect(() => {
@@ -52,6 +51,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
 	useEffect(() => {
 		setValidatorList(filterValidators(validatorsData, filter, search));
+		setLoading(false);
 	}, [validatorsData, search]);
 
 	useEffect(() => {
@@ -98,7 +98,11 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 					</form>
 					<div className={utilsStyles.spacer} />
 
-					<Footer onBack={unselectValidator} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+					<Footer
+						onBack={unselectValidator}
+						onBackUrl={onBack ? undefined : ''}
+						onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+					/>
 				</main>
 			</>
 		);
@@ -111,6 +115,8 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 				<div className={utilsStyles.spacer} />
 				{loading ? (
 					<Loader />
+				) : config.requireFunds && !wallet?.balances?.balances?.length ? (
+					<IconText text="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
 				) : !validatorList.length ? (
 					<IconText text="You don't have any tokens delegated yet." Img={SadFace} imgSize={50} />
 				) : (
@@ -124,14 +130,24 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
 								<div className={styles.filtersWrapper}>
 									<button
-										className={`${styles.filterButton} ${[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''}`}
-										onClick={handleFilterClick(filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC)}
+										className={`${styles.filterButton} ${
+											[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
+										}`}
+										onClick={handleFilterClick(
+											filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
+										)}
 									>
 										Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
 									<button
-										className={`${styles.filterButton} ${[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter) ? styles.activeFilterButton : ''}`}
-										onClick={handleFilterClick(filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC)}
+										className={`${styles.filterButton} ${
+											[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter)
+												? styles.activeFilterButton
+												: ''
+										}`}
+										onClick={handleFilterClick(
+											filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
+										)}
 									>
 										Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
@@ -146,7 +162,11 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 				)}
 				<div className={utilsStyles.spacer} />
 
-				<Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onCorrect={formIsValid() ? () => handleSubmit(null) : null} />
+				<Footer
+					onBack={onBack}
+					onBackUrl={onBack ? undefined : ''}
+					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
+				/>
 			</main>
 		</>
 	);

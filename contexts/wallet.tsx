@@ -1,12 +1,13 @@
 import { createContext, useState, useEffect, HTMLAttributes, useRef } from 'react';
 
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
-import { BALANCES, WALLET } from 'types/wallet';
+import { initializeQueryClient, queryValidators } from '@utils/query';
 import { initializeWallet } from '@utils/wallets';
 import { queryAllBalances } from '@utils/query';
-import { USER } from 'types/user';
+import { BALANCES, WALLET } from 'types/wallet';
 import { VALIDATOR } from 'types/validators';
-import { initializeQueryClient, queryValidators, QUERY_CLIENT } from '@utils/query';
+import { QUERY_CLIENT } from 'types/query';
+import { USER } from 'types/user';
 
 export const WalletContext = createContext({
 	wallet: {} as WALLET,
