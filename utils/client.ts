@@ -13,7 +13,7 @@ export const initStargateClient = async (offlineSigner: any, endpoint?: string):
 export const calculateGasOptions = (gasUsed: number): TRX_FEE_OPTIONS => {
 	const gasPriceStep = {
 		low: 0.010001,
-		average: 0.025001,
+		average: 0.025002,
 		high: 0.030003,
 	};
 	const gas = gasUsed < 0.01 ? 0.01 : gasUsed;
