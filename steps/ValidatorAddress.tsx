@@ -34,7 +34,6 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 	const { validators, filterValidators, validatorsLoading, searchFilter, sortFilter } = useGlobalValidators({
 		delegatedValidatorsOnly: config.delegatedValidatorsOnly,
 	});
-	console.log({ wallet });
 
 	useEffect(() => {
 		if (!config.showValidatorDetails && formIsValid()) {

@@ -22,7 +22,7 @@
 					"name": "Select token and amount"
 				},
 				{
-					"id": "review_and_sign",
+					"id": "bank_MsgSend",
 					"name": "Review and sign"
 				}
 			],
