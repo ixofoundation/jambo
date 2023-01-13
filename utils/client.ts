@@ -44,7 +44,7 @@ export const sendTransaction = async (
 			amount: [
 				{
 					denom: 'uixo',
-					amount: String(gasOptions[payload.fee || 'average']),
+					amount: String(Math.round(gasOptions[payload.fee || 'average'])),
 				},
 			],
 			gas: String(Math.round(gasUsed * 1.3)),
