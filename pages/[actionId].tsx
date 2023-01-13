@@ -15,7 +15,7 @@ import { WalletContext } from '@contexts/wallet';
 import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
-import { ValidatorAmountConfig } from 'types/validators';
+import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
 
 type ActionPageProps = {
 	actionData: ACTION;
@@ -60,15 +60,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						header={action?.name}
 					/>
 				);
-			case STEPS.get_validator_address:
+			case STEPS.get_validator_delegate:
 			case STEPS.get_delegated_validator_undelegate:
 			case STEPS.get_delegated_validator_redelegate:
 			case STEPS.get_validator_redelegate:
 				return (
 					<ValidatorAddress
-						onSuccess={handleOnNext<STEPS.get_validator_address>}
+						onSuccess={handleOnNext<STEPS.get_validator_delegate>}
 						onBack={handleBack}
-						data={step.data as StepDataType<STEPS.get_validator_address>}
+						data={step.data as StepDataType<STEPS.get_validator_delegate>}
 						header={action?.name}
 						config={VALIDATOR_CONFIGS[step.id] ?? VALIDATOR_CONFIGS.default}
 					/>
@@ -91,16 +91,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						onBack={handleBack}
 						data={step.data as StepDataType<STEPS.select_delegate_amount>}
 						header={action?.name}
-						config={(VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default) as ValidatorAmountConfig}
+						config={(VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default) as VALIDATOR_AMOUNT_CONFIG}
 						validator={
 							(
-								action?.steps.find((step) =>
-									[
-										STEPS.get_validator_address,
-										STEPS.get_delegated_validator_undelegate,
-										STEPS.get_delegated_validator_redelegate,
-									].includes(step.id),
-								)?.data as StepDataType<STEPS.get_validator_address>
+								action?.steps.find(
+									(step) =>
+										step.id === STEPS.get_validator_delegate ||
+										step.id === STEPS.get_delegated_validator_undelegate ||
+										step.id === STEPS.get_delegated_validator_redelegate,
+								)?.data as StepDataType<STEPS.get_validator_delegate>
 							)?.validator || null
 						}
 					/>
@@ -110,7 +109,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 					<ValidatorRewards
 						onSuccess={handleOnNext<STEPS.review_and_sign>}
 						onBack={handleBack}
-						data={step.data as StepDataType<STEPS.get_validator_address>}
+						data={step.data as StepDataType<STEPS.get_validator_delegate>}
 						header={action?.name}
 						message={step.id}
 					/>

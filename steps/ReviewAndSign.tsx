@@ -7,7 +7,7 @@ import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-import Loader from '@components/Loader/loader';
+import Loader from '@components/Loader/Loader';
 import Input from '@components/Input/Input';
 import Success from '@icons/success.svg';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
@@ -39,9 +39,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 	const [loading, setLoading] = useState(false);
 	const [amount, setAmount] = useState(0);
 	const [token, setToken] = useState<TokenDropdownType | null>(null);
-	const [address, setAddress] = useState(''); // destination address
+	const [dstAddress, setDstAddress] = useState(''); // destination address
 	const [srcAddress, setSrcAddress] = useState(''); // source address
-	const [validator, setValidator] = useState<VALIDATOR | null>(null); // destination validator
+	const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
 	const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
 
 	useEffect(() => {
@@ -56,19 +56,19 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
 			}
 			if (s.id === STEPS.get_receiver_address) {
-				setAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
+				setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
 			}
 			if (
-				s.id === STEPS.get_validator_address ||
+				s.id === STEPS.get_validator_delegate ||
 				s.id === STEPS.get_delegated_validator_undelegate ||
 				s.id === STEPS.get_validator_redelegate
 			) {
-				setAddress((s.data as StepDataType<STEPS.get_validator_address>)?.validator?.address ?? '');
-				setValidator((s.data as StepDataType<STEPS.get_validator_address>)?.validator);
+				setDstAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
+				setDstValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
 			}
 			if (s.id === STEPS.get_delegated_validator_redelegate) {
-				setSrcAddress((s.data as StepDataType<STEPS.get_validator_address>)?.validator?.address ?? '');
-				setSrcValidator((s.data as StepDataType<STEPS.get_validator_address>)?.validator);
+				setSrcAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
+				setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
 			}
 		});
 	}, [steps]);
@@ -80,7 +80,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			case STEPS.bank_MsgSend:
 				trx = generateBankSendTrx({
 					fromAddress: wallet.user!.address,
-					toAddress: address,
+					toAddress: dstAddress,
 					denom: 'uixo',
 					amount: getMicroAmount(amount.toString()),
 				});
@@ -88,7 +88,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			case STEPS.staking_MsgDelegate:
 				trx = generateDelegateTrx({
 					delegatorAddress: wallet.user!.address,
-					validatorAddress: address,
+					validatorAddress: dstAddress,
 					denom: 'uixo',
 					amount: getMicroAmount(amount.toString()),
 				});
@@ -96,7 +96,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			case STEPS.staking_MsgUndelegate:
 				trx = generateUndelegateTrx({
 					delegatorAddress: wallet.user!.address,
-					validatorAddress: address,
+					validatorAddress: dstAddress,
 					denom: 'uixo',
 					amount: getMicroAmount(amount.toString()),
 				});
@@ -105,19 +105,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateRedelegateTrx({
 					delegatorAddress: wallet.user!.address,
 					validatorSrcAddress: srcAddress,
-					validatorDstAddress: address,
+					validatorDstAddress: dstAddress,
 					denom: 'uixo',
 					amount: getMicroAmount(amount.toString()),
-				});
-				console.log({
-					trx,
-					request: {
-						delegatorAddress: wallet.user!.address,
-						validatorSrcAddress: srcAddress,
-						validatorDstAddress: address,
-						denom: 'uixo',
-						amount: getMicroAmount(amount.toString()),
-					},
 				});
 				break;
 			default:
@@ -157,14 +147,14 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 						</div>
 						<br />
 						<p>to the address:</p>
-						<Input name="address" required value={address} className={styles.stepInput} disabled />
+						<Input name="address" required value={dstAddress} className={styles.stepInput} disabled />
 						<br />
 						<p>Sign?</p>
 					</form>
 				) : message === STEPS.staking_MsgDelegate || message === STEPS.staking_MsgUndelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
 						{message === STEPS.staking_MsgDelegate && <p>I am delegating</p>}
-						{message === STEPS.staking_MsgUndelegate && <p>I want to undelegating</p>}
+						{message === STEPS.staking_MsgUndelegate && <p>I want to undelegate</p>}
 						<div className={styles.amountAndTokenInputs}>
 							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
 							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
@@ -173,14 +163,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 						{message === STEPS.staking_MsgDelegate && <p>to the validator:</p>}
 						{message === STEPS.staking_MsgUndelegate && <p>with the validator:</p>}
 
-						{/* <Input name="address" required value={address} className={styles.stepInput} disabled /> */}
-						<ValidatorListItem validator={validator!} onClick={() => () => {}} />
+						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
 						<br />
 						<p>Sign?</p>
 					</form>
 				) : message === STEPS.staking_MsgRedelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
-						<p>I want to redelegating</p>
+						<p>I want to redelegate</p>
 						<div className={styles.amountAndTokenInputs}>
 							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
 							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
@@ -189,7 +178,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 						<p>From validator</p>
 						<ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
 						<p>To validator</p>
-						<ValidatorListItem validator={validator!} onClick={() => () => {}} />
+						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
 						<br />
 						<p>Sign?</p>
 					</form>

@@ -4,7 +4,7 @@ import { VALIDATOR } from './validators';
 export enum STEPS {
 	check_user_balance = 'check_user_balance',
 	get_receiver_address = 'get_receiver_address',
-	get_validator_address = 'get_validator_address',
+	get_validator_delegate = 'get_validator_delegate',
 	get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
 	get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
 	get_validator_redelegate = 'get_validator_redelegate',
@@ -32,7 +32,7 @@ export type STEP = {
 export const steps: { [key in STEPS]: STEP } = {
 	[STEPS.check_user_balance]: { id: STEPS.check_user_balance, name: 'Check user balance' },
 	[STEPS.get_receiver_address]: { id: STEPS.get_receiver_address, name: 'Get receiver address' },
-	[STEPS.get_validator_address]: { id: STEPS.get_validator_address, name: 'Get validator address' },
+	[STEPS.get_validator_delegate]: { id: STEPS.get_validator_delegate, name: 'Get validator address' },
 	[STEPS.get_delegated_validator_undelegate]: {
 		id: STEPS.get_delegated_validator_undelegate,
 		name: 'Get delegated validator address',
@@ -110,7 +110,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
 	? Check_user_balance
 	: T extends STEPS.get_receiver_address
 	? Get_receiver_address
-	: T extends STEPS.get_validator_address
+	: T extends STEPS.get_validator_delegate
 	? Get_validator_address
 	: T extends STEPS.get_delegated_validator_undelegate
 	? Get_validator_address

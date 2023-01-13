@@ -1,7 +1,7 @@
 import { STEPS } from 'types/steps';
 
 export const VALIDATOR_CONFIGS = {
-	[STEPS.get_validator_address]: {
+	[STEPS.get_validator_delegate]: {
 		pageTitle: 'Choose validator',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: true,
@@ -13,23 +13,18 @@ export const VALIDATOR_CONFIGS = {
 		pageTitle: 'Undelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
-		requireFunds: false,
-		allowFilters: false,
 		label: 'Choose validator',
 	},
 	[STEPS.get_delegated_validator_redelegate]: {
 		pageTitle: 'Redelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
-		requireFunds: false,
-		allowFilters: false,
 		label: 'Choose stake to redelegate',
 	},
 	[STEPS.get_validator_redelegate]: {
 		pageTitle: 'Define validator to redelegate to',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: false,
-		requireFunds: false,
 		allowFilters: true,
 		label: 'I want to redelegate to',
 	},

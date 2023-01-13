@@ -38,7 +38,7 @@ const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
 					<div className={utilsStyles.spacer} />
 					<div className={styles.stakeCard}>
 						<span>My stake:</span>
-						<span>{(validator.delegation?.balance?.amount || 0) / Math.pow(10, 6)} IXO</span>
+						<span>{Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} IXO</span>
 					</div>
 				</>
 			)}

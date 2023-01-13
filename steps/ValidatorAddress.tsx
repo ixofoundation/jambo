@@ -3,56 +3,37 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import InputWithSufficIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
+import InputWithSuffixIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorCard from '@components/ValidatorCard/ValidatorCard';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/Loader/loader';
+import Loader from '@components/Loader/Loader';
 import Footer from '@components/Footer/Footer';
 import FilterDesc from '@icons/filter_desc.svg';
 import FilterAsc from '@icons/filter_asc.svg';
 import SadFace from '@icons/sad_face.svg';
 import Search from '@icons/search.svg';
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { VALIDATOR, ValidatorConfig } from 'types/validators';
-import { filterValidators } from '@utils/filters';
+import { VALIDATOR, VALIDATOR_CONFIG } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
+import useGlobalValidators from '@hooks/globalValidators';
 
 type ValidatorAddressProps = {
-	onSuccess: (data: StepDataType<STEPS.get_validator_address>) => void;
+	onSuccess: (data: StepDataType<STEPS.get_validator_delegate>) => void;
 	onBack?: () => void;
-	data?: StepDataType<STEPS.get_validator_address>;
+	data?: StepDataType<STEPS.get_validator_delegate>;
 	header?: string;
-	config: ValidatorConfig;
+	config: VALIDATOR_CONFIG;
 };
 
 const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, config }) => {
-	const [validatorsData, setValidatorsData] = useState<VALIDATOR[]>([]);
-	const [validatorList, setValidatorList] = useState<VALIDATOR[]>([]);
-	const [loading, setLoading] = useState<boolean>(true);
-	const [search, setSearch] = useState<string>('');
-	const [filter, setFilter] = useState<string>(FILTERS.VOTING_DESC);
 	const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
-	const { updateValidators, validators, wallet } = useContext(WalletContext);
-
-	useEffect(() => {
-		if (validators?.length && config.delegatedValidatorsOnly) {
-			setValidatorsData(validators.filter((validator: VALIDATOR) => !!validator.delegation?.shares) ?? []);
-		} else {
-			setValidatorsData(validators ?? []);
-		}
-	}, [validators]);
-
-	useEffect(() => {
-		updateValidators();
-	}, []);
-
-	useEffect(() => {
-		setValidatorList(filterValidators(validatorsData, filter, search));
-		setLoading(false);
-	}, [validatorsData, search]);
+	const { wallet } = useContext(WalletContext);
+	const { validators, filterValidators, validatorsLoading, searchFilter, sortFilter } = useGlobalValidators({
+		delegatedValidatorsOnly: config.delegatedValidatorsOnly,
+	});
 
 	useEffect(() => {
 		if (!config.showValidatorDetails && formIsValid()) {
@@ -61,7 +42,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 	}, [selectedValidator]);
 
 	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-		setSearch(event.target.value);
+		filterValidators('search', event.target.value);
 	};
 
 	const formIsValid = () => selectedValidator?.address?.length;
@@ -78,8 +59,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
 	const handleFilterClick = (filterType: string) => (event: any) => {
 		event?.preventDefault();
-		setFilter(filterType);
-		setValidatorList(filterValidators(validatorsData, filterType, search));
+		filterValidators('sort', filterType);
 	};
 
 	const unselectValidator = () => {
@@ -113,49 +93,49 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				<div className={utilsStyles.spacer} />
-				{loading ? (
+				{validatorsLoading ? (
 					<Loader />
-				) : config.requireFunds && !wallet?.balances?.balances?.length ? (
+				) : !!config.requireFunds && !wallet?.balances?.balances?.length ? (
 					<IconText text="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
-				) : !validatorList.length ? (
+				) : validators === null || (config.delegatedValidatorsOnly && !validators.length) ? (
 					<IconText text="You don't have any tokens delegated yet." Img={SadFace} imgSize={50} />
 				) : (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<p>{config.label}</p>
-						{config.allowFilters && (
+						{!!config.allowFilters && (
 							<>
-								<InputWithSufficIcon name="address" onChange={handleChange} value={search} Icon={Search} />
+								<InputWithSuffixIcon name="address" onChange={handleChange} value={searchFilter} Icon={Search} />
 
 								<div className={utilsStyles.spacer} />
 
 								<div className={styles.filtersWrapper}>
 									<button
 										className={`${styles.filterButton} ${
-											[FILTERS.VOTING_ASC, FILTERS.VOTING_DESC].includes(filter) ? styles.activeFilterButton : ''
+											sortFilter === FILTERS.VOTING_ASC || FILTERS.VOTING_DESC ? styles.activeFilterButton : ''
 										}`}
 										onClick={handleFilterClick(
-											filter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
+											sortFilter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
 										)}
 									>
-										Voting power {filter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
+										Voting power {sortFilter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
 									<button
 										className={`${styles.filterButton} ${
-											[FILTERS.COMMISSION_ASC, FILTERS.COMMISSION_DESC].includes(filter)
+											sortFilter === FILTERS.COMMISSION_ASC || sortFilter === FILTERS.COMMISSION_DESC
 												? styles.activeFilterButton
 												: ''
 										}`}
 										onClick={handleFilterClick(
-											filter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
+											sortFilter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
 										)}
 									>
-										Commission {filter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
+										Commission {sortFilter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
 									</button>
 								</div>
 							</>
 						)}
 
-						{validatorList.map((validator: any, index: number) => {
+						{validators.map((validator: any, index: number) => {
 							return <ValidatorListItem key={validator.address} validator={validator} onClick={handleValidatorClick} />;
 						})}
 					</form>

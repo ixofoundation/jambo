@@ -175,7 +175,7 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // 	"id": "eKXPPhewkJDLbE1bq1iboa",
 // 	"steps": [
 // 		{
-// 			"id": "get_validator_address",
+// 			"id": "get_validator_delegate",
 // 			"name": "Get validator address"
 // 		},
 // 		{
@@ -223,7 +223,7 @@ export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 // 			"name": "Define amount to redelegate"
 // 		},
 // 		{
-// 			"id": "get_validator_address",
+// 			"id": "get_validator_delegate",
 // 			"name": "Get validator address"
 // 		},
 // 		{

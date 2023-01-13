@@ -6,23 +6,22 @@ import styles from '@styles/stepsPages.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/Loader/loader';
+import Loader from '@components/Loader/Loader';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
-import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
 import { defaultTrxFeeOption, generateWithdrawRewardTrx } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
-import { filterValidators } from '@utils/filters';
 import { WalletContext } from '@contexts/wallet';
 import { ReviewStepsTypes, StepDataType, STEPS } from 'types/steps';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
+import useGlobalValidators from '@hooks/globalValidators';
 
 type ValidatorAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
 	onBack?: () => void;
-	data?: StepDataType<STEPS.get_validator_address>;
+	data?: StepDataType<STEPS.get_validator_delegate>;
 	header?: string;
 	message: ReviewStepsTypes;
 };
@@ -38,29 +37,21 @@ const calculateAccumulatedRewards = (validators: VALIDATOR[]) => {
 };
 
 const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, message }) => {
-	const [validatorList, setValidatorList] = useState<VALIDATOR[]>([]);
 	const [success, setSuccess] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [rewards, setRewards] = useState<string>();
-	const { wallet, updateValidators, validators } = useContext(WalletContext);
+	const { wallet } = useContext(WalletContext);
+	const { validators, validatorsLoading } = useGlobalValidators({ delegatedValidatorsOnly: true });
 
 	useEffect(() => {
-		if (validators?.length) {
-			const newValidatorList = validators.filter((validator: VALIDATOR) => !!validator.delegation?.shares) ?? [];
-			setValidatorList(filterValidators(newValidatorList, FILTERS.VOTING_DESC, ''));
-			setRewards(calculateAccumulatedRewards(newValidatorList));
-		}
-		setLoading(false);
+		if (validators?.length) setRewards(calculateAccumulatedRewards(validators));
+		if (loading && validators !== null) setLoading(false);
 	}, [validators]);
 
-	useEffect(() => {
-		updateValidators();
-	}, []);
-
 	const signTX = async (): Promise<void> => {
-		if (!validatorList) return;
+		if (!validators) return;
 		setLoading(true);
-		const trxs: TRX_MSG[] = validatorList.map((validator) =>
+		const trxs: TRX_MSG[] = validators.map((validator) =>
 			generateWithdrawRewardTrx({
 				delegatorAddress: wallet.user!.address,
 				validatorAddress: validator.address,
@@ -79,15 +70,15 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 			<Header pageTitle="Claim rewards" header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				{loading ? (
+				{loading || validatorsLoading ? (
 					<Loader />
 				) : success ? (
 					<IconText text="transaction successful!" Img={Success} imgSize={50} />
 				) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
-					validatorList?.length ? (
+					validators?.length ? (
 						<form className={styles.stepsForm} autoComplete="none">
 							<p>Your delegations</p>
-							{validatorList.map((validator: any, index: number) => {
+							{validators.map((validator: any, index: number) => {
 								return <ValidatorListItem key={validator.address} validator={validator} />;
 							})}
 							<div className={utilsStyles.spacer} />

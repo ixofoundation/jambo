@@ -26,15 +26,15 @@
 					"name": "Review and sign"
 				}
 			],
-			"name": "Swap",
-			"description": "Swap flow",
+			"name": "Send",
+			"description": "Crypto Wallet",
 			"image": "eKXPPhewkJDLbE1bq1ibo8.png"
 		},
 		{
 			"id": "eKXPPhewkJDLbE1bq1iboa",
 			"steps": [
 				{
-					"id": "get_validator_address",
+					"id": "get_validator_delegate",
 					"name": "Get validator address"
 				},
 				{

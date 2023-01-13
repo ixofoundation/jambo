@@ -10,7 +10,7 @@ import Input from '@components/Input/Input';
 import SadFace from '@icons/sad_face.svg';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import { VALIDATOR, ValidatorAmountConfig } from 'types/validators';
+import { VALIDATOR, VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import {
@@ -26,7 +26,7 @@ type DefineAmountTokenProps = {
 	data?: StepDataType<STEPS.select_delegate_amount>;
 	header?: string;
 	validator: VALIDATOR | null;
-	config: ValidatorAmountConfig;
+	config: VALIDATOR_AMOUNT_CONFIG;
 };
 
 const determineDelegationBalance = (

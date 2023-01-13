@@ -20,16 +20,16 @@ export type VALIDATOR = {
 	delegation: DELEGATION | null;
 };
 
-export type ValidatorConfig = {
+export type VALIDATOR_CONFIG = {
 	delegatedValidatorsOnly: boolean;
 	showValidatorDetails: boolean;
-	allowFilters: boolean;
-	requireFunds: boolean;
+	allowFilters?: boolean;
+	requireFunds?: boolean;
 	pageTitle: string;
 	label: string;
 };
 
-export type ValidatorAmountConfig = {
+export type VALIDATOR_AMOUNT_CONFIG = {
 	defaultLabel: string;
 	label: string;
 	sub?: string;

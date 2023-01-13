@@ -5,14 +5,20 @@
 		"codegen",
 		"cosmjs",
 		"impactxclient",
+		"jambo",
 		"keplr",
 		"keysafe",
+		"nextjs",
+		"proto",
 		"qrcode",
 		"redelegate",
 		"Stargate",
+		"svgr",
 		"swiper",
+		"toastify",
 		"uixo",
 		"undelegate",
+		"undelegation",
 		"walletconnect"
 	]
 }
