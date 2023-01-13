@@ -12,9 +12,9 @@ export const initStargateClient = async (offlineSigner: any, endpoint?: string):
 
 export const calculateGasOptions = (gasUsed: number): TRX_FEE_OPTIONS => {
 	const gasPriceStep = {
-		low: 0.01,
-		average: 0.025,
-		high: 0.04,
+		low: 0.010001,
+		average: 0.025001,
+		high: 0.030003,
 	};
 	const gas = gasUsed < 0.01 ? 0.01 : gasUsed;
 	const gasOptions = {
@@ -39,7 +39,10 @@ export const sendTransaction = async (
 	// console.log({ client, delegatorAddress, payload });
 	try {
 		const gasUsed = await client.simulate(delegatorAddress, payload.msgs as EncodeObject[], payload.memo);
-		const gasOptions = calculateGasOptions(gasUsed);
+		console.log({ gasUsed });
+		const gas = gasUsed * 1.3;
+		const gasOptions = calculateGasOptions(gas);
+		console.log('gasOptions', gasOptions);
 		const fee: TRX_FEE = {
 			amount: [
 				{
@@ -47,8 +50,9 @@ export const sendTransaction = async (
 					amount: String(Math.round(gasOptions[payload.fee || 'average'])),
 				},
 			],
-			gas: String(Math.round(gasUsed * 1.3)),
+			gas: String(Math.round(gas)),
 		};
+		console.log('fee', fee);
 		const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, fee, payload.memo);
 		assertIsDeliverTxSuccess(result);
 		return result;
