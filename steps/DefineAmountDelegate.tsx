@@ -34,7 +34,7 @@ const determineDelegationBalance = (
 	walletBalances: DecCoin | undefined,
 	validatorBalance: DecCoin | undefined,
 ): TokenDropdownType | undefined => {
-	if (walletBalances === undefined || validatorBalance === undefined) return;
+	console.log({ walletBalances, validatorBalance });
 	const ixoCurrency = source === 'wallet' ? walletBalances : source === 'validator' ? validatorBalance : null;
 	const [tokenDropdown] = generateUserTokensDropdown(ixoCurrency ? [ixoCurrency] : []);
 	return tokenDropdown;
