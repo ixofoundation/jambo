@@ -8,6 +8,7 @@ import styles from './Swiper.module.scss';
 import { ACTION } from 'types/actions';
 import { pushNewRoute } from '@utils/router';
 import { shimmerDataUrl } from '@utils/image';
+import useWindowDimensions from '@hooks/windowDimensions';
 
 type SwiperProps = {
 	actions: ACTION[];
@@ -16,13 +17,45 @@ type SwiperProps = {
 
 const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 	const [active, setActive] = useState(0);
+	const { width } = useWindowDimensions();
 
 	const selectedAction = actions[active];
 
-	const onNavigate = (e: MouseEvent<HTMLDivElement>) => {
+	const onClickNavigate = (actionId: string) => () => pushNewRoute(`/${actionId}`);
+
+	const onSwiperNavigate = (e: MouseEvent<HTMLDivElement>) => {
 		e.stopPropagation();
 		pushNewRoute(`/${actions[active].id}`);
 	};
+
+	if (width && width > 425) {
+		console.log({ 'width > 425': width });
+		return (
+			<div className={styles.actionGrid}>
+				{actions.map((action, i) => (
+					<div key={action.id} onClick={onClickNavigate(action.id)} className={styles.action}>
+						<div className={styles.swiperSlide}>
+							{action.image ? (
+								<Image
+									src={`/images/actions/${action.image}`}
+									alt={action.name}
+									layout="fill"
+									className={styles.actionImage}
+									placeholder="blur"
+									blurDataURL={shimmerDataUrl()}
+								/>
+							) : (
+								<div className={styles.actionImage} />
+							)}
+						</div>
+
+						<h2 className={styles.actionName}>{action.name}</h2>
+						<p className={styles.actionDescription}>{action.description}</p>
+					</div>
+				))}
+			</div>
+		);
+	}
 
 	return (
 		<div>
@@ -36,7 +69,7 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 					initialSlide={0}
 				>
 					{actions.map((action, i) => (
-						<SwiperSlide className={styles.swiperSlide} key={action.id} onClick={onNavigate}>
+						<SwiperSlide className={styles.swiperSlide} key={action.id} onClick={onSwiperNavigate}>
 							{action.image ? (
 								<Image
 									src={`/images/actions/${action.image}`}
@@ -54,7 +87,7 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 				</Swiper>
 			) : (
 				actions.map((action, i) => (
-					<div className={cls(styles.swiperSlide, styles.center)} key={action.id} onClick={onNavigate}>
+					<div className={cls(styles.swiperSlide, styles.center)} key={action.id} onClick={onSwiperNavigate}>
 						{action.image ? (
 							<Image
 								src={`/images/actions/${action.image}`}
