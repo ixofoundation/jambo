@@ -153,15 +153,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					</form>
 				) : message === STEPS.staking_MsgDelegate || message === STEPS.staking_MsgUndelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
-						{message === STEPS.staking_MsgDelegate && <p>I am delegating</p>}
-						{message === STEPS.staking_MsgUndelegate && <p>I want to undelegate</p>}
+						{message === STEPS.staking_MsgDelegate && <p>Delegating</p>}
+						{message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
 						<div className={styles.amountAndTokenInputs}>
 							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
 							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
 						</div>
 						<br />
-						{message === STEPS.staking_MsgDelegate && <p>to the validator:</p>}
-						{message === STEPS.staking_MsgUndelegate && <p>with the validator:</p>}
+						{message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
+						{message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
 						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
 						<br />
@@ -169,15 +169,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					</form>
 				) : message === STEPS.staking_MsgRedelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
-						<p>I want to redelegate</p>
+						<p>Redelegate</p>
 						<div className={styles.amountAndTokenInputs}>
 							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
 							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
 						</div>
 						<br />
-						<p>From validator</p>
+						<p>from</p>
 						<ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
-						<p>To validator</p>
+						<p>to</p>
 						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
 						<br />
 						<p>Sign?</p>

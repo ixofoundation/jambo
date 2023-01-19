@@ -11,26 +11,6 @@
 	"about": "config.about",
 	"actions": [
 		{
-			"id": "eKXPPhewkJDLbE1bq1ibo8",
-			"steps": [
-				{
-					"id": "get_receiver_address",
-					"name": "Get receiver address"
-				},
-				{
-					"id": "select_token_and_amount",
-					"name": "Select token and amount"
-				},
-				{
-					"id": "bank_MsgSend",
-					"name": "Review and sign"
-				}
-			],
-			"name": "Send",
-			"description": "Crypto Wallet",
-			"image": "eKXPPhewkJDLbE1bq1ibo8.png"
-		},
-		{
 			"id": "eKXPPhewkJDLbE1bq1iboa",
 			"steps": [
 				{

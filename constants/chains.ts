@@ -152,24 +152,24 @@ export const BLOCKCHAIN_REST_URL = CHAINS[CHAIN_ID].rest as string;
 export const BLOCKCHAIN_RPC_URL = CHAINS[CHAIN_ID].rpc as string;
 
 // {
-//   "id": "eKXPPhewkJDLbE1bq1ibo8",
-//   "steps": [
-//     {
-//       "id": "get_receiver_address",
-//       "name": "Get receiver address"
-//     },
-//     {
-//       "id": "select_token_and_amount",
-//       "name": "Select token and amount"
-//     },
-//     {
-//       "id": "review_and_sign",
-//       "name": "Review and sign"
-//     }
-//   ],
-//   "name": "Swap",
-//   "description": "Swap flow",
-//   "image": ""
+// 	"id": "eKXPPhewkJDLbE1bq1ibo8",
+// 	"steps": [
+// 		{
+// 			"id": "get_receiver_address",
+// 			"name": "Get receiver address"
+// 		},
+// 		{
+// 			"id": "select_token_and_amount",
+// 			"name": "Select token and amount"
+// 		},
+// 		{
+// 			"id": "bank_MsgSend",
+// 			"name": "Review and sign"
+// 		}
+// 	],
+// 	"name": "Send",
+// 	"description": "Crypto Wallet",
+// 	"image": "eKXPPhewkJDLbE1bq1ibo8.png"
 // },
 // {
 // 	"id": "eKXPPhewkJDLbE1bq1iboa",
