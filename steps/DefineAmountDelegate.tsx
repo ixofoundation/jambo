@@ -110,7 +110,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 									className={cls(styles.stepInput, styles.alignRight)}
 								/>
 							</div>
-							<div className={styles.tokenWrapper}>IXO</div>
+							<Input name="token" required value="IXO" disabled className={styles.tokenInput} size={8} />
 						</div>
 						{config.sub ? <p>{config.sub}</p> : null}
 						<div className={utilsStyles.spacer} />

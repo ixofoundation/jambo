@@ -2,18 +2,18 @@ import { STEPS } from 'types/steps';
 
 export const VALIDATOR_CONFIGS = {
 	[STEPS.get_validator_delegate]: {
-		pageTitle: 'Choose validator',
+		pageTitle: 'Choose a Validator',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: true,
 		requireFunds: true,
 		allowFilters: true,
-		label: 'Choose validator',
+		label: 'Choose a Validator',
 	},
 	[STEPS.get_delegated_validator_undelegate]: {
 		pageTitle: 'Undelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
-		label: 'Choose validator',
+		label: 'Choose a Validator',
 	},
 	[STEPS.get_delegated_validator_redelegate]: {
 		pageTitle: 'Redelegate',
@@ -29,19 +29,19 @@ export const VALIDATOR_CONFIGS = {
 		label: 'Choose validator to redelegate to',
 	},
 	default: {
-		pageTitle: 'Choose validator',
+		pageTitle: 'Choose a Validator',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: true,
 		requireFunds: true,
 		allowFilters: true,
-		label: 'Choose validator',
+		label: 'Choose a Validator',
 	},
 };
 
 export const VALIDATOR_AMOUNT_CONFIGS = {
 	[STEPS.select_delegate_amount]: {
 		pageTitle: 'Define amount to delegate',
-		defaultLabel: 'Enter amount to delegate',
+		defaultLabel: 'Enter an Amount to Delegate',
 		label: 'Add',
 		sub: 'Your tokens will be locked for 21 days.',
 		source: 'wallet',

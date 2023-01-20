@@ -147,10 +147,11 @@
 
 	& .amountWrapper {
 		flex: 1;
+		margin-right: 10px;
 	}
 
-	& .tokenWrapper {
-		flex: 1;
+	& .tokenInput {
+		text-align: center;
 	}
 }
 
