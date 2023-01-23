@@ -12,7 +12,6 @@ export type WALLET = {
 	walletType?: WALLET_TYPE;
 	user?: USER;
 	balances?: BALANCES;
-	showWalletModal?: boolean;
 };
 
 export type BALANCES = {

@@ -24,12 +24,12 @@ type ActionPageProps = {
 const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 	const [count, setCount] = useState(0);
 	const [action, setAction] = useState<ACTION | null>(null);
-	const { wallet, updateWallet } = useContext(WalletContext);
+	const { wallet, showWalletModal } = useContext(WalletContext);
 	const signedIn = wallet.user?.address;
 
 	useEffect(() => {
 		setAction(actionData);
-		if (!signedIn) updateWallet({ showWalletModal: true });
+		if (!signedIn) showWalletModal();
 		// console.log({ id });
 		// if (!id) return;
 		// const fetchedAction = (config as ConfigData).actions.find(a => a.id === id);

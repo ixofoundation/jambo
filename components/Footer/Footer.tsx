@@ -25,12 +25,12 @@ type FooterProps = {
  * If [onForward] or [onCorrect] is undefined then no button, if null then disabled button.
  */
 const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, showAboutButton }: FooterProps) => {
-	const { wallet, updateWallet } = useContext(WalletContext);
+	const { walletModalVisible, showWalletModal, hideWalletModal } = useContext(WalletContext);
 
 	return (
 		<footer className={styles.footer}>
 			{showAccountButton && (
-				<ButtonRound onClick={() => updateWallet({ showWalletModal: true })}>
+				<ButtonRound onClick={showWalletModal}>
 					<AccountImg width="20px" height="20px" />
 				</ButtonRound>
 			)}
@@ -49,7 +49,10 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 				</ButtonRound>
 			)}
 			{onCorrect !== undefined && (
-				<ButtonRound color={onCorrect ? BUTTON_ROUND_COLOR.success : BUTTON_ROUND_COLOR.disabled} onClick={onCorrect ?? undefined}>
+				<ButtonRound
+					color={onCorrect ? BUTTON_ROUND_COLOR.success : BUTTON_ROUND_COLOR.disabled}
+					onClick={onCorrect ?? undefined}
+				>
 					<Correct width="20px" height="20px" />
 				</ButtonRound>
 			)}
@@ -59,8 +62,8 @@ const Footer = ({ onBack, onBackUrl, onCorrect, onForward, showAccountButton, sh
 				</ButtonRound>
 			)}
 
-			{wallet.showWalletModal && (
-				<Modal onClose={() => updateWallet({ showWalletModal: false })}>
+			{walletModalVisible && (
+				<Modal onClose={hideWalletModal}>
 					<Account />
 				</Modal>
 			)}

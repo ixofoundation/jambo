@@ -28,8 +28,7 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 		pushNewRoute(`/${actions[active].id}`);
 	};
 
-	if (width && width > 425) {
-		console.log({ 'width > 425': width });
+	if (width && width > 425)
 		return (
 			<div className={styles.actionGrid}>
 				{actions.map((action, i) => (
@@ -55,7 +54,6 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
 				))}
 			</div>
 		);
-	}
 
 	return (
 		<div>

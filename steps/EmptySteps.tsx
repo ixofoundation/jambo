@@ -16,7 +16,7 @@ type EmptyStepsProps = {
 };
 
 const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) => {
-	const { updateWallet } = useContext(WalletContext);
+	const { showWalletModal } = useContext(WalletContext);
 
 	return (
 		<>
@@ -27,7 +27,7 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) =
 				{loading ? (
 					<Loader />
 				) : !signedIn ? (
-					<WalletCard name="Connect now" Img={WalletImg} onClick={() => updateWallet({ showWalletModal: true })} />
+					<WalletCard name="Connect now" Img={WalletImg} onClick={showWalletModal} />
 				) : (
 					<p>Sorry, there is no steps for this action</p>
 				)}
