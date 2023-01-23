@@ -66,10 +66,8 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		try {
 			const user = await initializeWallet(wallet);
 			updateWallet({ user });
-			if (!queryClientRef?.current) {
-				const queryClient = await initializeQueryClient(queryClientRef?.current);
-				queryClientRef.current = queryClient;
-			}
+			const queryClient = await initializeQueryClient(queryClientRef?.current);
+			queryClientRef.current = queryClient;
 		} catch (error) {
 			console.error('Initializing wallets error:', error);
 		}
@@ -140,14 +138,14 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	}, [wallet]);
 
 	useEffect(() => {
-		if (loaded && wallet.walletType && !wallet.user) initializeWallets();
+		if (loaded && wallet.walletType) initializeWallets();
 		if (wallet.walletType !== WALLET_TYPE.keplr) {
 			window.removeEventListener('keplr_keystorechange', updateKeplrWallet);
 		} else {
 			window.addEventListener('keplr_keystorechange', updateKeplrWallet);
 			return () => window.removeEventListener('keplr_keystorechange', updateKeplrWallet);
 		}
-	}, [wallet.walletType, wallet.user]);
+	}, [wallet.walletType]);
 
 	useEffect(() => {
 		// Comment out below to reset config
