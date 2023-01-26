@@ -41,22 +41,22 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	const hideWalletModal = () => setWalletModalVisible(false);
 
 	const updateWallet = (newWallet: WALLET) => {
-		setWallet((currentWallet) => ({ ...currentWallet, ...newWallet }));
+		setWallet(currentWallet => ({ ...currentWallet, ...newWallet }));
 	};
 
 	const updateUser = (newUser: USER, override: boolean = false) => {
-		if (override) setWallet((currentWallet) => ({ ...currentWallet, user: newUser }));
+		if (override) setWallet(currentWallet => ({ ...currentWallet, user: newUser }));
 		else
-			setWallet((currentWallet) => ({
+			setWallet(currentWallet => ({
 				...currentWallet,
 				user: currentWallet.user ? { ...currentWallet.user, ...newUser } : newUser,
 			}));
 	};
 
 	const updateBalances = (newBalances: BALANCES, override: boolean = false) => {
-		if (override) setWallet((currentWallet) => ({ ...currentWallet, balances: newBalances }));
+		if (override) setWallet(currentWallet => ({ ...currentWallet, balances: newBalances }));
 		else
-			setWallet((currentWallet) => ({
+			setWallet(currentWallet => ({
 				...currentWallet,
 				balances: currentWallet.balances ? { ...currentWallet.balances, ...newBalances } : newBalances,
 			}));
@@ -65,6 +65,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	const initializeWallets = async () => {
 		try {
 			const user = await initializeWallet(wallet);
+			console.log({ user });
 			updateWallet({ user });
 			const queryClient = await initializeQueryClient(queryClientRef?.current);
 			queryClientRef.current = queryClient;
@@ -92,9 +93,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		try {
 			if (!queryClientRef?.current?.cosmos || !wallet?.walletType) return;
 			const validatorList = await queryValidators(queryClientRef.current, wallet);
-			setValidators((prevState) =>
+			setValidators(prevState =>
 				validatorList.map((validator: VALIDATOR) => {
-					const prevValidator = prevState?.find((v) => v.address === validator.address);
+					const prevValidator = prevState?.find(v => v.address === validator.address);
 					if (prevValidator) {
 						return { ...prevValidator, ...validator, avatarUrl: prevValidator.avatarUrl };
 					}
@@ -108,18 +109,10 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	const updateValidatorAvatar = async (validatorAddress: string, avatarUrl: string) => {
 		if (!validators?.length) return;
-		const validatorIndex = validators.findIndex((v) => v.address === validatorAddress);
+		const validatorIndex = validators.findIndex(v => v.address === validatorAddress);
 		if (validatorIndex < 0) return;
 
-		setValidators((prevState: VALIDATOR[] | undefined) =>
-			!prevState
-				? prevState
-				: [
-						...prevState.slice(0, validatorIndex),
-						{ ...prevState[validatorIndex], avatarUrl },
-						...prevState.slice(validatorIndex + 1),
-				  ],
-		);
+		setValidators((prevState: VALIDATOR[] | undefined) => (!prevState ? prevState : [...prevState.slice(0, validatorIndex), { ...prevState[validatorIndex], avatarUrl }, ...prevState.slice(validatorIndex + 1)]));
 	};
 
 	const updateKeplrWallet = async () => {

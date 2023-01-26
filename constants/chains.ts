@@ -95,8 +95,8 @@ export const CHAINS = {
 		},
 		features: ['stargate'],
 	},
-	'impacthub-3': {
-		chainId: 'impacthub-3',
+	'ixo-4': {
+		chainId: 'ixo-4',
 		chainName: 'Impact Hub',
 		rpc: 'https://impacthub-rpc.lavenderfive.com/',
 		// rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
@@ -2300,10 +2300,9 @@ export const ChainInfos = (
 
 export const findTokenFromDenom = (denom: string): TOKEN_ASSET | undefined => {
 	let token: TOKEN_ASSET;
-	ChainInfos.find((c) => {
-		const currency = c.currencies.find((cur) => cur.coinMinimalDenom.toLowerCase() === denom.toLowerCase());
-		if (currency)
-			token = { ...currency, coinImageUrl: 'https://app.osmosis.zone' + currency.coinImageUrl } as TOKEN_ASSET;
+	ChainInfos.find(c => {
+		const currency = c.currencies.find(cur => cur.coinMinimalDenom.toLowerCase() === denom.toLowerCase());
+		if (currency) token = { ...currency, coinImageUrl: 'https://app.osmosis.zone' + currency.coinImageUrl } as TOKEN_ASSET;
 		return currency;
 	});
 	// @ts-ignore
@@ -2311,7 +2310,7 @@ export const findTokenFromDenom = (denom: string): TOKEN_ASSET | undefined => {
 };
 
 export const ChainDropdownOptions = [CHAINS[CHAIN_ID]].map((chain: any) => {
-	const stakeCurrency = ChainInfos.find((c) => c.chainId === 'impacthub-3')?.stakeCurrency;
+	const stakeCurrency = ChainInfos.find(c => c.chainId === 'impacthub-3')?.stakeCurrency;
 
 	return {
 		value: chain.chainId,
