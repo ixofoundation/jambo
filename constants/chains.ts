@@ -98,8 +98,8 @@ export const CHAINS = {
 	'ixo-4': {
 		chainId: 'ixo-4',
 		chainName: 'Impact Hub',
-		rpc: 'https://impacthub-rpc.lavenderfive.com/',
-		// rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
+		// rpc: 'https://impacthub-rpc.lavenderfive.com/',
+		rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
 		// rpc: 'https://proxies.sifchain.finance/api/impacthub-3/rpc',
 		// rpc: 'https://rpc-impacthub.keplr.app/', // CORS ERROR 404 ERROR
 		// rpc: 'https://impacthub.ixo.world/rpc/',  // CORS ERROR
