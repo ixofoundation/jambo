@@ -98,7 +98,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 				) : !!config.requireFunds && !wallet?.balances?.balances?.length ? (
 					<IconText text="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
 				) : validators === null || (config.delegatedValidatorsOnly && !validators.length) ? (
-					<IconText text="You don't have any tokens delegated yet." Img={SadFace} imgSize={50} />
+					<IconText text="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
 				) : (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<p>{config.label}</p>

@@ -88,7 +88,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 							<p>Claim?</p>
 						</form>
 					) : (
-						<IconText text="You don't have any tokens delegated yet." Img={SadFace} imgSize={50} />
+						<IconText text="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
 					)
 				) : (
 					<p>Unsupported review type</p>
