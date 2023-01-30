@@ -24,7 +24,7 @@ const TokenCard = ({ className, token, ...other }: TokenCardProps) => {
 				/>
 				<p className={styles.label}>{asset?.coinDenom || token.denom}</p>
 			</div>
-			<p>{formatTokenAmount(Number(token.amount))}</p>
+			<p>{formatTokenAmount(Number(token.amount), true, false)}</p>
 		</div>
 	);
 };

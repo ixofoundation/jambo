@@ -12,8 +12,17 @@ export const formatterUSD = new Intl.NumberFormat('en-US', {
 	//maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
 });
 
-export const formatTokenAmount = (amount: number, microUnits: boolean = true) =>
-	formatterToken.format(microUnits ? amount / Math.pow(10, 6) : amount);
+export const calculateTokenAmount = (amount: number, microUnits: boolean = true, roundAmount: boolean = false) => {
+	let tokenAmount = amount;
+	if (microUnits) tokenAmount = tokenAmount / Math.pow(10, 6);
+	if (roundAmount && tokenAmount >= 1) tokenAmount = Math.floor(tokenAmount);
+	return tokenAmount;
+};
+
+export const formatTokenAmount = (amount: number, microUnits: boolean = true, roundAmount: boolean = false) => {
+	const tokenAmount = calculateTokenAmount(amount, microUnits, roundAmount);
+	return formatterToken.format(tokenAmount);
+};
 
 export const formatterToken = new Intl.NumberFormat('en-US', {
 	//minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)

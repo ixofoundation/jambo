@@ -15,6 +15,7 @@ import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import {
 	formatTokenAmount,
+	calculateTokenAmount,
 	validateAmountAgainstBalance,
 	generateUserTokensDropdown,
 	TokenDropdownType,
@@ -75,7 +76,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 
 	const handleMaxClicked = () => {
 		if (!max?.amount) return;
-		const tokenAmount = Number(max.amount) / Math.pow(10, 6);
+		const tokenAmount = calculateTokenAmount(Number(max.amount), true, config.source === 'wallet');
 		setAmount(tokenAmount.toString());
 	};
 
@@ -99,7 +100,10 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 						<div className={styles.inputRow}>
 							<div className={styles.amountWrapper}>
 								<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
-									Max: {max ? `${formatTokenAmount(Number(max.amount))} ${max.label}` : '-'}
+									Max:{' '}
+									{max
+										? `${formatTokenAmount(Number(max.amount), true, config.source === 'wallet')} ${max.label}`
+										: '-'}
 								</p>
 								<Input
 									name="walletAddress"
