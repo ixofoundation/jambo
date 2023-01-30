@@ -21,6 +21,7 @@ const AddressActionButton = ({
 	...other
 }: AddressActionButtonProps) => {
 	const [copied, setCopied] = useState(false);
+	const addressToDisplay = address?.length ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : '';
 
 	const onCopy = () => {
 		if (copied) return;
@@ -35,7 +36,9 @@ const AddressActionButton = ({
 			<div className={styles.account} {...other}>
 				<div className={styles.column}>
 					<CopyToClipboard text={address} onCopy={() => onCopy()}>
-						<Card className={styles.card}>{address}</Card>
+						<Card className={styles.card} title={address}>
+							{addressToDisplay}
+						</Card>
 					</CopyToClipboard>
 					{copied ? <p className={styles.copied}>copied</p> : <div />}
 				</div>

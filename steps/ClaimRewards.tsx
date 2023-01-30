@@ -96,7 +96,13 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 				<Footer
 					onBack={loading || success ? null : onBack}
 					onBackUrl={onBack ? undefined : ''}
-					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
+					onCorrect={
+						loading || validatorsLoading || !validators?.length
+							? null
+							: success
+							? () => onSuccess({ done: true })
+							: signTX
+					}
 				/>
 			</main>
 		</>
