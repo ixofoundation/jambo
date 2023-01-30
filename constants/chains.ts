@@ -98,8 +98,8 @@ export const CHAINS = {
 	'ixo-4': {
 		chainId: 'ixo-4',
 		chainName: 'Impact Hub',
-		rpc: 'https://impacthub-rpc.lavenderfive.com/',
-		// rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
+		// rpc: 'https://impacthub-rpc.lavenderfive.com/',
+		rpc: 'https://rpc-ixo-ia.cosmosia.notional.ventures/',
 		// rpc: 'https://proxies.sifchain.finance/api/impacthub-3/rpc',
 		// rpc: 'https://rpc-impacthub.keplr.app/', // CORS ERROR 404 ERROR
 		// rpc: 'https://impacthub.ixo.world/rpc/',  // CORS ERROR
@@ -791,7 +791,7 @@ export const ChainInfos = (
 		{
 			rpc: 'https://rpc-impacthub.keplr.app',
 			rest: 'https://lcd-impacthub.keplr.app',
-			chainId: 'impacthub-3',
+			chainId: 'ixo-4',
 			chainName: 'IXO',
 			bip44: {
 				coinType: 118,
@@ -2310,7 +2310,7 @@ export const findTokenFromDenom = (denom: string): TOKEN_ASSET | undefined => {
 };
 
 export const ChainDropdownOptions = [CHAINS[CHAIN_ID]].map((chain: any) => {
-	const stakeCurrency = ChainInfos.find(c => c.chainId === 'impacthub-3')?.stakeCurrency;
+	const stakeCurrency = ChainInfos.find(c => c.chainId === 'ixo-4')?.stakeCurrency;
 
 	return {
 		value: chain.chainId,
