@@ -1,5 +1,4 @@
 import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
-import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 import cls from 'classnames';
 
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
@@ -12,6 +11,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import { VALIDATOR, VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
+import { CURRENCY } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
 import {
 	formatTokenAmount,
@@ -22,9 +22,9 @@ import {
 } from '@utils/currency';
 
 type DefineAmountTokenProps = {
-	onSuccess: (data: StepDataType<STEPS.select_delegate_amount>) => void;
+	onSuccess: (data: StepDataType<STEPS.select_amount_delegate>) => void;
 	onBack?: () => void;
-	data?: StepDataType<STEPS.select_delegate_amount>;
+	data?: StepDataType<STEPS.select_amount_delegate>;
 	header?: string;
 	validator: VALIDATOR | null;
 	config: VALIDATOR_AMOUNT_CONFIG;
@@ -32,8 +32,8 @@ type DefineAmountTokenProps = {
 
 const determineDelegationBalance = (
 	source: 'wallet' | 'validator',
-	walletBalances: DecCoin | undefined,
-	validatorBalance: DecCoin | undefined,
+	walletBalances: CURRENCY | undefined,
+	validatorBalance: CURRENCY | undefined,
 ): TokenDropdownType | undefined => {
 	const ixoCurrency = source === 'wallet' ? walletBalances : source === 'validator' ? validatorBalance : null;
 	const [tokenDropdown] = generateUserTokensDropdown(ixoCurrency ? [ixoCurrency] : []);
@@ -53,7 +53,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 	useEffect(() => {
 		const currentCurrency = determineDelegationBalance(
 			config.source,
-			wallet?.balances?.balances?.find((balance) => balance.denom === 'uixo'),
+			wallet?.balances?.balances?.find((balance) => balance?.token?.isStakeCurrency),
 			validator?.delegation?.balance,
 		);
 		if (currentCurrency?.amount !== max?.amount) setMax(currentCurrency);
@@ -114,7 +114,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
 									className={cls(styles.stepInput, styles.alignRight)}
 								/>
 							</div>
-							<Input name="token" required value="IXO" disabled className={styles.tokenInput} size={8} />
+							<Input name="token" required value={max?.label || ''} disabled className={styles.tokenInput} size={8} />
 						</div>
 						{config.sub ? <p>{config.sub}</p> : null}
 						<div className={utilsStyles.spacer} />

@@ -1,11 +1,13 @@
-import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { CURRENCY } from './wallet';
+
+export type VALIDATOR_FILTER_TYPE = 'voting_asc' | 'voting_desc' | 'commission_asc' | 'commission_desc';
 
 export type DELEGATION = {
 	delegatorAddress: string;
 	validatorAddress: string;
 	shares: number;
-	balance: DecCoin;
-	rewards?: DecCoin[];
+	balance: CURRENCY;
+	rewards?: CURRENCY[];
 };
 
 export type VALIDATOR = {

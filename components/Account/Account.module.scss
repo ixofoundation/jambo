@@ -18,6 +18,11 @@
 		flex: 1;
 	}
 
+	.centerLoader {
+		align-self: center;
+		justify-content: center;
+	}
+
 	.name {
 		text-align: center;
 		font-size: 1.2rem;
@@ -51,6 +56,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		flex-direction: column;
 
 		.loader {
 			margin: 10px auto;

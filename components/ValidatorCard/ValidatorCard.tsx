@@ -1,9 +1,10 @@
 import { FC } from 'react';
+import Image from 'next/image';
 
 import utilsStyles from '@styles/utils.module.scss';
-import { VALIDATOR } from 'types/validators';
 import styles from './ValidatorCard.module.scss';
-import Image from 'next/image';
+import { getDisplayDenomFromDenom } from '@utils/currency';
+import { VALIDATOR } from 'types/validators';
 
 type ValidatorCardProps = {
 	validator: VALIDATOR;
@@ -11,6 +12,7 @@ type ValidatorCardProps = {
 
 const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
 	const delegated = !!validator.delegation?.shares;
+	const denom = getDisplayDenomFromDenom(validator.delegation?.balance.denom || '');
 
 	return (
 		<>
@@ -38,7 +40,9 @@ const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
 					<div className={utilsStyles.spacer} />
 					<div className={styles.stakeCard}>
 						<span>My stake:</span>
-						<span>{Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} IXO</span>
+						<span>
+							{Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} {denom}
+						</span>
 					</div>
 				</>
 			)}

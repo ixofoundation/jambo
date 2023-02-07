@@ -1,15 +1,15 @@
-import * as amino from '@cosmjs/amino';
-import * as crypto from '@cosmjs/crypto';
 import { AccountData, DirectSignResponse, makeSignBytes, OfflineDirectSigner } from '@cosmjs/proto-signing';
 import { SignDoc } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
+import { ChainInfo } from '@keplr-wallet/types';
+import * as crypto from '@cosmjs/crypto';
+import * as amino from '@cosmjs/amino';
 
-import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
-import { USER } from 'types/user';
-// import blocksyncApi from './blocksync';
-import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import * as Toast from '@components/Toast/Toast';
+import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
 import { initStargateClient, sendTransaction } from './client';
-import { CHAIN_ID } from '@constants/chains';
+import { USER } from 'types/user';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
+// import blocksyncApi from './blocksync';
 
 const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
 
@@ -125,25 +125,27 @@ export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> =>
 	return offlineSigner;
 };
 
+const trx_fail = () => {
+	Toast.errorToast(`Transaction Failed`);
+	return null;
+};
+
 export const operaBroadCastMessage = async (
-	user: USER,
 	msgs: TRX_MSG[],
 	memo = '',
 	fee: TRX_FEE_OPTION,
+	feeDenom: string,
+	chainInfo: ChainInfo,
 ): Promise<string | null> => {
-	const trx_fail = () => {
-		Toast.errorToast(`Transaction Failed`);
-		return null;
-	};
-
 	const offlineSigner = await getOfflineSigner();
 	if (!address || !offlineSigner) return trx_fail();
-	const client = await initStargateClient(offlineSigner);
+	const client = await initStargateClient(chainInfo.rpc, offlineSigner);
 
 	const payload = {
 		msgs,
-		chain_id: CHAIN_ID,
+		chain_id: chainInfo.chainId,
 		fee,
+		feeDenom,
 		memo,
 	};
 

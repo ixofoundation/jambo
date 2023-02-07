@@ -5,13 +5,13 @@ export enum STEPS {
 	check_user_balance = 'check_user_balance',
 	get_receiver_address = 'get_receiver_address',
 	get_validator_delegate = 'get_validator_delegate',
+	get_validator_redelegate = 'get_validator_redelegate',
 	get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
 	get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
-	get_validator_redelegate = 'get_validator_redelegate',
 	select_token_and_amount = 'select_token_and_amount',
-	select_delegate_amount = 'select_delegate_amount',
-	select_undelegate_amount = 'select_undelegate_amount',
-	select_redelegate_amount = 'select_redelegate_amount',
+	select_amount_delegate = 'select_amount_delegate',
+	select_amount_undelegate = 'select_amount_undelegate',
+	select_amount_redelegate = 'select_amount_redelegate',
 	define_amount = 'define_amount',
 	send_token_to_receiver = 'send_token_to_receiver',
 	review_and_sign = 'review_and_sign',
@@ -46,9 +46,9 @@ export const steps: { [key in STEPS]: STEP } = {
 		name: 'Get validator address',
 	},
 	[STEPS.select_token_and_amount]: { id: STEPS.select_token_and_amount, name: 'Select token and amount' },
-	[STEPS.select_delegate_amount]: { id: STEPS.select_delegate_amount, name: 'Define amount to delegate' },
-	[STEPS.select_undelegate_amount]: { id: STEPS.select_undelegate_amount, name: 'Define amount to undelegate' },
-	[STEPS.select_redelegate_amount]: { id: STEPS.select_redelegate_amount, name: 'Define amount to redelegate' },
+	[STEPS.select_amount_delegate]: { id: STEPS.select_amount_delegate, name: 'Define amount to delegate' },
+	[STEPS.select_amount_undelegate]: { id: STEPS.select_amount_undelegate, name: 'Define amount to undelegate' },
+	[STEPS.select_amount_redelegate]: { id: STEPS.select_amount_redelegate, name: 'Define amount to redelegate' },
 	[STEPS.define_amount]: { id: STEPS.define_amount, name: 'Define amount' },
 	[STEPS.send_token_to_receiver]: { id: STEPS.send_token_to_receiver, name: 'Send token to receiver' },
 	[STEPS.review_and_sign]: { id: STEPS.review_and_sign, name: 'Review and sign' },
@@ -92,9 +92,6 @@ interface Send_token_to_receiver {
 interface Review_and_sign {
 	done: boolean;
 }
-interface Claim {
-	done: boolean;
-}
 
 export type AllStepDataTypes =
 	| Get_receiver_address
@@ -103,8 +100,7 @@ export type AllStepDataTypes =
 	| Check_user_balance
 	| Define_amount
 	| Send_token_to_receiver
-	| Review_and_sign
-	| Claim;
+	| Review_and_sign;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
 	? Check_user_balance
@@ -120,11 +116,11 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
 	? Get_validator_address
 	: T extends STEPS.select_token_and_amount
 	? Select_token_and_amount
-	: T extends STEPS.select_delegate_amount
+	: T extends STEPS.select_amount_delegate
 	? Select_token_and_amount
-	: T extends STEPS.select_undelegate_amount
+	: T extends STEPS.select_amount_undelegate
 	? Select_token_and_amount
-	: T extends STEPS.select_redelegate_amount
+	: T extends STEPS.select_amount_redelegate
 	? Select_token_and_amount
 	: T extends STEPS.define_amount
 	? Define_amount
@@ -135,5 +131,5 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
 	: T extends STEPS.distribution_MsgWithdrawDelegatorReward
 	? Review_and_sign
 	: T extends STEPS.claim
-	? Claim
+	? Review_and_sign
 	: never;

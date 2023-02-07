@@ -2,13 +2,16 @@
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"typescript.enablePromptUseWorkspaceTsdk": true,
 	"cSpell.words": [
+		"bech",
 		"codegen",
 		"cosmjs",
+		"devnet",
 		"impactxclient",
 		"jambo",
 		"keplr",
-		"keysafe",
+		"ledgered",
 		"nextjs",
+		"osmo",
 		"proto",
 		"qrcode",
 		"redelegate",
@@ -16,9 +19,11 @@
 		"svgr",
 		"swiper",
 		"toastify",
+		"uion",
 		"uixo",
 		"undelegate",
 		"undelegation",
+		"uosmo",
 		"walletconnect"
 	]
 }

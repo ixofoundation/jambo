@@ -1,7 +1,8 @@
-import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
+import { customQueries } from '@ixo/impactxclient-sdk';
 
-import { findTokenFromDenom } from '@constants/chains';
 import { ArrayElement } from 'types/general';
+import { CURRENCY } from 'types/wallet';
 
 export const formatUSDAmount = (amount: number) => formatterUSD.format(amount);
 
@@ -31,19 +32,11 @@ export const formatterToken = new Intl.NumberFormat('en-US', {
 
 export type TokenDropdownType = ArrayElement<ReturnType<typeof generateUserTokensDropdown>>;
 
-export type TOKEN_ASSET = {
-	coinDenom: string;
-	coinMinimalDenom: string;
-	coinDecimals: number;
-	coinGeckoId: string;
-	coinImageUrl: string;
-	isStakeCurrency?: boolean;
-	isFeeCurrency?: boolean;
-};
+export type TOKEN_ASSET = TokenAsset;
 
-export const generateUserTokensDropdown = (balances: DecCoin[]) => {
+export const generateUserTokensDropdown = (balances: CURRENCY[]) => {
 	return balances.map((b) => {
-		const asset = findTokenFromDenom(b.denom);
+		const asset = customQueries.currency.findTokenFromDenom(b.denom);
 		return {
 			value: b.denom,
 			label: asset?.coinDenom ?? b.denom,
@@ -56,4 +49,24 @@ export const generateUserTokensDropdown = (balances: DecCoin[]) => {
 export const validateAmountAgainstBalance = (amount: number, balance: number, balanceMicroUnits: boolean = true) => {
 	const realBalance = balanceMicroUnits ? balance / 10 ** 6 : balance;
 	return amount <= realBalance;
+};
+
+export const getFeeDenom = (suggestedDenom: string = '', feeCurrencies: TOKEN_ASSET[]): string => {
+	if (suggestedDenom) {
+		const suggestedTokenAsset = customQueries.currency.findTokenFromDenom(suggestedDenom);
+		if (suggestedTokenAsset?.isFeeCurrency) return suggestedTokenAsset.coinMinimalDenom;
+	}
+	const feeCurrency = feeCurrencies.find((cur: TOKEN_ASSET) => {
+		const curTokenAsset = customQueries.currency.findTokenFromDenom(cur.coinMinimalDenom);
+		if (!curTokenAsset.isFeeCurrency) return;
+		return cur;
+	});
+	if (feeCurrency) return feeCurrency.coinMinimalDenom;
+	throw new Error('Cannot determine fee denom');
+};
+
+export const getDisplayDenomFromDenom = (denom: string): string => {
+	const token = customQueries.currency.findTokenFromDenom(denom);
+	if (token?.coinDenom) return token.coinDenom;
+	return '';
 };

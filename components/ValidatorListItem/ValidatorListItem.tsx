@@ -4,6 +4,7 @@ import axios from 'axios';
 
 import styles from './ValidatorListItem.module.scss';
 import { WalletContext } from '@contexts/wallet';
+import { getDisplayDenomFromDenom } from '@utils/currency';
 import { VALIDATOR } from 'types/validators';
 
 type ValidatorListItemProps = {
@@ -11,26 +12,25 @@ type ValidatorListItemProps = {
 	onClick?: (validator: VALIDATOR) => () => void;
 };
 
-const fetchValidatorAvatar = async (identity: string, onComplete: (url: string) => void): Promise<string> => {
+const fetchValidatorAvatar = async (identity: string, onComplete: (url: string) => void): Promise<void> => {
 	try {
 		const response = await axios.post('/api/validators/getValidatorAvatar', { identity });
 		const { url } = response.data;
-
-		return url ?? '';
+		if (url) onComplete(url);
 	} catch (error) {
 		console.error(error);
-		return '';
 	}
 };
 
 const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) => {
 	const delegated = !!validator?.delegation?.shares;
+	const denom = getDisplayDenomFromDenom(validator?.delegation?.balance?.denom || '');
+
 	const { updateValidatorAvatar } = useContext(WalletContext);
 
 	useEffect(() => {
-		if (validator?.identity && typeof validator.avatarUrl !== 'string') {
+		if (validator?.identity && typeof validator.avatarUrl !== 'string')
 			fetchValidatorAvatar(validator.identity, (url) => updateValidatorAvatar(validator.address, url));
-		}
 	}, []);
 
 	if (!validator?.address) {
@@ -40,7 +40,9 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
 	return (
 		<div
 			key={validator.address}
-			className={`${styles.validatorWrapper} ${styles.clickable} ${delegated ? styles.delegatedValidator : ''}`}
+			className={`${styles.validatorWrapper} ${onClick && styles.clickable} ${
+				delegated ? styles.delegatedValidator : ''
+			}`}
 			onClick={onClick ? onClick(validator) : () => {}}
 		>
 			<div className={styles.row}>
@@ -57,7 +59,7 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
 				<div className={styles.row}>
 					<div className={styles.validatorText}>My stake:</div>
 					<div className={styles.validatorText}>
-						{Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} IXO
+						{Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} {denom}
 					</div>
 				</div>
 			)}

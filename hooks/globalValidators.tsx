@@ -1,18 +1,20 @@
 import { useContext, useEffect, useState } from 'react';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
+import { VALIDATOR, VALIDATOR_FILTER_TYPE } from 'types/validators';
 import { filterValidators } from '@utils/filters';
 import { WalletContext } from '@contexts/wallet';
-import { VALIDATOR } from 'types/validators';
+import { ChainContext } from '@contexts/chain';
 
 type GlobalValidators = {
-	delegatedValidatorsOnly?: boolean;
-	filter?: string;
 	search?: string;
+	filter?: VALIDATOR_FILTER_TYPE;
+	delegatedValidatorsOnly?: boolean;
+	customFilter?: (validator: VALIDATOR) => boolean;
 };
 type GlobalValidatorsReturn = {
-	sortFilter: string;
 	searchFilter: string;
+	sortFilter: VALIDATOR_FILTER_TYPE;
 	validators: VALIDATOR[] | null;
 	validatorsLoading: boolean;
 	updateValidators: Function;
@@ -22,32 +24,39 @@ type FilterKey = 'sort' | 'search';
 type FilterValue = string;
 
 const useGlobalValidators = ({
-	delegatedValidatorsOnly = false,
-	filter = FILTERS.VOTING_DESC,
 	search = '',
+	delegatedValidatorsOnly = false,
+	filter = FILTERS.VOTING_DESC as VALIDATOR_FILTER_TYPE,
+	customFilter = (validator: VALIDATOR) => true,
 }: GlobalValidators): GlobalValidatorsReturn => {
 	const [validatorsData, setValidatorsData] = useState<VALIDATOR[]>([]);
-	const [sortFilter, setSortFilter] = useState<string>(filter);
-	const [loading, setLoading] = useState<boolean>(true);
+	const [sortFilter, setSortFilter] = useState<VALIDATOR_FILTER_TYPE>(filter);
 	const [searchFilter, setSearchFilter] = useState<string>(search);
+	const [loading, setLoading] = useState<boolean>(true);
 	const { updateValidators, validators } = useContext(WalletContext);
+	const { queryClient } = useContext(ChainContext);
 
 	useEffect(() => {
-		updateValidators();
-	}, []);
+		if (queryClient) {
+			setLoading(true);
+			updateValidators();
+		}
+	}, [queryClient]);
 
 	useEffect(() => {
 		if (validators?.length) {
-			const validatorsData = delegatedValidatorsOnly
+			let validatorList = delegatedValidatorsOnly
 				? validators.filter((validator: VALIDATOR) => !!validator.delegation?.shares)
 				: validators;
-			setValidatorsData(filterValidators(validatorsData, sortFilter, searchFilter));
+			validatorList = validatorList.filter(customFilter);
+			validatorList = filterValidators(validatorList, sortFilter, searchFilter);
+			setValidatorsData(validatorList);
 			setLoading(false);
 		}
 	}, [validators, sortFilter, searchFilter]);
 
 	const filterValidatorState = (filterKey: FilterKey, filterValue: FilterValue = '') => {
-		if (filterKey === 'sort') setSortFilter(filterValue);
+		if (filterKey === 'sort') setSortFilter(filterValue as VALIDATOR_FILTER_TYPE);
 		else if (filterKey === 'search') setSearchFilter(filterValue);
 		else console.error(`Incorrect filter key provided - ${filterKey}`);
 	};

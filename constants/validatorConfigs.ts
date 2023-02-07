@@ -39,21 +39,21 @@ export const VALIDATOR_CONFIGS = {
 };
 
 export const VALIDATOR_AMOUNT_CONFIGS = {
-	[STEPS.select_delegate_amount]: {
+	[STEPS.select_amount_delegate]: {
 		pageTitle: 'Define amount to delegate',
 		defaultLabel: 'Enter an Amount to Delegate',
 		label: 'Add',
 		sub: 'Your tokens will be locked for 21 days.',
 		source: 'wallet',
 	},
-	[STEPS.select_undelegate_amount]: {
+	[STEPS.select_amount_undelegate]: {
 		pageTitle: 'Define amount to undelegate',
 		defaultLabel: 'Enter amount to undelegate',
 		label: 'Enter amount to undelegate',
 		sub: 'Your tokens will be available after 21 days.',
 		source: 'validator',
 	},
-	[STEPS.select_redelegate_amount]: {
+	[STEPS.select_amount_redelegate]: {
 		pageTitle: 'Define amount to redelegate',
 		defaultLabel: 'Enter amount to redelegate',
 		label: 'Enter amount to redelegate',

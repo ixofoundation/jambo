@@ -1,16 +1,16 @@
 import { HTMLAttributes } from 'react';
-import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { customQueries } from '@ixo/impactxclient-sdk';
 import cls from 'classnames';
 
 import styles from './TokenCard.module.scss';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
-import { findTokenFromDenom } from '@constants/chains';
 import { formatTokenAmount } from '@utils/currency';
+import { CURRENCY } from 'types/wallet';
 
-type TokenCardProps = { token: DecCoin } & HTMLAttributes<HTMLDivElement>;
+type TokenCardProps = { token: CURRENCY } & HTMLAttributes<HTMLDivElement>;
 
 const TokenCard = ({ className, token, ...other }: TokenCardProps) => {
-	const asset = findTokenFromDenom(token.denom);
+	const asset = customQueries.currency.findTokenFromDenom(token.denom);
 
 	return (
 		<div className={cls(styles.tokenCard)}>

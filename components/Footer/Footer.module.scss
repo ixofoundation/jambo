@@ -9,6 +9,17 @@
 	display: flex;
 	justify-content: space-around;
 
+	.label {
+		display: none;
+
+		@media only screen and (min-width: 425px) {
+			display: initial;
+			font-size: 1rem;
+			margin: 0 5px 0 10px;
+			color: var(--main-font-color-inverted);
+		}
+	}
+
 	@media only screen and (min-width: 760px) {
 		position: relative;
 		display: flex;

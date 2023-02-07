@@ -2,34 +2,35 @@ import { HTMLAttributes, useState, useContext, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 
 import styles from './Account.module.scss';
-import { WalletContext } from '@contexts/wallet';
 import AddressActionButton from '@components/AddressActionButton/AddressActionButton';
 import TokenCard from '@components/TokenCard/TokenCard';
 import Dropdown from '@components/Dropdown/Dropdown';
 import Wallets from '@components/Wallets/Wallets';
 import Loader from '@components/Loader/Loader';
+import Switch from '@components/Switch/Switch';
 import Button from '@components/Button/Button';
 import Card from '@components/Card/Card';
 import ArrowLeft from '@icons/arrow_left.svg';
 import QR from '@icons/qr_code.svg';
 import Copy from '@icons/copy.svg';
-import { ChainDropdownOptions } from '@constants/chains';
-import { ArrayElement } from 'types/general';
+import { getChainDropdownOption, getChainDropdownOptions, getChainFromChains } from '@utils/chains';
+import { CHAIN_DROPDOWN_OPTION_TYPE, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { MainnetAndTestnet } from '@constants/chains';
+import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
 
 type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
 const Account = ({ className, ...other }: AccountProps) => {
-	const [showQR, setShowQR] = useState(false);
-	const [selectedOption, setSelectedOption] = useState<ArrayElement<typeof ChainDropdownOptions>>(
-		ChainDropdownOptions[0],
-	);
+	const [showQR, setShowQR] = useState<boolean>(false);
 	const { wallet, updateWallet, fetchAssets, logoutWallet } = useContext(WalletContext);
-
-	const onChainSelected = (option: any) => setSelectedOption(option);
+	const { chain, chains, updateChainId, updateChainNetwork } = useContext(ChainContext);
 
 	useEffect(() => {
 		fetchAssets();
 	}, []);
+
+	const handleDropdownChange = (newValue: unknown) => updateChainId((newValue as CHAIN_DROPDOWN_OPTION_TYPE).value);
 
 	return (
 		<div className={styles.account}>
@@ -50,25 +51,65 @@ const Account = ({ className, ...other }: AccountProps) => {
 									ButtonLogo={QR}
 									buttonOnClick={() => setShowQR(true)}
 								/>
+								{MainnetAndTestnet && (
+									<>
+										<p className={styles.label}>Select environment:</p>
+										<Switch
+											option1={{
+												label: 'Mainnet',
+												value: 'mainnet',
+											}}
+											option2={{
+												label: 'Testnet',
+												value: 'testnet',
+											}}
+											selectedOption={chain.chainNetwork}
+											onOptionSelect={(value) => updateChainNetwork(value as CHAIN_NETWORK_TYPE)}
+										/>
+									</>
+								)}
 								<p className={styles.label}>Select chain:</p>
-								<Dropdown
-									defaultValue={selectedOption}
-									onChange={onChainSelected}
-									options={ChainDropdownOptions}
-									placeholder={null}
-									name="chain"
-									withLogos={true}
-								/>
+								{chain.chainNetworkLoading ? (
+									<div className="flex">
+										<Loader
+											size={20}
+											className={styles.centerLoader}
+											style={{ alignSelf: 'center', justifySelf: 'center' }}
+										/>
+									</div>
+								) : (
+									<Dropdown
+										defaultValue={getChainDropdownOption(
+											getChainFromChains(chains, chain.chainId) as KEPLR_CHAIN_INFO_TYPE,
+										)}
+										// onChange={updateChainId as (newValue: unknown, actionMeta: ActionMeta<unknown>) => void}
+										onChange={handleDropdownChange}
+										options={getChainDropdownOptions(chains)}
+										placeholder={null}
+										name="chain"
+										withLogos={true}
+									/>
+								)}
 								<p className={styles.label}>Available:</p>
-								<Card className={styles.available}>
-									{wallet.balances?.balances?.length ? (
-										wallet.balances.balances.map((token) => <TokenCard token={token} key={token.denom} />)
-									) : wallet.balances?.loading ? (
-										<Loader size={30} className={styles.loader} />
-									) : (
-										<p className={styles.noBalances}>No Balances to Show</p>
-									)}
-								</Card>
+								{chain.chainLoading ? (
+									<div className="flex">
+										<Loader
+											size={30}
+											className={styles.centerLoader}
+											style={{ alignSelf: 'center', justifySelf: 'center' }}
+										/>
+									</div>
+								) : (
+									<Card className={styles.available}>
+										{wallet.balances?.balances?.length ? (
+											wallet.balances.balances.map((token) => <TokenCard token={token} key={token.denom} />)
+										) : wallet.balances?.loading ? (
+											<Loader size={30} className={styles.loader} />
+										) : (
+											<p className={styles.noBalances}>No Balances to Show</p>
+										)}
+									</Card>
+								)}
 							</div>
 							<Button label="logout" onClick={logoutWallet} />
 						</>

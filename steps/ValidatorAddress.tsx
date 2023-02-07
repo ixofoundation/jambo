@@ -3,22 +3,17 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import InputWithSuffixIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
-import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorCard from '@components/ValidatorCard/ValidatorCard';
+import ValidatorList from '@components/ValidatorList/ValidatorList';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Footer from '@components/Footer/Footer';
-import FilterDesc from '@icons/filter_desc.svg';
-import FilterAsc from '@icons/filter_asc.svg';
 import SadFace from '@icons/sad_face.svg';
-import Search from '@icons/search.svg';
-import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
 import { VALIDATOR, VALIDATOR_CONFIG } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
-import { WalletContext } from '@contexts/wallet';
 import useGlobalValidators from '@hooks/globalValidators';
+import { WalletContext } from '@contexts/wallet';
 
 type ValidatorAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.get_validator_delegate>) => void;
@@ -26,9 +21,10 @@ type ValidatorAddressProps = {
 	data?: StepDataType<STEPS.get_validator_delegate>;
 	header?: string;
 	config: VALIDATOR_CONFIG;
+	excludeValidators: string | string[];
 };
 
-const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, config }) => {
+const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, config, excludeValidators }) => {
 	const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
 	const { wallet } = useContext(WalletContext);
 	const { validators, filterValidators, validatorsLoading, searchFilter, sortFilter } = useGlobalValidators({
@@ -101,43 +97,13 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 					<IconText text="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
 				) : (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-						<p>{config.label}</p>
-						{!!config.allowFilters && (
-							<>
-								<InputWithSuffixIcon name="address" onChange={handleChange} value={searchFilter} Icon={Search} />
-
-								<div className={utilsStyles.spacer} />
-
-								<div className={styles.filtersWrapper}>
-									<button
-										className={`${styles.filterButton} ${
-											sortFilter === FILTERS.VOTING_ASC || FILTERS.VOTING_DESC ? styles.activeFilterButton : ''
-										}`}
-										onClick={handleFilterClick(
-											sortFilter === FILTERS.VOTING_DESC ? FILTERS.VOTING_ASC : FILTERS.VOTING_DESC,
-										)}
-									>
-										Voting power {sortFilter === FILTERS.VOTING_ASC ? <FilterAsc /> : <FilterDesc />}
-									</button>
-									<button
-										className={`${styles.filterButton} ${
-											sortFilter === FILTERS.COMMISSION_ASC || sortFilter === FILTERS.COMMISSION_DESC
-												? styles.activeFilterButton
-												: ''
-										}`}
-										onClick={handleFilterClick(
-											sortFilter === FILTERS.COMMISSION_DESC ? FILTERS.COMMISSION_ASC : FILTERS.COMMISSION_DESC,
-										)}
-									>
-										Commission {sortFilter === FILTERS.COMMISSION_ASC ? <FilterAsc /> : <FilterDesc />}
-									</button>
-								</div>
-							</>
-						)}
-
-						{validators.map((validator: any, index: number) => {
-							return <ValidatorListItem key={validator.address} validator={validator} onClick={handleValidatorClick} />;
-						})}
+						<ValidatorList
+							label={config.label}
+							allowFilters={!!config.allowFilters}
+							delegatedValidatorsOnly={config.delegatedValidatorsOnly}
+							onValidatorClick={handleValidatorClick}
+							excludeValidators={[excludeValidators].flat()}
+						/>
 					</form>
 				)}
 				<div className={utilsStyles.spacer} />

@@ -1,37 +1,35 @@
 import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
-import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
-import { createQueryClient } from '@ixo/impactxclient-sdk';
+import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { BLOCKCHAIN_RPC_URL } from '@constants/chains';
-import { DELEGATION, VALIDATOR } from 'types/validators';
+import { DELEGATION, VALIDATOR, VALIDATOR_FILTER_TYPE } from 'types/validators';
+import { CURRENCY, WALLET, WALLET_BALANCE } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
-import { WALLET } from 'types/wallet';
 import { filterValidators } from './filters';
 
-export const initializeQueryClient = async (queryClient?: QUERY_CLIENT) => {
-	if (queryClient) return queryClient;
-	const client = await createQueryClient(BLOCKCHAIN_RPC_URL);
+export const initializeQueryClient = async (blockchainRpcUrl: string) => {
+	const client = await createQueryClient(blockchainRpcUrl);
 	return client;
 };
 
-export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: string): Promise<DecCoin[]> => {
-	let balances = [];
+export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: string): Promise<WALLET_BALANCE[]> => {
 	try {
-		const client = await initializeQueryClient(queryClient);
-		const response = await client.cosmos.bank.v1beta1.allBalances({ address });
-		balances = response.balances;
+		const response = await queryClient.cosmos.bank.v1beta1.allBalances({ address });
+		let balances = response.balances;
+		balances = balances.map((balance: CURRENCY): WALLET_BALANCE => {
+			const token = customQueries.currency.findTokenFromDenom(balance.denom);
+			return { ...balance, token };
+		});
+		return balances;
 	} catch (error) {
-		console.log('queryAllBalances', error);
+		console.error('queryAllBalances', error);
 		throw error;
 	}
-	return balances;
 };
 
 export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, wallet: WALLET): Promise<DELEGATION[]> => {
 	try {
-		const client = await initializeQueryClient(queryClient);
-		const { delegationResponses = [] } = await client.cosmos.staking.v1beta1.delegatorDelegations({
+		const { delegationResponses = [] } = await queryClient.cosmos.staking.v1beta1.delegatorDelegations({
 			delegatorAddr: wallet.user?.address ?? '',
 		});
 		const delegatorDelegations: DELEGATION[] = delegationResponses.map((delegation: DelegationResponse) => ({
@@ -47,7 +45,7 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, walle
 		for (let i = 0; i < delegatorDelegations.length; i++) {
 			try {
 				const delegation = delegatorDelegations[i];
-				const { rewards } = await client.cosmos.distribution.v1beta1.delegationRewards({
+				const { rewards } = await queryClient.cosmos.distribution.v1beta1.delegationRewards({
 					delegatorAddress: wallet.user?.address ?? '',
 					validatorAddress: delegation.validatorAddress,
 				});
@@ -66,9 +64,8 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, walle
 
 export const queryValidators = async (queryClient: QUERY_CLIENT, wallet: WALLET) => {
 	try {
-		const client = await initializeQueryClient(queryClient);
-		const { validators = [] } = await client.cosmos.staking.v1beta1.validators({ status: 'BOND_STATUS_BONDED' });
-		const delegatorDelegations = await queryDelegatorDelegations(client, wallet);
+		const { validators = [] } = await queryClient.cosmos.staking.v1beta1.validators({ status: 'BOND_STATUS_BONDED' });
+		const delegatorDelegations = await queryDelegatorDelegations(queryClient, wallet);
 		const totalTokens = validators.reduce((result: number, validator: any) => {
 			return result + Number(validator.tokens || 0);
 		}, 0);
@@ -94,7 +91,7 @@ export const queryValidators = async (queryClient: QUERY_CLIENT, wallet: WALLET)
 				delegation: delegation ?? null,
 			};
 		});
-		newValidatorList = filterValidators(newValidatorList, FILTERS.VOTING_DESC, '');
+		newValidatorList = filterValidators(newValidatorList, FILTERS.VOTING_POWER_RANKING as VALIDATOR_FILTER_TYPE, '');
 		newValidatorList = newValidatorList.map((validator: VALIDATOR, index: number) => ({
 			...validator,
 			votingRank: index + 1,

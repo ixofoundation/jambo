@@ -33,7 +33,7 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) =
 				)}
 				<div className={utilsStyles.spacer} />
 
-				<Footer onBackUrl="/" />
+				<Footer onBackUrl="/" backLabel="Home" />
 			</main>
 		</>
 	);

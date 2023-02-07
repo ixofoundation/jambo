@@ -1,17 +1,17 @@
-import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
+import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 import QRCodeModal from '@walletconnect/qrcode-modal';
 import SignClient from '@walletconnect/sign-client';
 import { SessionTypes } from '@walletconnect/types';
+import { ChainInfo } from '@keplr-wallet/types';
 import * as amino from '@cosmjs/amino';
 
 import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
-import { CHAINS, CHAIN_ID } from '@constants/chains';
-import config from '@constants/config.json';
 import { uint8Arr_to_b64 } from './encoding';
+import config from '@constants/config.json';
 
 let signClient: SignClient;
 export let address: string;
@@ -27,7 +27,7 @@ const getCurrentSession = () => {
 	return signClient.session.get(signClient.session.keys[signClient.session.keys.length - 1]);
 };
 
-export const initializeWC = async (): Promise<USER | undefined> => {
+export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
 	console.log('initializeWC');
 
 	if (!signClient) {
@@ -82,7 +82,7 @@ export const initializeWC = async (): Promise<USER | undefined> => {
 			requiredNamespaces: {
 				ixo: {
 					methods: Object.values(WC_METHODS),
-					chains: [`${config.wcNamespace}:${CHAIN_ID}`],
+					chains: [`${config.wcNamespace}:${chainInfo.chainId}`],
 					events: [],
 				},
 			},
@@ -202,27 +202,29 @@ export const getOfflineSigner = (): OfflineDirectSigner => {
 	return offlineSigner;
 };
 
+const trx_fail = () => {
+	Toast.errorToast(`Transaction Failed`);
+	return null;
+};
+
 export const WCBroadCastMessage = async (
-	user: USER,
 	msgs: TRX_MSG[],
 	memo = '',
 	fee: TRX_FEE_OPTION,
+	feeDenom: string,
+	chainInfo: ChainInfo,
 ): Promise<string | null> => {
-	const trx_fail = () => {
-		Toast.errorToast(`Transaction Failed`);
-		return null;
-	};
-
 	// @ts-ignore
 	const offlineSigner = getOfflineSigner();
 	if (!address || !offlineSigner) return trx_fail();
 	// const client = await initStargateClient(offlineSigner, 'https://impacthub.ixo.world/rpc/');
-	const client = await initStargateClient(offlineSigner);
+	const client = await initStargateClient(chainInfo.rpc, offlineSigner);
 
 	const payload = {
 		msgs,
-		chain_id: CHAIN_ID,
+		chain_id: chainInfo.chainId,
 		fee,
+		feeDenom,
 		memo,
 	};
 

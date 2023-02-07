@@ -11,9 +11,9 @@ import Loader from '@components/Loader/Loader';
 import Input from '@components/Input/Input';
 import Success from '@icons/success.svg';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
-import { WalletContext } from '@contexts/wallet';
 import { TokenDropdownType } from '@utils/currency';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
@@ -24,6 +24,8 @@ import {
 	generateRedelegateTrx,
 	generateUndelegateTrx,
 } from '@utils/transactions';
+import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -35,23 +37,25 @@ type ReviewAndSignProps = {
 
 const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
 	const { wallet } = useContext(WalletContext);
-	const [success, setSuccess] = useState(false);
-	const [loading, setLoading] = useState(false);
-	const [amount, setAmount] = useState(0);
+	const [success, setSuccess] = useState<boolean>(false);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [amount, setAmount] = useState<number>(0);
 	const [token, setToken] = useState<TokenDropdownType | null>(null);
-	const [dstAddress, setDstAddress] = useState(''); // destination address
-	const [srcAddress, setSrcAddress] = useState(''); // source address
+	const [dstAddress, setDstAddress] = useState<string>(''); // destination address
+	const [srcAddress, setSrcAddress] = useState<string>(''); // source address
 	const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
 	const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
+	const { chainInfo } = useContext(ChainContext);
 
 	useEffect(() => {
 		steps.forEach((s) => {
 			if (
 				s.id === STEPS.select_token_and_amount ||
-				s.id === STEPS.select_delegate_amount ||
-				s.id === STEPS.select_undelegate_amount ||
-				s.id === STEPS.select_redelegate_amount
+				s.id === STEPS.select_amount_delegate ||
+				s.id === STEPS.select_amount_undelegate ||
+				s.id === STEPS.select_amount_redelegate
 			) {
+				console.log(s);
 				setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
 				setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
 			}
@@ -81,7 +85,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateBankSendTrx({
 					fromAddress: wallet.user!.address,
 					toAddress: dstAddress,
-					denom: 'uixo',
+					denom: token?.value ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -89,7 +93,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateDelegateTrx({
 					delegatorAddress: wallet.user!.address,
 					validatorAddress: dstAddress,
-					denom: 'uixo',
+					denom: token?.value ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -97,7 +101,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateUndelegateTrx({
 					delegatorAddress: wallet.user!.address,
 					validatorAddress: dstAddress,
-					denom: 'uixo',
+					denom: token?.value ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -106,14 +110,21 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					delegatorAddress: wallet.user!.address,
 					validatorSrcAddress: srcAddress,
 					validatorDstAddress: dstAddress,
-					denom: 'uixo',
+					denom: token?.value ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
 			default:
 				throw new Error('Unsupported review type');
 		}
-		const hash = await broadCastMessages(wallet, [trx], undefined, defaultTrxFeeOption);
+		const hash = await broadCastMessages(
+			wallet,
+			[trx],
+			undefined,
+			defaultTrxFeeOption,
+			token?.label ?? '',
+			chainInfo as KEPLR_CHAIN_INFO_TYPE,
+		);
 		if (hash) setSuccess(true);
 		setLoading(false);
 	};
@@ -190,6 +201,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					onBack={loading || success ? null : onBack}
 					onBackUrl={onBack ? undefined : ''}
 					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
+					correctLabel={loading ? 'Signing' : success ? 'Done' : 'Sign'}
 				/>
 			</main>
 		</>

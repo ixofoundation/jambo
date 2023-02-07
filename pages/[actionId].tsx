@@ -71,6 +71,14 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						data={step.data as StepDataType<STEPS.get_validator_delegate>}
 						header={action?.name}
 						config={VALIDATOR_CONFIGS[step.id] ?? VALIDATOR_CONFIGS.default}
+						excludeValidators={
+							step.id === STEPS.get_validator_redelegate
+								? (
+										action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+											?.data as StepDataType<STEPS.get_validator_delegate>
+								  )?.validator?.address || []
+								: []
+						}
 					/>
 				);
 			case STEPS.select_token_and_amount:
@@ -82,14 +90,14 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 						header={action?.name}
 					/>
 				);
-			case STEPS.select_delegate_amount:
-			case STEPS.select_undelegate_amount:
-			case STEPS.select_redelegate_amount:
+			case STEPS.select_amount_delegate:
+			case STEPS.select_amount_undelegate:
+			case STEPS.select_amount_redelegate:
 				return (
 					<DefineAmountDelegate
-						onSuccess={handleOnNext<STEPS.select_delegate_amount>}
+						onSuccess={handleOnNext<STEPS.select_amount_delegate>}
 						onBack={handleBack}
-						data={step.data as StepDataType<STEPS.select_delegate_amount>}
+						data={step.data as StepDataType<STEPS.select_amount_delegate>}
 						header={action?.name}
 						config={(VALIDATOR_AMOUNT_CONFIGS[step.id] ?? VALIDATOR_AMOUNT_CONFIGS.default) as VALIDATOR_AMOUNT_CONFIG}
 						validator={
