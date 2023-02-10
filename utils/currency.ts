@@ -13,16 +13,23 @@ export const formatterUSD = new Intl.NumberFormat('en-US', {
 	//maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
 });
 
-export const calculateTokenAmount = (amount: number, microUnits: boolean = true, roundAmount: boolean = false) => {
+export const calculateTokenAmount = (amount: number, microUnits: boolean = true, floorAmount: boolean = false) => {
 	let tokenAmount = amount;
+	if (!amount) return 0;
 	if (microUnits) tokenAmount = tokenAmount / Math.pow(10, 6);
-	if (roundAmount && tokenAmount >= 1) tokenAmount = Math.floor(tokenAmount);
+	if (floorAmount && tokenAmount >= 1) tokenAmount = Math.floor(tokenAmount);
 	return tokenAmount;
 };
 
-export const formatTokenAmount = (amount: number, microUnits: boolean = true, roundAmount: boolean = false) => {
-	const tokenAmount = calculateTokenAmount(amount, microUnits, roundAmount);
+export const formatTokenAmount = (amount: number, microUnits: boolean = true, floorAmount: boolean = false) => {
+	const tokenAmount = calculateTokenAmount(amount, microUnits, floorAmount);
 	return formatterToken.format(tokenAmount);
+};
+
+export const calculateMaxTokenAmount = (amount: number, microUnits: boolean = true, floorAmount: boolean = false) => {
+	// assist user: subtract 0.3 for gas fees
+	const maxTokenAmount = calculateTokenAmount(amount >= 0.3 ? amount - 0.3 : 0, microUnits, floorAmount);
+	return formatterToken.format(maxTokenAmount);
 };
 
 export const formatterToken = new Intl.NumberFormat('en-US', {

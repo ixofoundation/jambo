@@ -91,7 +91,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 				) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
 					validators?.length ? (
 						<form className={styles.stepsForm} autoComplete="none">
-							<p>Your delegations</p>
+							<p>My delegations</p>
 							{validators.map((validator: any, index: number) => {
 								return <ValidatorListItem key={validator.address} validator={validator} />;
 							})}

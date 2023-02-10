@@ -12,7 +12,7 @@ import SadFace from '@icons/sad_face.svg';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import {
-	formatTokenAmount,
+	calculateMaxTokenAmount,
 	calculateTokenAmount,
 	generateUserTokensDropdown,
 	TokenDropdownType,
@@ -82,7 +82,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 						<p className={cls(styles.subtext, styles.alignRight)} onClick={handleMaxClicked}>
 							Max:{' '}
 							{selectedOption
-								? `${formatTokenAmount(Number(selectedOption?.amount ?? 0), true, true)} ${selectedOption.label}`
+								? `${calculateMaxTokenAmount(Number(selectedOption?.amount ?? 0), true, true)} ${selectedOption.label}`
 								: '-'}
 						</p>
 						<Input

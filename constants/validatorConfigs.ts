@@ -7,7 +7,7 @@ export const VALIDATOR_CONFIGS = {
 		showValidatorDetails: true,
 		requireFunds: true,
 		allowFilters: true,
-		label: 'Choose a Validator',
+		label: '',
 	},
 	[STEPS.get_delegated_validator_undelegate]: {
 		pageTitle: 'Undelegate',
@@ -19,7 +19,7 @@ export const VALIDATOR_CONFIGS = {
 		pageTitle: 'Redelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
-		label: 'Choose stake to redelegate',
+		label: 'Choose the Validator to redelegate from',
 	},
 	[STEPS.get_validator_redelegate]: {
 		pageTitle: 'Define validator to redelegate to',
@@ -54,7 +54,7 @@ export const VALIDATOR_AMOUNT_CONFIGS = {
 		source: 'validator',
 	},
 	[STEPS.select_amount_redelegate]: {
-		pageTitle: 'Define amount to redelegate',
+		pageTitle: 'Choose an amount',
 		defaultLabel: 'Enter amount to redelegate',
 		label: 'Enter amount to redelegate',
 		sub: 'Your tokens will be redelegated instantly.',
