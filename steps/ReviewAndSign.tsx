@@ -55,7 +55,6 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				s.id === STEPS.select_amount_undelegate ||
 				s.id === STEPS.select_amount_redelegate
 			) {
-				console.log(s);
 				setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
 				setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
 			}

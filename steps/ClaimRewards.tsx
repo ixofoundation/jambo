@@ -74,8 +74,6 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 		);
 		if (hash) setSuccess(true);
 
-		console.table(trxs);
-
 		setLoading(false);
 	};
 

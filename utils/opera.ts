@@ -17,7 +17,7 @@ export let address: string;
 export let pubkeyByteArray: Uint8Array;
 
 interface InterchainWallet {
-	getDidDoc: (index: number) => string;
+	getDidDoc: (index: number) => Promise<string>;
 	signMessage: (hexSignDoc: string, signMethod: string, addressIndex: number) => Promise<string>;
 }
 
@@ -85,37 +85,44 @@ export function transformSignature(signature: string): string | undefined {
 	return signatureCosmjsBase64 || undefined;
 }
 
-export const getDIDDocJSON = () => {
-	const didDoc = getOpera()?.getDidDoc(0);
-	const didDocJSON = JSON.parse(didDoc ?? '{}');
-	return didDocJSON;
+export const getDIDDocJSON = async () => {
+	try {
+		const opera = getOpera();
+		const didDoc = await opera?.getDidDoc(0);
+		const didDocJSON = JSON.parse(didDoc ?? '{}');
+		return didDocJSON;
+	} catch (error) {
+		console.error('getDIDDocJSON::', error);
+		throw error;
+	}
 };
 
 export const initializeOpera = async (): Promise<USER | undefined> => {
-	let ledgered = false;
-	const didDocJSON = getDIDDocJSON();
-
 	try {
+		let ledgered = false;
+		const didDocJSON = await getDIDDocJSON();
+
 		// const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
 		// console.log({ getDidDoc });
 		// if (!(getDidDoc as any)?.error) ledgered = true;
+
+		const verificationMethod = didDocJSON.verificationMethod.find((x: any) => x.type == pubKeyType);
+		const pubkeyBase58 = verificationMethod.publicKeyBase58;
+		pubkeyByteArray = b58_to_uint8Arr(pubkeyBase58);
+		const pubkeyBase64 = uint8Arr_to_b64(pubkeyByteArray);
+
+		const pubkey = {
+			type: amino.pubkeyType.secp256k1,
+			value: pubkeyBase64,
+		};
+		address = amino.pubkeyToAddress(pubkey, 'ixo');
+
+		console.log({ didDocJSON, pubkeyBase64, address });
+		return { pubKey: pubkeyByteArray, address, ledgered, algo: 'secp256k1', did: didDocJSON.id };
 	} catch (error) {
-		console.log({ error });
+		console.error('Initialize Opera::', error);
+		throw error;
 	}
-
-	const verificationMethod = didDocJSON.verificationMethod.find((x: any) => x.type == pubKeyType);
-	const pubkeyBase58 = verificationMethod.publicKeyBase58;
-	pubkeyByteArray = b58_to_uint8Arr(pubkeyBase58);
-	const pubkeyBase64 = uint8Arr_to_b64(pubkeyByteArray);
-
-	const pubkey = {
-		type: amino.pubkeyType.secp256k1,
-		value: pubkeyBase64,
-	};
-	address = amino.pubkeyToAddress(pubkey, 'ixo');
-
-	console.log({ didDocJSON, pubkeyBase64, address });
-	return { pubKey: pubkeyByteArray, address, ledgered, algo: 'secp256k1', did: didDocJSON.id };
 };
 
 export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
