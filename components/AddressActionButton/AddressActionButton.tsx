@@ -1,0 +1,61 @@
+import { HTMLAttributes, useState } from 'react';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
+
+import styles from './AddressActionButton.module.scss';
+import Card from '@components/Card/Card';
+import ButtonRound, { BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
+
+type AddressActionButtonProps = {
+	address: string;
+	ButtonLogo: any;
+	wrapButtonWithCopy?: boolean;
+	buttonOnClick?: () => void;
+} & HTMLAttributes<HTMLDivElement>;
+
+const AddressActionButton = ({
+	address,
+	ButtonLogo,
+	buttonOnClick,
+	wrapButtonWithCopy,
+	className,
+	...other
+}: AddressActionButtonProps) => {
+	const [copied, setCopied] = useState(false);
+	const addressToDisplay = address?.length ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : '';
+
+	const onCopy = () => {
+		if (copied) return;
+		setCopied(true);
+		setTimeout(() => {
+			setCopied(false);
+		}, 1200);
+	};
+
+	return (
+		<>
+			<div className={styles.account} {...other}>
+				<div className={styles.column}>
+					<CopyToClipboard text={address} onCopy={() => onCopy()}>
+						<Card className={styles.card} title={address}>
+							{addressToDisplay}
+						</Card>
+					</CopyToClipboard>
+					{copied ? <p className={styles.copied}>copied</p> : <div />}
+				</div>
+				{wrapButtonWithCopy ? (
+					<CopyToClipboard text={address} onCopy={() => onCopy()}>
+						<ButtonRound className={styles.button} onClick={buttonOnClick} size={BUTTON_ROUND_SIZE.mediumLarge}>
+							<ButtonLogo width={24} height={24} />
+						</ButtonRound>
+					</CopyToClipboard>
+				) : (
+					<ButtonRound className={styles.button} onClick={buttonOnClick} size={BUTTON_ROUND_SIZE.mediumLarge}>
+						<ButtonLogo width={24} height={24} />
+					</ButtonRound>
+				)}
+			</div>
+		</>
+	);
+};
+
+export default AddressActionButton;

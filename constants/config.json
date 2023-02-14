@@ -3,6 +3,7 @@
 	"siteUrl": "config.siteUrl",
 	"siteTitleMeta": "config.siteTitleMeta",
 	"siteDescriptionMeta": "config.siteDescriptionMeta",
+	"wcNamespace": "ixo",
 	"fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
 	"fontName": "Roboto",
 	"headerShowName": true,
@@ -10,24 +11,80 @@
 	"about": "config.about",
 	"actions": [
 		{
-			"id": "dummy",
+			"id": "eKXPPhewkJDLbE1bq1iboa",
 			"steps": [
 				{
-					"id": "get_receiver_address",
-					"name": "Get receiver address"
+					"id": "get_validator_delegate",
+					"name": "Get validator address"
 				},
 				{
-					"id": "select_token_and_amount",
-					"name": "Select token and amount"
+					"id": "select_delegate_amount",
+					"name": "Define amount to delegate"
 				},
 				{
-					"id": "bank_MsgSend",
+					"id": "staking_MsgDelegate",
 					"name": "Review and sign"
 				}
 			],
-			"name": "name",
-			"description": "description (send dummy flow)",
-			"image": ""
+			"name": "Delegate",
+			"description": "Delegate tokens on the IXO Network",
+			"image": "eKXPPhewkJDLbE1bq1iboa.png"
+		},
+		{
+			"id": "eKXPPhewkJDLbE1bq1ibob",
+			"steps": [
+				{
+					"id": "get_delegated_validator_undelegate",
+					"name": "Get delegation validator address"
+				},
+				{
+					"id": "select_undelegate_amount",
+					"name": "Define amount to undelegate"
+				},
+				{
+					"id": "staking_MsgUndelegate",
+					"name": "Review and sign"
+				}
+			],
+			"name": "Undelegate",
+			"description": "Undelegate tokens on the IXO Network",
+			"image": "eKXPPhewkJDLbE1bq1ibob.png"
+		},
+		{
+			"id": "eKXPPhewkJDLbE1bq1iboc",
+			"steps": [
+				{
+					"id": "get_delegated_validator_redelegate",
+					"name": "Get delegation validator address"
+				},
+				{
+					"id": "select_redelegate_amount",
+					"name": "Define amount to redelegate"
+				},
+				{
+					"id": "get_validator_redelegate",
+					"name": "Get validator address"
+				},
+				{
+					"id": "staking_MsgRedelegate",
+					"name": "Review and sign"
+				}
+			],
+			"name": "Redelegate",
+			"description": "Redelegate tokens on the IXO Network",
+			"image": "eKXPPhewkJDLbE1bq1iboc.png"
+		},
+		{
+			"id": "eKXPPhewkJDLbE1bq1ibod",
+			"steps": [
+				{
+					"id": "distribution_MsgWithdrawDelegatorReward",
+					"name": "Review and sign"
+				}
+			],
+			"name": "Claim Rewards",
+			"description": "Claim rewards on your delegations.",
+			"image": "eKXPPhewkJDLbE1bq1ibod.png"
 		}
 	]
 }

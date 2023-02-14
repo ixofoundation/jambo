@@ -1,5 +1,8 @@
-import { ChainInfos, CHAINS, CHAIN_ID } from '@constants/chains';
 import { AppCurrency, ChainInfo } from '@keplr-wallet/types';
+import { customQueries } from '@ixo/impactxclient-sdk';
+
+import { CHAIN_DROPDOWN_OPTION_TYPE, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { ChainNames } from '@constants/chains';
 
 export type PeggedCurrency = AppCurrency & {
 	originCurrency?: AppCurrency & {
@@ -63,3 +66,71 @@ export function createKeplrChainInfos(chainInfo: SimplifiedChainInfo): ChainInfo
 		feeCurrencies,
 	};
 }
+
+const fetchMainnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE> => {
+	try {
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'mainnet');
+		return chain;
+	} catch (error) {
+		throw error;
+	}
+};
+const fetchTestnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
+	try {
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'testnet');
+		return chain;
+	} catch (error) {
+		console.error('fetch testnet chain::', error);
+		return;
+	}
+};
+const fetchDevnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
+	try {
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'devnet');
+		return chain;
+	} catch (error) {
+		console.warn('fetch devnet chain::', error);
+		return;
+	}
+};
+
+export const getChainOptions = async (chainNetwork: CHAIN_NETWORK_TYPE = 'testnet') => {
+	if (!ChainNames.length) throw new Error('Chain Names are required to continue');
+	const chains = [];
+	for (let chainName of ChainNames) {
+		try {
+			if (chainNetwork === 'mainnet') {
+				const chainInfo = await fetchMainnetChain(chainName);
+				chains.push(chainInfo);
+			}
+			if (chainNetwork === 'testnet') {
+				const testnetChainInfo = await fetchTestnetChain(chainName);
+				if (testnetChainInfo) chains.push(testnetChainInfo);
+				const devnetChainInfo = await fetchDevnetChain(chainName);
+				if (devnetChainInfo) chains.push(devnetChainInfo);
+			}
+		} catch (error) {
+			console.error(chainName, chainNetwork, '::', error);
+		}
+	}
+	return chains;
+};
+
+export const getChainFromChains = (chains: KEPLR_CHAIN_INFO_TYPE[], chainId: string) =>
+	chains.find((chain: KEPLR_CHAIN_INFO_TYPE) => chain.chainId === chainId);
+
+export const getChainDropdownOption = (chainInfo: KEPLR_CHAIN_INFO_TYPE) => {
+	if (!chainInfo) {
+		console.error('Keplr chain info not available');
+		return;
+	}
+
+	return {
+		value: chainInfo.chainId,
+		label: chainInfo.chainName,
+		img: chainInfo.stakeCurrency?.coinImageUrl || chainInfo.chainSymbolImageUrl || 'https://app.osmosis.zone',
+	};
+};
+
+export const getChainDropdownOptions = (chains: KEPLR_CHAIN_INFO_TYPE[]): CHAIN_DROPDOWN_OPTION_TYPE[] =>
+	chains.map(getChainDropdownOption).filter((x) => !!x) as CHAIN_DROPDOWN_OPTION_TYPE[];

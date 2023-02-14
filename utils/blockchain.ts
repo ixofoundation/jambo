@@ -1,3 +1,4 @@
+export {};
 // import { BLOCKCHAIN_REST_URL } from '@constants/chains';
 // import axios from 'axios';
 

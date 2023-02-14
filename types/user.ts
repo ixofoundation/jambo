@@ -3,6 +3,6 @@ export type USER = {
 	pubKey: Uint8Array;
 	address: string;
 	algo?: string;
-	ledgered: boolean;
+	ledgered?: boolean;
 	did?: string;
 };

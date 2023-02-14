@@ -3,10 +3,10 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/aboutPage.module.scss';
-import Header from '@components/header/header';
-import Footer from '@components/footer/footer';
+import Header from '@components/Header/Header';
+import Footer from '@components/Footer/Footer';
 import config from '@constants/config.json';
-import Head from '@components/head/head';
+import Head from '@components/Head/Head';
 
 const About: NextPage = () => {
 	return (

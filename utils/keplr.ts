@@ -1,57 +1,62 @@
-import { CHAINS, CHAIN_ID } from '@constants/chains';
-import { Keplr } from '@keplr-wallet/types';
-import { USER } from 'types/user';
-import { TRX_FEE, TRX_MSG } from 'types/transactions';
+import { ChainInfo, Keplr } from '@keplr-wallet/types';
 
-import * as Toast from '@components/toast/toast';
+import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
+import { USER } from 'types/user';
 
 export const getKeplr = (): Keplr | undefined => {
 	if (typeof window !== 'undefined' && window.keplr) return window.keplr;
 	return undefined;
 };
 
-export const initializeKeplr = async (): Promise<USER | undefined> => {
+export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
 	const keplr = getKeplr();
 	try {
-		await keplr?.experimentalSuggestChain(CHAINS[CHAIN_ID]);
-		await keplr?.enable(CHAIN_ID);
-		const key = await keplr?.getKey(CHAIN_ID);
-		// console.log({ key });
-		return key ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true } : undefined;
+		await keplr?.experimentalSuggestChain(chainInfo as ChainInfo);
+		await keplr?.enable(chainInfo.chainId);
+		const key = await keplr?.getKey(chainInfo.chainId);
+		return key
+			? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
+			: undefined;
 	} catch (error) {
-		console.error('Error initializing Kepl: ' + error);
+		console.error('Error initializing Keplr:: ' + error);
 	}
 	return;
 };
 
-export const connectKeplrAccount = async (): Promise<any> => {
+export const connectKeplrAccount = async (chainInfo: ChainInfo): Promise<any> => {
 	const keplr = getKeplr();
 	if (!keplr) return [null, null];
-
-	await keplr.experimentalSuggestChain(CHAINS[CHAIN_ID]);
-	await keplr.enable(CHAIN_ID);
-
-	const offlineSigner = keplr.getOfflineSigner(CHAIN_ID);
+	await keplr.experimentalSuggestChain(chainInfo as ChainInfo);
+	await keplr.enable(chainInfo.chainId);
+	const offlineSigner = keplr.getOfflineSigner(chainInfo.chainId);
 	const accounts = await offlineSigner.getAccounts();
 	return [accounts, offlineSigner];
 };
 
-export const keplrBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX_FEE): Promise<string | null> => {
-	const trx_fail = () => {
-		Toast.errorToast(`Transaction Failed`);
-		return null;
-	};
+const trx_fail = () => {
+	Toast.errorToast(`Transaction Failed`);
+	return null;
+};
 
-	const [accounts, offlineSigner] = await connectKeplrAccount();
+export const keplrBroadCastMessage = async (
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE_OPTION,
+	feeDenom: string,
+	chainInfo: ChainInfo,
+): Promise<string | null> => {
+	const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);
 	if (!accounts || !offlineSigner) return trx_fail();
 	const address = accounts[0].address;
-	const client = await initStargateClient(offlineSigner);
+	const client = await initStargateClient(chainInfo.rpc, offlineSigner);
 
 	const payload = {
 		msgs,
-		chain_id: CHAIN_ID,
+		chain_id: chainInfo.chainId,
 		fee,
+		feeDenom,
 		memo,
 	};
 
