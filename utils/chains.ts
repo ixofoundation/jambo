@@ -69,7 +69,7 @@ export function createKeplrChainInfos(chainInfo: SimplifiedChainInfo): ChainInfo
 
 const fetchMainnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE> => {
 	try {
-		const chain = await customQueries.chain.getKeplrChainInfoFromChainName(chainName, 'mainnet');
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'mainnet');
 		return chain;
 	} catch (error) {
 		throw error;
@@ -77,7 +77,7 @@ const fetchMainnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TY
 };
 const fetchTestnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
 	try {
-		const chain = await customQueries.chain.getKeplrChainInfoFromChainName(chainName, 'testnet');
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'testnet');
 		return chain;
 	} catch (error) {
 		console.error('fetch testnet chain::', error);
@@ -86,7 +86,7 @@ const fetchTestnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TY
 };
 const fetchDevnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
 	try {
-		const chain = await customQueries.chain.getKeplrChainInfoFromChainName(chainName, 'devnet');
+		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'devnet');
 		return chain;
 	} catch (error) {
 		console.warn('fetch devnet chain::', error);
