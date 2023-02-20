@@ -3,6 +3,10 @@
 This repo and product is intentionally managed as Open Source and we aim to use this guide to light our way https://opensource.guide/.  
 Let us know how we are doing!
 
+## How to create a dApp using this repo
+
+This [documentation](CLIENT.md) will guide you through the process of creating your own dApp using the Ixo JAMBO client.
+
 ## How to contribute to this repo
 
 First off, thank you for applying your mind and time to improving this repo - it helps the Internet of Impact to save our planet!  
