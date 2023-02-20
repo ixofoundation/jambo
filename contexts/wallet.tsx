@@ -125,7 +125,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	};
 
 	useEffect(() => {
-		if (loaded && wallet.user?.address && queryClient) fetchAssets();
+		if (loaded) fetchAssets();
 	}, [wallet.user?.address, queryClient]);
 
 	useEffect(() => {
