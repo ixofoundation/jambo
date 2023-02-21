@@ -33,7 +33,8 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
 					)}
 					{operaWallet && (
 						<WalletCard
-							name="Opera Wallet"
+							// name="Opera Wallet"
+							imgWidth={171}
 							img="/images/wallets/opera.png"
 							onClick={() => onSelected(WALLET_TYPE.opera)}
 						/>
