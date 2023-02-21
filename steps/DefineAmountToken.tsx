@@ -69,7 +69,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
 						<p>Select token to be sent:</p>
 						<div className={styles.alignLeft}>
 							<Dropdown
-								defaultValue={selectedOption}
+								value={selectedOption}
 								onChange={(option) => setSelectedOption(option as TokenDropdownType)}
 								options={TokenDropdownOptions}
 								placeholder={null}

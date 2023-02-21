@@ -15,7 +15,7 @@ import QR from '@icons/qr_code.svg';
 import Copy from '@icons/copy.svg';
 import { getChainDropdownOption, getChainDropdownOptions, getChainFromChains } from '@utils/chains';
 import { CHAIN_DROPDOWN_OPTION_TYPE, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { MainnetAndTestnet } from '@constants/chains';
+import { EnableDeveloperMode } from '@constants/chains';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 
@@ -23,7 +23,7 @@ type AccountProps = {} & HTMLAttributes<HTMLDivElement>;
 
 const Account = ({ className, ...other }: AccountProps) => {
 	const [showQR, setShowQR] = useState<boolean>(false);
-	const { wallet, updateWallet, fetchAssets, logoutWallet } = useContext(WalletContext);
+	const { wallet, updateWalletType, fetchAssets, logoutWallet } = useContext(WalletContext);
 	const { chain, chains, updateChainId, updateChainNetwork } = useContext(ChainContext);
 
 	useEffect(() => {
@@ -51,7 +51,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 									ButtonLogo={QR}
 									buttonOnClick={() => setShowQR(true)}
 								/>
-								{MainnetAndTestnet && (
+								{EnableDeveloperMode && (
 									<>
 										<p className={styles.label}>Select environment:</p>
 										<Switch
@@ -69,7 +69,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 									</>
 								)}
 								<p className={styles.label}>Select chain:</p>
-								{chain.chainNetworkLoading ? (
+								{!chains?.length ? (
 									<div className="flex">
 										<Loader
 											size={20}
@@ -79,12 +79,12 @@ const Account = ({ className, ...other }: AccountProps) => {
 									</div>
 								) : (
 									<Dropdown
-										defaultValue={getChainDropdownOption(
-											getChainFromChains(chains, chain.chainId) as KEPLR_CHAIN_INFO_TYPE,
+										value={getChainDropdownOption(
+											getChainFromChains(chains, chain.chainId) || ({} as KEPLR_CHAIN_INFO_TYPE),
 										)}
 										// onChange={updateChainId as (newValue: unknown, actionMeta: ActionMeta<unknown>) => void}
 										onChange={handleDropdownChange}
-										options={getChainDropdownOptions(chains)}
+										options={getChainDropdownOptions(chains ?? [])}
 										placeholder={null}
 										name="chain"
 										withLogos={true}
@@ -116,7 +116,7 @@ const Account = ({ className, ...other }: AccountProps) => {
 					)}
 				</>
 			) : (
-				<Wallets onSelected={(type) => updateWallet({ walletType: type })} />
+				<Wallets onSelected={updateWalletType} />
 			)}
 		</div>
 	);

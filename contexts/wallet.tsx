@@ -1,18 +1,35 @@
 import { createContext, useState, useEffect, HTMLAttributes, useContext } from 'react';
 
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
-import { queryAllBalances, queryValidators } from '@utils/query';
+import {
+	queryAllBalances,
+	queryDelegationTotalRewards,
+	queryDelegatorDelegations,
+	queryDelegatorUnbondingDelegations,
+	queryValidators,
+} from '@utils/query';
 import { initializeWallet } from '@utils/wallets';
-import { BALANCES, WALLET, WALLET_TYPE } from 'types/wallet';
+import {
+	WALLET_BALANCES,
+	WALLET,
+	WALLET_TYPE,
+	WALLET_DELEGATIONS,
+	WALLET_REWARDS,
+	WALLET_UNBONDING,
+	WALLET_ASSETS,
+	WALLET_KEYS,
+} from 'types/wallet';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { QUERY_CLIENT } from 'types/query';
 import { USER } from 'types/user';
 import { ChainContext } from './chain';
+import useModalState from '@hooks/modalState';
+import { linkDelegationsAndRewards } from '@utils/validators';
 
 export const WalletContext = createContext({
 	wallet: {} as WALLET,
-	updateWallet: (newWallet: WALLET) => {},
+	updateWalletType: (newWalletType: WALLET_TYPE) => {},
 	fetchAssets: () => {},
 	logoutWallet: () => {},
 	walletModalVisible: false,
@@ -31,42 +48,37 @@ const DEFAULT_WALLET: WALLET = {
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 	const [wallet, setWallet] = useState<WALLET>(DEFAULT_WALLET);
-	const [walletModalVisible, setWalletModalVisible] = useState<boolean>(false);
+	const [walletModalVisible, showWalletModal, hideWalletModal] = useModalState(false);
 	const [loaded, setLoaded] = useState<boolean>(false);
 	const [validators, setValidators] = useState<VALIDATOR[]>();
 	const { chain, chainInfo, queryClient } = useContext(ChainContext);
-
-	const showWalletModal = () => setWalletModalVisible(true);
-
-	const hideWalletModal = () => setWalletModalVisible(false);
 
 	const updateWallet = (newWallet: WALLET, override: boolean = false) => {
 		if (override) setWallet({ ...DEFAULT_WALLET, ...newWallet });
 		else setWallet((currentWallet) => ({ ...currentWallet, ...newWallet }));
 	};
 
-	const updateUser = (newUser: USER, override: boolean = false) => {
-		if (override) setWallet((currentWallet) => ({ ...currentWallet, user: newUser }));
-		else
-			setWallet((currentWallet) => ({
-				...currentWallet,
-				user: currentWallet.user ? { ...currentWallet.user, ...newUser } : newUser,
-			}));
-	};
+	const updateWalletAsset =
+		(asset: WALLET_KEYS) =>
+		(newValue: WALLET_ASSETS, override: boolean = false) => {
+			if (override) updateWallet({ [asset]: newValue });
+			else
+				setWallet((currentWallet) => ({
+					...currentWallet,
+					[asset]: currentWallet[asset] ? { ...currentWallet[asset], ...newValue } : newValue,
+				}));
+		};
 
-	const updateBalances = (newBalances: BALANCES, override: boolean = false) => {
-		if (override) updateWallet({ balances: newBalances });
-		else
-			setWallet((currentWallet) => ({
-				...currentWallet,
-				balances: currentWallet.balances ? { ...currentWallet.balances, ...newBalances } : newBalances,
-			}));
-	};
+	const updateWalletType = (newWalletType: WALLET_TYPE) => updateWallet({ walletType: newWalletType });
+	const updateBalances = updateWalletAsset('balances');
+	const updateDelegations = updateWalletAsset('delegations');
+	const updateRewards = updateWalletAsset('rewards');
+	const updateUnbondingDelegations = updateWalletAsset('unbonding');
 
 	const initializeWallets = async () => {
 		try {
 			const user = await initializeWallet(wallet.walletType, chainInfo as KEPLR_CHAIN_INFO_TYPE);
-			updateWallet({ user, walletType: wallet.walletType });
+			updateWallet({ user });
 		} catch (error) {
 			console.error('Initializing wallets error:', error);
 		}
@@ -76,7 +88,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		updateWallet({}, true);
 	};
 
-	const fetchAssets = async () => {
+	const fetchUserBalances = async () => {
 		if (!wallet.user?.address || !queryClient) return;
 		updateBalances({ loading: true, error: undefined });
 		try {
@@ -86,11 +98,47 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 			updateBalances({ error: error as string, loading: false });
 		}
 	};
+	const fetchUserDelegations = async () => {
+		if (!wallet.user?.address || !queryClient) return;
+		updateDelegations({ loading: true, error: undefined });
+		try {
+			const delegations = await queryDelegatorDelegations(queryClient as QUERY_CLIENT, wallet.user.address);
+			updateDelegations({ delegations, loading: false }, true);
+		} catch (error) {
+			updateDelegations({ error: error as string, loading: false });
+		}
+	};
+	const fetchUserDelegationRewards = async () => {
+		if (!wallet.user?.address || !queryClient) return;
+		updateRewards({ loading: true, error: undefined });
+		try {
+			const rewards = await queryDelegationTotalRewards(queryClient as QUERY_CLIENT, wallet.user.address);
+			updateRewards({ rewards, loading: false }, true);
+		} catch (error) {
+			updateRewards({ error: error as string, loading: false });
+		}
+	};
+	const fetchUserUnbondingDelegations = async () => {
+		if (!wallet.user?.address || !queryClient) return;
+		updateUnbondingDelegations({ loading: true, error: undefined });
+		try {
+			const unbonding = await queryDelegatorUnbondingDelegations(queryClient as QUERY_CLIENT, wallet.user.address);
+			updateUnbondingDelegations({ unbonding, loading: false }, true);
+		} catch (error) {
+			updateUnbondingDelegations({ error: error as string, loading: false });
+		}
+	};
+
+	const fetchAssets = async () => {
+		fetchUserBalances();
+		fetchUserDelegations();
+		fetchUserUnbondingDelegations();
+	};
 
 	const updateValidators = async () => {
 		try {
 			if (!queryClient?.cosmos || !wallet?.walletType) return;
-			const validatorList = await queryValidators(queryClient, wallet);
+			const validatorList = await queryValidators(queryClient);
 			setValidators((prevState) =>
 				validatorList.map((validator: VALIDATOR) => {
 					const prevValidator = prevState?.find((v) => v.address === validator.address);
@@ -126,7 +174,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
 	useEffect(() => {
 		if (loaded) fetchAssets();
-	}, [wallet.user?.address, queryClient]);
+		// @ts-ignore
+		if (!queryClient && validators?.length) setValidators();
+	}, [wallet.user?.address, queryClient, chain.chainId]);
 
 	useEffect(() => {
 		if (loaded) setLocalStorage('wallet', wallet);
@@ -159,11 +209,15 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		walletModalVisible,
 		showWalletModal,
 		hideWalletModal,
-		updateWallet,
+		updateWalletType,
 		fetchAssets,
 		logoutWallet,
 		updateValidators,
-		validators: validators as VALIDATOR[],
+		validators: linkDelegationsAndRewards(
+			validators,
+			wallet.delegations?.delegations,
+			wallet.rewards?.rewards?.rewards,
+		) as VALIDATOR[],
 		updateValidatorAvatar,
 	};
 

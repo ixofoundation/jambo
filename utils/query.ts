@@ -2,7 +2,13 @@ import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/code
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { DELEGATION, VALIDATOR, VALIDATOR_FILTER_TYPE } from 'types/validators';
+import {
+	DELEGATION,
+	DELEGATION_REWARDS,
+	UNBONDING_DELEGATION,
+	VALIDATOR,
+	VALIDATOR_FILTER_TYPE,
+} from 'types/validators';
 import { CURRENCY, WALLET, WALLET_BALANCE } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
@@ -22,15 +28,15 @@ export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: strin
 		});
 		return balances;
 	} catch (error) {
-		console.error('queryAllBalances', error);
-		throw error;
+		console.error('queryAllBalances::', error);
+		return [];
 	}
 };
 
-export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, wallet: WALLET): Promise<DELEGATION[]> => {
+export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, address: string): Promise<DELEGATION[]> => {
 	try {
 		const { delegationResponses = [] } = await queryClient.cosmos.staking.v1beta1.delegatorDelegations({
-			delegatorAddr: wallet.user?.address ?? '',
+			delegatorAddr: address,
 		});
 		const delegatorDelegations: DELEGATION[] = delegationResponses.map((delegation: DelegationResponse) => ({
 			delegatorAddress: delegation?.delegation?.delegatorAddress ?? '',
@@ -42,30 +48,71 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, walle
 			},
 		}));
 
-		for (let i = 0; i < delegatorDelegations.length; i++) {
-			try {
-				const delegation = delegatorDelegations[i];
-				const { rewards } = await queryClient.cosmos.distribution.v1beta1.delegationRewards({
-					delegatorAddress: wallet.user?.address ?? '',
-					validatorAddress: delegation.validatorAddress,
-				});
-				delegatorDelegations[i].rewards = rewards;
-			} catch (error) {
-				console.error('Failed to query delegation rewards:', error);
-			}
-		}
-
 		return Promise.resolve(delegatorDelegations);
 	} catch (error) {
-		console.error(error);
-		return Promise.resolve([]);
+		console.error('queryDelegatorDelegations::', error);
+		return [];
 	}
 };
 
-export const queryValidators = async (queryClient: QUERY_CLIENT, wallet: WALLET) => {
+export const queryDelegationTotalRewards = async (
+	queryClient: QUERY_CLIENT,
+	address: string,
+): Promise<DELEGATION_REWARDS | undefined> => {
+	try {
+		const response = await queryClient.cosmos.distribution.v1beta1.delegationTotalRewards({
+			delegatorAddress: address,
+		});
+
+		if (!response?.total?.length) return;
+
+		const delegationTotalRewards = {
+			total: response.total.map((total: CURRENCY) => ({
+				amount: total.amount.slice(0, total.amount.length - 18),
+				denom: total.denom,
+			})),
+			rewards: response.rewards.map((reward) => ({
+				validatorAddress: reward.validatorAddress,
+				rewards: reward.reward.map((r) => ({
+					amount: r.amount.slice(0, r.amount.length - 18),
+					denom: r.denom,
+				})),
+			})),
+		};
+
+		return delegationTotalRewards;
+	} catch (error) {
+		console.error('queryDelegationTotalRewards::', error);
+		return;
+	}
+};
+
+export const queryDelegatorUnbondingDelegations = async (
+	queryClient: QUERY_CLIENT,
+	address: string,
+): Promise<UNBONDING_DELEGATION[]> => {
+	try {
+		const response = await queryClient.cosmos.staking.v1beta1.delegatorUnbondingDelegations({
+			delegatorAddr: address,
+		});
+		const unbondingDelegations = response.unbondingResponses.map((unbondingDelegation) => ({
+			delegatorAddress: unbondingDelegation.delegatorAddress,
+			validatorAddress: unbondingDelegation.validatorAddress,
+			entries: unbondingDelegation.entries.map((entry) => ({
+				balance: Number(entry.balance ?? 0),
+				completionTime: Number(entry.completionTime?.seconds?.low ?? 0),
+			})),
+		}));
+		return unbondingDelegations;
+	} catch (error) {
+		console.error('queryDelegatorUnbondingDelegations::', error);
+		return [];
+	}
+};
+
+export const queryValidators = async (queryClient: QUERY_CLIENT) => {
 	try {
 		const { validators = [] } = await queryClient.cosmos.staking.v1beta1.validators({ status: 'BOND_STATUS_BONDED' });
-		const delegatorDelegations = await queryDelegatorDelegations(queryClient, wallet);
 		const totalTokens = validators.reduce((result: number, validator: any) => {
 			return result + Number(validator.tokens || 0);
 		}, 0);
@@ -75,20 +122,14 @@ export const queryValidators = async (queryClient: QUERY_CLIENT, wallet: WALLET)
 				100
 			).toFixed(2);
 
-			const delegation = delegatorDelegations.find(
-				(delegation) => delegation.validatorAddress === validator.operatorAddress,
-			);
-
 			return {
 				address: validator.operatorAddress,
 				moniker: validator.description?.moniker ?? '',
 				identity: validator.description?.identity ?? '',
-				avatarUrl: null,
 				description: validator.description?.details,
 				commission: Number(validator.commission?.commissionRates?.rate ?? 0) / Math.pow(10, 16),
 				votingPower: Number(validatorVotingPower),
 				votingRank: 0,
-				delegation: delegation ?? null,
 			};
 		});
 		newValidatorList = filterValidators(newValidatorList, FILTERS.VOTING_POWER_RANKING as VALIDATOR_FILTER_TYPE, '');
@@ -99,7 +140,7 @@ export const queryValidators = async (queryClient: QUERY_CLIENT, wallet: WALLET)
 
 		return newValidatorList ?? [];
 	} catch (error) {
-		console.error(error);
+		console.error('queryValidators::', error);
 		return [];
 	}
 };

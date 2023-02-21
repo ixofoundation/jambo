@@ -15,6 +15,12 @@ export type CHAIN_DROPDOWN_OPTION_TYPE = {
 	img: string;
 };
 
+export type CHAIN_INFO_REQUEST = {
+	chainName: string;
+	chainNetwork: CHAIN_NETWORK_TYPE;
+	chainInfo: KEPLR_CHAIN_INFO_TYPE | undefined;
+};
+
 // Example of send action
 // {
 // 	"id": "send_abc",

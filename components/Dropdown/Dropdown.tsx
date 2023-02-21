@@ -10,7 +10,7 @@ type DropdownProps = {
 	withLogos?: boolean;
 } & React.ComponentProps<typeof Select>;
 
-const Dropdown: FC<DropdownProps> = ({ defaultValue, className, options, onChange, withLogos = false, ...other }) => {
+const Dropdown: FC<DropdownProps> = ({ value, className, options, onChange, withLogos = false, ...other }) => {
 	const customStyles = {
 		option: (provided: any, state: any) => ({
 			...provided,
@@ -20,7 +20,7 @@ const Dropdown: FC<DropdownProps> = ({ defaultValue, className, options, onChang
 
 	return (
 		<Select
-			defaultValue={defaultValue}
+			value={value}
 			onChange={onChange}
 			options={options}
 			className={cls(styles.dropdown, className)}
