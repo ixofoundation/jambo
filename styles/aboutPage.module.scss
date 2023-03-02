@@ -1,5 +1,5 @@
 .about {
-	max-width: 500px;
+	max-width: var(--max-width);
 	margin: 0 auto;
 }
 
@@ -13,10 +13,6 @@
 	font-size: 0.9rem;
 
 	a {
-		color: var(--accent-color);
+		color: var(--primary-color);
 	}
-}
-
-.notFound {
-	color: var(--grey-color);
 }

@@ -2,34 +2,29 @@ import { STEPS } from 'types/steps';
 
 export const VALIDATOR_CONFIGS = {
 	[STEPS.get_validator_delegate]: {
-		pageTitle: 'Choose a Validator',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: true,
 		requireFunds: true,
 		allowFilters: true,
-		label: '',
+		label: 'Choose a Validator for your Delegation',
 	},
 	[STEPS.get_delegated_validator_undelegate]: {
-		pageTitle: 'Undelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
-		label: 'Choose a Validator',
+		label: 'Choose validator',
 	},
 	[STEPS.get_delegated_validator_redelegate]: {
-		pageTitle: 'Redelegate',
 		delegatedValidatorsOnly: true,
 		showValidatorDetails: false,
 		label: 'Choose the Validator to redelegate from',
 	},
 	[STEPS.get_validator_redelegate]: {
-		pageTitle: 'Define validator to redelegate to',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: false,
 		allowFilters: true,
 		label: 'Choose validator to redelegate to',
 	},
 	default: {
-		pageTitle: 'Choose a Validator',
 		delegatedValidatorsOnly: false,
 		showValidatorDetails: true,
 		requireFunds: true,
@@ -40,24 +35,21 @@ export const VALIDATOR_CONFIGS = {
 
 export const VALIDATOR_AMOUNT_CONFIGS = {
 	[STEPS.select_amount_delegate]: {
-		pageTitle: 'Define amount to delegate',
 		defaultLabel: 'Enter an Amount to Delegate',
-		label: 'Add',
+		label: 'Enter amount to delegate',
 		sub: 'Your tokens will be locked for 21 days.',
 		source: 'wallet',
 	},
 	[STEPS.select_amount_undelegate]: {
-		pageTitle: 'Define amount to undelegate',
 		defaultLabel: 'Enter amount to undelegate',
 		label: 'Enter amount to undelegate',
 		sub: 'Your tokens will be available after 21 days.',
 		source: 'validator',
 	},
 	[STEPS.select_amount_redelegate]: {
-		pageTitle: 'Choose an amount',
 		defaultLabel: 'Enter amount to redelegate',
 		label: 'Enter amount to redelegate',
-		sub: 'Your tokens will be redelegated instantly.',
+		sub: 'Your tokens will be redelegated instantly and you continue to earn staking rewards.',
 		source: 'validator',
 	},
 	default: {

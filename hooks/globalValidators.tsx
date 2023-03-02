@@ -9,6 +9,7 @@ import { ChainContext } from '@contexts/chain';
 type GlobalValidators = {
 	search?: string;
 	filter?: VALIDATOR_FILTER_TYPE;
+	rewardedValidatorsOnly?: boolean;
 	delegatedValidatorsOnly?: boolean;
 	customFilter?: (validator: VALIDATOR) => boolean;
 };
@@ -26,6 +27,7 @@ type FilterValue = string;
 const useGlobalValidators = ({
 	search = '',
 	delegatedValidatorsOnly = false,
+	rewardedValidatorsOnly = false,
 	filter = FILTERS.VOTING_DESC as VALIDATOR_FILTER_TYPE,
 	customFilter = (validator: VALIDATOR) => true,
 }: GlobalValidators): GlobalValidatorsReturn => {
@@ -47,6 +49,9 @@ const useGlobalValidators = ({
 		if (validators?.length) {
 			let validatorList = delegatedValidatorsOnly
 				? validators.filter((validator: VALIDATOR) => !!validator.delegation?.shares)
+				: validators;
+			validatorList = rewardedValidatorsOnly
+				? validators.filter((validator: VALIDATOR) => !!validator.rewards?.length)
 				: validators;
 			validatorList = validatorList.filter(customFilter);
 			validatorList = filterValidators(validatorList, sortFilter, searchFilter);

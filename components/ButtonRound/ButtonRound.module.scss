@@ -7,9 +7,9 @@
 }
 
 .button {
-	background-color: var(--accent-color);
+	background-color: var(--bg-color);
 	border: none;
-	padding: 0.5rem;
+	padding: 8rem;
 	border-radius: 100px;
 	cursor: pointer;
 	display: flex;
@@ -26,20 +26,40 @@
 	margin-top: 0.5rem;
 }
 
+.xlarge {
+	padding: 20px;
+}
+
 .large {
-	padding: 1rem;
+	padding: 16px;
 }
 
 .mediumLarge {
-	padding: 0.75rem;
+	padding: 12px;
 }
 
 .small {
-	padding: 0.3rem;
+	padding: 5;
 }
 
 .xsmall {
-	padding: 0.15rem;
+	padding: 2rem;
+}
+
+.xxsmall {
+	padding: 0;
+}
+
+.withPrimaryBgColor {
+	background-color: var(--primary-color);
+}
+
+.withSecondaryBgColor {
+	background-color: var(--secondary-color);
+}
+
+.withTertiaryBgColor {
+	background-color: var(--tertiary-color);
 }
 
 .withSuccessBgColor {
@@ -52,6 +72,10 @@
 
 .withGreyBgColor {
 	background-color: var(--grey-color);
+}
+
+.withLightGreyBgColor {
+	background-color: var(--light-grey-color);
 }
 
 .successMark {

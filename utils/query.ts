@@ -21,12 +21,18 @@ export const initializeQueryClient = async (blockchainRpcUrl: string) => {
 export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: string): Promise<WALLET_BALANCE[]> => {
 	try {
 		const response = await queryClient.cosmos.bank.v1beta1.allBalances({ address });
-		let balances = response.balances;
-		balances = balances.map((balance: CURRENCY): WALLET_BALANCE => {
-			const token = customQueries.currency.findTokenFromDenom(balance.denom);
-			return { ...balance, token };
-		});
-		return balances;
+		let balances: WALLET_BALANCE[] = [];
+		for (const balance of response.balances) {
+			const isIbc = /^ibc\//i.test(balance.denom);
+			let tokenDenom = balance.denom?.replace(/ibc\//i, '');
+			if (isIbc) {
+				const ibcDenomTrace = await queryClient.ibc.applications.transfer.v1.denomTrace({ hash: tokenDenom });
+				tokenDenom = ibcDenomTrace.denomTrace?.baseDenom ?? tokenDenom;
+			}
+			const token = customQueries.currency.findTokenFromDenom(tokenDenom);
+			balances.push({ ...balance, ibc: isIbc, token });
+		}
+		return balances.sort((a, b) => (a.ibc ? 1 : -1));
 	} catch (error) {
 		console.error('queryAllBalances::', error);
 		return [];
@@ -45,6 +51,8 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, addre
 			balance: {
 				denom: delegation?.balance?.denom ?? '',
 				amount: delegation?.balance?.amount ?? '0',
+				ibc: false,
+				token: customQueries.currency.findTokenFromDenom(delegation?.balance?.denom ?? ''),
 			},
 		}));
 
@@ -76,6 +84,8 @@ export const queryDelegationTotalRewards = async (
 				rewards: reward.reward.map((r) => ({
 					amount: r.amount.slice(0, r.amount.length - 18),
 					denom: r.denom,
+					ibc: false,
+					token: customQueries.currency.findTokenFromDenom(r.denom ?? ''),
 				})),
 			})),
 		};
@@ -99,7 +109,7 @@ export const queryDelegatorUnbondingDelegations = async (
 			delegatorAddress: unbondingDelegation.delegatorAddress,
 			validatorAddress: unbondingDelegation.validatorAddress,
 			entries: unbondingDelegation.entries.map((entry) => ({
-				balance: Number(entry.balance ?? 0),
+				balance: Number(entry.balance ?? 0), // TODO: add staking token/CURRENCY_TOKEN here
 				completionTime: Number(entry.completionTime?.seconds?.low ?? 0),
 			})),
 		}));

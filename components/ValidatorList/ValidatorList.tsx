@@ -1,5 +1,6 @@
 import { ChangeEvent, FC } from 'react';
 
+import utilsStyles from '@styles/utils.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorFilter from '@components/ValidatorFilter/ValidatorFilter';
 import Loader from '@components/Loader/Loader';
@@ -43,7 +44,7 @@ const ValidatorList: FC<ValidatorListProps> = ({
 
 	return (
 		<>
-			<p>{label}</p>
+			<p className={utilsStyles.label}>{label}</p>
 			{allowFilters && (
 				<ValidatorFilter
 					sortFilter={sortFilter}

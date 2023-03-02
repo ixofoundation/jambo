@@ -8,6 +8,12 @@ export type CURRENCY = DecCoin;
 
 export type WALLET_BALANCE = {
 	token?: TOKEN_ASSET;
+	ibc?: boolean;
+} & CURRENCY;
+
+export type CURRENCY_TOKEN = {
+	token?: TOKEN_ASSET;
+	ibc?: boolean;
 } & CURRENCY;
 
 export enum WALLET_TYPE {
@@ -51,4 +57,12 @@ export type WALLET_UNBONDING = {
 	loading?: boolean;
 	error?: string;
 	unbonding?: UNBONDING_DELEGATION[];
+};
+
+export type TOKEN_BALANCE = {
+	denom: string; // TODO: remove denom
+	available: number;
+	staked: number;
+	undelegating: number;
+	token: CURRENCY_TOKEN;
 };

@@ -1,5 +1,5 @@
-import { TokenDropdownType } from '@utils/currency';
 import { VALIDATOR } from './validators';
+import { CURRENCY_TOKEN } from './wallet';
 
 export enum STEPS {
 	check_user_balance = 'check_user_balance',
@@ -80,7 +80,7 @@ interface Get_validator_address {
 	validator: VALIDATOR;
 }
 interface Select_token_and_amount {
-	token: TokenDropdownType;
+	token: CURRENCY_TOKEN;
 	amount: number;
 }
 interface Define_amount {

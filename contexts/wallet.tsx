@@ -1,6 +1,8 @@
 import { createContext, useState, useEffect, HTMLAttributes, useContext } from 'react';
 
+import Loader from '@components/Loader/Loader';
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
+import { initializeWallet } from '@utils/wallets';
 import {
 	queryAllBalances,
 	queryDelegationTotalRewards,
@@ -8,21 +10,10 @@ import {
 	queryDelegatorUnbondingDelegations,
 	queryValidators,
 } from '@utils/query';
-import { initializeWallet } from '@utils/wallets';
-import {
-	WALLET_BALANCES,
-	WALLET,
-	WALLET_TYPE,
-	WALLET_DELEGATIONS,
-	WALLET_REWARDS,
-	WALLET_UNBONDING,
-	WALLET_ASSETS,
-	WALLET_KEYS,
-} from 'types/wallet';
+import { WALLET, WALLET_TYPE, WALLET_ASSETS, WALLET_KEYS } from 'types/wallet';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { QUERY_CLIENT } from 'types/query';
-import { USER } from 'types/user';
 import { ChainContext } from './chain';
 import useModalState from '@hooks/modalState';
 import { linkDelegationsAndRewards } from '@utils/validators';
@@ -132,6 +123,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 	const fetchAssets = async () => {
 		fetchUserBalances();
 		fetchUserDelegations();
+		fetchUserDelegationRewards();
 		fetchUserUnbondingDelegations();
 	};
 
@@ -148,6 +140,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 					return validator;
 				}),
 			);
+			fetchUserDelegations();
+			fetchUserDelegationRewards();
+			fetchUserUnbondingDelegations();
 		} catch (error) {
 			console.error(error);
 		}
@@ -221,5 +216,5 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 		updateValidatorAvatar,
 	};
 
-	return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+	return <WalletContext.Provider value={value}>{!loaded ? <Loader /> : children}</WalletContext.Provider>;
 };

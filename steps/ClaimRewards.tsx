@@ -4,23 +4,27 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
+import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
+import { ViewOnExplorerButton } from '@components/Button/Button';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Footer from '@components/Footer/Footer';
+import Anchor from '@components/Anchor/Anchor';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
+import { calculateTokenAmount, getDisplayDenomFromDenom, getMicroUnitsFromDenom } from '@utils/currency';
 import { defaultTrxFeeOption, generateWithdrawRewardTrx } from '@utils/transactions';
-import { getDisplayDenomFromDenom } from '@utils/currency';
 import { broadCastMessages } from '@utils/wallets';
-import { WalletContext } from '@contexts/wallet';
-import { ChainContext } from '@contexts/chain';
+import { sumArray } from '@utils/misc';
 import { ReviewStepsTypes, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
 import { CURRENCY } from 'types/wallet';
 import useGlobalValidators from '@hooks/globalValidators';
+import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
 
 type ValidatorAddressProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -34,20 +38,21 @@ const calculateAccumulatedRewards = (validators: VALIDATOR[]): CURRENCY => {
 	let total = 0;
 	let denom = '';
 	validators.forEach((validator: VALIDATOR) => {
-		if (validator.delegation?.rewards?.length) {
-			total += Number(validator.delegation.rewards[0].amount ?? 0) / Math.pow(10, 6) / Math.pow(10, 18);
-			if (!denom) denom = getDisplayDenomFromDenom(validator.delegation.rewards[0].denom || '');
+		if (validator.rewards?.length) {
+			total += sumArray(validator.rewards.map((reward) => Number(reward.amount)));
+			if (!denom) denom = getDisplayDenomFromDenom(validator.rewards[0].denom || '');
 		}
 	});
-	return { amount: Number(total).toFixed(6), denom };
+	const microUnits = getMicroUnitsFromDenom(denom);
+	return { amount: calculateTokenAmount(total, microUnits).toString(), denom };
 };
 
 const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, message }) => {
-	const [success, setSuccess] = useState(false);
+	const [successHash, setSuccessHash] = useState<string | undefined>();
 	const [loading, setLoading] = useState(true);
 	const [rewards, setRewards] = useState<CURRENCY>({} as CURRENCY);
 	const { wallet } = useContext(WalletContext);
-	const { validators, validatorsLoading } = useGlobalValidators({ delegatedValidatorsOnly: true });
+	const { validators, validatorsLoading } = useGlobalValidators({ rewardedValidatorsOnly: true });
 	const { chainInfo } = useContext(ChainContext);
 
 	useEffect(() => {
@@ -72,20 +77,37 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 			'',
 			chainInfo as KEPLR_CHAIN_INFO_TYPE,
 		);
-		if (hash) setSuccess(true);
+		if (hash) setSuccessHash(hash);
 
 		setLoading(false);
 	};
 
+	if (successHash)
+		return (
+			<>
+				<Header header={header} />
+
+				<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+					<IconText title="Your transaction was successful!" Img={Success} imgSize={50}>
+						{chainInfo?.txExplorer && (
+							<Anchor active openInNewTab href={`${chainInfo.txExplorer.txUrl.replace(/\${txHash}/i, successHash)}`}>
+								<ViewOnExplorerButton explorer={chainInfo.txExplorer.name} />
+							</Anchor>
+						)}
+					</IconText>
+				</main>
+
+				<Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
+			</>
+		);
+
 	return (
 		<>
-			<Header pageTitle="Claim rewards" header={header} />
+			<Header header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				{loading || validatorsLoading ? (
 					<Loader />
-				) : success ? (
-					<IconText text="transaction successful!" Img={Success} imgSize={50} />
 				) : message === STEPS.distribution_MsgWithdrawDelegatorReward ? (
 					validators?.length ? (
 						<form className={styles.stepsForm} autoComplete="none">
@@ -93,31 +115,24 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
 							{validators.map((validator: any, index: number) => {
 								return <ValidatorListItem key={validator.address} validator={validator} />;
 							})}
-							<div className={utilsStyles.spacer} />
-							<p>Combined Rewards</p>
-							<p className={styles.rewardListItem}>
-								{rewards.amount} {rewards?.denom}
-							</p>
-							<div className={utilsStyles.spacer} />
-							<p>Claim?</p>
+							<div className={utilsStyles.spacer3} />
+							<p>Claim my combined rewards</p>
+							<AmountAndDenom amount={Number(rewards.amount)} denom={rewards.denom} microUnits={6} highlighted />
 						</form>
 					) : (
-						<IconText text="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
+						<IconText title="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
 					)
 				) : (
 					<p>Unsupported review type</p>
 				)}
+
 				<Footer
-					onBack={loading || success ? null : onBack}
+					onBack={loading || successHash ? null : onBack}
 					onBackUrl={onBack ? undefined : ''}
-					onCorrect={
-						loading || validatorsLoading || !validators?.length
-							? null
-							: success
-							? () => onSuccess({ done: true })
-							: signTX
-					}
-					correctLabel={loading ? 'Claiming' : success ? 'Done' : 'Claim'}
+					onCorrect={loading || !!successHash ? null : signTX}
+					correctLabel={loading ? 'Claiming' : !successHash ? 'Claim' : undefined}
+					showAccountButton={!!successHash}
+					showActionsButton={!!successHash}
 				/>
 			</main>
 		</>

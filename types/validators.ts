@@ -1,4 +1,4 @@
-import { CURRENCY } from './wallet';
+import { CURRENCY, CURRENCY_TOKEN } from './wallet';
 
 export type VALIDATOR_FILTER_TYPE = 'voting_asc' | 'voting_desc' | 'commission_asc' | 'commission_desc';
 
@@ -16,14 +16,14 @@ export type DELEGATION = {
 	delegatorAddress: string;
 	validatorAddress: string;
 	shares: number;
-	balance: CURRENCY;
+	balance: CURRENCY_TOKEN;
 };
 
 export type UNBONDING_DELEGATION = {
 	delegatorAddress: string;
 	validatorAddress: string;
 	entries: {
-		balance: number;
+		balance: number; // TODO: change to CURRENCY_TOKEN
 		completionTime: number;
 	}[];
 };
@@ -46,7 +46,6 @@ export type VALIDATOR_CONFIG = {
 	showValidatorDetails: boolean;
 	allowFilters?: boolean;
 	requireFunds?: boolean;
-	pageTitle: string;
 	label: string;
 };
 
@@ -54,6 +53,5 @@ export type VALIDATOR_AMOUNT_CONFIG = {
 	defaultLabel: string;
 	label: string;
 	sub?: string;
-	pageTitle: string;
 	source: 'wallet' | 'validator';
 };

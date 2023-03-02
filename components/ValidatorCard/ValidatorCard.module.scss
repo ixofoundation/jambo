@@ -1,9 +1,5 @@
 .validatorCard {
-	width: 100%;
-	background-color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
+	padding: 1rem;
 }
 
 .headerRow {
@@ -13,8 +9,7 @@
 	margin-bottom: 5px;
 
 	.validatorHeader {
-		font-size: 1.2rem;
-		font-weight: 500;
+		font-size: 1.1rem;
 	}
 }
 
@@ -43,17 +38,7 @@
 }
 
 .stakeCard {
-	width: 100%;
-	background-color: var(--accent-color);
-	color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
-	margin: 5px 0;
 	display: flex;
 	flex-direction: row;
-	align-items: center;
 	justify-content: space-between;
-	font-weight: 400;
-	font-size: 1rem;
 }

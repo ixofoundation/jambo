@@ -112,6 +112,9 @@ export const extractChainIdFromChainInfos = (chains: CHAIN_INFO_REQUEST[] = []) 
 	chains[0].chainInfo?.chainId ||
 	'';
 
+export const extractStakingTokenDenomFromChainInfo = (chainInfo?: KEPLR_CHAIN_INFO_TYPE) =>
+	chainInfo?.stakeCurrency.coinMinimalDenom ?? '';
+
 export const getChainFromChains = (chains: KEPLR_CHAIN_INFO_TYPE[], chainId: string) =>
 	chains.find((chain: KEPLR_CHAIN_INFO_TYPE) => chain.chainId === chainId);
 

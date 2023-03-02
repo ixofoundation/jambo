@@ -3,18 +3,21 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
+import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
+import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
 import Input from '@components/Input/Input';
+import Anchor from '@components/Anchor/Anchor';
 import Success from '@icons/success.svg';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
-import { TokenDropdownType } from '@utils/currency';
+import { getDisplayDenomFromCurrencyToken } from '@utils/currency';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import {
@@ -26,6 +29,7 @@ import {
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
+import { CURRENCY_TOKEN } from 'types/wallet';
 
 type ReviewAndSignProps = {
 	onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -37,10 +41,10 @@ type ReviewAndSignProps = {
 
 const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
 	const { wallet } = useContext(WalletContext);
-	const [success, setSuccess] = useState<boolean>(false);
+	const [successHash, setSuccessHash] = useState<string | undefined>();
 	const [loading, setLoading] = useState<boolean>(false);
 	const [amount, setAmount] = useState<number>(0);
-	const [token, setToken] = useState<TokenDropdownType | null>(null);
+	const [token, setToken] = useState<CURRENCY_TOKEN | null>(null);
 	const [dstAddress, setDstAddress] = useState<string>(''); // destination address
 	const [srcAddress, setSrcAddress] = useState<string>(''); // source address
 	const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
@@ -84,7 +88,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateBankSendTrx({
 					fromAddress: wallet.user!.address,
 					toAddress: dstAddress,
-					denom: token?.value ?? '',
+					denom: token?.denom ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -92,7 +96,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateDelegateTrx({
 					delegatorAddress: wallet.user!.address,
 					validatorAddress: dstAddress,
-					denom: token?.value ?? '',
+					denom: token?.denom ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -100,7 +104,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 				trx = generateUndelegateTrx({
 					delegatorAddress: wallet.user!.address,
 					validatorAddress: dstAddress,
-					denom: token?.value ?? '',
+					denom: token?.denom ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -109,7 +113,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 					delegatorAddress: wallet.user!.address,
 					validatorSrcAddress: srcAddress,
 					validatorDstAddress: dstAddress,
-					denom: token?.value ?? '',
+					denom: token?.denom ?? '',
 					amount: getMicroAmount(amount.toString()),
 				});
 				break;
@@ -121,88 +125,92 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 			[trx],
 			undefined,
 			defaultTrxFeeOption,
-			token?.label ?? '',
+			token?.denom ?? '',
 			chainInfo as KEPLR_CHAIN_INFO_TYPE,
 		);
-		if (hash) setSuccess(true);
+		if (hash) setSuccessHash(hash);
 		setLoading(false);
 	};
 
+	if (successHash)
+		return (
+			<>
+				<Header header={header} />
+
+				<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+					<IconText title="Your transaction was successful!" Img={Success} imgSize={50}>
+						{chainInfo?.txExplorer && (
+							<Anchor active openInNewTab href={`${chainInfo.txExplorer.txUrl.replace(/\${txHash}/i, successHash)}`}>
+								<Button
+									label={`View on ${chainInfo.txExplorer.name}`}
+									size={BUTTON_SIZE.mediumLarge}
+									rounded
+									bgColor={BUTTON_BG_COLOR.lightGrey}
+									borderColor={BUTTON_BORDER_COLOR.lightGrey}
+								/>
+							</Anchor>
+						)}
+					</IconText>
+				</main>
+
+				<Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
+			</>
+		);
+
 	return (
 		<>
-			<Header
-				pageTitle={
-					message === STEPS.bank_MsgSend
-						? 'Review and sign'
-						: message === STEPS.staking_MsgDelegate
-						? 'Confirm delegation'
-						: message === STEPS.staking_MsgUndelegate
-						? 'Confirm undelegation'
-						: 'Unsupported review type'
-				}
-				header={header}
-			/>
+			<Header header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
 				{loading ? (
 					<Loader />
-				) : success ? (
-					<IconText text="Transaction successful!" Img={Success} imgSize={50} />
 				) : message === STEPS.bank_MsgSend ? (
 					<form className={styles.stepsForm} autoComplete="none">
-						<p>I am sending</p>
-						<div className={styles.amountAndTokenInputs}>
-							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
-						</div>
+						<p className={utilsStyles.label}>I am sending</p>
+						<AmountAndDenom amount={amount} denom={token?.token?.coinDenom ?? token?.denom ?? ''} />
 						<br />
-						<p>to the address:</p>
-						<Input name="address" required value={dstAddress} className={styles.stepInput} disabled />
-						<br />
-						<p>Sign?</p>
+						<p className={utilsStyles.label}>to the address:</p>
+						<Input name="address" required value={dstAddress} className={styles.stepInput} align="center" disabled />
 					</form>
-				) : message === STEPS.staking_MsgDelegate || message === STEPS.staking_MsgUndelegate ? (
+				) : message === STEPS.staking_MsgDelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
 						{message === STEPS.staking_MsgDelegate && <p>Delegating</p>}
-						{message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
-						<div className={styles.amountAndTokenInputs}>
-							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
-						</div>
+						<AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
 						<br />
 						{message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
+
+						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+					</form>
+				) : message === STEPS.staking_MsgUndelegate ? (
+					<form className={styles.stepsForm} autoComplete="none">
+						{message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
+						<AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
+						<br />
 						{message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
 						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
-						<br />
-						<p>Sign?</p>
 					</form>
 				) : message === STEPS.staking_MsgRedelegate ? (
 					<form className={styles.stepsForm} autoComplete="none">
 						<p>Redelegate</p>
-						<div className={styles.amountAndTokenInputs}>
-							<Input name="amount" required value={amount} className={styles.stepInput} disabled />
-							<Input name="token" required value={token?.label ?? ''} disabled className={styles.tokenInput} size={8} />
-						</div>
+						<AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
 						<br />
 						<p>from</p>
 						<ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
 						<p>to</p>
 						<ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
-						<br />
-						<p>Sign?</p>
 					</form>
 				) : (
 					<p>Unsupported review type</p>
 				)}
-
-				<Footer
-					onBack={loading || success ? null : onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={loading ? null : success ? () => onSuccess({ done: true }) : signTX}
-					correctLabel={loading ? 'Signing' : success ? 'Done' : 'Sign'}
-				/>
 			</main>
+
+			<Footer
+				onBack={loading || successHash ? null : onBack}
+				onBackUrl={onBack ? undefined : ''}
+				onCorrect={loading || !!successHash ? null : signTX}
+				correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
+			/>
 		</>
 	);
 };

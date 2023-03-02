@@ -14,7 +14,7 @@ const Dropdown: FC<DropdownProps> = ({ value, className, options, onChange, with
 	const customStyles = {
 		option: (provided: any, state: any) => ({
 			...provided,
-			backgroundColor: state.isSelected ? getCSSVariable('--accent-color') : null,
+			backgroundColor: state.isSelected ? getCSSVariable('--primary-color') : null,
 		}),
 	};
 

@@ -12,16 +12,17 @@
 
 		.tokenInput {
 			margin-left: 10px;
+			text-align: center;
 		}
 
 		.stepInput {
-			text-align: right;
+			text-align: center;
 		}
 	}
 
 	.stepsForm {
 		width: 100%;
-		max-width: 400px;
+		max-width: var(--max-width);
 		text-align: center;
 
 		.alignLeft {
@@ -36,10 +37,21 @@
 			margin-bottom: 4px;
 		}
 
+		.label {
+			font-size: 1.1rem;
+		}
+
+		.caption {
+			font-size: 0.8rem;
+			padding-left: 2rem;
+			padding-right: 3rem;
+		}
+
 		.subtext {
 			font-size: 0.8rem;
-			color: var(--grey-color);
-			opacity: 0.8;
+			font-weight: 400;
+			color: var(--primary-color);
+			text-transform: uppercase;
 			margin: 4px 0;
 		}
 	}
@@ -47,7 +59,7 @@
 
 .qrScan {
 	path[fill^='#000'] {
-		fill: var(--accent-color);
+		fill: var(--primary-color);
 	}
 }
 
@@ -127,7 +139,7 @@
 
 .rewardListItem {
 	width: 100%;
-	background-color: var(--accent-color);
+	background-color: var(--primary-color);
 	border: none;
 	color: var(--light-grey-color);
 	border-radius: var(--card-border-radius);
