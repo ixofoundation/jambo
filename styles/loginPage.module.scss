@@ -13,13 +13,13 @@
 
 .emptyMnemonic {
 	border-radius: var(--card-border-radius);
-	border: 1px solid var(--accent-color);
+	border: 1px solid var(--primary-color);
 	padding: 0.5rem 2.5rem;
 	min-height: 35px;
 }
 
 .mnemonic {
-	background-color: var(--accent-color);
+	background-color: var(--primary-color);
 	border-radius: var(--card-border-radius);
 	color: var(--main-font-color-inverted);
 	padding: 0.5rem 1rem;
@@ -38,7 +38,7 @@
 	cursor: pointer;
 
 	path {
-		fill: var(--accent-color);
+		fill: var(--primary-color);
 	}
 
 	p {
@@ -66,10 +66,10 @@
 		width: 100%;
 		// height: auto;
 		background-color: var(---bg-color);
-		border: 1px solid var(--accent-color);
+		border: 1px solid var(--primary-color);
 
 		&:focus {
-			outline: solid 1px var(--accent-color);
+			outline: solid 1px var(--primary-color);
 		}
 	}
 }

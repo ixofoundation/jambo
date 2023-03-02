@@ -5,18 +5,23 @@ import styles from './ButtonRound.module.scss';
 import Correct from '@icons/correct.svg';
 
 export enum BUTTON_ROUND_COLOR {
-	accent = '',
+	primary = 'withPrimaryBgColor',
+	secondary = 'withSecondaryBgColor',
+	tertiary = 'withTertiaryBgColor',
 	success = 'withSuccessBgColor',
 	disabled = 'withDisabledBgColor',
 	grey = 'withGreyBgColor',
+	lightGrey = 'withLightGreyBgColor',
 }
 
 export enum BUTTON_ROUND_SIZE {
+	lxarge = 'xlarge',
 	large = 'large',
 	mediumLarge = 'mediumLarge',
 	medium = '',
 	small = 'small',
 	xsmall = 'xsmall',
+	xxsmall = 'xxsmall',
 }
 
 type ButtonRoundProps = {
@@ -29,7 +34,7 @@ type ButtonRoundProps = {
 const ButtonRound = ({
 	label,
 	children,
-	color = BUTTON_ROUND_COLOR.accent,
+	color = BUTTON_ROUND_COLOR.primary,
 	size = BUTTON_ROUND_SIZE.medium,
 	className,
 	successMark = false,
@@ -40,8 +45,8 @@ const ButtonRound = ({
 			<button
 				className={cls(
 					styles.button,
-					styles[color as typeof BUTTON_ROUND_COLOR.grey],
-					styles[size as typeof BUTTON_ROUND_SIZE.large],
+					styles[color as typeof BUTTON_ROUND_COLOR.primary],
+					styles[size as typeof BUTTON_ROUND_SIZE.medium],
 				)}
 				{...other}
 			>

@@ -18,7 +18,7 @@ type QRCameraProps = {
 const QRCamera: FC<QRCameraProps> = ({ onSuccess, onBack }) => {
 	const { height, width, footerHeight } = useWindowDimensions();
 
-	const errorDisplay = () => <IconText text="Unable to load QR Scanner." Img={SadFace} imgSize={50} />;
+	const errorDisplay = () => <IconText title="Unable to load QR Scanner." Img={SadFace} imgSize={50} />;
 
 	return (
 		<>

@@ -2,23 +2,27 @@ import { createContext, useState, useEffect, HTMLAttributes, useRef } from 'reac
 import { createQueryClient } from '@ixo/impactxclient-sdk';
 
 import Banner from '@components/Banner/Banner';
-import { CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import {
+	extractChainIdFromChainInfos,
+	extractChainInfosFromChainState,
+	getChainsByNetwork,
+	getChainOptions,
+	getChainInfoByChainId,
+} from '@utils/chains';
+import { CHAIN_INFO_REQUEST, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { QUERY_CLIENT } from 'types/query';
-import { DefaultChainId, DefaultNetwork } from '@constants/chains';
-import { getChainFromChains, getChainOptions } from '@utils/chains';
+import { DefaultChainNetwork } from '@constants/chains';
 
 type CHAIN_STATE_TYPE = {
 	chainId: string;
 	chainNetwork: CHAIN_NETWORK_TYPE;
 	chainLoading: boolean;
-	chainNetworkLoading: boolean;
 };
 
 const DEFAULT_CHAIN: CHAIN_STATE_TYPE = {
 	chainId: '',
-	chainNetwork: DefaultNetwork as CHAIN_NETWORK_TYPE,
+	chainNetwork: DefaultChainNetwork as CHAIN_NETWORK_TYPE,
 	chainLoading: true,
-	chainNetworkLoading: true,
 };
 
 export const ChainContext = createContext({
@@ -31,9 +35,8 @@ export const ChainContext = createContext({
 });
 
 export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
-	const [chains, setChains] = useState<KEPLR_CHAIN_INFO_TYPE[]>([]);
+	const [chains, setChains] = useState<CHAIN_INFO_REQUEST[]>([]);
 	const [currentChain, setCurrentChain] = useState<CHAIN_STATE_TYPE>(DEFAULT_CHAIN);
-
 	const queryClientRef = useRef<QUERY_CLIENT | undefined>();
 
 	const updateCurrentChain = (newChain: any, override: boolean = false) => {
@@ -43,13 +46,11 @@ export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
 	const fetchChainOptions = async () => {
 		try {
-			const results = await getChainOptions(currentChain.chainNetwork);
+			const results = await getChainOptions();
 			setChains(results);
-			const defaultChainOption = getChainFromChains(results, DefaultChainId || results[0].chainId || '');
-			updateCurrentChain({
-				chainNetworkLoading: false,
-				chainId: defaultChainOption?.chainId ?? results[0]?.chainId ?? '',
-			});
+			const chainInfos = getChainsByNetwork(results, currentChain.chainNetwork);
+			const nextChainId = extractChainIdFromChainInfos(chainInfos);
+			updateCurrentChain({ chainId: nextChainId });
 		} catch (error) {
 			console.error(error);
 		}
@@ -57,35 +58,31 @@ export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
 	const initQueryClient = async () => {
 		try {
-			const chainInfo = getChainFromChains(chains, currentChain.chainId);
+			const chainInfo = getChainInfoByChainId(chains, currentChain.chainId);
 			if (!chainInfo) throw new Error('Unable to create query client - no chain info');
-
 			const queryClient = await createQueryClient(chainInfo.rpc);
 			queryClientRef.current = queryClient;
-
-			updateCurrentChain({ chainLoading: false });
 		} catch (error) {
 			if (queryClientRef.current) queryClientRef.current = undefined;
 			console.error('initQueryClient::', error);
-			updateCurrentChain({ chainLoading: false });
 		}
+		updateCurrentChain({ chainLoading: false });
 	};
 
 	const updateChainId = (selectedChainId: string) => {
 		if (selectedChainId === currentChain.chainId) return;
-		try {
-			updateCurrentChain({ chainLoading: true, chainId: selectedChainId });
-		} catch (error) {
-			console.error('updateChainId::', error);
-		}
+		if (queryClientRef.current) queryClientRef.current = undefined;
+		updateCurrentChain({ chainLoading: true, chainId: selectedChainId });
 	};
 
 	const updateChainNetwork = (selectedChainNetwork: CHAIN_NETWORK_TYPE) => {
 		if (selectedChainNetwork === currentChain.chainNetwork) return;
 		try {
-			updateCurrentChain({ chainNetworkLoading: true, chainLoading: true });
+			updateCurrentChain({ chainLoading: true });
 			if (queryClientRef.current) queryClientRef.current = undefined;
-			updateCurrentChain({ chainId: '', chainNetwork: selectedChainNetwork });
+			const chainInfos = getChainsByNetwork(chains, selectedChainNetwork);
+			const nextChainId = extractChainIdFromChainInfos(chainInfos);
+			updateCurrentChain({ chainId: nextChainId, chainNetwork: selectedChainNetwork });
 		} catch (error) {
 			console.error(error);
 		}
@@ -93,16 +90,16 @@ export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
 	useEffect(() => {
 		fetchChainOptions();
-	}, [currentChain.chainNetwork]);
+	}, []);
 
 	useEffect(() => {
 		if (currentChain.chainId) initQueryClient();
 	}, [currentChain.chainId]);
 
 	const value = {
-		chains,
+		chains: extractChainInfosFromChainState(getChainsByNetwork(chains, currentChain.chainNetwork)),
 		chain: currentChain,
-		chainInfo: getChainFromChains(chains, currentChain.chainId),
+		chainInfo: getChainInfoByChainId(chains, currentChain.chainId),
 		queryClient: queryClientRef.current,
 		updateChainId,
 		updateChainNetwork,

@@ -3,7 +3,7 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import InputWithSufficIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
+import InputWithSuffixIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
@@ -48,31 +48,29 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 				</Suspense>
 			) : (
 				<>
-					<Header pageTitle="Who is the receiver" header={header} />
+					<Header header={header} />
 
 					<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-						<div className={utilsStyles.spacer} />
 						{/* <div onClick={() => setShowQRCamera(true)}>
 							<QRScan width="100px" height="100px" className={styles.qrScan} />
 							<p>Scan address</p>
 						</div>
 						<p>or</p> */}
 						{!wallet?.balances?.balances?.length ? (
-							<IconText text="You don't have any tokens to send." Img={SadFace} imgSize={50} />
+							<IconText title="You don't have any tokens to send." Img={SadFace} imgSize={50} />
 						) : (
 							<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
-								<p>Paste address here</p>
-								<InputWithSufficIcon name="address" required onChange={handleChange} value={address} Icon={Paste} />
+								<p className={styles.label}>Paste address here</p>
+								<InputWithSuffixIcon name="address" required onChange={handleChange} value={address} icon={Paste} />
 							</form>
 						)}
-						<div className={utilsStyles.spacer} />
-
-						<Footer
-							onBack={onBack}
-							onBackUrl={onBack ? undefined : ''}
-							onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-						/>
 					</main>
+
+					<Footer
+						onBack={onBack}
+						onBackUrl={onBack ? undefined : ''}
+						onForward={formIsValid() ? () => handleSubmit(null) : null}
+					/>
 				</>
 			)}
 		</>

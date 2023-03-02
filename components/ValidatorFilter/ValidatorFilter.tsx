@@ -19,9 +19,9 @@ type ValidatorFilterProps = {
 const ValidatorFilter: FC<ValidatorFilterProps> = ({ sortFilter, searchFilter, onSortChange, onSearchChange }) => {
 	return (
 		<>
-			<InputWithSuffixIcon name="address" onChange={onSearchChange} value={searchFilter} Icon={Search} />
+			<InputWithSuffixIcon name="address" onChange={onSearchChange} value={searchFilter} icon={Search} />
 
-			<div className={utilsStyles.spacer} />
+			<div className={utilsStyles.spacer3} />
 
 			<div className={styles.filtersWrapper}>
 				<button

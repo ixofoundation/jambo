@@ -36,8 +36,8 @@ export const b64_to_uint8Arr = (str: string): Uint8Array => {
 	return fromBase64(str);
 };
 
-export const getMicroAmount = (amount: string): string => {
-	return new BigNumber(amount).times(new BigNumber(10).pow(6)).toString();
+export const getMicroAmount = (amount: string, decimals: number = 6): string => {
+	return new BigNumber(amount).times(new BigNumber(10).pow(decimals)).toString();
 };
 
 export const strToArray = (str: string): Uint8Array => {
@@ -95,3 +95,7 @@ export const stringifySignDoc = (signDoc: SignDoc) => {
 		accountNumber: signDoc.accountNumber.toString(16),
 	});
 };
+
+export const urlEncodeIbcDenom = (denom: string) => (denom ?? '').replace(/^ibc\//i, 'ibc');
+
+export const urlDecodeIbcDenom = (denom: string) => (denom ?? '').replace(/^ibc/i, 'ibc/');

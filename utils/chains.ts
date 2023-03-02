@@ -1,8 +1,9 @@
 import { AppCurrency, ChainInfo } from '@keplr-wallet/types';
 import { customQueries } from '@ixo/impactxclient-sdk';
 
-import { CHAIN_DROPDOWN_OPTION_TYPE, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { ChainNames } from '@constants/chains';
+import { CHAIN_DROPDOWN_OPTION_TYPE, CHAIN_INFO_REQUEST, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { ChainNames, DefaultChainName, EnableDeveloperMode } from '@constants/chains';
+import { isFulfilled, isRejected } from './misc';
 
 export type PeggedCurrency = AppCurrency & {
 	originCurrency?: AppCurrency & {
@@ -67,54 +68,52 @@ export function createKeplrChainInfos(chainInfo: SimplifiedChainInfo): ChainInfo
 	};
 }
 
-const fetchMainnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE> => {
+async function fetchChainInfo(chainName: string, chainNetwork: CHAIN_NETWORK_TYPE): Promise<CHAIN_INFO_REQUEST> {
+	let chainInfo: KEPLR_CHAIN_INFO_TYPE | undefined;
 	try {
-		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'mainnet');
-		return chain;
+		chainInfo = await customQueries.chain.getKeplrChainInfo(chainName, chainNetwork);
 	} catch (error) {
-		throw error;
+		if (chainNetwork !== 'devnet') console.error(`${chainName} ${chainNetwork} chain::${error}`);
+		if (chainNetwork === 'devnet') console.warn(`${chainName} ${chainNetwork} chain::${error}`);
+		if (chainNetwork !== 'devnet') throw error;
 	}
-};
-const fetchTestnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
-	try {
-		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'testnet');
-		return chain;
-	} catch (error) {
-		console.error('fetch testnet chain::', error);
-		return;
-	}
-};
-const fetchDevnetChain = async (chainName: string): Promise<KEPLR_CHAIN_INFO_TYPE | undefined> => {
-	try {
-		const chain = await customQueries.chain.getKeplrChainInfo(chainName, 'devnet');
-		return chain;
-	} catch (error) {
-		console.warn('fetch devnet chain::', error);
-		return;
-	}
-};
+	return { chainName, chainNetwork, chainInfo };
+}
 
-export const getChainOptions = async (chainNetwork: CHAIN_NETWORK_TYPE = 'testnet') => {
+export const getChainOptions = async () => {
 	if (!ChainNames.length) throw new Error('Chain Names are required to continue');
-	const chains = [];
-	for (let chainName of ChainNames) {
-		try {
-			if (chainNetwork === 'mainnet') {
-				const chainInfo = await fetchMainnetChain(chainName);
-				chains.push(chainInfo);
-			}
-			if (chainNetwork === 'testnet') {
-				const testnetChainInfo = await fetchTestnetChain(chainName);
-				if (testnetChainInfo) chains.push(testnetChainInfo);
-				const devnetChainInfo = await fetchDevnetChain(chainName);
-				if (devnetChainInfo) chains.push(devnetChainInfo);
-			}
-		} catch (error) {
-			console.error(chainName, chainNetwork, '::', error);
+	const requests: Promise<CHAIN_INFO_REQUEST>[] = [];
+
+	for (const chainName of ChainNames) {
+		requests.push(fetchChainInfo(chainName, 'mainnet'));
+		if (EnableDeveloperMode) {
+			requests.push(fetchChainInfo(chainName, 'testnet'));
+			requests.push(fetchChainInfo(chainName, 'devnet'));
 		}
 	}
-	return chains;
+
+	const responses = await Promise.allSettled(requests);
+	const fulfilledResponses = responses.filter(isFulfilled).map(({ value }): CHAIN_INFO_REQUEST => value);
+	const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
+	return fulfilledResponses.filter((x) => x.chainInfo);
 };
+
+export const getChainsByNetwork = (chains: CHAIN_INFO_REQUEST[], chainNetwork: CHAIN_NETWORK_TYPE) =>
+	chains.filter((chain) => chain.chainNetwork === chainNetwork);
+
+export const getChainInfoByChainId = (chains: CHAIN_INFO_REQUEST[], chainId: string) =>
+	chains.find((chain) => chain.chainInfo?.chainId === chainId)?.chainInfo;
+
+export const extractChainInfosFromChainState = (chainState: CHAIN_INFO_REQUEST[]): KEPLR_CHAIN_INFO_TYPE[] =>
+	chainState.map(({ chainInfo }) => chainInfo as KEPLR_CHAIN_INFO_TYPE);
+
+export const extractChainIdFromChainInfos = (chains: CHAIN_INFO_REQUEST[] = []) =>
+	(!!DefaultChainName && chains.find((chain) => chain.chainName === DefaultChainName)?.chainInfo?.chainId) ||
+	chains[0].chainInfo?.chainId ||
+	'';
+
+export const extractStakingTokenDenomFromChainInfo = (chainInfo?: KEPLR_CHAIN_INFO_TYPE) =>
+	chainInfo?.stakeCurrency.coinMinimalDenom ?? '';
 
 export const getChainFromChains = (chains: KEPLR_CHAIN_INFO_TYPE[], chainId: string) =>
 	chains.find((chain: KEPLR_CHAIN_INFO_TYPE) => chain.chainId === chainId);

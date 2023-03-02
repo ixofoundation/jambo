@@ -1,19 +1,26 @@
 .main {
 	padding: 0 1rem;
-	padding-top: var(--header-height); // For navbar height
-	padding-bottom: var(--footer-height); // For footer height
+	padding-top: calc(var(--header-height) + 20px); // For navbar height
+	padding-bottom: calc(var(--footer-height) + 20px); // For footer height
 	height: 100%;
 	min-height: 100vh;
+}
 
-	@media only screen and (min-width: 760px) {
-		padding-bottom: 0;
-	}
+.column {
+	display: flex;
+	flex-direction: column;
 }
 
 .columnSpaceEvenlyCentered {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-evenly;
+	align-items: center;
+}
+
+.columnAlignCenter {
+	display: flex;
+	flex-direction: column;
 	align-items: center;
 }
 
@@ -30,11 +37,48 @@
 	align-items: center;
 }
 
-.spacer {
+.row {
+	display: flex;
+	flex-direction: row;
+	max-width: var(--max-width);
+}
+
+.rowAlignCenter {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.rowJustifyCenter {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+}
+
+.rowAlignSpaceBetween {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.spacer1 {
+	height: 10px;
+}
+
+.spacer2 {
+	height: 20px;
+}
+
+.spacer3 {
 	height: 30px;
 }
 
 .spacerFlex {
 	height: 30px;
 	flex: 1;
+}
+
+.label {
+	font-size: 1.1rem;
+	font-weight: 400;
 }

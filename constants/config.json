@@ -9,7 +9,28 @@
 	"headerShowName": true,
 	"headerShowLogo": true,
 	"about": "config.about",
+	"termsAndConditions": "https://my.jambo.earth/legal/termsOfUse",
 	"actions": [
+		{
+			"id": "eKXPPhewkJDLbE1bq1iboz",
+			"steps": [
+				{
+					"id": "get_receiver_address",
+					"name": "Get validator address"
+				},
+				{
+					"id": "select_token_and_amount",
+					"name": "Define amount to delegate"
+				},
+				{
+					"id": "bank_MsgSend",
+					"name": "Review and sign"
+				}
+			],
+			"name": "Send",
+			"description": "Crypto Senf",
+			"image": "eKXPPhewkJDLbE1bq1iboa.png"
+		},
 		{
 			"id": "eKXPPhewkJDLbE1bq1iboa",
 			"steps": [
@@ -18,7 +39,7 @@
 					"name": "Get validator address"
 				},
 				{
-					"id": "select_delegate_amount",
+					"id": "select_amount_delegate",
 					"name": "Define amount to delegate"
 				},
 				{
@@ -38,7 +59,7 @@
 					"name": "Get delegation validator address"
 				},
 				{
-					"id": "select_undelegate_amount",
+					"id": "select_amount_undelegate",
 					"name": "Define amount to undelegate"
 				},
 				{
@@ -58,7 +79,7 @@
 					"name": "Get delegation validator address"
 				},
 				{
-					"id": "select_redelegate_amount",
+					"id": "select_amount_redelegate",
 					"name": "Define amount to redelegate"
 				},
 				{

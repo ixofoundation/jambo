@@ -65,36 +65,34 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 	if (config.showValidatorDetails && selectedValidator?.address)
 		return (
 			<>
-				<Header pageTitle="Validator details" header={header} />
+				<Header header={header} />
 
 				<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-					<div className={utilsStyles.spacer} />
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<ValidatorCard validator={selectedValidator} />
 					</form>
-					<div className={utilsStyles.spacer} />
-
-					<Footer
-						onBack={unselectValidator}
-						onBackUrl={onBack ? undefined : ''}
-						onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-					/>
+					<div className={utilsStyles.spacer3} />
 				</main>
+
+				<Footer
+					onBack={unselectValidator}
+					onBackUrl={onBack ? undefined : ''}
+					onForward={formIsValid() ? () => handleSubmit(null) : null}
+				/>
 			</>
 		);
 
 	return (
 		<>
-			<Header pageTitle={config.pageTitle} header={header} />
+			<Header header={header} />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-				<div className={utilsStyles.spacer} />
 				{validatorsLoading ? (
 					<Loader />
 				) : !!config.requireFunds && !wallet?.balances?.balances?.length ? (
-					<IconText text="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
+					<IconText title="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
 				) : validators === null || (config.delegatedValidatorsOnly && !validators.length) ? (
-					<IconText text="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
+					<IconText title="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
 				) : (
 					<form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete="none">
 						<ValidatorList
@@ -106,14 +104,13 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 						/>
 					</form>
 				)}
-				<div className={utilsStyles.spacer} />
-
-				<Footer
-					onBack={onBack}
-					onBackUrl={onBack ? undefined : ''}
-					onCorrect={formIsValid() ? () => handleSubmit(null) : null}
-				/>
 			</main>
+
+			<Footer
+				onBack={onBack}
+				onBackUrl={onBack ? undefined : ''}
+				onForward={formIsValid() ? () => handleSubmit(null) : null}
+			/>
 		</>
 	);
 };

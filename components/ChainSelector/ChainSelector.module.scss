@@ -1,0 +1,25 @@
+.chainWrapper {
+	margin: 3px 0;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+.chainImage {
+	margin: 0 12px;
+}
+
+.chainName {
+	font-weight: 500;
+	margin: 0;
+}
+
+.userName {
+	font-weight: 500;
+	font-size: 1.1rem;
+}

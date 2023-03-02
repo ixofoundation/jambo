@@ -3,8 +3,9 @@ import Image from 'next/image';
 import axios from 'axios';
 
 import styles from './ValidatorListItem.module.scss';
-import { WalletContext } from '@contexts/wallet';
+import Card from '@components/Card/Card';
 import { getDisplayDenomFromDenom } from '@utils/currency';
+import { WalletContext } from '@contexts/wallet';
 import { VALIDATOR } from 'types/validators';
 
 type ValidatorListItemProps = {
@@ -38,8 +39,9 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
 	}
 
 	return (
-		<div
+		<Card
 			key={validator.address}
+			rounded={!delegated}
 			className={`${styles.validatorWrapper} ${onClick && styles.clickable} ${
 				delegated ? styles.delegatedValidator : ''
 			}`}
@@ -63,7 +65,7 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
 					</div>
 				</div>
 			)}
-		</div>
+		</Card>
 	);
 };
 

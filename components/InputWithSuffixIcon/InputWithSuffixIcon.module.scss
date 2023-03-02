@@ -1,13 +1,13 @@
 .input {
-	width: 100%;
-	background-color: var(--light-grey-color);
+	flex: 1;
+	background-color: inherit;
 	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
+	border-radius: inherit;
+	padding: 15px;
 	padding-right: 45px;
 
 	&:focus {
-		outline: solid 1px var(--accent-color);
+		outline: solid 1px var(--primary-color);
 	}
 
 	&::placeholder {
@@ -17,19 +17,13 @@
 }
 
 .inputContainer {
-	width: 100%;
 	position: relative;
+	display: flex;
 
-	& svg {
-		margin: 8px;
+	& .inputIcon {
+		margin: 12px;
 		position: absolute;
 		right: 0;
-		width: 22px;
-		height: 22px;
-
-		& path {
-			fill: var(--accent-color);
-		}
 	}
 }
 
