@@ -1,21 +1,19 @@
 import { useContext, useEffect, useState } from 'react';
-import Image from 'next/image';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './ChainSelector.module.scss';
-import BottomSheet from '@components/BottomSheet/BottomSheet';
-import { ChainContext } from '@contexts/chain';
-import Card, { CARD_SIZE } from '@components/Card/Card';
-import useModalState from '@hooks/modalState';
-import Loader from '@components/Loader/Loader';
+import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
+import BottomSheet from '@components/BottomSheet/BottomSheet';
+import Card, { CARD_SIZE } from '@components/Card/Card';
+import Loader from '@components/Loader/Loader';
+import { ChainContext } from '@contexts/chain';
+import useModalState from '@hooks/modalState';
 
-type ChainSelectorProps = {
-	username?: string;
-};
+type ChainSelectorProps = {};
 
-const ChainSelector = ({ username }: ChainSelectorProps) => {
+const ChainSelector = ({}: ChainSelectorProps) => {
 	const [currentChainId, setCurrentChainId] = useState<string | undefined>();
 	const [chainSelectVisible, showChainSelect, hideChainSelect] = useModalState(false);
 	const { chains, chainInfo, chain, updateChainId } = useContext(ChainContext);
@@ -42,7 +40,17 @@ const ChainSelector = ({ username }: ChainSelectorProps) => {
 
 	return (
 		<>
-			<ChainSelectorButton username={username} chainImg={chainInfo?.chainSymbolImageUrl} onClick={showChainSelect} />
+			<ButtonRound onClick={showChainSelect} size={BUTTON_ROUND_SIZE.xsmall} color={BUTTON_ROUND_COLOR.lightGrey}>
+				{chainInfo?.chainSymbolImageUrl && (
+					<ImageWithFallback
+						fallbackSrc={'/images/chain-logos/fallback.png'}
+						alt="Select a chain"
+						src={chainInfo.chainSymbolImageUrl}
+						height={42}
+						width={42}
+					/>
+				)}
+			</ButtonRound>
 			{chainSelectVisible && (
 				<BottomSheet dismissable={!!currentChainId} onClose={hideChainSelect} title="Select a Chain">
 					{chains.map((chainOption) => (
@@ -54,9 +62,13 @@ const ChainSelector = ({ username }: ChainSelectorProps) => {
 						>
 							<div className={utilsStyles.rowAlignCenter}>
 								{chainOption?.chainSymbolImageUrl && (
-									<div className={styles.chainImage}>
-										<Image src={chainOption.chainSymbolImageUrl} alt={chainOption.chainName} height={32} width={32} />
-									</div>
+									<ImageWithFallback
+										fallbackSrc={'/images/chain-logos/fallback.png'}
+										src={chainOption.chainSymbolImageUrl}
+										alt={chainOption.chainName}
+										height={32}
+										width={32}
+									/>
 								)}
 								<p className={styles.chainName}>{chainOption.chainName}</p>
 							</div>
@@ -70,30 +82,3 @@ const ChainSelector = ({ username }: ChainSelectorProps) => {
 };
 
 export default ChainSelector;
-
-type ChainSelectorButtonProps = {
-	username?: string;
-	chainImg?: string;
-	onClick?: () => void;
-};
-
-export const ChainSelectorButton = ({ onClick, chainImg, username }: ChainSelectorButtonProps) => {
-	const clickable = !!onClick;
-
-	return (
-		<div className={cls(utilsStyles.rowAlignCenter, clickable && styles.clickable)} onClick={onClick}>
-			{chainImg && (
-				<div className={styles.chainImage}>
-					<ImageWithFallback
-						fallbackSrc={'/images/chain-logos/fallback.png'}
-						src={chainImg}
-						width={32}
-						height={32}
-						alt="Chain Selector"
-					/>
-				</div>
-			)}
-			<h3 className={styles.userName}>{username ?? 'Hi'}</h3>
-		</div>
-	);
-};

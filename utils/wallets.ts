@@ -15,7 +15,8 @@ import { customQueries } from '@ixo/impactxclient-sdk';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
-	address?.length ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : '';
+	(address?.length && address.length > 19 ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : address) ??
+	'';
 // TODO: replace next/Image with ImageWithFallback everywhere
 
 // TODO: provide denom as 5th param to only group for the denom

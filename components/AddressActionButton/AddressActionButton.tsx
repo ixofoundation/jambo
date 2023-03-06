@@ -1,21 +1,20 @@
 import { HTMLAttributes, useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import Image from 'next/image';
 
 import styles from './AddressActionButton.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
+import ChainSelector from '@components/ChainSelector/ChainSelector';
 import Card, { CARD_SIZE } from '@components/Card/Card';
 import QR from '@icons/qr_code.svg';
 import Copy from '@icons/copy.svg';
 import { shortenAddress } from '@utils/wallets';
-import { WALLETS } from '@constants/wallet';
 import { WALLET_TYPE } from 'types/wallet';
 
 type AddressActionButtonProps = {
 	address: string;
+	allowChainChange?: boolean;
 	shortAddress?: boolean;
-	onWalletClick?: () => void;
 	copyOrQr?: 'copy' | 'qr';
 	onCopyOrQrClick?: () => void;
 	walletType?: WALLET_TYPE;
@@ -24,8 +23,8 @@ type AddressActionButtonProps = {
 const AddressActionButton = ({
 	address,
 	shortAddress,
-	onWalletClick = () => {},
 	copyOrQr,
+	allowChainChange = false,
 	onCopyOrQrClick = () => {},
 	className,
 	walletType,
@@ -44,14 +43,10 @@ const AddressActionButton = ({
 
 	return (
 		<div className={styles.account} {...other}>
-			{!!walletType && (
-				<ButtonRound onClick={onWalletClick} size={BUTTON_ROUND_SIZE.mediumLarge} color={BUTTON_ROUND_COLOR.lightGrey}>
-					<Image src={WALLETS[walletType].img} alt={WALLETS[walletType].name} height={24} width={24} />
-				</ButtonRound>
-			)}
+			{allowChainChange && <ChainSelector />}
 			<div className={styles.column}>
 				<CopyToClipboard text={address} onCopy={onCopy}>
-					<Card className={styles.card} title={address} size={CARD_SIZE.mediumLarge} rounded>
+					<Card className={styles.address} title={address} size={CARD_SIZE.mediumLarge} rounded>
 						{addressToDisplay}
 					</Card>
 				</CopyToClipboard>

@@ -1,5 +1,4 @@
 import { HTMLAttributes } from 'react';
-import { customQueries } from '@ixo/impactxclient-sdk';
 
 import styles from './TokenCard.module.scss';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
@@ -31,7 +30,6 @@ type TokenCardProps = {
 	image?: string;
 	available: number;
 	onTokenClick: (denom: string) => void;
-	asset?: any;
 	type?: string;
 	staked?: number;
 	undelegating?: number;
@@ -50,8 +48,6 @@ const TokenCard = ({
 	onTokenClick = (denom: string) => {},
 }: TokenCardProps) => {
 	if (!denom) return null;
-
-	const asset = customQueries.currency.findTokenFromDenom(denom);
 
 	const handleTokenClick = () => onTokenClick(denom);
 

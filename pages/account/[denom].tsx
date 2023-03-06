@@ -5,10 +5,11 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/accountPage.module.scss';
-import { ChainSelectorButton } from '@components/ChainSelector/ChainSelector';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import IconText from '@components/IconText/IconText';
 import Footer from '@components/Footer/Footer';
 import Header from '@components/Header/Header';
+import Anchor from '@components/Anchor/Anchor';
 import Head from '@components/Head/Head';
 import SadFace from '@icons/sad_face.svg';
 import { formatTokenAmount, getDecimalsFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
@@ -22,7 +23,7 @@ import config from '@constants/config.json';
 // TODO: add dollar values;
 
 const Denom: NextPage = () => {
-	const { query } = useRouter();
+	const { query, replace } = useRouter();
 	const { wallet } = useContext(WalletContext);
 	const { chainInfo } = useContext(ChainContext);
 	const assets = groupWalletAssets(
@@ -35,6 +36,8 @@ const Denom: NextPage = () => {
 
 	if (!asset) return <IconText title="Oops" subTitle="Something went wrong" Img={SadFace} imgSize={50} />;
 
+	const backToAccount = () => replace('/account');
+
 	return (
 		<>
 			<Head title="Account" description={config.siteDescriptionMeta} />
@@ -42,7 +45,16 @@ const Denom: NextPage = () => {
 			<Header allowBack />
 
 			<main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter, styles.denomPage)}>
-				<ChainSelectorButton chainImg={chainInfo?.chainSymbolImageUrl} username={wallet?.user?.name} />
+				<div className={utilsStyles.usernameWrapper} onClick={backToAccount}>
+					<ImageWithFallback
+						fallbackSrc={'/images/chain-logos/fallback.png'}
+						src={chainInfo?.chainSymbolImageUrl ?? ''}
+						width={32}
+						height={32}
+						alt="account"
+					/>
+					<h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
+				</div>
 
 				<p>My {getDisplayDenomFromCurrencyToken(asset.token)} Balance</p>
 				<p className={styles.totalBalance}>
@@ -62,24 +74,28 @@ const Denom: NextPage = () => {
 						{getDisplayDenomFromCurrencyToken(asset.token)}
 					</p>
 				</div>
-				<div className={styles.assetRow}>
-					<div className={styles.assetLabel}>
-						<div className={cls(styles.dot, styles.secondaryDot)}>staked</div>
-					</div>
-					<p>
-						{formatTokenAmount(asset.staked, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
-						{getDisplayDenomFromCurrencyToken(asset.token)}
-					</p>
-				</div>
-				<div className={styles.assetRow}>
-					<div className={styles.assetLabel}>
-						<div className={cls(styles.dot, styles.tertiaryDot)}>undelegating</div>
-					</div>
-					<p>
-						{formatTokenAmount(asset.undelegating, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
-						{getDisplayDenomFromCurrencyToken(asset.token)}
-					</p>
-				</div>
+				{!asset.token.ibc && (
+					<>
+						<div className={styles.assetRow}>
+							<div className={styles.assetLabel}>
+								<div className={cls(styles.dot, styles.secondaryDot)}>staked</div>
+							</div>
+							<p>
+								{formatTokenAmount(asset.staked, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
+								{getDisplayDenomFromCurrencyToken(asset.token)}
+							</p>
+						</div>
+						<div className={styles.assetRow}>
+							<div className={styles.assetLabel}>
+								<div className={cls(styles.dot, styles.tertiaryDot)}>undelegating</div>
+							</div>
+							<p>
+								{formatTokenAmount(asset.undelegating, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
+								{getDisplayDenomFromCurrencyToken(asset.token)}
+							</p>
+						</div>
+					</>
+				)}
 			</main>
 			<Footer showAccountButton showActionsButton />
 		</>

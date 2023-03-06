@@ -6,7 +6,7 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import AddressActionButton from '@components/AddressActionButton/AddressActionButton';
-import ChainSelector from '@components/ChainSelector/ChainSelector';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import TokenList from '@components/TokenList/TokenList';
 import Wallets from '@components/Wallets/Wallets';
 import Header from '@components/Header/Header';
@@ -18,6 +18,7 @@ import { urlEncodeIbcDenom } from '@utils/encoding';
 import { WalletContext } from '@contexts/wallet';
 import useModalState from '@hooks/modalState';
 import config from '@constants/config.json';
+import { WALLETS } from '@constants/wallet';
 
 const Account: NextPage = () => {
 	const [QRVisible, showQR, hideQR] = useModalState(false);
@@ -35,13 +36,24 @@ const Account: NextPage = () => {
 			<main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter)}>
 				{wallet.user && wallet.walletType ? (
 					<>
-						<ChainSelector username={wallet.user.name} />
+						<div className={utilsStyles.usernameWrapper} onClick={logoutWallet}>
+							{!!wallet.walletType && (
+								<ImageWithFallback
+									src={WALLETS[wallet.walletType].img}
+									alt={WALLETS[wallet.walletType].name}
+									height={32}
+									width={32}
+									fallbackSrc="/images/chain-logos/fallback.png"
+								/>
+							)}
+							<h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
+						</div>
 						<div className={utilsStyles.spacer1} />
 						<AddressActionButton
 							address={wallet.user.address}
 							shortAddress
-							onWalletClick={logoutWallet}
 							copyOrQr="qr"
+							allowChainChange
 							onCopyOrQrClick={showQR}
 							walletType={wallet.walletType}
 						/>
