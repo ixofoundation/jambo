@@ -22,6 +22,7 @@ import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import {
   defaultTrxFeeOption,
+  generateBankMultiSendTrx,
   generateBankSendTrx,
   generateDelegateTrx,
   generateRedelegateTrx,
@@ -34,18 +35,28 @@ import { CURRENCY_TOKEN } from 'types/wallet';
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
   onBack?: () => void;
+  handleNextMultiSend?: (nextIndex: number) => void;
+  deleteMultiSend?: (deleteIndex: number) => void;
   steps: STEP[];
   header?: string;
   message: ReviewStepsTypes;
 };
 
-const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
+const ReviewAndSign: FC<ReviewAndSignProps> = ({
+  onSuccess,
+  onBack,
+  handleNextMultiSend,
+  deleteMultiSend,
+  steps,
+  header,
+  message,
+}) => {
   const { wallet } = useContext(WalletContext);
   const [successHash, setSuccessHash] = useState<string | undefined>();
   const [loading, setLoading] = useState<boolean>(false);
-  const [amount, setAmount] = useState<number>(0);
-  const [token, setToken] = useState<CURRENCY_TOKEN | null>(null);
-  const [dstAddress, setDstAddress] = useState<string>(''); // destination address
+  const [amount, setAmount] = useState<number | number[]>(0);
+  const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | null>(null);
+  const [dstAddress, setDstAddress] = useState<string | string[]>(''); // destination address
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
   const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
@@ -53,17 +64,20 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
 
   useEffect(() => {
     steps.forEach((s) => {
+      if (s.id === STEPS.select_token_and_amount) {
+        setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.data.map((v) => v.amount) ?? []);
+        setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.data.map((v) => v.token) ?? []);
+      }
       if (
-        s.id === STEPS.select_token_and_amount ||
         s.id === STEPS.select_amount_delegate ||
         s.id === STEPS.select_amount_undelegate ||
         s.id === STEPS.select_amount_redelegate
       ) {
-        setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
-        setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
+        setAmount((s.data as StepDataType<STEPS.select_amount_delegate>)?.amount ?? 0);
+        setToken((s.data as StepDataType<STEPS.select_amount_delegate>)?.token);
       }
       if (s.id === STEPS.get_receiver_address) {
-        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
+        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.data.map((v) => v.address) ?? []);
       }
       if (
         s.id === STEPS.get_validator_delegate ||
@@ -87,9 +101,16 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
       case STEPS.bank_MsgSend:
         trx = generateBankSendTrx({
           fromAddress: wallet.user!.address,
-          toAddress: dstAddress,
-          denom: token?.denom ?? '',
+          toAddress: dstAddress[0] as string,
+          denom: token ? token[0]?.value : '',
           amount: getMicroAmount(amount.toString()),
+        });
+      case STEPS.bank_MsgMultiSend:
+        trx = generateBankMultiSendTrx({
+          fromAddress: wallet.user!.address,
+          toAddresses: dstAddress as string[],
+          denoms: (token as CURRENCY_TOKEN[]).map((token) => token.value),
+          amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
         });
         break;
       case STEPS.staking_MsgDelegate:
@@ -165,6 +186,14 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         {loading ? (
           <Loader />
         ) : message === STEPS.bank_MsgSend ? (
+          <form className={styles.stepsForm} autoComplete='none'>
+            <p className={utilsStyles.label}>I am sending</p>
+            <AmountAndDenom amount={amount} denom={token?.token?.coinDenom ?? token?.denom ?? ''} />
+            <br />
+            <p className={utilsStyles.label}>to the address:</p>
+            <Input name='address' required value={dstAddress} className={styles.stepInput} align='center' disabled />
+          </form>
+        ) : message === STEPS.bank_MsgMultiSend ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p className={utilsStyles.label}>I am sending</p>
             <AmountAndDenom amount={amount} denom={token?.token?.coinDenom ?? token?.denom ?? ''} />

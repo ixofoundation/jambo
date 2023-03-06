@@ -25,7 +25,9 @@ type ReceiverAddressProps = {
 
 const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, header }) => {
   const [showQRCamera, setShowQRCamera] = useState(false);
-  const [address, setAddress] = useState(data?.address ?? '');
+  const [address, setAddress] = useState(
+    data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.address ?? '' : '',
+  );
   const { wallet } = useContext(WalletContext);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -36,15 +38,24 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
+    const newData = { address };
+    const isEditing = !!data?.data[data?.currentIndex];
     if (!formIsValid()) return alert('Address must be provided');
-    onSuccess({ address });
+    onSuccess(
+      !isEditing
+        ? { ...data, currentIndex: 0, data: [...(data?.data ?? []), newData] }
+        : {
+            ...data,
+            data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(data.currentIndex + 1)],
+          },
+    );
   };
 
   return (
     <>
       {showQRCamera ? (
         <Suspense fallback={<EmptySteps loading={true} />}>
-          <QRCamera onSuccess={(address) => onSuccess({ address })} onBack={() => setShowQRCamera(false)} />
+          {/* <QRCamera onSuccess={(address) => onSuccess({ address })} onBack={() => setShowQRCamera(false)} /> */}
         </Suspense>
       ) : (
         <>
