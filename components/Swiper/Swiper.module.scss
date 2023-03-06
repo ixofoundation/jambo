@@ -1,82 +1,82 @@
 .actionGrid {
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-	align-items: center;
-	margin: 0 40px;
-	flex-wrap: wrap;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin: 0 40px;
+  flex-wrap: wrap;
 }
 
 .action {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	margin: 20px;
-	width: 280px;
-	max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px;
+  width: 280px;
+  max-width: 280px;
 }
 
 .swiper {
-	width: auto;
-	margin: 0 auto;
+  width: auto;
+  margin: 0 auto;
 }
 
 .swiperSlide {
-	transform: translateZ(0);
-	width: 200px;
-	height: 200px;
-	border-radius: 16px;
-	overflow: hidden;
-	cursor: pointer;
+  transform: translateZ(0);
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .center {
-	margin: 0 auto;
+  margin: 0 auto;
 }
 
 .actionImage {
-	width: 100%;
-	height: 100%;
-	text-align: center;
+  width: 100%;
+  height: 100%;
+  text-align: center;
 }
 
 .actionName {
-	text-align: center;
-	font-size: 1.8rem;
-	margin-bottom: 5px;
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 5px;
 }
 
 .actionDescription {
-	text-align: center;
-	margin: 0 40px;
-	font-size: 0.8rem;
-	text-overflow: ellipsis;
-	display: -webkit-box;
-	-webkit-line-clamp: 2; /* number of lines to show */
-	line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
-	line-height: 1rem;
-	max-height: 2rem;
-	min-height: 2rem;
+  text-align: center;
+  margin: 0 40px;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* number of lines to show */
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1rem;
+  max-height: 2rem;
+  min-height: 2rem;
 }
 
 @mixin gradient {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	width: 70px;
-	z-index: 10;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 70px;
+  z-index: 10;
 }
 
 .leftGradient {
-	@include gradient();
-	left: 0;
-	background: linear-gradient(to right, var(--bg-color), #0000);
+  @include gradient();
+  left: 0;
+  background: linear-gradient(to right, var(--bg-color), #0000);
 }
 
 .rightGradient {
-	@include gradient();
-	right: 0;
-	background: linear-gradient(to left, var(--bg-color), #0000);
+  @include gradient();
+  right: 0;
+  background: linear-gradient(to left, var(--bg-color), #0000);
 }

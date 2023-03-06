@@ -23,83 +23,83 @@ import config from '@constants/config.json';
 // TODO: add dollar values;
 
 const Denom: NextPage = () => {
-	const { query, replace } = useRouter();
-	const { wallet } = useContext(WalletContext);
-	const { chainInfo } = useContext(ChainContext);
-	const assets = groupWalletAssets(
-		wallet.balances?.balances ?? [],
-		wallet.delegations?.delegations ?? [],
-		wallet.unbonding?.unbonding ?? [],
-		extractStakingTokenDenomFromChainInfo(chainInfo) || '',
-	);
-	const asset = assets.find((asset) => asset.token.denom === urlDecodeIbcDenom(query.denom as string));
+  const { query, replace } = useRouter();
+  const { wallet } = useContext(WalletContext);
+  const { chainInfo } = useContext(ChainContext);
+  const assets = groupWalletAssets(
+    wallet.balances?.balances ?? [],
+    wallet.delegations?.delegations ?? [],
+    wallet.unbonding?.unbonding ?? [],
+    extractStakingTokenDenomFromChainInfo(chainInfo) || '',
+  );
+  const asset = assets.find((asset) => asset.token.denom === urlDecodeIbcDenom(query.denom as string));
 
-	if (!asset) return <IconText title="Oops" subTitle="Something went wrong" Img={SadFace} imgSize={50} />;
+  if (!asset) return <IconText title='Oops' subTitle='Something went wrong' Img={SadFace} imgSize={50} />;
 
-	const backToAccount = () => replace('/account');
+  const backToAccount = () => replace('/account');
 
-	return (
-		<>
-			<Head title="Account" description={config.siteDescriptionMeta} />
+  return (
+    <>
+      <Head title='Account' description={config.siteDescriptionMeta} />
 
-			<Header allowBack />
+      <Header allowBack />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter, styles.denomPage)}>
-				<div className={utilsStyles.usernameWrapper} onClick={backToAccount}>
-					<ImageWithFallback
-						fallbackSrc={'/images/chain-logos/fallback.png'}
-						src={chainInfo?.chainSymbolImageUrl ?? ''}
-						width={32}
-						height={32}
-						alt="account"
-					/>
-					<h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
-				</div>
+      <main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter, styles.denomPage)}>
+        <div className={utilsStyles.usernameWrapper} onClick={backToAccount}>
+          <ImageWithFallback
+            fallbackSrc={'/images/chain-logos/fallback.png'}
+            src={chainInfo?.chainSymbolImageUrl ?? ''}
+            width={32}
+            height={32}
+            alt='account'
+          />
+          <h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
+        </div>
 
-				<p>My {getDisplayDenomFromCurrencyToken(asset.token)} Balance</p>
-				<p className={styles.totalBalance}>
-					{formatTokenAmount(
-						asset.available + asset.staked + asset.undelegating,
-						getDecimalsFromCurrencyToken(asset.token),
-						false,
-					)}
-				</p>
+        <p>My {getDisplayDenomFromCurrencyToken(asset.token)} Balance</p>
+        <p className={styles.totalBalance}>
+          {formatTokenAmount(
+            asset.available + asset.staked + asset.undelegating,
+            getDecimalsFromCurrencyToken(asset.token),
+            false,
+          )}
+        </p>
 
-				<div className={styles.assetRow}>
-					<div className={styles.assetLabel}>
-						<div className={cls(styles.dot, styles.primaryDot)}>available</div>
-					</div>
-					<p>
-						{formatTokenAmount(asset.available, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
-						{getDisplayDenomFromCurrencyToken(asset.token)}
-					</p>
-				</div>
-				{!asset.token.ibc && (
-					<>
-						<div className={styles.assetRow}>
-							<div className={styles.assetLabel}>
-								<div className={cls(styles.dot, styles.secondaryDot)}>staked</div>
-							</div>
-							<p>
-								{formatTokenAmount(asset.staked, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
-								{getDisplayDenomFromCurrencyToken(asset.token)}
-							</p>
-						</div>
-						<div className={styles.assetRow}>
-							<div className={styles.assetLabel}>
-								<div className={cls(styles.dot, styles.tertiaryDot)}>undelegating</div>
-							</div>
-							<p>
-								{formatTokenAmount(asset.undelegating, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
-								{getDisplayDenomFromCurrencyToken(asset.token)}
-							</p>
-						</div>
-					</>
-				)}
-			</main>
-			<Footer showAccountButton showActionsButton />
-		</>
-	);
+        <div className={styles.assetRow}>
+          <div className={styles.assetLabel}>
+            <div className={cls(styles.dot, styles.primaryDot)}>available</div>
+          </div>
+          <p>
+            {formatTokenAmount(asset.available, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
+            {getDisplayDenomFromCurrencyToken(asset.token)}
+          </p>
+        </div>
+        {!asset.token.ibc && (
+          <>
+            <div className={styles.assetRow}>
+              <div className={styles.assetLabel}>
+                <div className={cls(styles.dot, styles.secondaryDot)}>staked</div>
+              </div>
+              <p>
+                {formatTokenAmount(asset.staked, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
+                {getDisplayDenomFromCurrencyToken(asset.token)}
+              </p>
+            </div>
+            <div className={styles.assetRow}>
+              <div className={styles.assetLabel}>
+                <div className={cls(styles.dot, styles.tertiaryDot)}>undelegating</div>
+              </div>
+              <p>
+                {formatTokenAmount(asset.undelegating, getDecimalsFromCurrencyToken(asset.token), false)}{' '}
+                {getDisplayDenomFromCurrencyToken(asset.token)}
+              </p>
+            </div>
+          </>
+        )}
+      </main>
+      <Footer showAccountButton showActionsButton />
+    </>
+  );
 };
 
 export default Denom;

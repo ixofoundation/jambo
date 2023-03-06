@@ -1,125 +1,125 @@
 .button {
-	border: 1px solid var(--bg-color);
-	cursor: pointer;
-	font-size: 1rem;
+  border: 1px solid var(--bg-color);
+  cursor: pointer;
+  font-size: 1rem;
 }
 
 .squared {
-	border-radius: var(--button-border-radius);
+  border-radius: var(--button-border-radius);
 }
 
 .rounded {
-	border-radius: 50px;
+  border-radius: 50px;
 }
 
 .xlarge {
-	padding: 18px 26px;
+  padding: 18px 26px;
 }
 
 .large {
-	padding: 16px 24px;
+  padding: 16px 24px;
 }
 
 .mediumLarge {
-	padding: 12px 20px;
+  padding: 12px 20px;
 }
 
 .medium {
-	padding: 8px 16px;
+  padding: 8px 16px;
 }
 
 .small {
-	padding: 5px 10px;
+  padding: 5px 10px;
 }
 
 .xsmall {
-	padding: 3px 5px;
+  padding: 3px 5px;
 }
 
 .xxsmall {
-	padding: 0;
+  padding: 0;
 }
 
 .withPrimaryColor {
-	color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .withSecondaryColor {
-	color: var(--secondary-color);
+  color: var(--secondary-color);
 }
 
 .withTertiaryColor {
-	color: var(--tertiary-color);
+  color: var(--tertiary-color);
 }
 
 .withSuccessColor {
-	color: var(--success-color);
+  color: var(--success-color);
 }
 
 .withDisabledColor {
-	color: var(--disabled-color);
+  color: var(--disabled-color);
 }
 
 .withGreyColor {
-	color: var(--grey-color);
+  color: var(--grey-color);
 }
 
 .withLightGreyColor {
-	color: var(--light-grey-color);
+  color: var(--light-grey-color);
 }
 
 .withPrimaryBgColor {
-	background-color: var(--primary-color);
+  background-color: var(--primary-color);
 }
 
 .withSecondaryBgColor {
-	background-color: var(--secondary-color);
+  background-color: var(--secondary-color);
 }
 
 .withTertiaryBgColor {
-	background-color: var(--tertiary-color);
+  background-color: var(--tertiary-color);
 }
 
 .withSuccessBgColor {
-	background-color: var(--success-color);
+  background-color: var(--success-color);
 }
 
 .withDisabledBgColor {
-	background-color: var(--disabled-color);
+  background-color: var(--disabled-color);
 }
 
 .withGreyBgColor {
-	background-color: var(--grey-color);
+  background-color: var(--grey-color);
 }
 
 .withLightGreyBgColor {
-	background-color: var(--light-grey-color);
+  background-color: var(--light-grey-color);
 }
 
 .withPrimaryBorderColor {
-	border-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .withSecondaryBorderColor {
-	border-color: var(--secondary-color);
+  border-color: var(--secondary-color);
 }
 
 .withTertiaryBorderColor {
-	border-color: var(--tertiary-color);
+  border-color: var(--tertiary-color);
 }
 
 .withSuccessBorderColor {
-	border-color: var(--success-color);
+  border-color: var(--success-color);
 }
 
 .withDisabledBorderColor {
-	border-color: var(--disabled-color);
+  border-color: var(--disabled-color);
 }
 
 .withGreyBorderColor {
-	border-color: var(--grey-color);
+  border-color: var(--grey-color);
 }
 
 .withLightGreyBorderColor {
-	border-color: var(--light-grey-color);
+  border-color: var(--light-grey-color);
 }

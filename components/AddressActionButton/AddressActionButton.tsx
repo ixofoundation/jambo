@@ -12,67 +12,67 @@ import { shortenAddress } from '@utils/wallets';
 import { WALLET_TYPE } from 'types/wallet';
 
 type AddressActionButtonProps = {
-	address: string;
-	allowChainChange?: boolean;
-	shortAddress?: boolean;
-	copyOrQr?: 'copy' | 'qr';
-	onCopyOrQrClick?: () => void;
-	walletType?: WALLET_TYPE;
+  address: string;
+  allowChainChange?: boolean;
+  shortAddress?: boolean;
+  copyOrQr?: 'copy' | 'qr';
+  onCopyOrQrClick?: () => void;
+  walletType?: WALLET_TYPE;
 } & HTMLAttributes<HTMLDivElement>;
 
 const AddressActionButton = ({
-	address,
-	shortAddress,
-	copyOrQr,
-	allowChainChange = false,
-	onCopyOrQrClick = () => {},
-	className,
-	walletType,
-	...other
+  address,
+  shortAddress,
+  copyOrQr,
+  allowChainChange = false,
+  onCopyOrQrClick = () => {},
+  className,
+  walletType,
+  ...other
 }: AddressActionButtonProps) => {
-	const [copied, setCopied] = useState(false);
-	const addressToDisplay = shortAddress ? shortenAddress(address) : address;
+  const [copied, setCopied] = useState(false);
+  const addressToDisplay = shortAddress ? shortenAddress(address) : address;
 
-	const onCopy = () => {
-		if (copied) return;
-		setCopied(true);
-		setTimeout(() => {
-			setCopied(false);
-		}, 1200);
-	};
+  const onCopy = () => {
+    if (copied) return;
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 1200);
+  };
 
-	return (
-		<div className={styles.account} {...other}>
-			{allowChainChange && <ChainSelector />}
-			<div className={styles.column}>
-				<CopyToClipboard text={address} onCopy={onCopy}>
-					<Card className={styles.address} title={address} size={CARD_SIZE.mediumLarge} rounded>
-						{addressToDisplay}
-					</Card>
-				</CopyToClipboard>
-				{copied ? <p className={styles.copied}>copied</p> : null}
-			</div>
-			{copyOrQr === 'copy' ? (
-				<CopyToClipboard text={address} onCopy={onCopy}>
-					<ButtonRound
-						onClick={onCopyOrQrClick}
-						size={BUTTON_ROUND_SIZE.mediumLarge}
-						color={BUTTON_ROUND_COLOR.lightGrey}
-					>
-						<ColoredIcon icon={Copy} color={ICON_COLOR.primary} size={24} />
-					</ButtonRound>
-				</CopyToClipboard>
-			) : copyOrQr === 'qr' ? (
-				<ButtonRound
-					onClick={onCopyOrQrClick}
-					size={BUTTON_ROUND_SIZE.mediumLarge}
-					color={BUTTON_ROUND_COLOR.lightGrey}
-				>
-					<ColoredIcon icon={QR} color={ICON_COLOR.primary} size={24} />
-				</ButtonRound>
-			) : null}
-		</div>
-	);
+  return (
+    <div className={styles.account} {...other}>
+      {allowChainChange && <ChainSelector />}
+      <div className={styles.column}>
+        <CopyToClipboard text={address} onCopy={onCopy}>
+          <Card className={styles.address} title={address} size={CARD_SIZE.mediumLarge} rounded>
+            {addressToDisplay}
+          </Card>
+        </CopyToClipboard>
+        {copied ? <p className={styles.copied}>copied</p> : null}
+      </div>
+      {copyOrQr === 'copy' ? (
+        <CopyToClipboard text={address} onCopy={onCopy}>
+          <ButtonRound
+            onClick={onCopyOrQrClick}
+            size={BUTTON_ROUND_SIZE.mediumLarge}
+            color={BUTTON_ROUND_COLOR.lightGrey}
+          >
+            <ColoredIcon icon={Copy} color={ICON_COLOR.primary} size={24} />
+          </ButtonRound>
+        </CopyToClipboard>
+      ) : copyOrQr === 'qr' ? (
+        <ButtonRound
+          onClick={onCopyOrQrClick}
+          size={BUTTON_ROUND_SIZE.mediumLarge}
+          color={BUTTON_ROUND_COLOR.lightGrey}
+        >
+          <ColoredIcon icon={QR} color={ICON_COLOR.primary} size={24} />
+        </ButtonRound>
+      ) : null}
+    </div>
+  );
 };
 
 export default AddressActionButton;

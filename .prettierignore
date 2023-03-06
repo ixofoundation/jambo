@@ -1,0 +1,20 @@
+# dependencies
+/node_modules
+
+# public
+./public
+
+# next
+.next
+
+# production
+/build
+
+# vscode
+# .vscode
+
+# vercel
+.vercel
+
+# netlify
+/.netlify

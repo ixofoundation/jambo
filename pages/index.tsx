@@ -10,19 +10,19 @@ import config from '@constants/config.json';
 import { ACTION } from 'types/actions';
 
 const Home: NextPage = () => {
-	return (
-		<>
-			<Head title={config.siteName} description={config.siteName + ' dApp'} />
+  return (
+    <>
+      <Head title={config.siteName} description={config.siteName + ' dApp'} />
 
-			<Header />
+      <Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
-				<CustomSwiper actions={config.actions as ACTION[]} swiper />
-			</main>
+      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
+        <CustomSwiper actions={config.actions as ACTION[]} swiper />
+      </main>
 
-			<Footer showActionsButton showAccountButton />
-		</>
-	);
+      <Footer showActionsButton showAccountButton />
+    </>
+  );
 };
 
 export default Home;

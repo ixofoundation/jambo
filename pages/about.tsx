@@ -10,24 +10,24 @@ import config from '@constants/config.json';
 import Head from '@components/Head/Head';
 
 const About: NextPage = () => {
-	const { replace } = useRouter();
+  const { replace } = useRouter();
 
-	if (!config.about) replace('/settings');
+  if (!config.about) replace('/settings');
 
-	return (
-		<>
-			<Head title="About" description={config.siteDescriptionMeta} />
+  return (
+    <>
+      <Head title='About' description={config.siteDescriptionMeta} />
 
-			<Header allowBack />
+      <Header allowBack />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
-				<div className={utilsStyles.spacer3Flex} />
-				<h2 className={styles.title}>About</h2>
-				<p className={styles.text} dangerouslySetInnerHTML={{ __html: config.about }} />
-			</main>
-			<Footer showAccountButton showActionsButton />
-		</>
-	);
+      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
+        <div className={utilsStyles.spacer3Flex} />
+        <h2 className={styles.title}>About</h2>
+        <p className={styles.text} dangerouslySetInnerHTML={{ __html: config.about }} />
+      </main>
+      <Footer showAccountButton showActionsButton />
+    </>
+  );
 };
 
 export default About;

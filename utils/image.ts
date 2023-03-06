@@ -12,6 +12,7 @@ const shimmer = (w: number, h: number) => `
   <animate xlink:href="#r" attributeName="x" from="-${w}" to="${w}" dur="1s" repeatCount="indefinite"  />
 </svg>`;
 
-const toBase64 = (str: string) => (typeof window === 'undefined' ? Buffer.from(str).toString('base64') : window.btoa(str));
+const toBase64 = (str: string) =>
+  typeof window === 'undefined' ? Buffer.from(str).toString('base64') : window.btoa(str);
 
 export const shimmerDataUrl = () => `data:image/svg+xml;base64,${toBase64(shimmer(1000, 800))}`;

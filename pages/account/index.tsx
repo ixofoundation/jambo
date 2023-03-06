@@ -21,70 +21,70 @@ import config from '@constants/config.json';
 import { WALLETS } from '@constants/wallet';
 
 const Account: NextPage = () => {
-	const [QRVisible, showQR, hideQR] = useModalState(false);
-	const { wallet, updateWalletType, logoutWallet } = useContext(WalletContext);
+  const [QRVisible, showQR, hideQR] = useModalState(false);
+  const { wallet, updateWalletType, logoutWallet } = useContext(WalletContext);
 
-	const { push } = useRouter();
-	const handleTokenClick = (denom: string) => push(`/account/${urlEncodeIbcDenom(denom)}`);
+  const { push } = useRouter();
+  const handleTokenClick = (denom: string) => push(`/account/${urlEncodeIbcDenom(denom)}`);
 
-	return (
-		<>
-			<Head title="Account" description={config.siteDescriptionMeta} />
+  return (
+    <>
+      <Head title='Account' description={config.siteDescriptionMeta} />
 
-			<Header />
+      <Header />
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter)}>
-				{wallet.user && wallet.walletType ? (
-					<>
-						<div className={utilsStyles.usernameWrapper} onClick={logoutWallet}>
-							{!!wallet.walletType && (
-								<ImageWithFallback
-									src={WALLETS[wallet.walletType].img}
-									alt={WALLETS[wallet.walletType].name}
-									height={32}
-									width={32}
-									fallbackSrc="/images/chain-logos/fallback.png"
-								/>
-							)}
-							<h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
-						</div>
-						<div className={utilsStyles.spacer1} />
-						<AddressActionButton
-							address={wallet.user.address}
-							shortAddress
-							copyOrQr="qr"
-							allowChainChange
-							onCopyOrQrClick={showQR}
-							walletType={wallet.walletType}
-						/>
-						<div className={utilsStyles.spacer3} />
-						<TokenList onTokenClick={handleTokenClick} />
-						{QRVisible && (
-							<Modal onClose={hideQR}>
-								<div className={utilsStyles.columnAlignCenter}>
-									<div className={utilsStyles.spacer1} />
-									<sub>...IN PROGRESS...</sub>
-									<div className={utilsStyles.spacer1} />
-									<QRCode value={wallet.user.address} size={150} />
-									<div className={utilsStyles.spacer3} />
-									<AddressActionButton address={wallet.user.address} copyOrQr="copy" onCopyOrQrClick={showQR} />
-									<div className={utilsStyles.spacer1} />
-								</div>
-							</Modal>
-						)}
-					</>
-				) : wallet.walletType && !wallet.user ? (
-					<>
-						<div className={utilsStyles.spacer3} />
-						<Loader size={50} />
-					</>
-				) : (
-					<Wallets onSelected={updateWalletType} />
-				)}
-			</main>
-			<Footer showAccountButton showActionsButton />
-		</>
-	);
+      <main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter)}>
+        {wallet.user && wallet.walletType ? (
+          <>
+            <div className={utilsStyles.usernameWrapper} onClick={logoutWallet}>
+              {!!wallet.walletType && (
+                <ImageWithFallback
+                  src={WALLETS[wallet.walletType].img}
+                  alt={WALLETS[wallet.walletType].name}
+                  height={32}
+                  width={32}
+                  fallbackSrc='/images/chain-logos/fallback.png'
+                />
+              )}
+              <h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
+            </div>
+            <div className={utilsStyles.spacer1} />
+            <AddressActionButton
+              address={wallet.user.address}
+              shortAddress
+              copyOrQr='qr'
+              allowChainChange
+              onCopyOrQrClick={showQR}
+              walletType={wallet.walletType}
+            />
+            <div className={utilsStyles.spacer3} />
+            <TokenList onTokenClick={handleTokenClick} />
+            {QRVisible && (
+              <Modal onClose={hideQR}>
+                <div className={utilsStyles.columnAlignCenter}>
+                  <div className={utilsStyles.spacer1} />
+                  <sub>...IN PROGRESS...</sub>
+                  <div className={utilsStyles.spacer1} />
+                  <QRCode value={wallet.user.address} size={150} />
+                  <div className={utilsStyles.spacer3} />
+                  <AddressActionButton address={wallet.user.address} copyOrQr='copy' onCopyOrQrClick={showQR} />
+                  <div className={utilsStyles.spacer1} />
+                </div>
+              </Modal>
+            )}
+          </>
+        ) : wallet.walletType && !wallet.user ? (
+          <>
+            <div className={utilsStyles.spacer3} />
+            <Loader size={50} />
+          </>
+        ) : (
+          <Wallets onSelected={updateWalletType} />
+        )}
+      </main>
+      <Footer showAccountButton showActionsButton />
+    </>
+  );
 };
 
 export default Account;
