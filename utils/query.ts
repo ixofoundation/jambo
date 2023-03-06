@@ -9,7 +9,7 @@ import {
 	VALIDATOR,
 	VALIDATOR_FILTER_TYPE,
 } from 'types/validators';
-import { CURRENCY, WALLET, WALLET_BALANCE } from 'types/wallet';
+import { CURRENCY, WALLET_BALANCE } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
 
@@ -24,13 +24,13 @@ export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: strin
 		let balances: WALLET_BALANCE[] = [];
 		for (const balance of response.balances) {
 			const isIbc = /^ibc\//i.test(balance.denom);
-			let tokenDenom = balance.denom?.replace(/ibc\//i, '');
 			if (isIbc) {
-				const ibcDenomTrace = await queryClient.ibc.applications.transfer.v1.denomTrace({ hash: tokenDenom });
-				tokenDenom = ibcDenomTrace.denomTrace?.baseDenom ?? tokenDenom;
+				const ibcToken = await customQueries.currency.findIbcTokenFromHash(queryClient, balance.denom);
+				balances.push({ ...balance, ibc: isIbc, token: ibcToken.token });
+			} else {
+				const token = customQueries.currency.findTokenFromDenom(balance.denom);
+				balances.push({ ...balance, ibc: isIbc, token });
 			}
-			const token = customQueries.currency.findTokenFromDenom(tokenDenom);
-			balances.push({ ...balance, ibc: isIbc, token });
 		}
 		return balances.sort((a, b) => (a.ibc ? 1 : -1));
 	} catch (error) {
