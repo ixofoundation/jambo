@@ -61,6 +61,18 @@
 	justify-content: space-between;
 }
 
+.rowAlignSpaceAround {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-around;
+}
+
+.rowAlignSpaceBetween {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
 .spacer1 {
 	height: 10px;
 }

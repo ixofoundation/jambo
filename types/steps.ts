@@ -26,6 +26,7 @@ export enum STEPS {
 export type STEP = {
 	id: STEPS;
 	name: string;
+	config?: AllStepConfigTypes;
 	data?: AllStepDataTypes;
 };
 
@@ -69,6 +70,10 @@ export type ReviewStepsTypes =
 	| STEPS.staking_MsgUndelegate
 	| STEPS.staking_MsgRedelegate
 	| STEPS.distribution_MsgWithdrawDelegatorReward;
+
+export type AllStepConfigTypes = never;
+
+export type StepConfigType<T> = never;
 
 interface Check_user_balance {
 	balance: number;

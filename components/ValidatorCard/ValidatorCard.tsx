@@ -68,5 +68,5 @@ const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
 		</>
 	);
 };
-// TODO: use formatTokenAmount on "my stake"
+
 export default ValidatorCard;
