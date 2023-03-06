@@ -1,40 +1,40 @@
 .modalOverlay {
-	position: fixed;
-	top: 0;
-	left: 0;
-	bottom: 0;
-	right: 0;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: rgba(0, 0, 0, 0.5);
-	z-index: 100;
-	padding: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  padding: 20px;
 }
 
 .modal {
-	max-height: 90vh;
-	background: white;
-	width: auto;
-	height: auto;
-	border-radius: var(--card-border-radius);
-	padding: 10px 15px 15px;
-	overflow: auto;
+  max-height: 90vh;
+  background: white;
+  width: auto;
+  height: auto;
+  border-radius: var(--card-border-radius);
+  padding: 10px 15px 15px;
+  overflow: auto;
 }
 
 .modalHeader {
-	position: relative;
+  position: relative;
 }
 
 .modalTitle {
-	font-size: 1.5rem;
-	margin: 10px 25px 1em;
-	text-align: center;
+  font-size: 1.5rem;
+  margin: 10px 25px 1em;
+  text-align: center;
 }
 
 .closeCross {
-	font-size: 15px;
-	position: absolute;
-	top: 0;
-	right: 0;
+  font-size: 15px;
+  position: absolute;
+  top: 0;
+  right: 0;
 }
