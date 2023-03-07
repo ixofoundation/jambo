@@ -4,7 +4,7 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import Card, { CARD_BG_COLOR, CARD_COLOR, CARD_SIZE } from '@components/Card/Card';
+import Card, { CARD_SIZE } from '@components/Card/Card';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
 import IconText from '@components/IconText/IconText';
@@ -32,8 +32,12 @@ import {
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
-import { address } from '@utils/opera';
-import { denom } from '@components/AmountAndDenom/AmountAndDenom.module.scss';
+import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
+import Cross from '@icons/cross.svg';
+import Plus from '@icons/plus.svg';
+import Correct from '@icons/correct.svg';
+import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
+import BottomSheet from '@components/BottomSheet/BottomSheet';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -66,6 +70,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
 
+  const showCancelTransactionModal = (index: number) => (e: Event | any) => {
+    e.preventDefault();
+    setTrxCancelId(index);
+  };
+
+  const hideCancelTransactionModal = () => setTrxCancelId(undefined);
+
   const addingNewTransaction = (e: Event | any) => {
     e.preventDefault();
     if (handleNextMultiSend)
@@ -80,6 +91,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const handleDeleteMultiSend = (e: Event | any) => {
     e.preventDefault();
     if (deleteMultiSend) deleteMultiSend(trxCancelId!);
+    hideCancelTransactionModal();
   };
 
   useEffect(() => {
@@ -166,7 +178,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       [trx],
       undefined,
       defaultTrxFeeOption,
-      (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '', // need to sort out broadcast error
+      (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
       chainInfo as KEPLR_CHAIN_INFO_TYPE,
     );
     if (hash) setSuccessHash(hash);
@@ -225,26 +237,51 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                   const addressAmount = amount![index];
                   const addressToken = token![index];
                   return (
-                    <Card>
-                      <AmountAndDenom amount={addressAmount} denom={addressToken.denom} />
-                      <br />
-                      <div className={styles.multiMsgAddresses}>
-                        <p className={utilsStyles.label}>to:</p>
-                        <Input
-                          name='address'
-                          required
-                          value={address}
-                          className={styles.multiMsgAddressesInput}
-                          align='center'
-                          disabled
-                        />
+                    <Card className={styles.spaceBetweenCards}>
+                      <div className={styles.cardContent}>
+                        <div>
+                          <AmountAndDenom amount={addressAmount} denom={addressToken.denom} />
+                          <div className={styles.multiMsgAddresses}>
+                            <p className={styles.addressLabel}>to:</p>
+                            <Input
+                              name='address'
+                              required
+                              value={address}
+                              className={styles.multiMsgAddressesInput}
+                              align='center'
+                              disabled
+                            />
+                          </div>
+                        </div>
+                        <ButtonRound
+                          className={styles.cancelBtn}
+                          size={BUTTON_ROUND_SIZE.mediumLarge}
+                          color={BUTTON_ROUND_COLOR.white}
+                          onClick={showCancelTransactionModal(index)}
+                        >
+                          <ColoredIcon icon={Cross} size={23} color={ICON_COLOR.primary} />
+                        </ButtonRound>
                       </div>
                     </Card>
                   );
                 })}
             </div>
-            <button onClick={handleDeleteMultiSend}>x</button>
-            <button onClick={addingNewTransaction}>+</button>
+            <ButtonRound size={BUTTON_ROUND_SIZE.mediumLarge} onClick={addingNewTransaction}>
+              <Plus className={styles.plusIcon} />
+            </ButtonRound>
+            {typeof trxCancelId === 'number' && (
+              <BottomSheet onClose={hideCancelTransactionModal}>
+                <div className={styles.bottomSheetContent}>
+                  <div className={styles.bottomSheetText}>
+                    <span className={styles.spaceBetweenText}>Are you sure you wish to remove</span> <br />{' '}
+                    <span>this send action ?</span>
+                  </div>
+                  <ButtonRound size={BUTTON_ROUND_SIZE.mediumLarge} onClick={handleDeleteMultiSend}>
+                    <Correct className={styles.plusIcon} />
+                  </ButtonRound>
+                </div>
+              </BottomSheet>
+            )}
           </form>
         ) : message === STEPS.staking_MsgDelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>

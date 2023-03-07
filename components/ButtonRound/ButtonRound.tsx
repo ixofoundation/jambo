@@ -12,6 +12,7 @@ export enum BUTTON_ROUND_COLOR {
   disabled = 'withDisabledBgColor',
   grey = 'withGreyBgColor',
   lightGrey = 'withLightGreyBgColor',
+  white = 'withWhiteBgColor',
 }
 
 export enum BUTTON_ROUND_SIZE {
