@@ -1,4 +1,4 @@
-import { ChangeEvent, FC } from 'react';
+import { ChangeEvent, FC, ReactNode } from 'react';
 
 import utilsStyles from '@styles/utils.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
@@ -14,6 +14,7 @@ type ValidatorListProps = {
   delegatedValidatorsOnly: boolean;
   onValidatorClick: (validator: VALIDATOR) => () => void;
   exclude?: string[];
+  noValidators?: ReactNode;
 };
 
 const ValidatorList: FC<ValidatorListProps> = ({
@@ -22,6 +23,7 @@ const ValidatorList: FC<ValidatorListProps> = ({
   excludeValidators = [],
   delegatedValidatorsOnly,
   onValidatorClick,
+  noValidators: NoValidators,
 }) => {
   const { validators, filterValidators, validatorsLoading, searchFilter, sortFilter } = useGlobalValidators({
     delegatedValidatorsOnly,
@@ -40,8 +42,11 @@ const ValidatorList: FC<ValidatorListProps> = ({
 
   if (validatorsLoading) return <Loader />;
 
-  // if (!validators?.length) return null;
+  if (!!NoValidators && (validators === null || (delegatedValidatorsOnly && !validators.length)))
+    return <>{NoValidators}</>;
 
+  // if (!validators?.length) return null;
+  console.log('validators', validators);
   return (
     <>
       <p className={utilsStyles.label}>{label}</p>
