@@ -9,7 +9,7 @@ import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
-import { calculateMaxTokenAmount, validateAmountAgainstBalance } from '@utils/currency';
+import { validateAmountAgainstBalance } from '@utils/currency';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { CURRENCY_TOKEN } from 'types/wallet';
@@ -22,8 +22,8 @@ type DefineAmountTokenProps = {
 };
 
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
-  const [amount, setAmount] = useState(data?.amount?.toString() ?? '');
-  const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | null>(data?.token || null);
+  const [amount, setAmount] = useState(data?.amount.toString() ?? '');
+  const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>(data?.token || undefined);
   const { wallet, fetchAssets } = useContext(WalletContext);
 
   useEffect(() => {
@@ -31,7 +31,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   }, []);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setAmount(event.target.value);
+    let newAmount = event.target.value;
+    // cannot use thousands separators
+    // newAmount = formatTokenAmount(formattedAmountToNumber(newAmount), getDecimalsFromCurrencyToken(selectedOption));
+    setAmount(newAmount);
   };
 
   const formIsValid = () =>
@@ -42,7 +45,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
     if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
-    onSuccess({ amount: Number.parseFloat(amount), token: selectedOption! });
+    onSuccess({
+      amount: Number(amount),
+      token: selectedOption!,
+    });
   };
 
   return (
@@ -61,8 +67,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>Enter an amount to send</p>
             <InputWithMax
-              maxAmount={calculateMaxTokenAmount(Number(selectedOption?.amount ?? 0), 6, true)}
-              maxDenom={selectedOption?.token?.coinDenom ?? selectedOption?.denom ?? '-'}
+              maxToken={selectedOption}
               onMaxClick={(maxAmount) => setAmount(maxAmount.toString())}
               name='walletAddress'
               type='number'

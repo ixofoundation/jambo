@@ -44,11 +44,11 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
   const [successHash, setSuccessHash] = useState<string | undefined>();
   const [loading, setLoading] = useState<boolean>(false);
   const [amount, setAmount] = useState<number>(0);
-  const [token, setToken] = useState<CURRENCY_TOKEN | null>(null);
+  const [token, setToken] = useState<CURRENCY_TOKEN | undefined>();
   const [dstAddress, setDstAddress] = useState<string>(''); // destination address
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
-  const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
-  const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
+  const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
+  const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
 
   useEffect(() => {
@@ -167,7 +167,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.bank_MsgSend ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p className={utilsStyles.label}>I am sending</p>
-            <AmountAndDenom amount={amount} denom={token?.token?.coinDenom ?? token?.denom ?? ''} />
+            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
             <br />
             <p className={utilsStyles.label}>to the address:</p>
             <Input name='address' required value={dstAddress} className={styles.stepInput} align='center' disabled />
@@ -175,7 +175,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.staking_MsgDelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             {message === STEPS.staking_MsgDelegate && <p>Delegating</p>}
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
+            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
 
@@ -184,7 +184,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.staking_MsgUndelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             {message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
+            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
@@ -193,7 +193,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.staking_MsgRedelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p>Redelegate</p>
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} />
+            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
             <br />
             <p>from</p>
             <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />

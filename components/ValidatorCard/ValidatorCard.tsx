@@ -4,7 +4,6 @@ import Image from 'next/image';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './ValidatorCard.module.scss';
 import Card, { CARD_BG_COLOR, CARD_COLOR, CARD_SIZE } from '@components/Card/Card';
-import { CURRENCY_TOKEN } from 'types/wallet';
 import { VALIDATOR } from 'types/validators';
 import {
   formatTokenAmount,
@@ -19,13 +18,6 @@ type ValidatorCardProps = {
 
 const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
   const delegated = !!validator.delegation?.balance;
-  const delegationAmount = delegated ? getAmountFromCurrencyToken(validator.delegation?.balance as CURRENCY_TOKEN) : 0;
-  const delegationDenom = delegated
-    ? getDisplayDenomFromCurrencyToken(validator.delegation?.balance as CURRENCY_TOKEN)
-    : '';
-  const delegationDecimals = delegated
-    ? getDecimalsFromCurrencyToken(validator.delegation?.balance as CURRENCY_TOKEN)
-    : 0;
 
   return (
     <>
@@ -60,7 +52,11 @@ const ValidatorCard: FC<ValidatorCardProps> = ({ validator }) => {
           >
             <span>My stake:</span>
             <span>
-              {formatTokenAmount(delegationAmount, delegationDecimals)} {delegationDenom}
+              {formatTokenAmount(
+                getAmountFromCurrencyToken(validator.delegation?.balance),
+                getDecimalsFromCurrencyToken(validator.delegation?.balance),
+              )}{' '}
+              {getDisplayDenomFromCurrencyToken(validator.delegation?.balance)}
             </span>
           </Card>
         </>
