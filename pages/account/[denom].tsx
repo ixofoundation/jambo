@@ -9,7 +9,6 @@ import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import IconText from '@components/IconText/IconText';
 import Footer from '@components/Footer/Footer';
 import Header from '@components/Header/Header';
-import Anchor from '@components/Anchor/Anchor';
 import Head from '@components/Head/Head';
 import SadFace from '@icons/sad_face.svg';
 import { formatTokenAmount, getDecimalsFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
