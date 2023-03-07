@@ -14,8 +14,10 @@ import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
 import Modal from '@components/Modal/Modal';
 import Head from '@components/Head/Head';
+import useWindowDimensions from '@hooks/windowDimensions';
 import { urlEncodeIbcDenom } from '@utils/encoding';
 import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
 import useModalState from '@hooks/modalState';
 import config from '@constants/config.json';
 import { WALLETS } from '@constants/wallet';
@@ -23,6 +25,8 @@ import { WALLETS } from '@constants/wallet';
 const Account: NextPage = () => {
   const [QRVisible, showQR, hideQR] = useModalState(false);
   const { wallet, updateWalletType, logoutWallet } = useContext(WalletContext);
+  const { chainInfo } = useContext(ChainContext);
+  const { width } = useWindowDimensions();
 
   const { push } = useRouter();
   const handleTokenClick = (denom: string) => push(`/account/${urlEncodeIbcDenom(denom)}`);
@@ -63,11 +67,25 @@ const Account: NextPage = () => {
               <Modal onClose={hideQR}>
                 <div className={utilsStyles.columnAlignCenter}>
                   <div className={utilsStyles.spacer1} />
-                  <sub>...IN PROGRESS...</sub>
-                  <div className={utilsStyles.spacer1} />
+                  <div className={utilsStyles.usernameWrapper}>
+                    <ImageWithFallback
+                      fallbackSrc={'/images/chain-logos/fallback.png'}
+                      src={chainInfo?.chainSymbolImageUrl ?? ''}
+                      width={32}
+                      height={32}
+                      alt='account'
+                    />
+                    <h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
+                  </div>
+                  <div className={utilsStyles.spacer2} />
                   <QRCode value={wallet.user.address} size={150} />
                   <div className={utilsStyles.spacer3} />
-                  <AddressActionButton address={wallet.user.address} copyOrQr='copy' onCopyOrQrClick={showQR} />
+                  <AddressActionButton
+                    shortAddress={wallet.user.address.length >= 42 || (width ?? 0) <= 500}
+                    address={wallet.user.address}
+                    copyOrQr='copy'
+                    onCopyOrQrClick={showQR}
+                  />
                   <div className={utilsStyles.spacer1} />
                 </div>
               </Modal>
