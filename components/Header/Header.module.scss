@@ -1,78 +1,87 @@
 .nav {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	z-index: 10;
-	height: var(--header-height);
-	background-color: var(--accent-color);
-	display: grid;
-	grid-template-columns: 1fr auto 1fr;
-	grid-template-rows: 1fr auto 1fr;
-	gap: 6px 15px;
-	align-items: center;
-	justify-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: var(--header-height);
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 10px;
+  justify-content: space-between;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  padding: 0 5px;
+}
+
+.dappStoreIcon {
+  margin: 15px 20px;
+}
+
+.settingsIcon {
+  margin: 20px 25px;
 }
 
 .logo {
-	height: var(--header-logo-height);
-	width: var(--header-logo-width);
-	grid-column: 1 / 2;
-	grid-row: 1 / 4;
-	justify-self: end;
-	position: relative;
-}
-
-.logoCentered {
-	height: var(--header-logo-height);
-	width: var(--header-logo-width);
-	grid-column: 2 / 3;
-	grid-row: 2 / 3;
-	position: relative;
+  min-height: var(--header-logo-height);
+  min-width: var(--header-logo-width);
+  max-height: var(--header-logo-height);
+  max-width: var(--header-logo-width);
+  height: var(--header-logo-height);
+  width: var(--header-logo-width);
+  position: relative;
 }
 
 .name {
-	font-size: 1.8rem;
-	margin: 0;
-	color: var(--main-font-color-inverted);
+  font-size: calc(1.5 * var(--main-font-size));
+  font-weight: 400;
+  margin: 0 0 0 10px;
+  color: var(--primary-color);
+  text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .nameContainer {
-	position: relative;
-	grid-column: 2 / 3;
-	grid-row: 2 / 3;
+  min-width: 0;
 }
 
 .nameFormInput {
-	background: none;
-	border: none;
-	font-size: 1.2rem;
-	width: auto;
-	margin: 0;
-	color: var(--main-font-color-inverted);
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  width: auto;
+  margin: 0;
+  color: var(--main-font-color-inverted);
 }
 
 .subTitle {
-	grid-column: 2 / 3;
-	grid-row: 3 / 4;
-	margin: 0;
-	font-size: 0.8rem;
-	align-self: start;
-	color: var(--main-font-color-inverted);
+  margin: 0;
+  font-size: 0.8rem;
+  align-self: start;
+  color: var(--main-font-color-inverted);
 }
 
 .reloadButton {
-	position: absolute;
-	bottom: -10px;
-	left: 15px;
+  position: absolute;
+  bottom: -10px;
+  left: 15px;
 }
 
 .configureButton {
-	position: absolute;
-	bottom: -5px;
-	right: -10px;
+  position: absolute;
+  bottom: -5px;
+  right: -10px;
 }
 
 .modalInput {
-	width: 100%;
+  width: 100%;
 }

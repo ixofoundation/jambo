@@ -1,7 +1,7 @@
 import {
-	ChainNetwork,
-	KeplrChainInfo,
-	RegistryChainInfo,
+  ChainNetwork,
+  KeplrChainInfo,
+  RegistryChainInfo,
 } from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
 
 export type REGISTRY_CHAIN_INFO_TYPE = RegistryChainInfo;
@@ -10,9 +10,15 @@ export type KEPLR_CHAIN_INFO_TYPE = KeplrChainInfo;
 export type CHAIN_NETWORK_TYPE = ChainNetwork;
 
 export type CHAIN_DROPDOWN_OPTION_TYPE = {
-	value: string;
-	label: string;
-	img: string;
+  value: string;
+  label: string;
+  img: string;
+};
+
+export type CHAIN_INFO_REQUEST = {
+  chainName: string;
+  chainNetwork: CHAIN_NETWORK_TYPE;
+  chainInfo: KEPLR_CHAIN_INFO_TYPE | undefined;
 };
 
 // Example of send action

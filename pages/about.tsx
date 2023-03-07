@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router';
 import type { NextPage } from 'next';
 import cls from 'classnames';
 
@@ -9,25 +10,24 @@ import config from '@constants/config.json';
 import Head from '@components/Head/Head';
 
 const About: NextPage = () => {
-	return (
-		<>
-			<Head title="About" description={config.siteDescriptionMeta} />
+  const { replace } = useRouter();
 
-			<Header />
+  if (!config.about) replace('/settings');
 
-			<main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
-				<div className={utilsStyles.spacerFlex} />
-				<h2 className={styles.title}>About</h2>
-				<p className={styles.text} dangerouslySetInnerHTML={{ __html: config.about }} />
+  return (
+    <>
+      <Head title='About' description={config.siteDescriptionMeta} />
 
-				{/* <h2 className={styles.title}>Account History</h2> */}
+      <Header allowBack />
 
-				<Footer onBackUrl="/" />
-				<div className={utilsStyles.spacerFlex} />
-				<div className={utilsStyles.spacerFlex} />
-			</main>
-		</>
-	);
+      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
+        <div className={utilsStyles.spacer3Flex} />
+        <h2 className={styles.title}>About</h2>
+        <p className={styles.text} dangerouslySetInnerHTML={{ __html: config.about }} />
+      </main>
+      <Footer showAccountButton showActionsButton />
+    </>
+  );
 };
 
 export default About;

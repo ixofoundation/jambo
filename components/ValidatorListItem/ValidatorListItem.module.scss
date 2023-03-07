@@ -1,66 +1,54 @@
 .validatorWrapper {
-	// cursor: pointer;
-	width: 100%;
-	background-color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
-	margin: 5px 0;
-	text-align: initial;
+  width: 100%;
+  background-color: var(--light-grey-color);
+  border: none;
+  margin: 7px 0;
+  text-align: initial;
 
-	&.delegatedValidator {
-		background-color: var(--accent-color);
-		color: var(--light-grey-color);
-	}
+  &.delegatedValidator {
+    background-color: var(--primary-color);
+    color: var(--light-grey-color);
+  }
 
-	&.clickable {
-		cursor: pointer;
-	}
+  &.clickable {
+    cursor: pointer;
+  }
 
-	.row {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-between;
-	}
+  .row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 
-	.validatorRank {
-		font-weight: 500;
-		margin-right: 0.7rem;
-		// font-size: 1.2rem;
-	}
+  .validatorRank {
+    margin-right: 10px;
+  }
 
-	.validatorAvatar {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		margin-right: 0.7rem;
-		background-color: var(--grey-color);
-		overflow: hidden;
-		position: relative;
+  .validatorAvatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background-color: var(--grey-color);
+    overflow: hidden;
+    position: relative;
+  }
 
-		// img {
-		// 	width: 100%;
-		// 	height: 100%;
-		// }
-	}
+  .validatorMoniker {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex: 1;
+  }
 
-	.validatorMoniker {
-		white-space: nowrap;
-		text-overflow: ellipsis;
-		overflow: hidden;
-		flex: 1;
-		font-weight: 500;
-	}
+  .validatorCommission {
+    margin-left: 15px;
+  }
 
-	.validatorCommission {
-		font-weight: 500;
-		margin-left: 1rem;
-	}
-
-	.validatorText {
-		font-weight: 400;
-		font-size: 0.9rem;
-		margin-top: 8px;
-	}
+  .validatorText {
+    font-weight: 400;
+    font-size: 0.9rem;
+    margin-top: 8px;
+  }
 }

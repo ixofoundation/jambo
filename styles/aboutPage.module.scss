@@ -1,22 +1,18 @@
 .about {
-	max-width: 500px;
-	margin: 0 auto;
+  max-width: var(--max-width);
+  margin: 0 auto;
 }
 
 .title {
-	margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .text {
-	margin-top: 0.7rem;
-	margin-bottom: 1.5rem;
-	font-size: 0.9rem;
+  margin-top: 0.7rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
 
-	a {
-		color: var(--accent-color);
-	}
-}
-
-.notFound {
-	color: var(--grey-color);
+  a {
+    color: var(--primary-color);
+  }
 }

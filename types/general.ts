@@ -1,5 +1,5 @@
 export interface IObjectKeys {
-	[key: string]: string | number | undefined | boolean | Array<any> | IObjectKeys;
+  [key: string]: string | number | undefined | boolean | Array<any> | IObjectKeys;
 }
 
 // Makes certain fields on Type optional eg: type OptionalNameAgeDeveloper = MakeOptional<Developer, 'name' | 'age>

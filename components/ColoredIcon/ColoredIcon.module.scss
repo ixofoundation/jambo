@@ -1,0 +1,66 @@
+.iconWrapper {
+  margin: 0;
+  padding: 0;
+
+  & svg {
+    & path {
+      fill: #fff;
+    }
+  }
+
+  &.withPrimaryColor {
+    & svg {
+      & path {
+        fill: var(--primary-color);
+      }
+    }
+  }
+
+  &.withSecondaryColor {
+    & svg {
+      & path {
+        fill: var(--secondary-color);
+      }
+    }
+  }
+
+  &.withTertiaryColor {
+    & svg {
+      & path {
+        fill: var(--tertiary-color);
+      }
+    }
+  }
+
+  &.withSuccessColor {
+    & svg {
+      & path {
+        fill: var(--success-color);
+      }
+    }
+  }
+
+  &.withDisabledColor {
+    & svg {
+      & path {
+        fill: var(--disabled-color);
+      }
+    }
+  }
+
+  &.withGreyColor {
+    & svg {
+      & path {
+        fill: var(--grey-color);
+      }
+    }
+  }
+
+  &.withLightGreyColor {
+    & svg {
+      & path {
+        fill: var(--light-grey-color);
+      }
+    }
+  }
+}

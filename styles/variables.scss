@@ -1,18 +1,22 @@
 :root {
-	--bg-color: white;
-	--accent-color: #2b84a3;
-	--success-color: #22c55e;
-	--disabled-color: #d1d5db;
-	--footer-bg-color: #e5e7eb;
-	--grey-color: #9ca3af;
-	--light-grey-color: #f3f4f6;
-	--main-font-size: 16px;
-	--main-font-color: rgba(0, 0, 0, 0.9);
-	--main-font-color-inverted: rgba(255, 255, 255, 1);
-	--button-border-radius: 18px;
-	--header-height: 120px;
-	--header-logo-width: 55px;
-	--header-logo-height: 55px;
-	--footer-height: 50px;
-	--card-border-radius: 8px;
+  --bg-color: white;
+  --primary-color: #1db3d3;
+  --secondary-color: #1297b4;
+  --tertiary-color: #fc9a63;
+  --success-color: #22c55e;
+  --disabled-color: #d1d5db;
+  --footer-bg-color: white;
+  --grey-color: #9ca3af;
+  --light-grey-color: #f0f0f0;
+  --backdrop-color: rgba(255, 255, 255, 0.1);
+  --main-font-size: 16px;
+  --main-font-color: rgba(0, 0, 0, 0.9);
+  --main-font-color-inverted: rgba(255, 255, 255, 1);
+  --button-border-radius: 18px;
+  --header-height: 90px;
+  --header-logo-width: 42px;
+  --header-logo-height: 42px;
+  --footer-height: 90px;
+  --card-border-radius: 16px;
+  --max-width: 400px;
 }

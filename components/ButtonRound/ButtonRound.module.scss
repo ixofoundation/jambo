@@ -1,71 +1,95 @@
 .buttonContainer {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 .button {
-	background-color: var(--accent-color);
-	border: none;
-	padding: 0.5rem;
-	border-radius: 100px;
-	cursor: pointer;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	position: relative;
+  background-color: var(--bg-color);
+  border: none;
+  padding: 8px;
+  border-radius: 100px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 
-	path {
-		fill: var(--main-font-color-inverted);
-	}
+  path {
+    fill: var(--main-font-color-inverted);
+  }
 }
 
 .label {
-	margin-top: 0.5rem;
+  margin-top: 8px;
+}
+
+.xlarge {
+  padding: 20px;
 }
 
 .large {
-	padding: 1rem;
+  padding: 16px;
 }
 
 .mediumLarge {
-	padding: 0.75rem;
+  padding: 12px;
 }
 
 .small {
-	padding: 0.3rem;
+  padding: 5px;
 }
 
 .xsmall {
-	padding: 0.15rem;
+  padding: 2px;
+}
+
+.xxsmall {
+  padding: 0;
+}
+
+.withPrimaryBgColor {
+  background-color: var(--primary-color);
+}
+
+.withSecondaryBgColor {
+  background-color: var(--secondary-color);
+}
+
+.withTertiaryBgColor {
+  background-color: var(--tertiary-color);
 }
 
 .withSuccessBgColor {
-	background-color: var(--success-color);
+  background-color: var(--success-color);
 }
 
 .withDisabledBgColor {
-	background-color: var(--disabled-color);
+  background-color: var(--disabled-color);
 }
 
 .withGreyBgColor {
-	background-color: var(--grey-color);
+  background-color: var(--grey-color);
+}
+
+.withLightGreyBgColor {
+  background-color: var(--light-grey-color);
 }
 
 .successMark {
-	background-color: var(--success-color);
-	border-radius: 50%;
-	padding: 0.2rem;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	position: absolute;
-	right: 0;
-	top: 60px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  padding: 0.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  right: 0;
+  top: 60px;
 
-	path {
-		fill: var(--main-font-color-inverted);
-	}
+  path {
+    fill: var(--main-font-color-inverted);
+  }
 }

@@ -1,31 +1,38 @@
 .account {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 
-	.column {
-		display: flex;
-		flex-direction: column;
+  .column {
+    position: relative;
+    margin: 0 10px;
 
-		.copied {
-			margin: 0;
-			font-size: 0.8rem;
-			color: var(--accent-color);
-			text-align: center;
-		}
+    .copied {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 200%);
+      font-size: 0.8rem;
+      color: var(--primary-color);
+      text-align: center;
+    }
 
-		.card {
-			padding: 4px 6px;
-			max-width: 47vw;
-			text-overflow: ellipsis;
-			overflow: hidden;
-			font-size: 0.86rem;
-			cursor: pointer;
-		}
-	}
+    .address {
+      padding-left: 24px;
+      padding-right: 24px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      font-size: 0.86rem;
+      cursor: pointer;
+      border: 1px solid transparent;
 
-	.button {
-		margin-left: 5px;
-	}
+      @media only screen and (min-width: 425px) {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .button {
+    margin-left: 5px;
+  }
 }

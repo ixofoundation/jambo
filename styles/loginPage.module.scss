@@ -1,75 +1,75 @@
 .mnemonicsWrapper {
-	margin: 20px;
+  margin: 20px;
 }
 
 .mnemonics {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	max-width: 500px;
-	gap: 8px;
-	align-items: stretch;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  max-width: 500px;
+  gap: 8px;
+  align-items: stretch;
 }
 
 .emptyMnemonic {
-	border-radius: var(--card-border-radius);
-	border: 1px solid var(--accent-color);
-	padding: 0.5rem 2.5rem;
-	min-height: 35px;
+  border-radius: var(--card-border-radius);
+  border: 1px solid var(--primary-color);
+  padding: 0.5rem 2.5rem;
+  min-height: 35px;
 }
 
 .mnemonic {
-	background-color: var(--accent-color);
-	border-radius: var(--card-border-radius);
-	color: var(--main-font-color-inverted);
-	padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  border-radius: var(--card-border-radius);
+  color: var(--main-font-color-inverted);
+  padding: 0.5rem 1rem;
 }
 
 .mnemonicTitle {
-	font-size: 1.25rem;
+  font-size: 1.25rem;
 }
 
 .copyContainer {
-	display: flex;
-	flex-direction: row;
-	justify-content: center;
-	align-items: center;
-	margin-top: 20px;
-	cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  cursor: pointer;
 
-	path {
-		fill: var(--accent-color);
-	}
+  path {
+    fill: var(--primary-color);
+  }
 
-	p {
-		margin-left: 8px;
-		font-size: 0.9rem;
-	}
+  p {
+    margin-left: 8px;
+    font-size: 0.9rem;
+  }
 }
 
 .mnemonicForm {
-	width: 100%;
-	max-width: 500px;
-	display: grid;
-	grid-template-columns: auto 1fr auto 1fr;
-	gap: 12px 2px;
-	:nth-child(4n + 3) {
-		padding-left: 10px;
-	}
+  width: 100%;
+  max-width: 500px;
+  display: grid;
+  grid-template-columns: auto 1fr auto 1fr;
+  gap: 12px 2px;
+  :nth-child(4n + 3) {
+    padding-left: 10px;
+  }
 
-	p {
-		color: var(--grey-color);
-		margin: 8px 0;
-	}
+  p {
+    color: var(--grey-color);
+    margin: 8px 0;
+  }
 
-	input {
-		width: 100%;
-		// height: auto;
-		background-color: var(---bg-color);
-		border: 1px solid var(--accent-color);
+  input {
+    width: 100%;
+    // height: auto;
+    background-color: var(---bg-color);
+    border: 1px solid var(--primary-color);
 
-		&:focus {
-			outline: solid 1px var(--accent-color);
-		}
-	}
+    &:focus {
+      outline: solid 1px var(--primary-color);
+    }
+  }
 }

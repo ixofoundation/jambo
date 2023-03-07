@@ -1,38 +1,38 @@
 .filtersWrapper {
-	width: 100%;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 10px;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .filterButton {
-	background: none;
-	cursor: pointer;
-	border: none;
-	outline: none;
-	color: var(--grey-color);
-	font-weight: 500;
-	font-size: 0.9rem;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
+  background: none;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  color: var(--grey-color);
+  font-weight: 500;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 
-	& svg {
-		margin: 0 0 0 3px;
-		width: 18px;
-		height: 18px;
+  & svg {
+    margin: 0 0 0 3px;
+    width: 18px;
+    height: 18px;
 
-		& path {
-			fill: var(--grey-color);
-		}
-	}
+    & path {
+      fill: var(--grey-color);
+    }
+  }
 }
 .activeFilterButton {
-	color: var(--accent-color);
+  color: var(--primary-color);
 
-	& svg > path {
-		fill: var(--accent-color);
-	}
+  & svg > path {
+    fill: var(--primary-color);
+  }
 }

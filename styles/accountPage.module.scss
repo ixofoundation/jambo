@@ -1,0 +1,51 @@
+.denomPage {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.totalBalance {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin: 0 0 1rem;
+}
+
+.assetRow {
+  padding: 5px 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.dot {
+  &::before {
+    content: '';
+    display: inline-block;
+    height: 12px;
+    width: 12px;
+    border-radius: 6px;
+    margin-right: 8px;
+    background-color: #155;
+  }
+  &.primaryDot {
+    &::before {
+      background-color: var(--primary-color);
+    }
+  }
+  &.secondaryDot {
+    &::before {
+      background-color: var(--secondary-color);
+    }
+  }
+  &.tertiaryDot {
+    &::before {
+      background-color: var(--tertiary-color);
+    }
+  }
+}
+
+.assetLabel {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}

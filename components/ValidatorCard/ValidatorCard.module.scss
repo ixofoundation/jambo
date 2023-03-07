@@ -1,59 +1,44 @@
 .validatorCard {
-	width: 100%;
-	background-color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
+  padding: 1rem;
 }
 
 .headerRow {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	margin-bottom: 5px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 5px;
 
-	.validatorHeader {
-		font-size: 1.2rem;
-		font-weight: 500;
-	}
+  .validatorHeader {
+    font-size: 1.1rem;
+  }
 }
 
 .validatorAvatar {
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	margin-right: 0.7rem;
-	background-color: var(--grey-color);
-	overflow: hidden;
-	position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  margin-right: 0.7rem;
+  background-color: var(--grey-color);
+  overflow: hidden;
+  position: relative;
 }
 
 .detailRow {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	margin: 20px 0;
-	font-size: 0.9rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0;
+  font-size: 0.9rem;
 
-	& p {
-		margin: 0;
-		padding: 0;
-	}
+  & p {
+    margin: 0;
+    padding: 0;
+  }
 }
 
 .stakeCard {
-	width: 100%;
-	background-color: var(--accent-color);
-	color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
-	margin: 5px 0;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
-	font-weight: 400;
-	font-size: 1rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }

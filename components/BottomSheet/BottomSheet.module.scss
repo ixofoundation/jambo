@@ -1,0 +1,55 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  background-color: var(--backdrop-color);
+  z-index: 100;
+  margin: 0;
+  padding: 0;
+}
+
+.sheet {
+  height: auto;
+  min-height: 250px;
+  max-height: 500px;
+  width: 100%;
+  max-width: 500px;
+  background-color: var(--bg-color);
+  border-radius: var(--button-border-radius) var(--button-border-radius) 0 0;
+  padding: 1rem;
+  overflow: auto;
+}
+
+.sheetTitle {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.withPrimaryBgColor {
+  background-color: var(--primary-color);
+}
+
+.withSecondaryBgColor {
+  background-color: var(--secondary-color);
+}
+.withTertiaryBgColor {
+  background-color: var(--tertiary-color);
+}
+.withSuccessBgColor {
+  background-color: var(--success-color);
+}
+.withDisabledBgColor {
+  background-color: var(--disabled-color);
+}
+.withGreyBgColor {
+  background-color: var(--grey-color);
+}
+.withLightGreyBgColor {
+  background-color: var(--light-grey-color);
+}

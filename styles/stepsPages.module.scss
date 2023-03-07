@@ -1,137 +1,149 @@
 .stepContainer {
-	align-items: center;
+  align-items: center;
 
-	.stepInput {
-		width: 100%;
-	}
+  .stepInput {
+    width: 100%;
+  }
 
-	.amountAndTokenInputs {
-		width: 100%;
-		display: flex;
-		flex-direction: row;
+  .amountAndTokenInputs {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
 
-		.tokenInput {
-			margin-left: 10px;
-		}
+    .tokenInput {
+      margin-left: 10px;
+      text-align: center;
+    }
 
-		.stepInput {
-			text-align: right;
-		}
-	}
+    .stepInput {
+      text-align: center;
+    }
+  }
 
-	.stepsForm {
-		width: 100%;
-		max-width: 400px;
-		text-align: center;
+  .stepsForm {
+    width: 100%;
+    max-width: var(--max-width);
+    text-align: center;
 
-		.alignLeft {
-			text-align: left;
-		}
+    .alignLeft {
+      text-align: left;
+    }
 
-		.alignRight {
-			text-align: right;
-		}
+    .alignRight {
+      text-align: right;
+    }
 
-		.titleWithSubtext {
-			margin-bottom: 4px;
-		}
+    .titleWithSubtext {
+      margin-bottom: 4px;
+    }
 
-		.subtext {
-			font-size: 0.8rem;
-			color: var(--grey-color);
-			opacity: 0.8;
-			margin: 4px 0;
-		}
-	}
+    .label {
+      font-size: 1.1rem;
+    }
+
+    .caption {
+      font-size: 0.8rem;
+      padding-left: 2rem;
+      padding-right: 3rem;
+    }
+
+    .subtext {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      margin: 4px 0;
+    }
+  }
 }
 
 .qrScan {
-	path[fill^='#000'] {
-		fill: var(--accent-color);
-	}
+  path[fill^='#000'] {
+    fill: var(--primary-color);
+  }
 }
 
 .qrCameraMain {
-	padding-top: 0 !important;
+  padding-top: 0 !important;
 }
 
 .validatorWrapper {
-	// cursor: pointer;
-	width: 100%;
-	background-color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
-	margin: 5px 0;
-	text-align: initial;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	justify-content: space-between;
+  // cursor: pointer;
+  width: 100%;
+  background-color: var(--light-grey-color);
+  border: none;
+  border-radius: var(--card-border-radius);
+  padding: 0.7rem;
+  margin: 5px 0;
+  text-align: initial;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 
-	&.clickable {
-		cursor: pointer;
-	}
+  &.clickable {
+    cursor: pointer;
+  }
 
-	.validatorRank {
-		font-weight: 500;
-		margin-right: 0.7rem;
-		// font-size: 1.2rem;
-	}
+  .validatorRank {
+    font-weight: 500;
+    margin-right: 0.7rem;
+    // font-size: 1.2rem;
+  }
 
-	.validatorAvatar {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		margin-right: 0.7rem;
-		background-color: var(--grey-color);
-	}
+  .validatorAvatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin-right: 0.7rem;
+    background-color: var(--grey-color);
+  }
 
-	.validatorMoniker {
-		white-space: nowrap;
-		text-overflow: ellipsis;
-		overflow: hidden;
-		flex: 1;
-	}
+  .validatorMoniker {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    flex: 1;
+  }
 
-	.validatorCommission {
-		font-weight: 500;
-		margin-left: 0.7rem;
-	}
+  .validatorCommission {
+    font-weight: 500;
+    margin-left: 0.7rem;
+  }
 }
 
 .inputRow {
-	width: 100%;
-	display: flex;
-	flex-direction: row;
-	align-items: flex-end;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
 
-	& .amountWrapper {
-		flex: 1;
-		margin-right: 10px;
-	}
+  & .amountWrapper {
+    flex: 1;
+    margin-right: 10px;
+  }
 
-	& .tokenInput {
-		text-align: center;
-	}
+  & .tokenInput {
+    text-align: center;
+  }
 }
 
 .tokenWrapper {
-	max-width: 68px;
-	margin-left: 10px;
-	background-color: var(--light-grey-color);
-	border: none;
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
+  max-width: 68px;
+  margin-left: 10px;
+  background-color: var(--light-grey-color);
+  border: none;
+  border-radius: var(--card-border-radius);
+  padding: 0.7rem;
 }
 
 .rewardListItem {
-	width: 100%;
-	background-color: var(--accent-color);
-	border: none;
-	color: var(--light-grey-color);
-	border-radius: var(--card-border-radius);
-	padding: 0.7rem;
-	margin: 5px 0;
-	text-align: center;
+  width: 100%;
+  background-color: var(--primary-color);
+  border: none;
+  color: var(--light-grey-color);
+  border-radius: var(--card-border-radius);
+  padding: 0.7rem;
+  margin: 5px 0;
+  text-align: center;
 }

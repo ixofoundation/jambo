@@ -1,22 +1,22 @@
 .walletForm {
-	width: 100%;
-	max-width: 330px;
+  width: 100%;
+  max-width: 330px;
 
-	label {
-		// text-align: center;
-		font-size: 18px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
+  label {
+    // text-align: center;
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 
-	input {
-		margin-top: 10px;
-		margin-bottom: 25px;
-		width: 100%;
-	}
+  input {
+    margin-top: 10px;
+    margin-bottom: 25px;
+    width: 100%;
+  }
 
-	button {
-		display: none;
-	}
+  button {
+    display: none;
+  }
 }
