@@ -20,7 +20,7 @@ const AmountAndDenom = ({ amount, denom, microUnits = 0, highlighted = false }: 
         className={styles.amount}
         rounded
         color={highlighted ? CARD_COLOR.lightGrey : CARD_COLOR.text}
-        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.lightGrey}
+        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.white}
       >
         {formatTokenAmount(amount ?? 0, microUnits)}
       </Card>
@@ -29,7 +29,7 @@ const AmountAndDenom = ({ amount, denom, microUnits = 0, highlighted = false }: 
         className={styles.denom}
         rounded
         color={highlighted ? CARD_COLOR.lightGrey : CARD_COLOR.text}
-        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.lightGrey}
+        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.white}
       >
         {denom ?? '-'}
       </Card>

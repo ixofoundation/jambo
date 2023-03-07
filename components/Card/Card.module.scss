@@ -18,6 +18,10 @@
   width: max-content;
 }
 
+.whiteBgColor{
+  background-color: var(--bg-color);
+}
+
 .withPrimaryBgColor {
   background-color: var(--primary-color);
 }

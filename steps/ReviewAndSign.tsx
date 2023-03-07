@@ -33,6 +33,7 @@ import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { address } from '@utils/opera';
+import { denom } from '@components/AmountAndDenom/AmountAndDenom.module.scss';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -224,24 +225,26 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                   const addressAmount = amount![index];
                   const addressToken = token![index];
                   return (
-                    <Card key={`${address}_${index}`}>
-                      <AmountAndDenom amount={addressAmount} denom={addressToken} />
+                    <Card>
+                      <AmountAndDenom amount={addressAmount} denom={addressToken.denom} />
                       <br />
-                      <p className={utilsStyles.label}>to:</p>
-                      <Input
-                        name='address'
-                        required
-                        value={address}
-                        className={styles.stepInput}
-                        align='center'
-                        disabled
-                      />
+                      <div className={styles.multiMsgAddresses}>
+                        <p className={utilsStyles.label}>to:</p>
+                        <Input
+                          name='address'
+                          required
+                          value={address}
+                          className={styles.multiMsgAddressesInput}
+                          align='center'
+                          disabled
+                        />
+                      </div>
                     </Card>
                   );
                 })}
-              <button onClick={handleDeleteMultiSend}>x</button>
-              <button onClick={addingNewTransaction}>+</button>
             </div>
+            <button onClick={handleDeleteMultiSend}>x</button>
+            <button onClick={addingNewTransaction}>+</button>
           </form>
         ) : message === STEPS.staking_MsgDelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>

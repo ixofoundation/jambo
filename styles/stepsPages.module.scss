@@ -147,3 +147,13 @@
   margin: 5px 0;
   text-align: center;
 }
+.multiMsgAddresses{
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.multiMsgAddressesInput{
+  background-color: var(--bg-color);
+  width: 17.5rem;
+}
