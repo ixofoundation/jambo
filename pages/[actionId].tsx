@@ -43,7 +43,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
   const handleBack = () => {
     if (count === 0) {
       const newActionData = JSON.parse(JSON.stringify(action));
-      if (newActionData.steps.find((step: STEP) => step.id === STEPS.get_receiver_address).data.data.length > 1) {
+      if (newActionData.steps.find((step: STEP) => step.id === STEPS.get_receiver_address)?.data?.data?.length > 1) {
         newActionData.steps.forEach((step: STEP, index: number) => {
           if (step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address) {
             newActionData.steps[index].data.data.pop();
@@ -74,7 +74,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
     if (
       newActionData.steps.find(
         (step: STEP) => step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address,
-      ).data.data.length <= 1
+      )?.data?.data.length <= 1
     )
       return replaceRoute('/');
     newActionData.steps.forEach((step: STEP, index: number) => {
@@ -90,7 +90,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
   };
 
   const getStepComponent = (step: STEP) => {
-    switch (step.id) {
+    switch (step?.id) {
       case STEPS.get_receiver_address:
         return (
           <ReceiverAddress
