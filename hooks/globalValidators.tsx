@@ -18,7 +18,6 @@ type GlobalValidatorsReturn = {
   sortFilter: VALIDATOR_FILTER_TYPE;
   validators: VALIDATOR[] | null;
   validatorsLoading: boolean;
-  updateValidators: Function;
   filterValidators: (filterKey: FilterKey, filterValue?: FilterValue) => void;
 };
 type FilterKey = 'sort' | 'search';
@@ -44,15 +43,15 @@ const useGlobalValidators = ({
       updateValidators();
     }
   }, [queryClient]);
-
+  console.log({ delegatedValidatorsOnly });
   useEffect(() => {
     if (validators?.length) {
       let validatorList = delegatedValidatorsOnly
-        ? validators.filter((validator: VALIDATOR) => !!validator.delegation?.shares)
+        ? validators.filter((validator: VALIDATOR) => !!validator.delegation?.balance)
         : validators;
       validatorList = rewardedValidatorsOnly
-        ? validators.filter((validator: VALIDATOR) => !!validator.rewards?.length)
-        : validators;
+        ? validatorList.filter((validator: VALIDATOR) => !!validator.rewards?.length)
+        : validatorList;
       validatorList = validatorList.filter(customFilter);
       validatorList = filterValidators(validatorList, sortFilter, searchFilter);
       setValidatorsData(validatorList);
@@ -70,7 +69,6 @@ const useGlobalValidators = ({
     validators: validators?.length ? validatorsData : null,
     filterValidators: filterValidatorState,
     validatorsLoading: loading,
-    updateValidators,
     searchFilter,
     sortFilter,
   };

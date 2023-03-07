@@ -27,19 +27,12 @@ type ValidatorAddressProps = {
 const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, config, excludeValidators }) => {
   const [selectedValidator, setSelectedValidator] = useState<VALIDATOR | null>(null);
   const { wallet } = useContext(WalletContext);
-  const { validators, filterValidators, validatorsLoading, searchFilter, sortFilter } = useGlobalValidators({
-    delegatedValidatorsOnly: config.delegatedValidatorsOnly,
-  });
 
   useEffect(() => {
     if (!config.showValidatorDetails && formIsValid()) {
       handleSubmit(null);
     }
   }, [selectedValidator]);
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    filterValidators('search', event.target.value);
-  };
 
   const formIsValid = () => selectedValidator?.address?.length;
 
@@ -51,11 +44,6 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
 
   const handleValidatorClick = (validator: VALIDATOR) => () => {
     setSelectedValidator(validator);
-  };
-
-  const handleFilterClick = (filterType: string) => (event: any) => {
-    event?.preventDefault();
-    filterValidators('sort', filterType);
   };
 
   const unselectValidator = () => {
@@ -87,12 +75,8 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
       <Header header={header} />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-        {validatorsLoading ? (
-          <Loader />
-        ) : !!config.requireFunds && !wallet?.balances?.balances?.length ? (
+        {!!config.requireFunds && !wallet?.balances?.balances?.length ? (
           <IconText title="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
-        ) : validators === null || (config.delegatedValidatorsOnly && !validators.length) ? (
-          <IconText title="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
         ) : (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
             <ValidatorList
@@ -101,6 +85,9 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
               delegatedValidatorsOnly={config.delegatedValidatorsOnly}
               onValidatorClick={handleValidatorClick}
               excludeValidators={[excludeValidators].flat()}
+              noValidators={
+                <IconText title="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
+              }
             />
           </form>
         )}
