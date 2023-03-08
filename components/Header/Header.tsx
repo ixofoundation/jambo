@@ -6,7 +6,6 @@ import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import Anchor from '@components/Anchor/Anchor';
 import VerticalDots from '@icons/vertical_dots.svg';
 import DappStore from '@icons/squares_grid.svg';
-import ArrowLeft from '@icons/arrow_left.svg';
 import { pushNewRoute } from '@utils/router';
 import config from '@constants/config.json';
 
