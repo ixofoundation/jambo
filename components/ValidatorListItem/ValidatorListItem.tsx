@@ -1,10 +1,16 @@
 import { FC, useContext, useEffect } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
+import cls from 'classnames';
 
 import styles from './ValidatorListItem.module.scss';
 import Card from '@components/Card/Card';
-import { getDisplayDenomFromDenom } from '@utils/currency';
+import {
+  formatTokenAmount,
+  getAmountFromCurrencyToken,
+  getDecimalsFromCurrencyToken,
+  getDisplayDenomFromCurrencyToken,
+} from '@utils/currency';
 import { WalletContext } from '@contexts/wallet';
 import { VALIDATOR } from 'types/validators';
 
@@ -25,7 +31,6 @@ const fetchValidatorAvatar = async (identity: string, onComplete: (url: string) 
 
 const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) => {
   const delegated = !!validator?.delegation?.shares;
-  const denom = getDisplayDenomFromDenom(validator?.delegation?.balance?.denom || '');
 
   const { updateValidatorAvatar } = useContext(WalletContext);
 
@@ -42,9 +47,7 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
     <Card
       key={validator.address}
       rounded={!delegated}
-      className={`${styles.validatorWrapper} ${onClick && styles.clickable} ${
-        delegated ? styles.delegatedValidator : ''
-      }`}
+      className={cls(styles.validatorWrapper, onClick && styles.clickable, delegated && styles.delegatedValidator)}
       onClick={onClick ? onClick(validator) : () => {}}
     >
       <div className={styles.row}>
@@ -61,7 +64,11 @@ const ValidatorListItem: FC<ValidatorListItemProps> = ({ validator, onClick }) =
         <div className={styles.row}>
           <div className={styles.validatorText}>My stake:</div>
           <div className={styles.validatorText}>
-            {Number(validator.delegation?.balance?.amount ?? 0) / Math.pow(10, 6)} {denom}
+            {formatTokenAmount(
+              getAmountFromCurrencyToken(validator.delegation?.balance),
+              getDecimalsFromCurrencyToken(validator.delegation?.balance),
+            )}{' '}
+            {getDisplayDenomFromCurrencyToken(validator.delegation?.balance)}
           </div>
         </div>
       )}

@@ -13,29 +13,41 @@ export const formatterUSD = new Intl.NumberFormat('en-US', {
   //maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
 });
 
+export const microAmountToAmount = (microAmount: number, microUnits: number = 6) => {
+  const amount = (microAmount ?? 0) / Math.pow(10, microUnits);
+  return amount;
+};
+
 export const calculateTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   let tokenAmount = amount;
   if (!amount) return 0;
-  if (microUnits) tokenAmount = tokenAmount / Math.pow(10, microUnits);
+  if (microUnits) tokenAmount = microAmountToAmount(tokenAmount, microUnits);
   if (floorAmount && tokenAmount >= 1) tokenAmount = Math.floor(tokenAmount);
   return tokenAmount;
 };
 
 export const formatTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   const tokenAmount = calculateTokenAmount(amount, microUnits, floorAmount);
-  return formatterToken.format(tokenAmount);
+  return formatterTokenAmount.format(tokenAmount);
 };
 
 export const calculateMaxTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   // assist user: subtract 0.3 for gas fees
   const maxTokenAmount = calculateTokenAmount(amount >= 0.3 ? amount - 0.3 : 0, microUnits, floorAmount);
-  return formatterToken.format(maxTokenAmount);
+  return formatterTokenAmount.format(maxTokenAmount);
 };
 
-export const formatterToken = new Intl.NumberFormat('en-US', {
+export const formatterTokenAmount = new Intl.NumberFormat('en-US', {
   //minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
   maximumFractionDigits: 6, // (causes 2500.99 to be printed as $2,501)
 });
+
+export const formattedAmountToNumber = (amount: string) => Number(amount?.replace(/\,/g, '') ?? 0);
+
+export const amountToMicroAmount = (amount: number, microUnits: number = 6) => {
+  const microAmount = (amount ?? 0) * Math.pow(10, microUnits);
+  return microAmount;
+};
 
 export type TokenDropdownType = ArrayElement<ReturnType<typeof generateUserTokensDropdown>>;
 

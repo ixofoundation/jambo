@@ -36,14 +36,12 @@ const determineDelegationBalance = (
   validatorBalance: CURRENCY_TOKEN | undefined,
 ): CURRENCY_TOKEN | undefined => {
   const ixoCurrency = source === 'wallet' ? walletBalances : source === 'validator' ? validatorBalance : undefined;
-  console.log({ source, walletBalances, validatorBalance, ixoCurrency });
-  const [tokenDropdown] = generateUserTokensDropdown(ixoCurrency ? [ixoCurrency] : []);
   return ixoCurrency;
 };
 
 const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header, validator, config }) => {
   const delegated = !!validator?.delegation?.shares;
-  const [amount, setAmount] = useState(data?.amount?.toString() ?? '');
+  const [amount, setAmount] = useState(data?.amount.toString() ?? '');
   const [max, setMax] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
 
@@ -72,7 +70,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
     if (!formIsValid()) return alert('Amount must be bigger than 0 and less than balance.');
-    onSuccess({ amount: Number.parseFloat(amount), token: max as CURRENCY_TOKEN });
+    onSuccess({ amount: Number(amount), token: max! });
   };
 
   const handleMaxClicked = () => {

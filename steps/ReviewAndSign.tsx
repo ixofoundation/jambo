@@ -64,11 +64,11 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [successHash, setSuccessHash] = useState<string | undefined>();
   const [loading, setLoading] = useState<boolean>(false);
   const [amount, setAmount] = useState<number | number[]>(0);
-  const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | null>(null);
+  const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | undefined>();
   const [dstAddress, setDstAddress] = useState<string | string[]>(''); // destination address
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
-  const [dstValidator, setDstValidator] = useState<VALIDATOR | null>(null); // destination validator
-  const [srcValidator, setSrcValidator] = useState<VALIDATOR | null>(null); // source validator
+  const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
+  const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
 
@@ -225,6 +225,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
               denom={(Array.isArray(token) ? token[0].denom ?? '' : token?.denom) ?? ''}
+              microUnits={0}
             />
             <br />
             <p className={utilsStyles.label}>to the address:</p>
@@ -302,6 +303,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <AmountAndDenom
               amount={amount as number}
               denom={getDisplayDenomFromCurrencyToken((token as CURRENCY_TOKEN) ?? '')}
+              microUnits={0}
             />
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
@@ -314,6 +316,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
               denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              microUnits={0}
             />
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
@@ -326,6 +329,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
               denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              microUnits={0}
             />
 
             <br />

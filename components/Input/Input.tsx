@@ -2,8 +2,14 @@ import { FC, InputHTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './Input.module.scss';
-import { CURRENCY } from 'types/wallet';
-import { calculateMaxTokenAmount } from '@utils/currency';
+import { CURRENCY_TOKEN } from 'types/wallet';
+import {
+  calculateMaxTokenAmount,
+  formattedAmountToNumber,
+  getAmountFromCurrencyToken,
+  getDecimalsFromCurrencyToken,
+  getDisplayDenomFromCurrencyToken,
+} from '@utils/currency';
 
 type InputProps = {
   label?: string;
@@ -46,18 +52,25 @@ const Input: FC<InputProps> = ({ label, align = 'start', className, ...other }) 
 export default Input;
 
 type InputWithMaxProps = {
-  maxAmount?: string;
-  maxDenom?: string;
-  onMaxClick: (amount: string) => void;
+  maxAmount?: number;
+  maxToken?: CURRENCY_TOKEN;
+  onMaxClick: (amount: number) => void;
 } & InputProps;
 
-export const InputWithMax = ({ maxAmount = '', maxDenom = '-', onMaxClick, ...other }: InputWithMaxProps) => {
-  const handleMaxClick = () => onMaxClick(maxAmount?.replace(/\,/g, '') ?? '0');
+export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, ...other }: InputWithMaxProps) => {
+  const amount = calculateMaxTokenAmount(
+    maxAmount ?? getAmountFromCurrencyToken(maxToken),
+    getDecimalsFromCurrencyToken(maxToken),
+    true,
+  );
+  const denom = getDisplayDenomFromCurrencyToken(maxToken);
+
+  const handleMaxClick = () => onMaxClick(formattedAmountToNumber(amount));
 
   return (
     <>
       <p className={cls(styles.max, styles.endAlign)} onClick={handleMaxClick}>
-        {maxAmount} {maxDenom} MAX
+        {amount} {denom} MAX
       </p>
       <Input {...other} />
     </>

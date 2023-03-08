@@ -1,12 +1,13 @@
 import { HTMLAttributes } from 'react';
+import cls from 'classnames';
 
 import styles from './TokenCard.module.scss';
+import utilsStyles from '@styles/utils.module.scss';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
-import { formatTokenAmount } from '@utils/currency';
 import Card, { CARD_SIZE } from '@components/Card/Card';
+import { formatTokenAmount } from '@utils/currency';
+import { getCSSVariable } from '@utils/styles';
 
-// TODO: generate available vs staked vs undelegating colored border
-// TODO: determine whether chain or ibc token
 // TODO: find dolor values
 
 const formatPercentage = (percentage: number) => {
@@ -16,11 +17,20 @@ const formatPercentage = (percentage: number) => {
 };
 
 const generateBalanceGradient = (available: number = 0, staked: number = 0, undelegating: number = 0) => {
+  // colors
+  const primaryColor = getCSSVariable('--primary-color');
+  const secondaryColor = getCSSVariable('--secondary-color');
+  const tertiaryColor = getCSSVariable('--tertiary-color');
+
+  // percentages
   const total = available + staked + undelegating;
   const availablePercentage = formatPercentage((available / total) * 100);
   const stakedPercentage = formatPercentage((staked / total) * 100);
   const undelegatingPercentage = formatPercentage((undelegating / total) * 100);
-  const result = `linear-gradient(to right, var(--primary-color) ${availablePercentage}, var(--secondary-color) ${availablePercentage}, var(secondary-color) ${stakedPercentage}, var(--tertiary-color) ${stakedPercentage}) 5 !important`;
+
+  // gradient
+  const result = `linear-gradient(to right, ${primaryColor} ${availablePercentage}, ${secondaryColor} ${availablePercentage}, ${secondaryColor} ${stakedPercentage}, ${tertiaryColor} ${stakedPercentage})`;
+
   return result;
 };
 
@@ -52,26 +62,33 @@ const TokenCard = ({
   const handleTokenClick = () => onTokenClick(denom);
 
   return (
-    <Card size={CARD_SIZE.xxsmall} className={styles.tokenCardWrapper} onClick={handleTokenClick}>
-      <div
-        className={styles.tokenCard}
-        style={{
-          borderImage: displayGradient ? generateBalanceGradient(available, staked, undelegating) : 'transparent',
-        }}
-      >
-        <ImageWithFallback
-          src={image}
-          alt={denom}
-          fallbackSrc='/images/chain-logos/fallback.png'
-          width={38}
-          height={38}
-        />
-        <div className={styles.tokenDenom}>
-          <p className={styles.denom}>{displayDenom}</p>
-          <p className={styles.denomType}>{type}</p>
-        </div>
-        <p>{formatTokenAmount(Number(available), 6, false)}</p>
+    <Card
+      size={CARD_SIZE.medium}
+      onClick={handleTokenClick}
+      className={cls(
+        styles.tokenCardWrapper,
+        utilsStyles.rowAlignCenter,
+        displayGradient && styles.gradientTokenCardWrapper,
+      )}
+    >
+      <ImageWithFallback
+        src={image}
+        alt={denom}
+        fallbackSrc='/images/chain-logos/fallback.png'
+        width={38}
+        height={38}
+      />
+      <div className={styles.tokenDenom}>
+        <p className={styles.denom}>{displayDenom}</p>
+        <p className={styles.denomType}>{type}</p>
       </div>
+      <p>{formatTokenAmount(Number(available), 6, false)}</p>
+      {displayGradient && (
+        <div
+          className={styles.gradient}
+          style={{ background: generateBalanceGradient(available, staked, undelegating) }}
+        />
+      )}
     </Card>
   );
 };
