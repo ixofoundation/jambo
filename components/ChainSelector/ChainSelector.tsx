@@ -4,9 +4,9 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './ChainSelector.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
+import Card, { CARD_BG_COLOR, CARD_BORDER_COLOR, CARD_SIZE } from '@components/Card/Card';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
-import Card, { CARD_SIZE } from '@components/Card/Card';
 import Loader from '@components/Loader/Loader';
 import { ChainContext } from '@contexts/chain';
 import useModalState from '@hooks/modalState';
@@ -25,7 +25,6 @@ const ChainSelector = ({}: ChainSelectorProps) => {
   }, [chainInfo, chain.chainLoading]);
 
   useEffect(() => {
-    console.log({ currentChainId });
     if (currentChainId) {
       hideChainSelect();
     }
@@ -52,13 +51,22 @@ const ChainSelector = ({}: ChainSelectorProps) => {
         )}
       </ButtonRound>
       {chainSelectVisible && (
-        <BottomSheet dismissable={!!currentChainId} onClose={hideChainSelect} title='Select a Chain'>
+        <BottomSheet
+          className={utilsStyles.columnAlignCenter}
+          dismissable={!!currentChainId}
+          onClose={hideChainSelect}
+          title='Select a Chain'
+        >
           {chains.map((chainOption) => (
             <Card
               className={cls(styles.chainWrapper)}
               key={chainOption.chainId}
               onClick={onChainClick(chainOption.chainId)}
               size={CARD_SIZE.small}
+              bgColor={chainOption.chainId === chainInfo?.chainId ? CARD_BG_COLOR.background : CARD_BG_COLOR.lightGrey}
+              borderColor={
+                chainOption.chainId === chainInfo?.chainId ? CARD_BORDER_COLOR.primary : CARD_BORDER_COLOR.lightGrey
+              }
             >
               <div className={utilsStyles.rowAlignCenter}>
                 {chainOption?.chainSymbolImageUrl && (
