@@ -56,6 +56,14 @@
     }
   }
 
+  &.withIconGreyColor {
+    & svg {
+      & path {
+        fill: var(--icon-grey-color);
+      }
+    }
+  }
+
   &.withLightGreyColor {
     & svg {
       & path {

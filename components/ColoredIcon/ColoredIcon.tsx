@@ -11,6 +11,7 @@ export enum ICON_COLOR {
   success = 'withSuccessColor',
   disabled = 'withDisabledColor',
   grey = 'withGreyColor',
+  iconGrey = 'withIconGreyColor',
   lightGrey = 'withLightGreyColor',
 }
 
