@@ -36,7 +36,7 @@ const Settings: NextPage = () => {
         >
           <Card className={utilsStyles.rowAlignCenter} size={CARD_SIZE.large}>
             <ColoredIcon icon={Document} size={24} color={ICON_COLOR.primary} className={styles.icon} />
-            <p className={styles.settingLabel}>about</p>
+            <p className={styles.settingLabel}>About</p>
           </Card>
         </Anchor>
         <div className={utilsStyles.spacer2} />
@@ -47,7 +47,7 @@ const Settings: NextPage = () => {
         >
           <Card className={utilsStyles.rowAlignCenter} size={CARD_SIZE.large}>
             <ColoredIcon icon={Document} size={24} color={ICON_COLOR.primary} className={styles.icon} />
-            <p className={styles.settingLabel}>terms & conditions</p>
+            <p className={styles.settingLabel}>Terms & Conditions</p>
           </Card>
         </Anchor>
         {EnableDeveloperMode && (

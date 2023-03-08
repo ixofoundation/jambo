@@ -21,6 +21,8 @@ import { ChainContext } from '@contexts/chain';
 import useModalState from '@hooks/modalState';
 import config from '@constants/config.json';
 import { WALLETS } from '@constants/wallet';
+import BottomSheet from '@components/BottomSheet/BottomSheet';
+import { CARD_BG_COLOR } from '@components/Card/Card';
 
 const Account: NextPage = () => {
   const [QRVisible, showQR, hideQR] = useModalState(false);
@@ -62,11 +64,10 @@ const Account: NextPage = () => {
               walletType={wallet.walletType}
             />
             <div className={utilsStyles.spacer3} />
-            <TokenList onTokenClick={handleTokenClick} />
+            <TokenList onTokenClick={handleTokenClick} displayGradient />
             {QRVisible && (
-              <Modal onClose={hideQR}>
+              <BottomSheet onClose={hideQR} bgColor={CARD_BG_COLOR.background}>
                 <div className={utilsStyles.columnAlignCenter}>
-                  <div className={utilsStyles.spacer1} />
                   <div className={utilsStyles.usernameWrapper}>
                     <ImageWithFallback
                       fallbackSrc={'/images/chain-logos/fallback.png'}
@@ -88,7 +89,7 @@ const Account: NextPage = () => {
                   />
                   <div className={utilsStyles.spacer1} />
                 </div>
-              </Modal>
+              </BottomSheet>
             )}
           </>
         ) : wallet.walletType && !wallet.user ? (

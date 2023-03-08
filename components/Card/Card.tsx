@@ -4,6 +4,7 @@ import cls from 'classnames';
 import styles from './Card.module.scss';
 
 export enum CARD_SIZE {
+  xlarge = 'xlarge',
   large = 'large',
   mediumLarge = 'mediumLarge',
   medium = '',
@@ -35,11 +36,23 @@ export enum CARD_BG_COLOR {
   lightGrey = 'withLightGreyBgColor',
 }
 
+export enum CARD_BORDER_COLOR {
+  none = '',
+  primary = 'withPrimaryBorderColor',
+  secondary = 'withSecondaryBorderColor',
+  tertiary = 'withTertiaryBorderColor',
+  success = 'withSuccessBorderColor',
+  disabled = 'withDisabledBorderColor',
+  grey = 'withGreyBorderColor',
+  lightGrey = 'withLightGreyBorderColor',
+}
+
 export type CardProps = {
   size?: CARD_SIZE;
   rounded?: boolean;
   color?: CARD_COLOR;
   bgColor?: CARD_BG_COLOR;
+  borderColor?: CARD_BORDER_COLOR;
 } & HTMLAttributes<HTMLDivElement>;
 
 const Card = ({
@@ -48,6 +61,7 @@ const Card = ({
   size = CARD_SIZE.medium,
   color = CARD_COLOR.text,
   bgColor = CARD_BG_COLOR.lightGrey,
+  borderColor = CARD_BORDER_COLOR.none,
   className,
   ...other
 }: CardProps) => {
@@ -58,6 +72,7 @@ const Card = ({
         styles[size as typeof CARD_SIZE.medium],
         styles[color as typeof CARD_COLOR.text],
         styles[bgColor as typeof CARD_BG_COLOR.lightGrey],
+        styles[borderColor as typeof CARD_BORDER_COLOR.none],
         rounded ? styles.roundedCard : styles.squaredCard,
         className,
       )}

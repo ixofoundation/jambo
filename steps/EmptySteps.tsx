@@ -27,7 +27,7 @@ const EmptySteps: FC<EmptyStepsProps> = ({ loading = false, signedIn = true }) =
         {loading ? (
           <Loader />
         ) : !signedIn ? (
-          <WalletCard name='Connect now' Img={WalletImg} onClick={navigateToAccount} />
+          <WalletCard name='Connect your Wallet' Img={WalletImg} onClick={navigateToAccount} />
         ) : (
           <p>Sorry, there is no steps for this action</p>
         )}

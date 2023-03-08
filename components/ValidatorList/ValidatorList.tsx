@@ -46,7 +46,7 @@ const ValidatorList: FC<ValidatorListProps> = ({
     return <>{NoValidators}</>;
 
   // if (!validators?.length) return null;
-  console.log('validators', validators);
+
   return (
     <>
       <p className={utilsStyles.label}>{label}</p>

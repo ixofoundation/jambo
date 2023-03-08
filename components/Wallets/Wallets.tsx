@@ -55,7 +55,7 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
           <div className={utilsStyles.spacer1} />
           <h3>No Wallet Detected</h3>
           <div className={utilsStyles.spacer2} />
-          <p>This app works best in an Opera mobile browser</p>
+          <p>This app works best in an Opera mobile browser on Android</p>
         </>
       )}
     </div>

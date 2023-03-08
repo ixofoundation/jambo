@@ -1,9 +1,10 @@
 .card {
   background-color: var(--light-grey-color);
   width: 100%;
-  padding: 0.5rem;
+  padding: 8px 16px;
   max-width: var(--max-width);
   margin: 0 auto;
+  border: 1px solid transparent;
 }
 
 .squaredCard {
@@ -76,6 +77,34 @@
   color: var(--light-grey-color);
 }
 
+.withPrimaryBorderColor {
+  border-color: var(--primary-color);
+}
+
+.withSecondaryBorderColor {
+  border-color: var(--secondary-color);
+}
+
+.withTertiaryBorderColor {
+  border-color: var(--tertiary-color);
+}
+
+.withSuccessBorderColor {
+  border-color: var(--success-color);
+}
+
+.withDisabledBorderColor {
+  border-color: var(--disabled-color);
+}
+
+.withGreyBorderColor {
+  border-color: var(--grey-color);
+}
+
+.withLightGreyBorderColor {
+  border-color: var(--light-grey-color);
+}
+
 .xlarge {
   padding: 18px 26px;
 }
@@ -86,10 +115,6 @@
 
 .mediumLarge {
   padding: 12px 20px;
-}
-
-.medium {
-  padding: 8px 16px;
 }
 
 .small {
