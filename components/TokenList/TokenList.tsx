@@ -11,11 +11,12 @@ import { TOKEN_BALANCE } from 'types/wallet';
 import { getTokenTypeFromCurrencyToken } from '@utils/currency';
 
 type TokenListProps = {
-  filter?: (asset: TOKEN_BALANCE) => boolean;
+  displayGradient?: boolean;
   onTokenClick: (denom: string) => void;
+  filter?: (asset: TOKEN_BALANCE) => boolean;
 };
 
-const TokenList = ({ filter = () => true, onTokenClick }: TokenListProps) => {
+const TokenList = ({ displayGradient, filter = () => true, onTokenClick }: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
   const { chainInfo } = useContext(ChainContext);
@@ -39,7 +40,7 @@ const TokenList = ({ filter = () => true, onTokenClick }: TokenListProps) => {
           .filter(filter)
           .map((token) => (
             <TokenCard
-              displayGradient
+              displayGradient={displayGradient}
               denom={token.denom}
               image={token.token.token?.coinImageUrl}
               displayDenom={token?.token?.token?.coinDenom ?? token.token.denom ?? token.denom}

@@ -62,7 +62,7 @@ const Account: NextPage = () => {
               walletType={wallet.walletType}
             />
             <div className={utilsStyles.spacer3} />
-            <TokenList onTokenClick={handleTokenClick} />
+            <TokenList onTokenClick={handleTokenClick} displayGradient />
             {QRVisible && (
               <Modal onClose={hideQR}>
                 <div className={utilsStyles.columnAlignCenter}>
