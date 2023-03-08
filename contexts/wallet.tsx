@@ -222,17 +222,17 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
   return (
     <WalletContext.Provider value={value}>
-      {/* {!loaded ? ( */}
-      <main className={cls(utilsStyles.main, utilsStyles.columnCenter)}>
-        <SiteHeader displayLogo displayName />
-        <br />
-        <br />
-        <div className={utilsStyles.spacer2} />
-        <Loader size={25} />
-      </main>
-      {/* ) : (
+      {!loaded ? (
+        <main className={cls(utilsStyles.main, utilsStyles.columnCenter)}>
+          <SiteHeader displayLogo displayName />
+          <br />
+          <br />
+          <div className={utilsStyles.spacer2} />
+          <Loader size={25} />
+        </main>
+      ) : (
         children
-      )} */}
+      )}
     </WalletContext.Provider>
   );
 };
