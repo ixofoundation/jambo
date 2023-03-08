@@ -192,7 +192,8 @@
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  width: 230px;
+  font-weight: 450;
+  width: 235px;
   text-align: center;
   margin-top: 2rem;
   margin-bottom: 2rem;
@@ -207,6 +208,18 @@
   flex-direction: column;
   align-items: center;
 }
+
+.btnSpacing{
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  top: 3rem
+}
+
+.cancelBottomSheetBtn{
+  margin-right: 12rem;
+}
+
 
 @media only screen and (max-width : 600px){
 
@@ -225,6 +238,17 @@
   }
   .cancelBtn{
     margin-left: -1rem;
+  }
+
+  .btnSpacing{
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    top: 3rem
+  }
+
+  .cancelBottomSheetBtn{
+    margin-right: 8.5rem;
   }
   
 }

@@ -36,8 +36,10 @@ import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/
 import Cross from '@icons/cross.svg';
 import Plus from '@icons/plus.svg';
 import Correct from '@icons/correct.svg';
+import ArrowLeft from '@icons/arrow_left.svg';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
+import { shortenAddress } from '../utils/wallets';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -246,7 +248,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                             <Input
                               name='address'
                               required
-                              value={address}
+                              value={shortenAddress(address)}
                               className={styles.multiMsgAddressesInput}
                               align='center'
                               disabled
@@ -276,9 +278,20 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                     <span className={styles.spaceBetweenText}>Are you sure you wish to remove</span> <br />{' '}
                     <span>this send action ?</span>
                   </div>
-                  <ButtonRound size={BUTTON_ROUND_SIZE.mediumLarge} onClick={handleDeleteMultiSend}>
-                    <Correct className={styles.plusIcon} />
-                  </ButtonRound>
+                  <div className={styles.btnSpacing}>
+                    <ButtonRound
+                      className={styles.cancelBottomSheetBtn}
+                      size={BUTTON_ROUND_SIZE.large}
+                      color={BUTTON_ROUND_COLOR.white}
+                      onClick={hideCancelTransactionModal}
+                    >
+                      <ColoredIcon icon={ArrowLeft} size={25} color={ICON_COLOR.primary} />
+                    </ButtonRound>
+
+                    <ButtonRound size={BUTTON_ROUND_SIZE.large} onClick={handleDeleteMultiSend}>
+                      <Correct className={styles.plusIcon} />
+                    </ButtonRound>
+                  </div>
                 </div>
               </BottomSheet>
             )}
