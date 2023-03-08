@@ -43,7 +43,7 @@ const useGlobalValidators = ({
       updateValidators();
     }
   }, [queryClient]);
-  console.log({ delegatedValidatorsOnly });
+
   useEffect(() => {
     if (validators?.length) {
       let validatorList = delegatedValidatorsOnly
