@@ -4,7 +4,7 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import Card, { CARD_SIZE } from '@components/Card/Card';
+import MultiSendCard from '@components/MultiSendCard/MultiSendCard';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
 import IconText from '@components/IconText/IconText';
@@ -33,7 +33,6 @@ import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
-import Cross from '@icons/cross.svg';
 import Plus from '@icons/plus.svg';
 import Correct from '@icons/correct.svg';
 import ArrowLeft from '@icons/arrow_left.svg';
@@ -72,8 +71,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
 
-  const showCancelTransactionModal = (index: number) => (e: Event | any) => {
-    e.preventDefault();
+  const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
   };
 
@@ -240,32 +238,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                   const addressAmount = amount![index];
                   const addressToken = token![index];
                   return (
-                    <Card className={styles.spaceBetweenCards}>
-                      <div className={styles.cardContent}>
-                        <div>
-                          <AmountAndDenom amount={addressAmount} denom={addressToken.denom} />
-                          <div className={styles.multiMsgAddresses}>
-                            <p className={styles.addressLabel}>to:</p>
-                            <Input
-                              name='address'
-                              required
-                              value={shortenAddress(address)}
-                              className={styles.multiMsgAddressesInput}
-                              align='center'
-                              disabled
-                            />
-                          </div>
-                        </div>
-                        <ButtonRound
-                          className={styles.cancelBtn}
-                          size={BUTTON_ROUND_SIZE.mediumLarge}
-                          color={BUTTON_ROUND_COLOR.white}
-                          onClick={showCancelTransactionModal(index)}
-                        >
-                          <ColoredIcon icon={Cross} size={23} color={ICON_COLOR.primary} />
-                        </ButtonRound>
-                      </div>
-                    </Card>
+                    <MultiSendCard
+                      address={shortenAddress(address)}
+                      token={addressToken}
+                      amount={addressAmount}
+                      onDeleteClick={showCancelTransactionModal(index)}
+                      key={`${address}_${index}`}
+                    />
                   );
                 })}
             </div>
