@@ -15,23 +15,23 @@
       "id": "eKXPPhewkJDLbE1bq1iboz",
       "steps": [
         {
-          "id": "get_receiver_address",
-          "name": "Get validator address"
-        },
-        {
           "id": "select_token_and_amount",
-          "name": "Define amount to delegate"
-        },
-        {
-          "id": "bank_MsgSend",
+          "name": "Select token and amount"
+          },
+          {
+          "id": "get_receiver_address",
+          "name": "Get receiver address"
+          },
+          {
+          "id": "bank_MsgMultiSend",
           "name": "Review and sign"
-        }
+          }
       ],
       "name": "Send",
-      "description": "Crypto Senf",
+      "description": "Crypto Send",
       "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    },
-    {
+    }
+    ,{
       "id": "eKXPPhewkJDLbE1bq1iboa",
       "steps": [
         {

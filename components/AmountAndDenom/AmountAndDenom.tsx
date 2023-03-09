@@ -9,28 +9,24 @@ type AmountAndDenomProps = {
   denom?: string;
   microUnits?: number;
   token?: CURRENCY_TOKEN;
-  highlighted?: boolean;
+  color?: CARD_COLOR;
+  bgColor?: CARD_BG_COLOR;
 };
 
-const AmountAndDenom = ({ amount, denom, token, microUnits, highlighted = false }: AmountAndDenomProps) => {
+const AmountAndDenom = ({
+  amount,
+  denom,
+  token,
+  microUnits,
+  color = CARD_COLOR.text,
+  bgColor = CARD_BG_COLOR.lightGrey,
+}: AmountAndDenomProps) => {
   return (
     <div className={utilsStyles.row}>
-      <Card
-        size={CARD_SIZE.mediumLarge}
-        className={styles.amount}
-        rounded
-        color={highlighted ? CARD_COLOR.lightGrey : CARD_COLOR.text}
-        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.lightGrey}
-      >
+      <Card size={CARD_SIZE.mediumLarge} className={styles.amount} rounded color={color} bgColor={bgColor}>
         {formatTokenAmount(amount ?? 0, microUnits ?? getDecimalsFromCurrencyToken(token))}
       </Card>
-      <Card
-        size={CARD_SIZE.mediumLarge}
-        className={styles.denom}
-        rounded
-        color={highlighted ? CARD_COLOR.lightGrey : CARD_COLOR.text}
-        bgColor={highlighted ? CARD_BG_COLOR.primary : CARD_BG_COLOR.lightGrey}
-      >
+      <Card size={CARD_SIZE.mediumLarge} className={styles.denom} rounded color={color} bgColor={bgColor}>
         {denom ?? getDisplayDenomFromCurrencyToken(token)}
       </Card>
     </div>

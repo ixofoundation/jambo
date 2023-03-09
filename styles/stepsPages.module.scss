@@ -147,3 +147,108 @@
   margin: 5px 0;
   text-align: center;
 }
+.multiMsgAddresses{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.multiMsgAddressesInput{
+  background-color: var(--bg-color) !important;
+  width: 15rem;
+  margin-left: 1rem;
+  margin-top: 0.6rem;
+  margin-right: 0.6rem;
+  padding: .8rem;
+}
+
+.spaceBetweenCards{
+  margin-bottom: 1rem !important;
+}
+
+.cardContent{
+  display: flex;
+}
+
+.cancelBtn{
+  padding-left: 1rem;
+}
+
+.crossIcon{
+  color: black !important;
+  background-color: var(--primary-color) !important;
+  font-size: 1.5rem;
+}
+
+.plusIcon{
+  font-size: 1.5rem;
+}
+
+.addressLabel{
+  margin-left: 1rem;
+}
+
+.bottomSheetText{
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  font-weight: 450;
+  width: 235px;
+  text-align: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+
+}
+  .spaceBetweenText{
+    margin-bottom: -0.5rem;
+}
+
+.bottomSheetContent{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btnSpacing{
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  top: 3rem
+}
+
+.cancelBottomSheetBtn{
+  margin-right: 12rem;
+}
+
+
+@media only screen and (max-width : 600px){
+
+  .multiMsgAddresses{
+    display: flex;
+    align-items: center;
+  }
+
+  .multiMsgAddressesInput{
+    background-color: var(--bg-color) !important;
+    width: 12rem;
+    margin-left: 1rem;
+    margin-top: 0.6rem;
+    margin-right: 1.6rem;
+    padding: .8rem;
+  }
+  .cancelBtn{
+    margin-left: -1rem;
+  }
+
+  .btnSpacing{
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    top: 3rem
+  }
+
+  .cancelBottomSheetBtn{
+    margin-right: 8.5rem;
+  }
+  
+}

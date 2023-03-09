@@ -30,10 +30,6 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
   useEffect(() => {
     setAction(actionData);
     if (!signedIn) showWalletModal();
-    // console.log({ id });
-    // if (!id) return;
-    // const fetchedAction = (config as ConfigData).actions.find(a => a.id === id);
-    // if (fetchedAction) setAction(fetchedAction);
   }, [actionData]);
 
   function handleOnNext<T>(data: StepDataType<T>) {
@@ -45,18 +41,67 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
   }
 
   const handleBack = () => {
-    if (count === 0) return backRoute();
+    if (count === 0) {
+      const newActionData = JSON.parse(JSON.stringify(action));
+      if (newActionData.steps.find((step: STEP) => step.id === STEPS.get_receiver_address)?.data?.data?.length > 1) {
+        newActionData.steps.forEach((step: STEP, index: number) => {
+          if (step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address) {
+            newActionData.steps[index].data.data.pop();
+            newActionData.steps[index].data.currentIndex = newActionData.steps[index].data.data.length - 1;
+          }
+        });
+        setAction(newActionData);
+        return setCount(action?.steps.findIndex((step) => step.id === STEPS.bank_MsgMultiSend) as number);
+      } else {
+        return backRoute();
+      }
+    }
     setCount((c) => c - 1);
   };
 
+  const handleNextMultiSend = (nextIndex: number = 0) => {
+    const newActionData = JSON.parse(JSON.stringify(action));
+    action!.steps!.forEach((step, index) => {
+      if (step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address)
+        newActionData.steps[index].data.currentIndex = nextIndex;
+    });
+    setAction(newActionData);
+    setCount((c) => c - 2);
+  };
+
+  const handleDeleteMultiSend = (deleteIndex: number = 0) => {
+    const newActionData = JSON.parse(JSON.stringify(action));
+    if (
+      newActionData.steps.find(
+        (step: STEP) => step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address,
+      )?.data?.data.length <= 1
+    )
+      return replaceRoute('/');
+    newActionData.steps.forEach((step: STEP, index: number) => {
+      if (step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address) {
+        newActionData.steps[index].data.data = [
+          ...newActionData.steps[index].data.data.slice(0, deleteIndex),
+          ...newActionData.steps[index].data.data.slice(deleteIndex + 1),
+        ];
+        newActionData.steps[index].data.currentIndex = newActionData.steps[index].data.data.length - 1;
+      }
+    });
+    setAction(newActionData);
+  };
+
   const getStepComponent = (step: STEP) => {
-    switch (step.id) {
+    switch (step?.id) {
       case STEPS.get_receiver_address:
         return (
           <ReceiverAddress
             onSuccess={handleOnNext<STEPS.get_receiver_address>}
             onBack={handleBack}
-            data={step.data as StepDataType<STEPS.get_receiver_address>}
+            data={
+              (step.data as StepDataType<STEPS.get_receiver_address>) ?? {
+                data: [],
+                currentIndex: 0,
+              }
+            }
             header={action?.name}
           />
         );
@@ -86,7 +131,12 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
           <DefineAmountToken
             onSuccess={handleOnNext<STEPS.select_token_and_amount>}
             onBack={handleBack}
-            data={step.data as StepDataType<STEPS.select_token_and_amount>}
+            data={
+              (step.data as StepDataType<STEPS.select_token_and_amount>) ?? {
+                data: [],
+                currentIndex: 0,
+              }
+            }
             header={action?.name}
           />
         );
@@ -123,12 +173,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
           />
         );
       case STEPS.bank_MsgSend:
+      case STEPS.bank_MsgMultiSend:
       case STEPS.staking_MsgDelegate:
       case STEPS.staking_MsgUndelegate:
       case STEPS.staking_MsgRedelegate:
         return (
           <ReviewAndSign
             onSuccess={handleOnNext<STEPS.review_and_sign>}
+            handleNextMultiSend={handleNextMultiSend}
+            deleteMultiSend={handleDeleteMultiSend}
             onBack={handleBack}
             steps={action!.steps}
             header={action?.name}

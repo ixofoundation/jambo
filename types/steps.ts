@@ -16,6 +16,7 @@ export enum STEPS {
   send_token_to_receiver = 'send_token_to_receiver',
   review_and_sign = 'review_and_sign',
   bank_MsgSend = 'bank_MsgSend',
+  bank_MsgMultiSend = 'bank_MsgMultiSend',
   staking_MsgDelegate = 'staking_MsgDelegate',
   staking_MsgUndelegate = 'staking_MsgUndelegate',
   staking_MsgRedelegate = 'staking_MsgRedelegate',
@@ -54,6 +55,7 @@ export const steps: { [key in STEPS]: STEP } = {
   [STEPS.send_token_to_receiver]: { id: STEPS.send_token_to_receiver, name: 'Send token to receiver' },
   [STEPS.review_and_sign]: { id: STEPS.review_and_sign, name: 'Review and sign' },
   [STEPS.bank_MsgSend]: { id: STEPS.bank_MsgSend, name: 'Review and sign' },
+  [STEPS.bank_MsgMultiSend]: { id: STEPS.bank_MsgMultiSend, name: 'Review and sign' },
   [STEPS.staking_MsgDelegate]: { id: STEPS.staking_MsgDelegate, name: 'Review and sign' },
   [STEPS.staking_MsgUndelegate]: { id: STEPS.staking_MsgUndelegate, name: 'Review and sign' },
   [STEPS.staking_MsgRedelegate]: { id: STEPS.staking_MsgRedelegate, name: 'Review and sign' },
@@ -66,6 +68,7 @@ export const steps: { [key in STEPS]: STEP } = {
 
 export type ReviewStepsTypes =
   | STEPS.bank_MsgSend
+  | STEPS.bank_MsgMultiSend
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
@@ -81,12 +84,20 @@ interface Check_user_balance {
 interface Get_receiver_address {
   address: string;
 }
+interface Get_receiver_addresses {
+  data: Get_receiver_address[];
+  currentIndex: number;
+}
 interface Get_validator_address {
   validator: VALIDATOR;
 }
 interface Select_token_and_amount {
   token: CURRENCY_TOKEN;
   amount: number;
+}
+interface Select_tokens_and_amounts {
+  data: Select_token_and_amount[];
+  currentIndex: number;
 }
 interface Define_amount {
   amount: number;
@@ -100,8 +111,10 @@ interface Review_and_sign {
 
 export type AllStepDataTypes =
   | Get_receiver_address
+  | Get_receiver_addresses
   | Get_validator_address
   | Select_token_and_amount
+  | Select_tokens_and_amounts
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
@@ -110,7 +123,7 @@ export type AllStepDataTypes =
 export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Check_user_balance
   : T extends STEPS.get_receiver_address
-  ? Get_receiver_address
+  ? Get_receiver_addresses
   : T extends STEPS.get_validator_delegate
   ? Get_validator_address
   : T extends STEPS.get_delegated_validator_undelegate
@@ -120,7 +133,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.get_validator_redelegate
   ? Get_validator_address
   : T extends STEPS.select_token_and_amount
-  ? Select_token_and_amount
+  ? Select_tokens_and_amounts
   : T extends STEPS.select_amount_delegate
   ? Select_token_and_amount
   : T extends STEPS.select_amount_undelegate

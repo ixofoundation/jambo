@@ -29,6 +29,7 @@ export enum CARD_BG_COLOR {
   primary = 'withPrimaryBgColor',
   secondary = 'withSecondaryBgColor',
   tertiary = 'withTertiaryBgColor',
+  white = 'withWhiteBgColor',
   success = 'withSuccessBgColor',
   disabled = 'withDisabledBgColor',
   grey = 'withGreyBgColor',
