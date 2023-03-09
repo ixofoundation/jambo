@@ -5,7 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Footer from '@components/Footer/Footer';
 import QRScanner from '@components/QRScanner/QRScanner';
-import useWindowDimensions from '@hooks/windowDimensions';
+import useWindowDimensions from '@hooks/useWindowDimensions';
 import Loader from '@components/Loader/Loader';
 import SadFace from '@icons/sad_face.svg';
 import IconText from '@components/IconText/IconText';

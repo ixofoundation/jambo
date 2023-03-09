@@ -17,7 +17,7 @@ import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { QUERY_CLIENT } from 'types/query';
 import { ChainContext } from './chain';
-import useModalState from '@hooks/modalState';
+import useModalState from '@hooks/useModalState';
 import { linkDelegationsAndRewards } from '@utils/validators';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import { SiteHeader } from '@components/Header/Header';

@@ -7,22 +7,21 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import AddressActionButton from '@components/AddressActionButton/AddressActionButton';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
+import BottomSheet from '@components/BottomSheet/BottomSheet';
 import TokenList from '@components/TokenList/TokenList';
+import { CARD_BG_COLOR } from '@components/Card/Card';
 import Wallets from '@components/Wallets/Wallets';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
-import Modal from '@components/Modal/Modal';
 import Head from '@components/Head/Head';
-import useWindowDimensions from '@hooks/windowDimensions';
+import useWindowDimensions from '@hooks/useWindowDimensions';
 import { urlEncodeIbcDenom } from '@utils/encoding';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
-import useModalState from '@hooks/modalState';
+import useModalState from '@hooks/useModalState';
 import config from '@constants/config.json';
 import { WALLETS } from '@constants/wallet';
-import BottomSheet from '@components/BottomSheet/BottomSheet';
-import { CARD_BG_COLOR } from '@components/Card/Card';
 
 const Account: NextPage = () => {
   const [QRVisible, showQR, hideQR] = useModalState(false);

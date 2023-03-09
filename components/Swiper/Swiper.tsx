@@ -6,7 +6,7 @@ import 'swiper/css';
 import styles from './Swiper.module.scss';
 import { ACTION } from 'types/actions';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
-import useWindowDimensions from '@hooks/windowDimensions';
+import useWindowDimensions from '@hooks/useWindowDimensions';
 import { shimmerDataUrl } from '@utils/image';
 import { pushNewRoute } from '@utils/router';
 
