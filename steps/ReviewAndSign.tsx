@@ -4,6 +4,7 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_SIZE } from '@components/Button/Button';
+import MultiSendCard from '@components/MultiSendCard/MultiSendCard';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
 import IconText from '@components/IconText/IconText';
@@ -22,6 +23,7 @@ import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import {
   defaultTrxFeeOption,
+  generateBankMultiSendTrx,
   generateBankSendTrx,
   generateDelegateTrx,
   generateRedelegateTrx,
@@ -30,40 +32,81 @@ import {
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
+import Plus from '@icons/plus.svg';
+import BottomSheet from '@components/BottomSheet/BottomSheet';
+import { shortenAddress } from '../utils/wallets';
+import MultiSendContent from '../components/BottomSheetContent/MultiSendContent';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
   onBack?: () => void;
+  handleNextMultiSend?: (nextIndex: number) => void;
+  deleteMultiSend?: (deleteIndex: number) => void;
   steps: STEP[];
   header?: string;
   message: ReviewStepsTypes;
 };
 
-const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, header, message }) => {
+const ReviewAndSign: FC<ReviewAndSignProps> = ({
+  onSuccess,
+  onBack,
+  handleNextMultiSend,
+  deleteMultiSend,
+  steps,
+  header,
+  message,
+}) => {
   const { wallet } = useContext(WalletContext);
   const [successHash, setSuccessHash] = useState<string | undefined>();
   const [loading, setLoading] = useState<boolean>(false);
-  const [amount, setAmount] = useState<number>(0);
-  const [token, setToken] = useState<CURRENCY_TOKEN | undefined>();
-  const [dstAddress, setDstAddress] = useState<string>(''); // destination address
+  const [amount, setAmount] = useState<number | number[]>(0);
+  const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | undefined>();
+  const [dstAddress, setDstAddress] = useState<string | string[]>(''); // destination address
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
   const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
+  const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
+
+  const showCancelTransactionModal = (index: number) => () => {
+    setTrxCancelId(index);
+  };
+
+  const hideCancelTransactionModal = () => setTrxCancelId(undefined);
+
+  const addingNewTransaction = (e: Event | any) => {
+    e.preventDefault();
+    if (handleNextMultiSend)
+      handleNextMultiSend(
+        steps.find(
+          (step) => step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address,
+          // @ts-ignore
+        )?.data?.data?.length,
+      );
+  };
+
+  const handleDeleteMultiSend = () => {
+    if (deleteMultiSend) deleteMultiSend(trxCancelId!);
+    hideCancelTransactionModal();
+  };
 
   useEffect(() => {
     steps.forEach((s) => {
+      if (s.id === STEPS.select_token_and_amount) {
+        setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.data.map((v) => v.amount) ?? []);
+        setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.data.map((v) => v.token) ?? []);
+      }
       if (
-        s.id === STEPS.select_token_and_amount ||
         s.id === STEPS.select_amount_delegate ||
         s.id === STEPS.select_amount_undelegate ||
         s.id === STEPS.select_amount_redelegate
       ) {
-        setAmount((s.data as StepDataType<STEPS.select_token_and_amount>)?.amount ?? 0);
-        setToken((s.data as StepDataType<STEPS.select_token_and_amount>)?.token);
+        setAmount((s.data as StepDataType<STEPS.select_amount_delegate>)?.amount ?? 0);
+        setToken((s.data as StepDataType<STEPS.select_amount_delegate>)?.token);
       }
       if (s.id === STEPS.get_receiver_address) {
-        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
+        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.data.map((v) => v.address) ?? []);
       }
       if (
         s.id === STEPS.get_validator_delegate ||
@@ -87,24 +130,31 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
       case STEPS.bank_MsgSend:
         trx = generateBankSendTrx({
           fromAddress: wallet.user!.address,
-          toAddress: dstAddress,
-          denom: token?.denom ?? '',
+          toAddress: dstAddress[0] as string,
+          denom: token ? token[0]?.value : '',
           amount: getMicroAmount(amount.toString()),
+        });
+      case STEPS.bank_MsgMultiSend:
+        trx = generateBankMultiSendTrx({
+          fromAddress: wallet.user!.address,
+          toAddresses: dstAddress as string[],
+          denoms: (token as CURRENCY_TOKEN[]).map((token) => token.denom),
+          amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
         });
         break;
       case STEPS.staking_MsgDelegate:
         trx = generateDelegateTrx({
           delegatorAddress: wallet.user!.address,
-          validatorAddress: dstAddress,
-          denom: token?.denom ?? '',
+          validatorAddress: dstAddress as string,
+          denom: token ? token[0]?.value : '',
           amount: getMicroAmount(amount.toString()),
         });
         break;
       case STEPS.staking_MsgUndelegate:
         trx = generateUndelegateTrx({
           delegatorAddress: wallet.user!.address,
-          validatorAddress: dstAddress,
-          denom: token?.denom ?? '',
+          validatorAddress: dstAddress as string,
+          denom: token ? token[0]?.value : '',
           amount: getMicroAmount(amount.toString()),
         });
         break;
@@ -112,8 +162,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         trx = generateRedelegateTrx({
           delegatorAddress: wallet.user!.address,
           validatorSrcAddress: srcAddress,
-          validatorDstAddress: dstAddress,
-          denom: token?.denom ?? '',
+          validatorDstAddress: dstAddress as string,
+          denom: token ? token[0]?.value : '',
           amount: getMicroAmount(amount.toString()),
         });
         break;
@@ -125,7 +175,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
       [trx],
       undefined,
       defaultTrxFeeOption,
-      token?.denom ?? '',
+      (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
       chainInfo as KEPLR_CHAIN_INFO_TYPE,
     );
     if (hash) setSuccessHash(hash);
@@ -167,15 +217,54 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.bank_MsgSend ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p className={utilsStyles.label}>I am sending</p>
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
+            <AmountAndDenom
+              amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
+              denom={(Array.isArray(token) ? token[0].denom ?? '' : token?.denom) ?? ''}
+              microUnits={0}
+            />
             <br />
             <p className={utilsStyles.label}>to the address:</p>
             <Input name='address' required value={dstAddress} className={styles.stepInput} align='center' disabled />
           </form>
+        ) : message === STEPS.bank_MsgMultiSend ? (
+          <form className={styles.stepsForm} autoComplete='none'>
+            <p className={utilsStyles.label}>Confirm to Send</p>
+            <div>
+              {Array.isArray(dstAddress) &&
+                dstAddress.map((address, index) => {
+                  const addressAmount = amount![index];
+                  const addressToken = token![index];
+                  return (
+                    <MultiSendCard
+                      address={shortenAddress(address)}
+                      token={addressToken}
+                      amount={addressAmount}
+                      onDeleteClick={showCancelTransactionModal(index)}
+                      key={`${address}_${index}`}
+                    />
+                  );
+                })}
+            </div>
+            <ButtonRound size={BUTTON_ROUND_SIZE.mediumLarge} onClick={addingNewTransaction}>
+              <Plus className={styles.plusIcon} />
+            </ButtonRound>
+            {typeof trxCancelId === 'number' && (
+              <BottomSheet onClose={hideCancelTransactionModal}>
+                <MultiSendContent
+                  onDeleteMsgClicked={handleDeleteMultiSend}
+                  onCloseBottomSheet={hideCancelTransactionModal}
+                />
+              </BottomSheet>
+            )}
+          </form>
         ) : message === STEPS.staking_MsgDelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             {message === STEPS.staking_MsgDelegate && <p>Delegating</p>}
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
+            <AmountAndDenom
+              amount={amount as number}
+              denom={getDisplayDenomFromCurrencyToken((token as CURRENCY_TOKEN) ?? '')}
+              microUnits={0}
+            />
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
 
@@ -184,7 +273,11 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.staking_MsgUndelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             {message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
+            <AmountAndDenom
+              amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
+              denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              microUnits={0}
+            />
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
@@ -193,7 +286,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({ onSuccess, onBack, steps, heade
         ) : message === STEPS.staking_MsgRedelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p>Redelegate</p>
-            <AmountAndDenom amount={amount} denom={getDisplayDenomFromCurrencyToken(token!)} microUnits={0} />
+            <AmountAndDenom
+              amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
+              denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              microUnits={0}
+            />
+
             <br />
             <p>from</p>
             <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />

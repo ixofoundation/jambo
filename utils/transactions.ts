@@ -1,4 +1,5 @@
 import { cosmos } from '@ixo/impactxclient-sdk';
+import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
@@ -7,6 +8,24 @@ export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';
 export const defaultTrxFee: TRX_FEE = {
   amount: [{ amount: String(5000), denom: 'uixo' }],
   gas: String(300000),
+};
+
+const generateCoins = (denoms: string[], amounts: string[]): Coin[] => {
+  const coinMap: Record<string, number> = {};
+  for (let i = 0; i < denoms!.length; i++) {
+    const denom = denoms![i];
+    const amount = parseInt(amounts![i]);
+    if (coinMap[denom!]) {
+      coinMap[denom!] += amount;
+    } else {
+      coinMap[denom] = amount;
+    }
+  }
+  const coins: Coin[] = [];
+  for (const [denom, amount] of Object.entries(coinMap)) {
+    coins.push(cosmos.base.v1beta1.Coin.fromPartial({ denom, amount: amount.toString() }));
+  }
+  return coins;
 };
 
 export const generateBankSendTrx = ({
@@ -25,6 +44,36 @@ export const generateBankSendTrx = ({
     fromAddress,
     toAddress,
     amount: [cosmos.base.v1beta1.Coin.fromPartial({ amount, denom })],
+  }),
+});
+export const generateBankMultiSendTrx = ({
+  fromAddress,
+  toAddresses,
+  amounts,
+  denoms,
+}: {
+  fromAddress: string;
+  toAddresses: string[];
+  denoms: string[];
+  amounts: string[];
+}): TRX_MSG => ({
+  typeUrl: '/cosmos.bank.v1beta1.MsgMultiSend',
+  value: cosmos.bank.v1beta1.MsgMultiSend.fromPartial({
+    inputs: [
+      {
+        address: fromAddress,
+        coins: generateCoins(denoms, amounts),
+      },
+    ],
+    outputs: toAddresses.map((address, index) => ({
+      address: address,
+      coins: [
+        cosmos.base.v1beta1.Coin.fromPartial({
+          amount: amounts[index],
+          denom: denoms[index],
+        }),
+      ],
+    })),
   }),
 });
 

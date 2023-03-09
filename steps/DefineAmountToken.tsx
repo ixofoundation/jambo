@@ -22,8 +22,10 @@ type DefineAmountTokenProps = {
 };
 
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
-  const [amount, setAmount] = useState(data?.amount.toString() ?? '');
-  const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>(data?.token || undefined);
+  const [amount, setAmount] = useState(
+    data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
+  );
+  const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
 
   useEffect(() => {
@@ -45,10 +47,19 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
     if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
-    onSuccess({
+    const newData = {
       amount: Number(amount),
       token: selectedOption!,
-    });
+    };
+    const isEditing = !!data?.data[data?.currentIndex];
+    onSuccess(
+      !isEditing
+        ? { ...data, currentIndex: 0, data: [...(data?.data ?? []), newData] }
+        : {
+            ...data,
+            data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(0, data.currentIndex)],
+          },
+    );
   };
 
   return (

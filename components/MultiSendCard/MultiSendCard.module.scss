@@ -1,0 +1,55 @@
+.multiMsgAddresses{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .addressCard{
+    margin-left: 10px;
+    margin-top: 8px;
+  }
+  
+
+  .wrapper{
+    margin-bottom: 1rem !important;
+  }
+  
+  .cardContent{
+    display: flex;
+  }
+  
+  .cancelBtn{
+    padding-left: 1rem;
+  }
+
+  
+
+  .contentWrapper{
+    flex: 1;
+  }
+
+  @media only screen and (max-width : 600px){
+
+    .multiMsgAddresses{
+      display: flex;
+      align-items: center;
+    }
+  
+   
+    .cancelBtn{
+      margin-left: -1rem;
+    }
+  
+    .btnSpacing{
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      top: 3rem
+    }
+  
+    .cancelBottomSheetBtn{
+      margin-right: 8.5rem;
+    }
+    
+  }
+  

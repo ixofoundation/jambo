@@ -25,6 +25,7 @@ import { CURRENCY } from 'types/wallet';
 import useGlobalValidators from '@hooks/globalValidators';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
+import { CARD_COLOR } from '@components/Card/Card';
 
 type ValidatorAddressProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -117,7 +118,12 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
               })}
               <div className={utilsStyles.spacer3} />
               <p>Claim my combined rewards</p>
-              <AmountAndDenom amount={Number(rewards.amount)} denom={rewards.denom} microUnits={6} highlighted />
+              <AmountAndDenom
+                amount={Number(rewards.amount)}
+                denom={rewards.denom}
+                microUnits={6}
+                color={CARD_COLOR.lightGrey}
+              />
             </form>
           ) : (
             <IconText title="You don't have any tokens delegated for this account." Img={SadFace} imgSize={50} />
