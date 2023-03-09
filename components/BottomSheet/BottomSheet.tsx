@@ -3,21 +3,21 @@ import ReactDOM from 'react-dom';
 import cls from 'classnames';
 
 import styles from './BottomSheet.module.scss';
-import { BUTTON_ROUND_COLOR } from '@components/ButtonRound/ButtonRound';
+import { CARD_BG_COLOR } from '@components/Card/Card';
 
 type BottomSheetProps = {
   title?: string;
   children: ReactNode;
   onClose: () => void;
   dismissable?: boolean;
-  bgColor?: BUTTON_ROUND_COLOR;
+  bgColor?: CARD_BG_COLOR;
 } & HTMLAttributes<HTMLDivElement>;
 
 const BottomSheet = ({
   dismissable = false,
   onClose,
   title,
-  bgColor = BUTTON_ROUND_COLOR.lightGrey,
+  bgColor = CARD_BG_COLOR.lightGrey,
   className,
   children,
   ...other
@@ -50,7 +50,7 @@ const BottomSheet = ({
 
   const sheetContent = (
     <div className={styles.backdrop}>
-      <div className={cls(styles.sheet, className, styles[bgColor as BUTTON_ROUND_COLOR])} ref={modalRef} {...other}>
+      <div className={cls(styles.sheet, className, styles[bgColor as CARD_BG_COLOR])} ref={modalRef} {...other}>
         {!!title && <h3 className={styles.sheetTitle}>{title}</h3>}
         {children}
       </div>

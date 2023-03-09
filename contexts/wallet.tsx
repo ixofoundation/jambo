@@ -1,5 +1,7 @@
 import { createContext, useState, useEffect, HTMLAttributes, useContext } from 'react';
+import cls from 'classnames';
 
+import utilsStyles from '@styles/utils.module.scss';
 import Loader from '@components/Loader/Loader';
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
 import { initializeWallet } from '@utils/wallets';
@@ -17,6 +19,8 @@ import { QUERY_CLIENT } from 'types/query';
 import { ChainContext } from './chain';
 import useModalState from '@hooks/modalState';
 import { linkDelegationsAndRewards } from '@utils/validators';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
+import { SiteHeader } from '@components/Header/Header';
 
 export const WalletContext = createContext({
   wallet: {} as WALLET,
@@ -216,5 +220,19 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     updateValidatorAvatar,
   };
 
-  return <WalletContext.Provider value={value}>{!loaded ? <Loader /> : children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider value={value}>
+      {!loaded ? (
+        <main className={cls(utilsStyles.main, utilsStyles.columnCenter)}>
+          <SiteHeader displayLogo displayName />
+          <br />
+          <br />
+          <div className={utilsStyles.spacer2} />
+          <Loader size={25} />
+        </main>
+      ) : (
+        children
+      )}
+    </WalletContext.Provider>
+  );
 };

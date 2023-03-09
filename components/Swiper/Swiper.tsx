@@ -1,14 +1,14 @@
 import { useState, MouseEvent } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import Image from 'next/image';
-import 'swiper/css';
 import cls from 'classnames';
+import 'swiper/css';
 
 import styles from './Swiper.module.scss';
 import { ACTION } from 'types/actions';
-import { pushNewRoute } from '@utils/router';
-import { shimmerDataUrl } from '@utils/image';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import useWindowDimensions from '@hooks/windowDimensions';
+import { shimmerDataUrl } from '@utils/image';
+import { pushNewRoute } from '@utils/router';
 
 type SwiperProps = {
   actions: ACTION[];
@@ -35,7 +35,8 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
           <div key={action.id} onClick={onClickNavigate(action.id)} className={styles.action}>
             <div className={styles.swiperSlide}>
               {action.image ? (
-                <Image
+                <ImageWithFallback
+                  fallbackSrc='/images/actions/fallback.png'
                   src={`/images/actions/${action.image}`}
                   alt={action.name}
                   layout='fill'
@@ -69,7 +70,8 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
           {actions.map((action, i) => (
             <SwiperSlide className={styles.swiperSlide} key={action.id} onClick={onSwiperNavigate}>
               {action.image ? (
-                <Image
+                <ImageWithFallback
+                  fallbackSrc='/images/actions/fallback.png'
                   src={`/images/actions/${action.image}`}
                   alt={action.name}
                   layout='fill'
@@ -87,7 +89,8 @@ const CustomSwiper = ({ actions, swiper = true }: SwiperProps) => {
         actions.map((action, i) => (
           <div className={cls(styles.swiperSlide, styles.center)} key={action.id} onClick={onSwiperNavigate}>
             {action.image ? (
-              <Image
+              <ImageWithFallback
+                fallbackSrc='/images/actions/fallback.png'
                 src={`/images/actions/${action.image}`}
                 alt={action.name}
                 layout='fill'

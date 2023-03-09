@@ -11,6 +11,13 @@
   flex-direction: column;
 }
 
+.columnCenter {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 .columnSpaceEvenlyCentered {
   display: flex;
   flex-direction: column;

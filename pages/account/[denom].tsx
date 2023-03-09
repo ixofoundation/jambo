@@ -41,7 +41,7 @@ const Denom: NextPage = () => {
     <>
       <Head title='Account' description={config.siteDescriptionMeta} />
 
-      <Header allowBack />
+      <Header />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnAlignCenter, styles.denomPage)}>
         <div className={utilsStyles.usernameWrapper} onClick={backToAccount}>

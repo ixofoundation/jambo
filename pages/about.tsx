@@ -18,7 +18,7 @@ const About: NextPage = () => {
     <>
       <Head title='About' description={config.siteDescriptionMeta} />
 
-      <Header allowBack />
+      <Header />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.about)}>
         <div className={utilsStyles.spacer3Flex} />
