@@ -1,27 +1,12 @@
 .amount {
-  flex: 0.6;
-  margin-left: 1rem;
+  flex: 1;
 }
 
 .denom {
-  flex: 0.3;
+  flex: 0;
   padding-left: 20px;
   padding-right: 20px;
-  margin-left: -3px;
+  margin-left: 10px;
 }
 
 
-@media only screen and (max-width : 600px){
-  
-  .amount {
-    flex: 0.4;
-    margin-left: 1rem;
-  }
-  
-  .denom {
-    flex: 0.3;
-    padding-left: 20px;
-    padding-right: 20px;
-    margin-left: -9px;
-  }
-}

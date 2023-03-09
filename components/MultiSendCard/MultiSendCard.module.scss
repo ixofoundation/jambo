@@ -4,15 +4,13 @@
     align-items: center;
   }
   
-  .multiMsgAddressesInput{
-    background-color: var(--bg-color) !important;
-    flex: 1;
-    margin-left: 1rem;
-    margin-top: 0.6rem;
-    margin-right: 0.6rem;
+  .addressCard{
+    margin-left: 10px;
+    margin-top: 8px;
   }
+  
 
-  .spaceBetweenCards{
+  .wrapper{
     margin-bottom: 1rem !important;
   }
   
@@ -24,9 +22,7 @@
     padding-left: 1rem;
   }
 
-  .addressLabel{
-    margin-left: 1.2rem;
-  }
+  
 
   .contentWrapper{
     flex: 1;
@@ -39,14 +35,7 @@
       align-items: center;
     }
   
-    .multiMsgAddressesInput{
-      background-color: var(--bg-color) !important;
-      width: 12rem;
-      margin-left: 1rem;
-      margin-top: 0.6rem;
-      margin-right: 1.6rem;
-      padding: .8rem;
-    }
+   
     .cancelBtn{
       margin-left: -1rem;
     }

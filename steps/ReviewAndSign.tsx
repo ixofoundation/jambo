@@ -34,11 +34,9 @@ import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import Plus from '@icons/plus.svg';
-import Correct from '@icons/correct.svg';
-import ArrowLeft from '@icons/arrow_left.svg';
-import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import { shortenAddress } from '../utils/wallets';
+import MultiSendContent from '../components/BottomSheetContent/MultiSendContent';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -88,8 +86,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       );
   };
 
-  const handleDeleteMultiSend = (e: Event | any) => {
-    e.preventDefault();
+  const handleDeleteMultiSend = () => {
     if (deleteMultiSend) deleteMultiSend(trxCancelId!);
     hideCancelTransactionModal();
   };
@@ -253,26 +250,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             </ButtonRound>
             {typeof trxCancelId === 'number' && (
               <BottomSheet onClose={hideCancelTransactionModal}>
-                <div className={styles.bottomSheetContent}>
-                  <div className={styles.bottomSheetText}>
-                    <span className={styles.spaceBetweenText}>Are you sure you wish to remove</span> <br />{' '}
-                    <span>this send action ?</span>
-                  </div>
-                  <div className={styles.btnSpacing}>
-                    <ButtonRound
-                      className={styles.cancelBottomSheetBtn}
-                      size={BUTTON_ROUND_SIZE.large}
-                      color={BUTTON_ROUND_COLOR.white}
-                      onClick={hideCancelTransactionModal}
-                    >
-                      <ColoredIcon icon={ArrowLeft} size={25} color={ICON_COLOR.primary} />
-                    </ButtonRound>
-
-                    <ButtonRound size={BUTTON_ROUND_SIZE.large} onClick={handleDeleteMultiSend}>
-                      <Correct className={styles.plusIcon} />
-                    </ButtonRound>
-                  </div>
-                </div>
+                <MultiSendContent
+                  onDeleteMsgClicked={handleDeleteMultiSend}
+                  onCloseBottomSheet={hideCancelTransactionModal}
+                />
               </BottomSheet>
             )}
           </form>
