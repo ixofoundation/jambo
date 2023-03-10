@@ -133,18 +133,14 @@ Else if you want to customize the dApp to use different or even multiple chains 
 1. Create a new file named ".env" in the root directory of the project
 2. Add the following environment variables to the .env file:
    - NEXT_PUBLIC_CHAIN_NAMES: This variable is a comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
-   - NEXT_PUBLIC_ENABLE_MAINNET: This variable should be set to 1 if the dApp is being deployed to production. This variable is used to enable the dApp to connect to the mainnet.
-   - NEXT_PUBLIC_ENABLE_TESTNET: This variable should be set to 1 if the dApp is being deployed for testing. This variable is used to enable the dApp to connect to the testnet (and devnet where applicable).
-   - NEXT_PUBLIC_DEFAULT_NETWORK: This variable is used to specify the default network to connect to when both the testnet and mainnet are enabled.
-   - NEXT_PUBLIC_DEFAULT_CHAIN_ID: This variable is used to specify the default chain ID to connect to if more than one chain is used.
+   - NEXT_PUBLIC_ENABLE_DEVELOPER_MODE: This variable determines whether the app can use both testnet and mainnet (truthy value) or mainnet only (falsy value). This is false by default.
+   - NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: This variable specifies the preferred network for the initial load of the dApp. If developer mode (NEXT_PUBLIC_ENABLE_DEVELOPER_MODE) isn't active, this variable gets ignored. This variable defaults to devnet if developer mode is active.
 3. Here is an example of the .env file with the above variables set (as seen in .env.example):
 
 ```
-NEXT_PUBLIC_CHAIN_NAMES=impacthub
-NEXT_PUBLIC_ENABLE_MAINNET=1
-NEXT_PUBLIC_ENABLE_TESTNET=1
-NEXT_PUBLIC_DEFAULT_NETWORK=testnet
-NEXT_PUBLIC_DEFAULT_CHAIN_ID=pandora-7
+NEXT_PUBLIC_CHAIN_NAMES=impacthub,osmosis
+NEXT_PUBLIC_ENABLE_DEVELOPER_MODE=1
+NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK=mainnet
 ```
 
 ---
