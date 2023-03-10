@@ -17,7 +17,6 @@ import {
   calculateMaxTokenAmount,
   calculateTokenAmount,
   validateAmountAgainstBalance,
-  generateUserTokensDropdown,
   getDisplayDenomFromCurrencyToken,
 } from '@utils/currency';
 
