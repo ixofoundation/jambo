@@ -1,0 +1,40 @@
+.bottomSheetText {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  font-weight: 450;
+  width: 235px;
+  text-align: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+.spaceBetweenText {
+  margin-bottom: -0.5rem;
+}
+
+.bottomSheetContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btnSpacing {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  top: 3rem;
+}
+
+.cancelBottomSheetBtn {
+  margin-right: 12rem;
+}
+
+.plusIcon {
+  font-size: 1.5rem;
+}
+
+@media only screen and (max-width: 600px) {
+  .cancelBottomSheetBtn {
+    margin-right: 8.5rem;
+  }
+}
