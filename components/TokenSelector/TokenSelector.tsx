@@ -10,7 +10,7 @@ import TokenList from '@components/TokenList/TokenList';
 import ChevronDown from '@icons/chevron_down.svg';
 import Search from '@icons/search.svg';
 import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
-import useModalState from '@hooks/modalState';
+import useModalState from '@hooks/useModalState';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 type TokenSelectorProps = {

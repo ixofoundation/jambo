@@ -5,7 +5,7 @@ import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import ValidatorFilter from '@components/ValidatorFilter/ValidatorFilter';
 import Loader from '@components/Loader/Loader';
 import { VALIDATOR, VALIDATOR_FILTER_TYPE } from 'types/validators';
-import useGlobalValidators from '@hooks/globalValidators';
+import useGlobalValidators from '@hooks/useGlobalValidators';
 
 type ValidatorListProps = {
   label: string;

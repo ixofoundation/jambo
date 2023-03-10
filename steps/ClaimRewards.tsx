@@ -22,10 +22,10 @@ import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
 import { CURRENCY } from 'types/wallet';
-import useGlobalValidators from '@hooks/globalValidators';
+import useGlobalValidators from '@hooks/useGlobalValidators';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
-import { CARD_COLOR } from '@components/Card/Card';
+import { CARD_BG_COLOR, CARD_COLOR } from '@components/Card/Card';
 
 type ValidatorAddressProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -45,6 +45,7 @@ const calculateAccumulatedRewards = (validators: VALIDATOR[]): CURRENCY => {
     }
   });
   const microUnits = getMicroUnitsFromDenom(denom);
+  console.log({ microUnits, denom, total });
   return { amount: calculateTokenAmount(total, microUnits).toString(), denom };
 };
 
@@ -123,6 +124,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
                 denom={rewards.denom}
                 microUnits={6}
                 color={CARD_COLOR.lightGrey}
+                bgColor={CARD_BG_COLOR.primary}
               />
             </form>
           ) : (

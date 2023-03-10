@@ -219,7 +219,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <p className={utilsStyles.label}>I am sending</p>
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
-              denom={(Array.isArray(token) ? token[0].denom ?? '' : token?.denom) ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(
+                Array.isArray(token) ? (token[0] as CURRENCY_TOKEN) : (token as CURRENCY_TOKEN),
+              )}
               microUnits={0}
             />
             <br />
@@ -262,7 +264,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             {message === STEPS.staking_MsgDelegate && <p>Delegating</p>}
             <AmountAndDenom
               amount={amount as number}
-              denom={getDisplayDenomFromCurrencyToken((token as CURRENCY_TOKEN) ?? '')}
+              denom={getDisplayDenomFromCurrencyToken(token as CURRENCY_TOKEN)}
               microUnits={0}
             />
             <br />
@@ -275,7 +277,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             {message === STEPS.staking_MsgUndelegate && <p>Undelegate</p>}
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
-              denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(token as CURRENCY_TOKEN)}
               microUnits={0}
             />
             <br />
@@ -288,10 +290,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <p>Redelegate</p>
             <AmountAndDenom
               amount={(Array.isArray(amount) ? amount[0] : amount) ?? ''}
-              denom={(Array.isArray(token) ? token[0].denom : token?.denom) ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(token as CURRENCY_TOKEN)}
               microUnits={0}
             />
-
             <br />
             <p>from</p>
             <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />

@@ -8,8 +8,8 @@ import Card, { CARD_BG_COLOR, CARD_BORDER_COLOR, CARD_SIZE } from '@components/C
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import Loader from '@components/Loader/Loader';
+import useModalState from '@hooks/useModalState';
 import { ChainContext } from '@contexts/chain';
-import useModalState from '@hooks/modalState';
 
 type ChainSelectorProps = {};
 

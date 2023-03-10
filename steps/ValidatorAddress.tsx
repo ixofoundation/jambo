@@ -1,4 +1,4 @@
-import { ChangeEvent, FC, FormEvent, useState, useEffect, useContext } from 'react';
+import { FC, FormEvent, useState, useEffect, useContext } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -7,12 +7,10 @@ import ValidatorCard from '@components/ValidatorCard/ValidatorCard';
 import ValidatorList from '@components/ValidatorList/ValidatorList';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
-import Loader from '@components/Loader/Loader';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import { VALIDATOR, VALIDATOR_CONFIG } from 'types/validators';
 import { StepDataType, STEPS } from 'types/steps';
-import useGlobalValidators from '@hooks/globalValidators';
 import { WalletContext } from '@contexts/wallet';
 
 type ValidatorAddressProps = {
