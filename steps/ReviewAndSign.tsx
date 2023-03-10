@@ -18,7 +18,7 @@ import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
-import { getDisplayDenomFromCurrencyToken } from '@utils/currency';
+import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
 import { broadCastMessages } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import {
@@ -146,7 +146,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         trx = generateDelegateTrx({
           delegatorAddress: wallet.user!.address,
           validatorAddress: dstAddress as string,
-          denom: token ? token[0]?.value : '',
+          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
           amount: getMicroAmount(amount.toString()),
         });
         break;
@@ -154,7 +154,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         trx = generateUndelegateTrx({
           delegatorAddress: wallet.user!.address,
           validatorAddress: dstAddress as string,
-          denom: token ? token[0]?.value : '',
+          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
           amount: getMicroAmount(amount.toString()),
         });
         break;
@@ -163,7 +163,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           delegatorAddress: wallet.user!.address,
           validatorSrcAddress: srcAddress,
           validatorDstAddress: dstAddress as string,
-          denom: token ? token[0]?.value : '',
+          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
           amount: getMicroAmount(amount.toString()),
         });
         break;
