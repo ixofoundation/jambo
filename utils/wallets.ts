@@ -3,7 +3,7 @@ import { ChainInfo } from '@keplr-wallet/types';
 
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { TOKEN_BALANCE, WALLET, WALLET_BALANCE, WALLET_TYPE } from 'types/wallet';
+import { TOKEN_BALANCE, WALLET, WALLET_TYPE, CURRENCY_TOKEN } from 'types/wallet';
 import { USER } from 'types/user';
 import { initializeWC, WCBroadCastMessage } from './walletConnect';
 import { initializeKeplr, keplrBroadCastMessage } from './keplr';
@@ -11,7 +11,6 @@ import { initializeOpera, operaBroadCastMessage } from './opera';
 import { getFeeDenom, TOKEN_ASSET } from './currency';
 import { DELEGATION, UNBONDING_DELEGATION } from 'types/validators';
 import { sumArray } from './misc';
-import { customQueries } from '@ixo/impactxclient-sdk';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
@@ -20,10 +19,9 @@ export const shortenAddress = (address: string) =>
 
 // TODO: provide denom as 5th param to only group for the denom
 export const groupWalletAssets = (
-  balances: WALLET_BALANCE[],
+  balances: CURRENCY_TOKEN[],
   delegations: DELEGATION[],
   unbondingDelegations: UNBONDING_DELEGATION[],
-  stakingTokenDenom: string,
 ): TOKEN_BALANCE[] => {
   const assets = new Map<string, TOKEN_BALANCE>();
   for (const balance of balances) {
@@ -54,21 +52,25 @@ export const groupWalletAssets = (
     );
   }
   for (const unbondingDelegation of unbondingDelegations) {
-    const asset = assets.get(stakingTokenDenom);
+    const asset = assets.get(unbondingDelegation.entries[0].balance?.denom);
     assets.set(
-      stakingTokenDenom,
+      unbondingDelegation.entries[0].balance?.denom,
       asset
-        ? { ...asset, undelegating: asset.undelegating + sumArray(unbondingDelegation.entries.map((x) => x.balance)) }
+        ? {
+            ...asset,
+            undelegating:
+              asset.undelegating + sumArray(unbondingDelegation.entries.map((x) => Number(x.balance.amount ?? 0))),
+          }
         : {
-            denom: stakingTokenDenom,
+            denom: unbondingDelegation.entries[0].balance?.denom,
             available: 0,
             staked: 0,
             undelegating: sumArray(unbondingDelegation.entries.map((x) => Number(x.balance))),
             token: {
               amount: '0',
-              denom: stakingTokenDenom,
+              denom: unbondingDelegation.entries[0].balance?.denom,
               ibc: false,
-              token: customQueries.currency.findTokenFromDenom(stakingTokenDenom),
+              token: unbondingDelegation.entries[0].balance?.token,
             },
           },
     );

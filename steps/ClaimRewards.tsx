@@ -5,6 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import ValidatorListItem from '@components/ValidatorListItem/ValidatorListItem';
 import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
+import { CARD_BG_COLOR, CARD_COLOR } from '@components/Card/Card';
 import { ViewOnExplorerButton } from '@components/Button/Button';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
@@ -13,19 +14,14 @@ import Footer from '@components/Footer/Footer';
 import Anchor from '@components/Anchor/Anchor';
 import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
-import { calculateTokenAmount, getDisplayDenomFromDenom, getMicroUnitsFromDenom } from '@utils/currency';
 import { defaultTrxFeeOption, generateWithdrawRewardTrx } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
-import { sumArray } from '@utils/misc';
 import { ReviewStepsTypes, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
-import { CURRENCY } from 'types/wallet';
 import useGlobalValidators from '@hooks/useGlobalValidators';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
-import { CARD_BG_COLOR, CARD_COLOR } from '@components/Card/Card';
 
 type ValidatorAddressProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -35,30 +31,14 @@ type ValidatorAddressProps = {
   message: ReviewStepsTypes;
 };
 
-const calculateAccumulatedRewards = (validators: VALIDATOR[]): CURRENCY => {
-  let total = 0;
-  let denom = '';
-  validators.forEach((validator: VALIDATOR) => {
-    if (validator.rewards?.length) {
-      total += sumArray(validator.rewards.map((reward) => Number(reward.amount)));
-      if (!denom) denom = getDisplayDenomFromDenom(validator.rewards[0].denom || '');
-    }
-  });
-  const microUnits = getMicroUnitsFromDenom(denom);
-  console.log({ microUnits, denom, total });
-  return { amount: calculateTokenAmount(total, microUnits).toString(), denom };
-};
-
 const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, message }) => {
   const [successHash, setSuccessHash] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
-  const [rewards, setRewards] = useState<CURRENCY>({} as CURRENCY);
   const { wallet } = useContext(WalletContext);
   const { validators, validatorsLoading } = useGlobalValidators({ rewardedValidatorsOnly: true });
   const { chainInfo } = useContext(ChainContext);
 
   useEffect(() => {
-    if (validators?.length) setRewards(calculateAccumulatedRewards(validators));
     if (loading && validators !== null) setLoading(false);
   }, [validators]);
 
@@ -120,8 +100,7 @@ const ClaimRewards: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header, me
               <div className={utilsStyles.spacer3} />
               <p>Claim my combined rewards</p>
               <AmountAndDenom
-                amount={Number(rewards.amount)}
-                denom={rewards.denom}
+                token={wallet.delegationRewards?.data?.total}
                 microUnits={6}
                 color={CARD_COLOR.lightGrey}
                 bgColor={CARD_BG_COLOR.primary}

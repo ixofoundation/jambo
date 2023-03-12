@@ -156,7 +156,7 @@ const RequestDonation: FC<RequestDonationProps> = ({ onSuccess, onBack, config, 
 				Conditional rendering based on whether the user has any tokens to donate
 				Show a warning screen when a user has no tokens to donate (!wallet.balances.balances)
 				*/
-        wallet.balances?.balances ? (
+        wallet.balances?.data ? (
           <DonationForm approved={donationApproved} onApprove={setDonationApproved} />
         ) : (
           <IconText title="You don't have any tokens to donate." Img={SadFace} imgSize={50}>

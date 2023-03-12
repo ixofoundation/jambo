@@ -67,13 +67,13 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
       <Header header={header} />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-        {wallet.balances?.balances ? (
+        {wallet.balances?.data ? (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
             <p className={styles.label}>Select token to sent</p>
             <TokenSelector
               value={selectedOption as CURRENCY_TOKEN}
               onChange={setSelectedOption}
-              options={wallet.balances?.balances ?? []}
+              options={wallet.balances?.data ?? []}
             />
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>Enter an amount to send</p>

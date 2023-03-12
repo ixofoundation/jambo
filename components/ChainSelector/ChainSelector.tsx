@@ -9,6 +9,7 @@ import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
 import Loader from '@components/Loader/Loader';
 import useModalState from '@hooks/useModalState';
+import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 
 type ChainSelectorProps = {};
@@ -16,7 +17,8 @@ type ChainSelectorProps = {};
 const ChainSelector = ({}: ChainSelectorProps) => {
   const [currentChainId, setCurrentChainId] = useState<string | undefined>();
   const [chainSelectVisible, showChainSelect, hideChainSelect] = useModalState(false);
-  const { chains, chainInfo, chain, updateChainId } = useContext(ChainContext);
+  const { chains, chainInfo, chain } = useContext(ChainContext);
+  const { updateChainId } = useContext(WalletContext);
 
   useEffect(() => {
     if (chainInfo?.chainId && !chain.chainLoading && chainInfo?.chainId !== currentChainId)

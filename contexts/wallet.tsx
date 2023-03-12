@@ -1,9 +1,15 @@
 import { createContext, useState, useEffect, HTMLAttributes, useContext } from 'react';
+import { ChainNetwork } from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
+import { SiteHeader } from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
+import { WALLET, WALLET_TYPE, WALLET_DELEGATIONS, WALLET_DELEGATION_REWARDS } from 'types/wallet';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { VALIDATOR } from 'types/validators';
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
+import { generateValidators } from '@utils/validators';
 import { initializeWallet } from '@utils/wallets';
 import {
   queryAllBalances,
@@ -12,24 +18,17 @@ import {
   queryDelegatorUnbondingDelegations,
   queryValidators,
 } from '@utils/query';
-import { WALLET, WALLET_TYPE, WALLET_ASSETS, WALLET_KEYS } from 'types/wallet';
-import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { VALIDATOR } from 'types/validators';
-import { QUERY_CLIENT } from 'types/query';
 import { ChainContext } from './chain';
-import useModalState from '@hooks/useModalState';
-import { linkDelegationsAndRewards } from '@utils/validators';
-import ImageWithFallback from '@components/ImageFallback/ImageFallback';
-import { SiteHeader } from '@components/Header/Header';
+import useWalletData from '@hooks/useWalletData';
 
 export const WalletContext = createContext({
   wallet: {} as WALLET,
   updateWalletType: (newWalletType: WALLET_TYPE) => {},
   fetchAssets: () => {},
+  clearAssets: () => {},
+  updateChainId: (chainId: string) => {},
+  updateChainNetwork: (chainNetwork: ChainNetwork) => {},
   logoutWallet: () => {},
-  walletModalVisible: false,
-  showWalletModal: () => {},
-  hideWalletModal: () => {},
   validators: [] as VALIDATOR[],
   updateValidators: async () => {},
   updateValidatorAvatar: (validatorAddress: string, avatarUrl: string) => {},
@@ -38,37 +37,33 @@ export const WalletContext = createContext({
 const DEFAULT_WALLET: WALLET = {
   walletType: undefined,
   user: undefined,
-  balances: undefined,
 };
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   const [wallet, setWallet] = useState<WALLET>(DEFAULT_WALLET);
-  const [walletModalVisible, showWalletModal, hideWalletModal] = useModalState(false);
   const [loaded, setLoaded] = useState<boolean>(false);
   const [validators, setValidators] = useState<VALIDATOR[]>();
-  const { chain, chainInfo, queryClient } = useContext(ChainContext);
+  const { chain, chainInfo, queryClient, updateChainId, updateChainNetwork } = useContext(ChainContext);
+  const [balances, fetchBalances, clearBalances] = useWalletData(queryAllBalances, wallet?.user?.address);
+  const [delegations, fetchDelegations, clearDelegations] = useWalletData(
+    queryDelegatorDelegations,
+    wallet?.user?.address,
+  );
+  const [delegationRewards, fetchDelegationRewards, clearDelegationRewards] = useWalletData(
+    queryDelegationTotalRewards,
+    wallet?.user?.address,
+  );
+  const [unbondingDelegations, fetchUnbondingDelegations, clearUnbondingDelegations] = useWalletData(
+    queryDelegatorUnbondingDelegations,
+    wallet?.user?.address,
+  );
 
   const updateWallet = (newWallet: WALLET, override: boolean = false) => {
     if (override) setWallet({ ...DEFAULT_WALLET, ...newWallet });
     else setWallet((currentWallet) => ({ ...currentWallet, ...newWallet }));
   };
 
-  const updateWalletAsset =
-    (asset: WALLET_KEYS) =>
-    (newValue: WALLET_ASSETS, override: boolean = false) => {
-      if (override) updateWallet({ [asset]: newValue });
-      else
-        setWallet((currentWallet) => ({
-          ...currentWallet,
-          [asset]: currentWallet[asset] ? { ...currentWallet[asset], ...newValue } : newValue,
-        }));
-    };
-
   const updateWalletType = (newWalletType: WALLET_TYPE) => updateWallet({ walletType: newWalletType });
-  const updateBalances = updateWalletAsset('balances');
-  const updateDelegations = updateWalletAsset('delegations');
-  const updateRewards = updateWalletAsset('rewards');
-  const updateUnbondingDelegations = updateWalletAsset('unbonding');
 
   const initializeWallets = async () => {
     try {
@@ -79,56 +74,21 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     }
   };
 
-  const logoutWallet = () => {
-    updateWallet({}, true);
-  };
+  const logoutWallet = () => updateWallet({}, true);
 
-  const fetchUserBalances = async () => {
-    if (!wallet.user?.address || !queryClient) return;
-    updateBalances({ loading: true, error: undefined });
-    try {
-      const balances = await queryAllBalances(queryClient as QUERY_CLIENT, wallet.user.address);
-      updateBalances({ balances, loading: false }, true);
-    } catch (error) {
-      updateBalances({ error: error as string, loading: false });
-    }
-  };
-  const fetchUserDelegations = async () => {
-    if (!wallet.user?.address || !queryClient) return;
-    updateDelegations({ loading: true, error: undefined });
-    try {
-      const delegations = await queryDelegatorDelegations(queryClient as QUERY_CLIENT, wallet.user.address);
-      updateDelegations({ delegations, loading: false }, true);
-    } catch (error) {
-      updateDelegations({ error: error as string, loading: false });
-    }
-  };
-  const fetchUserDelegationRewards = async () => {
-    if (!wallet.user?.address || !queryClient) return;
-    updateRewards({ loading: true, error: undefined });
-    try {
-      const rewards = await queryDelegationTotalRewards(queryClient as QUERY_CLIENT, wallet.user.address);
-      updateRewards({ rewards, loading: false }, true);
-    } catch (error) {
-      updateRewards({ error: error as string, loading: false });
-    }
-  };
-  const fetchUserUnbondingDelegations = async () => {
-    if (!wallet.user?.address || !queryClient) return;
-    updateUnbondingDelegations({ loading: true, error: undefined });
-    try {
-      const unbonding = await queryDelegatorUnbondingDelegations(queryClient as QUERY_CLIENT, wallet.user.address);
-      updateUnbondingDelegations({ unbonding, loading: false }, true);
-    } catch (error) {
-      updateUnbondingDelegations({ error: error as string, loading: false });
-    }
-  };
+  // const clearWallet = () =>
 
-  const fetchAssets = async () => {
-    fetchUserBalances();
-    fetchUserDelegations();
-    fetchUserDelegationRewards();
-    fetchUserUnbondingDelegations();
+  const fetchAssets = () => {
+    fetchBalances();
+    fetchDelegations();
+    fetchDelegationRewards();
+    fetchUnbondingDelegations();
+  };
+  const clearAssets = () => {
+    clearBalances();
+    clearDelegations();
+    clearDelegationRewards();
+    clearUnbondingDelegations();
   };
 
   const updateValidators = async () => {
@@ -144,9 +104,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
           return validator;
         }),
       );
-      fetchUserDelegations();
-      fetchUserDelegationRewards();
-      fetchUserUnbondingDelegations();
+      fetchDelegations();
+      fetchDelegationRewards();
+      fetchUnbondingDelegations();
     } catch (error) {
       console.error(error);
     }
@@ -204,20 +164,32 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
   }, []);
 
   const value = {
-    wallet,
-    walletModalVisible,
-    showWalletModal,
-    hideWalletModal,
+    wallet: {
+      ...wallet,
+      balances,
+      delegations,
+      delegationRewards,
+      unbondingDelegations,
+      loading:
+        balances.loading ||
+        delegations.loading ||
+        delegationRewards.loading ||
+        unbondingDelegations.loading ||
+        chain.chainLoading,
+    } as WALLET,
     updateWalletType,
     fetchAssets,
+    clearAssets,
+    updateChainId: updateChainId(clearAssets),
+    updateChainNetwork: updateChainNetwork(clearAssets),
     logoutWallet,
     updateValidators,
-    validators: linkDelegationsAndRewards(
-      validators,
-      wallet.delegations?.delegations,
-      wallet.rewards?.rewards?.rewards,
-    ) as VALIDATOR[],
     updateValidatorAvatar,
+    validators: generateValidators(
+      validators,
+      (delegations as WALLET_DELEGATIONS)?.data,
+      (delegationRewards as WALLET_DELEGATION_REWARDS)?.data?.rewards,
+    ) as VALIDATOR[],
   };
 
   return (
