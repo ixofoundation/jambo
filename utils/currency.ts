@@ -111,8 +111,10 @@ export const getDecimalsFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) =>
 
 export const getIbcStatusFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) => currencyToken?.ibc ?? false;
 
+export const getCoinImageUrlFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) => currencyToken?.token?.coinImageUrl;
+
 export const getTokenTypeFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN, chainName?: string) =>
-  (currencyToken?.ibc ? 'ibc' : chainName) ?? '';
+  (currencyToken?.ibc ? 'ibc' : currencyToken?.chain) ?? chainName ?? '';
 
 // let exampleCurrencyToken: CURRENCY_TOKEN = {
 // 	amount: '5',

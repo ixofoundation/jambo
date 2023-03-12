@@ -52,11 +52,11 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
   useEffect(() => {
     const currentCurrency = determineDelegationBalance(
       config.source,
-      wallet?.balances?.balances?.find((balance) => balance?.token?.isStakeCurrency),
+      wallet?.balances?.data?.find((balance) => balance?.token?.isStakeCurrency),
       validator?.delegation?.balance,
     );
     if (currentCurrency?.amount !== max?.amount) setMax(currentCurrency);
-  }, [config.source, wallet.balances?.balances, validator?.delegation?.balance]);
+  }, [config.source, wallet.balances?.data, validator?.delegation?.balance]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setAmount(event.target.value);
@@ -87,7 +87,7 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
         <div className={utilsStyles.spacer3} />
         {!validator ? (
           <IconText title='Something went wrong. Please try again.' Img={SadFace} imgSize={50} />
-        ) : wallet.balances?.balances?.length ? (
+        ) : wallet.balances?.data?.length ? (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
             {delegated && (
               <>

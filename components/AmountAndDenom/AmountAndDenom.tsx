@@ -1,7 +1,12 @@
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './AmountAndDenom.module.scss';
 import Card, { CARD_BG_COLOR, CARD_COLOR, CARD_SIZE } from '@components/Card/Card';
-import { formatTokenAmount, getDecimalsFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
+import {
+  formatTokenAmount,
+  getAmountFromCurrencyToken,
+  getDecimalsFromCurrencyToken,
+  getDisplayDenomFromCurrencyToken,
+} from '@utils/currency';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 type AmountAndDenomProps = {
@@ -24,7 +29,10 @@ const AmountAndDenom = ({
   return (
     <div className={utilsStyles.row}>
       <Card size={CARD_SIZE.mediumLarge} className={styles.amount} rounded color={color} bgColor={bgColor}>
-        {formatTokenAmount(amount ?? 0, microUnits ?? getDecimalsFromCurrencyToken(token))}
+        {formatTokenAmount(
+          amount ?? getAmountFromCurrencyToken(token),
+          microUnits ?? getDecimalsFromCurrencyToken(token),
+        )}
       </Card>
       <Card size={CARD_SIZE.mediumLarge} className={styles.denom} rounded color={color} bgColor={bgColor}>
         {denom ?? getDisplayDenomFromCurrencyToken(token)}

@@ -67,7 +67,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
 							<p>Scan address</p>
 						</div>
 						<p>or</p> */}
-            {!wallet?.balances?.balances?.length ? (
+            {!wallet?.balances?.data?.length ? (
               <IconText title="You don't have any tokens to send." Img={SadFace} imgSize={50} />
             ) : (
               <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>

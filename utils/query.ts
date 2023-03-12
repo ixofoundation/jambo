@@ -9,27 +9,32 @@ import {
   VALIDATOR,
   VALIDATOR_FILTER_TYPE,
 } from 'types/validators';
-import { CURRENCY, WALLET_BALANCE } from 'types/wallet';
+import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
+import { TOKEN_ASSET } from './currency';
 
 export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   const client = await createQueryClient(blockchainRpcUrl);
   return client;
 };
 
-export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: string): Promise<WALLET_BALANCE[]> => {
+export const queryAllBalances = async (
+  queryClient: QUERY_CLIENT,
+  chain: string,
+  address: string,
+): Promise<CURRENCY_TOKEN[]> => {
   try {
     const response = await queryClient.cosmos.bank.v1beta1.allBalances({ address });
-    let balances: WALLET_BALANCE[] = [];
+    let balances: CURRENCY_TOKEN[] = [];
     for (const balance of response.balances) {
       const isIbc = /^ibc\//i.test(balance.denom);
       if (isIbc) {
         const ibcToken = await customQueries.currency.findIbcTokenFromHash(queryClient, balance.denom);
-        balances.push({ ...balance, ibc: isIbc, token: ibcToken.token });
+        balances.push({ ...balance, ibc: isIbc, token: ibcToken.token, chain });
       } else {
         const token = customQueries.currency.findTokenFromDenom(balance.denom);
-        balances.push({ ...balance, ibc: isIbc, token });
+        balances.push({ ...balance, ibc: isIbc, token, chain });
       }
     }
     return balances.sort((a, b) => (a.ibc ? 1 : -1));
@@ -39,7 +44,12 @@ export const queryAllBalances = async (queryClient: QUERY_CLIENT, address: strin
   }
 };
 
-export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, address: string): Promise<DELEGATION[]> => {
+export const queryDelegatorDelegations = async (
+  queryClient: QUERY_CLIENT,
+  chain: string,
+  address: string,
+  stakeCurrency: TOKEN_ASSET,
+): Promise<DELEGATION[]> => {
   try {
     const { delegationResponses = [] } = await queryClient.cosmos.staking.v1beta1.delegatorDelegations({
       delegatorAddr: address,
@@ -49,10 +59,11 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, addre
       validatorAddress: delegation?.delegation?.validatorAddress ?? '',
       shares: Number(delegation?.delegation?.shares ?? 0),
       balance: {
-        denom: delegation?.balance?.denom ?? '',
+        denom: delegation?.balance?.denom ?? stakeCurrency.coinMinimalDenom ?? '',
         amount: delegation?.balance?.amount ?? '0',
         ibc: false,
-        token: customQueries.currency.findTokenFromDenom(delegation?.balance?.denom ?? ''),
+        chain,
+        token: stakeCurrency,
       },
     }));
 
@@ -65,29 +76,61 @@ export const queryDelegatorDelegations = async (queryClient: QUERY_CLIENT, addre
 
 export const queryDelegationTotalRewards = async (
   queryClient: QUERY_CLIENT,
+  chain: string,
   address: string,
+  stakeCurrency: TOKEN_ASSET,
 ): Promise<DELEGATION_REWARDS | undefined> => {
   try {
     const response = await queryClient.cosmos.distribution.v1beta1.delegationTotalRewards({
       delegatorAddress: address,
     });
-
     if (!response?.total?.length) return;
-
+    const totalRewards = response.total.find((total) => total.denom === stakeCurrency.coinMinimalDenom);
     const delegationTotalRewards = {
-      total: response.total.map((total: CURRENCY) => ({
-        amount: total.amount.slice(0, total.amount.length - 18),
-        denom: total.denom,
-      })),
-      rewards: response.rewards.map((reward) => ({
-        validatorAddress: reward.validatorAddress,
-        rewards: reward.reward.map((r) => ({
-          amount: r.amount.slice(0, r.amount.length - 18),
-          denom: r.denom,
-          ibc: false,
-          token: customQueries.currency.findTokenFromDenom(r.denom ?? ''),
-        })),
-      })),
+      total: totalRewards
+        ? {
+            amount: totalRewards.amount.slice(0, totalRewards.amount.length - 18),
+            denom: totalRewards.denom,
+            ibc: false,
+            chain,
+            token: stakeCurrency,
+          }
+        : undefined,
+      // total: response.total.map(
+      //   (total: CURRENCY): CURRENCY_TOKEN => ({
+      //     amount: total.amount.slice(0, total.amount.length - 18),
+      //     denom: total.denom,
+      //     ibc: false,
+      //     chain,
+      //     token: stakeCurrency,
+      //   }),
+      // ),
+      rewards: response.rewards.map((reward) => {
+        const delegationReward = reward.reward.find((reward) => reward.denom === stakeCurrency.coinMinimalDenom);
+
+        return {
+          validatorAddress: reward.validatorAddress,
+          rewards: delegationReward
+            ? {
+                amount: delegationReward.amount.slice(0, delegationReward.amount.length - 18),
+                denom: delegationReward.denom ?? stakeCurrency.coinMinimalDenom,
+                ibc: false,
+                chain,
+                token: stakeCurrency,
+              }
+            : undefined,
+        };
+      }),
+      // rewards: response.rewards.map((reward) => ({
+      //   validatorAddress: reward.validatorAddress,
+      //   rewards: reward.reward.map((r) => ({
+      //     amount: r.amount.slice(0, r.amount.length - 18),
+      //     denom: r.denom ?? stakeCurrency.coinMinimalDenom,
+      //     ibc: false,
+      //     chain,
+      //     token: stakeCurrency,
+      //   })),
+      // })),
     };
 
     return delegationTotalRewards;
@@ -99,20 +142,31 @@ export const queryDelegationTotalRewards = async (
 
 export const queryDelegatorUnbondingDelegations = async (
   queryClient: QUERY_CLIENT,
+  chain: string,
   address: string,
+  stakeCurrency: TOKEN_ASSET,
 ): Promise<UNBONDING_DELEGATION[]> => {
   try {
     const response = await queryClient.cosmos.staking.v1beta1.delegatorUnbondingDelegations({
       delegatorAddr: address,
     });
-    const unbondingDelegations = response.unbondingResponses.map((unbondingDelegation) => ({
-      delegatorAddress: unbondingDelegation.delegatorAddress,
-      validatorAddress: unbondingDelegation.validatorAddress,
-      entries: unbondingDelegation.entries.map((entry) => ({
-        balance: Number(entry.balance ?? 0), // TODO: add staking token/CURRENCY_TOKEN here
-        completionTime: Number(entry.completionTime?.seconds?.low ?? 0),
-      })),
-    }));
+    const unbondingDelegations = response.unbondingResponses.map(
+      (unbondingDelegation): UNBONDING_DELEGATION => ({
+        delegatorAddress: unbondingDelegation.delegatorAddress,
+        validatorAddress: unbondingDelegation.validatorAddress,
+        entries: unbondingDelegation.entries.map((entry) => ({
+          completionTime: Number(entry.completionTime?.seconds?.low ?? 0),
+          // balance: Number(entry.balance ?? 0), // TODO: add staking token/CURRENCY_TOKEN here
+          balance: {
+            amount: entry.balance ?? '0',
+            denom: stakeCurrency.coinMinimalDenom,
+            ibc: false,
+            chain,
+            token: stakeCurrency,
+          },
+        })),
+      }),
+    );
     return unbondingDelegations;
   } catch (error) {
     console.error('queryDelegatorUnbondingDelegations::', error);
