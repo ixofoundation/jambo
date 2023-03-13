@@ -88,6 +88,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
     setAction(newActionData);
   };
 
+  const handleEditMultiSend = () => {
+    if (
+      action?.steps.find((step) => step.id === STEPS.select_token_and_amount || step.id === STEPS.get_receiver_address)
+        ?.data
+    ) {
+      console.log('edditing transaction');
+    }
+  };
+
   const getStepComponent = (step: STEP) => {
     switch (step?.id) {
       case STEPS.get_receiver_address:
@@ -181,6 +190,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             onSuccess={handleOnNext<STEPS.review_and_sign>}
             handleNextMultiSend={handleNextMultiSend}
             deleteMultiSend={handleDeleteMultiSend}
+            editMultiSend={handleEditMultiSend}
             onBack={handleBack}
             steps={action!.steps}
             header={action?.name}

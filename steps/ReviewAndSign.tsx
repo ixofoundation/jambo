@@ -42,6 +42,7 @@ type ReviewAndSignProps = {
   onBack?: () => void;
   handleNextMultiSend?: (nextIndex: number) => void;
   deleteMultiSend?: (deleteIndex: number) => void;
+  editMultiSend?: () => void;
   steps: STEP[];
   header?: string;
   message: ReviewStepsTypes;
@@ -52,6 +53,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   onBack,
   handleNextMultiSend,
   deleteMultiSend,
+  editMultiSend,
   steps,
   header,
   message,
@@ -88,6 +90,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const handleDeleteMultiSend = () => {
     if (deleteMultiSend) deleteMultiSend(trxCancelId!);
     hideCancelTransactionModal();
+  };
+
+  const handleEditTrxMsg = () => {
+    editMultiSend;
   };
 
   useEffect(() => {
@@ -241,6 +247,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                       token={addressToken}
                       amount={addressAmount}
                       onDeleteClick={showCancelTransactionModal(index)}
+                      onEditClick={handleEditTrxMsg}
                       key={`${address}_${index}`}
                     />
                   );

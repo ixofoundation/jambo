@@ -28,7 +28,28 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
 
+  const calculateRemainingMax = (
+    currentToken: CURRENCY_TOKEN,
+    prevData: StepDataType<STEPS.select_token_and_amount>,
+  ) => {
+    let result;
+    const mapedAndFiltered = prevData.data.reduce(
+      (acc: any, curr) => {
+        const { amount, token } = curr;
+        if (token.token?.coinDenom === currentToken.denom) {
+          result = { amount: Number(acc.amount) - amount };
+        } else {
+          result = acc;
+        }
+      },
+      { amount: currentToken.amount },
+    );
+    result = mapedAndFiltered.amount;
+    return result;
+  };
+
   useEffect(() => {
+    console.log(calculateRemainingMax);
     fetchAssets();
   }, []);
 
