@@ -30,8 +30,8 @@ export const ChainContext = createContext({
   chainInfo: {} as KEPLR_CHAIN_INFO_TYPE | undefined,
   chains: [] as KEPLR_CHAIN_INFO_TYPE[],
   queryClient: undefined as QUERY_CLIENT | undefined,
-  updateChainId: (selectedChainId: string) => {},
-  updateChainNetwork: (selectedChainNetwork: CHAIN_NETWORK_TYPE) => {},
+  updateChainId: (callback?: Function) => (selectedChainId: string) => {},
+  updateChainNetwork: (callback?: Function) => (selectedChainNetwork: CHAIN_NETWORK_TYPE) => {},
 });
 
 export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
@@ -69,20 +69,24 @@ export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     updateCurrentChain({ chainLoading: false });
   };
 
-  const updateChainId = (selectedChainId: string) => {
-    if (selectedChainId === currentChain.chainId) return;
+  const updateChainId = (callback?: Function) => (selectedChainId: string) => {
+    if (selectedChainId === currentChain.chainId) return false;
     if (queryClientRef.current) queryClientRef.current = undefined;
+    if (callback && typeof callback === 'function') callback();
     updateCurrentChain({ chainLoading: true, chainId: selectedChainId });
+    return true;
   };
 
-  const updateChainNetwork = (selectedChainNetwork: CHAIN_NETWORK_TYPE) => {
+  const updateChainNetwork = (callback?: Function) => (selectedChainNetwork: CHAIN_NETWORK_TYPE) => {
     if (selectedChainNetwork === currentChain.chainNetwork) return;
     try {
       updateCurrentChain({ chainLoading: true });
       if (queryClientRef.current) queryClientRef.current = undefined;
       const chainInfos = getChainsByNetwork(chains, selectedChainNetwork);
       const nextChainId = extractChainIdFromChainInfos(chainInfos);
+      if (callback && typeof callback === 'function') callback();
       updateCurrentChain({ chainId: nextChainId, chainNetwork: selectedChainNetwork });
+      return true;
     } catch (error) {
       console.error(error);
     }

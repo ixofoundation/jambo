@@ -4,11 +4,11 @@ export type VALIDATOR_FILTER_TYPE = 'voting_asc' | 'voting_desc' | 'commission_a
 
 export type DELEGATION_REWARD = {
   validatorAddress: string;
-  rewards: CURRENCY[];
+  rewards?: CURRENCY_TOKEN;
 };
 
 export type DELEGATION_REWARDS = {
-  total: CURRENCY[];
+  total?: CURRENCY_TOKEN;
   rewards: DELEGATION_REWARD[];
 };
 
@@ -23,7 +23,7 @@ export type UNBONDING_DELEGATION = {
   delegatorAddress: string;
   validatorAddress: string;
   entries: {
-    balance: number; // TODO: change to CURRENCY_TOKEN
+    balance: CURRENCY_TOKEN;
     completionTime: number;
   }[];
 };
@@ -38,7 +38,7 @@ export type VALIDATOR = {
   votingPower: number;
   votingRank: number;
   delegation?: DELEGATION;
-  rewards?: CURRENCY[];
+  rewards?: CURRENCY;
 };
 
 export type VALIDATOR_CONFIG = {
@@ -54,4 +54,8 @@ export type VALIDATOR_AMOUNT_CONFIG = {
   label: string;
   sub?: string;
   source: 'wallet' | 'validator';
+};
+
+export type VALIDATORS_AVATARS = {
+  [validatorAddress: string]: string;
 };

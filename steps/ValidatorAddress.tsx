@@ -73,7 +73,7 @@ const ValidatorAddress: FC<ValidatorAddressProps> = ({ onSuccess, onBack, header
       <Header header={header} />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-        {!!config.requireFunds && !wallet?.balances?.balances?.length ? (
+        {!!config.requireFunds && !wallet?.balances?.data?.length ? (
           <IconText title="You don't have any tokens to stake." Img={SadFace} imgSize={50} />
         ) : (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>

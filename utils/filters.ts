@@ -5,37 +5,33 @@ export const VALIDATOR_FILTERS = {
   [VALIDATOR_FILTER_KEYS.VOTING_POWER_RANKING]: (a: VALIDATOR, b: VALIDATOR) =>
     a.votingPower !== b.votingPower ? b.votingPower - a.votingPower : b.commission - a.commission,
   [VALIDATOR_FILTER_KEYS.VOTING_ASC]: (a: VALIDATOR, b: VALIDATOR) =>
-    !a.delegation !== !b.delegation
-      ? !a.delegation
-        ? 1
-        : -1
-      : a.votingRank !== b.votingRank
-      ? b.votingRank - a.votingRank
-      : a.commission - b.commission,
+    // !a.delegation !== !b.delegation
+    //   ? !a.delegation
+    //     ? 1
+    //     : -1
+    //   :
+    a.votingRank !== b.votingRank ? b.votingRank - a.votingRank : a.commission - b.commission,
   [VALIDATOR_FILTER_KEYS.VOTING_DESC]: (a: VALIDATOR, b: VALIDATOR) =>
-    !a.delegation !== !b.delegation
-      ? !a.delegation
-        ? 1
-        : -1
-      : a.votingRank !== b.votingRank
-      ? a.votingRank - b.votingRank
-      : b.commission - a.commission,
+    // !a.delegation !== !b.delegation
+    //   ? !a.delegation
+    //     ? 1
+    //     : -1
+    //   :
+    a.votingRank !== b.votingRank ? a.votingRank - b.votingRank : b.commission - a.commission,
   [VALIDATOR_FILTER_KEYS.COMMISSION_ASC]: (a: VALIDATOR, b: VALIDATOR) =>
-    !a.delegation !== !b.delegation
-      ? !a.delegation
-        ? 1
-        : -1
-      : a.commission !== b.commission
-      ? a.commission - b.commission
-      : b.votingRank - a.votingRank,
+    // !a.delegation !== !b.delegation
+    //   ? !a.delegation
+    //     ? 1
+    //     : -1
+    //   :
+    a.commission !== b.commission ? a.commission - b.commission : b.votingRank - a.votingRank,
   [VALIDATOR_FILTER_KEYS.COMMISSION_DESC]: (a: VALIDATOR, b: VALIDATOR) =>
-    !a.delegation !== !b.delegation
-      ? !a.delegation
-        ? 1
-        : -1
-      : a.commission !== b.commission
-      ? b.commission - a.commission
-      : a.votingRank - b.votingRank,
+    // !a.delegation !== !b.delegation
+    //   ? !a.delegation
+    //     ? 1
+    //     : -1
+    //   :
+    a.commission !== b.commission ? b.commission - a.commission : a.votingRank - b.votingRank,
 };
 
 export const filterValidators = (validators: VALIDATOR[], filter: VALIDATOR_FILTER_TYPE, search: string) => {

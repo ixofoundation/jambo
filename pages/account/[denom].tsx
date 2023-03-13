@@ -12,7 +12,6 @@ import Header from '@components/Header/Header';
 import Head from '@components/Head/Head';
 import SadFace from '@icons/sad_face.svg';
 import { formatTokenAmount, getDecimalsFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
-import { extractStakingTokenDenomFromChainInfo } from '@utils/chains';
 import { urlDecodeIbcDenom } from '@utils/encoding';
 import { groupWalletAssets } from '@utils/wallets';
 import { WalletContext } from '@contexts/wallet';
@@ -26,10 +25,9 @@ const Denom: NextPage = () => {
   const { wallet } = useContext(WalletContext);
   const { chainInfo } = useContext(ChainContext);
   const assets = groupWalletAssets(
-    wallet.balances?.balances ?? [],
-    wallet.delegations?.delegations ?? [],
-    wallet.unbonding?.unbonding ?? [],
-    extractStakingTokenDenomFromChainInfo(chainInfo) || '',
+    wallet.balances?.data ?? [],
+    wallet.delegations?.data ?? [],
+    wallet.unbondingDelegations?.data ?? [],
   );
   const asset = assets.find((asset) => asset.token.denom === urlDecodeIbcDenom(query.denom as string));
 
@@ -55,7 +53,9 @@ const Denom: NextPage = () => {
           <h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
         </div>
 
-        <p>My {getDisplayDenomFromCurrencyToken(asset.token)} Balance</p>
+        <p>
+          My {getDisplayDenomFromCurrencyToken(asset.token)} Balance{asset.token.ibc && ' (ibc)'}
+        </p>
         <p className={styles.totalBalance}>
           {formatTokenAmount(
             asset.available + asset.staked + asset.undelegating,

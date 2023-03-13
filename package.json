@@ -21,7 +21,7 @@
     "@dnd-kit/modifiers": "6.0.0",
     "@dnd-kit/sortable": "7.0.1",
     "@dnd-kit/utilities": "3.2.0",
-    "@ixo/impactxclient-sdk": "0.0.15",
+    "@ixo/impactxclient-sdk": "0.0.19",
     "@keplr-wallet/cosmos": "0.11.11",
     "@keplr-wallet/types": "0.11.10",
     "@keplr-wallet/wc-client": "0.11.11",
