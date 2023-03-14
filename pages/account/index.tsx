@@ -5,10 +5,10 @@ import QRCode from 'react-qr-code';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
+import AccountTokenCardList from '@components/AccountTokenCardList/AccountTokenCardList';
 import AddressActionButton from '@components/AddressActionButton/AddressActionButton';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
-import TokenList from '@components/TokenList/TokenList';
 import { CARD_BG_COLOR } from '@components/Card/Card';
 import Wallets from '@components/Wallets/Wallets';
 import Header from '@components/Header/Header';
@@ -63,7 +63,7 @@ const Account: NextPage = () => {
               walletType={wallet.walletType}
             />
             <div className={utilsStyles.spacer3} />
-            <TokenList onTokenClick={handleTokenClick} displayGradient />
+            <AccountTokenCardList onTokenClick={handleTokenClick} />
             {QRVisible && (
               <BottomSheet onClose={hideQR} bgColor={CARD_BG_COLOR.background}>
                 <div className={utilsStyles.columnAlignCenter}>

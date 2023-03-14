@@ -11,8 +11,8 @@ import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
 import { validateAmountAgainstBalance } from '@utils/currency';
 import { StepDataType, STEPS } from 'types/steps';
-import { WalletContext } from '@contexts/wallet';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import { WalletContext } from '@contexts/wallet';
 
 type DefineAmountTokenProps = {
   onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
@@ -32,12 +32,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
     fetchAssets();
   }, []);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    let newAmount = event.target.value;
-    // cannot use thousands separators
-    // newAmount = formatTokenAmount(formattedAmountToNumber(newAmount), getDecimalsFromCurrencyToken(selectedOption));
-    setAmount(newAmount);
-  };
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value);
 
   const formIsValid = () =>
     !!selectedOption &&
@@ -72,8 +67,8 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
             <p className={styles.label}>Select token to sent</p>
             <TokenSelector
               value={selectedOption as CURRENCY_TOKEN}
-              onChange={setSelectedOption}
-              options={wallet.balances?.data ?? []}
+              onTokenSelect={setSelectedOption}
+              tokens={wallet.balances?.data ?? []}
             />
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>Enter an amount to send</p>

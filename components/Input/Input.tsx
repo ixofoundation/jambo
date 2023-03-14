@@ -2,6 +2,7 @@ import { FC, InputHTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './Input.module.scss';
+import utilsStyles from '@styles/utils.module.scss';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import {
   calculateMaxTokenAmount,
@@ -68,11 +69,11 @@ export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, ...other }: Inpu
   const handleMaxClick = () => onMaxClick(formattedAmountToNumber(amount));
 
   return (
-    <>
+    <div className={cls(styles.inputWithMax, utilsStyles.column)}>
       <p className={cls(styles.max, styles.endAlign)} onClick={handleMaxClick}>
         {amount} {denom} MAX
       </p>
       <Input {...other} />
-    </>
+    </div>
   );
 };

@@ -1,14 +1,59 @@
-import { HTMLAttributes } from 'react';
+import { FC, HTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './TokenCard.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import Card, { CARD_SIZE } from '@components/Card/Card';
-import { formatTokenAmount } from '@utils/currency';
+import {
+  calculateTokenAmount,
+  getAmountFromCurrencyToken,
+  getCoinImageUrlFromCurrencyToken,
+  getDecimalsFromCurrencyToken,
+  getDenomFromCurrencyToken,
+  getDisplayDenomFromCurrencyToken,
+  getTokenTypeFromCurrencyToken,
+} from '@utils/currency';
 import { getCSSVariable } from '@utils/styles';
+import { CURRENCY_TOKEN } from 'types/wallet';
 
 // TODO: find dolor values
+
+type TokenCardProps = {
+  token?: CURRENCY_TOKEN;
+  onTokenClick: (denom: string) => void;
+  className?: string;
+} & HTMLAttributes<HTMLDivElement>;
+
+const TokenCard: FC<TokenCardProps> = ({ token, children, className, onTokenClick = (denom: string) => {} }) => {
+  if (!getDenomFromCurrencyToken(token)) return null;
+
+  const handleTokenClick = () => onTokenClick(getDenomFromCurrencyToken(token));
+
+  return (
+    <Card
+      size={CARD_SIZE.medium}
+      onClick={handleTokenClick}
+      className={cls(styles.tokenCardWrapper, utilsStyles.rowAlignCenter, className)}
+    >
+      <ImageWithFallback
+        src={getCoinImageUrlFromCurrencyToken(token)}
+        alt={getDenomFromCurrencyToken(token)}
+        fallbackSrc='/images/chain-logos/fallback.png'
+        width={38}
+        height={38}
+      />
+      <div className={styles.tokenDenom}>
+        <p className={styles.denom}>{getDisplayDenomFromCurrencyToken(token)}</p>
+        <p className={styles.denomType}>{getTokenTypeFromCurrencyToken(token)}</p>
+      </div>
+      <p>{calculateTokenAmount(getAmountFromCurrencyToken(token), getDecimalsFromCurrencyToken(token), false)}</p>
+      {children}
+    </Card>
+  );
+};
+
+export default TokenCard;
 
 const formatPercentage = (percentage: number) => {
   if (!percentage) return '0%';
@@ -34,63 +79,19 @@ const generateBalanceGradient = (available: number = 0, staked: number = 0, unde
   return result;
 };
 
-type TokenCardProps = {
-  denom: string;
-  displayDenom: string;
-  image?: string;
+type GradientTokenCardProps = {
   available: number;
-  onTokenClick: (denom: string) => void;
-  type?: string;
   staked?: number;
   undelegating?: number;
-  displayGradient?: boolean;
-} & HTMLAttributes<HTMLDivElement>;
+} & TokenCardProps;
 
-const TokenCard = ({
-  denom,
-  displayDenom,
-  image = '/images/chain-logos/fallback.png',
-  available,
-  staked,
-  type = '',
-  undelegating,
-  displayGradient = false,
-  onTokenClick = (denom: string) => {},
-}: TokenCardProps) => {
-  if (!denom) return null;
-
-  const handleTokenClick = () => onTokenClick(denom);
-
+export const GradientTokenCard: FC<GradientTokenCardProps> = ({ available, staked, undelegating, ...other }) => {
   return (
-    <Card
-      size={CARD_SIZE.medium}
-      onClick={handleTokenClick}
-      className={cls(
-        styles.tokenCardWrapper,
-        utilsStyles.rowAlignCenter,
-        displayGradient && styles.gradientTokenCardWrapper,
-      )}
-    >
-      <ImageWithFallback
-        src={image}
-        alt={denom}
-        fallbackSrc='/images/chain-logos/fallback.png'
-        width={38}
-        height={38}
+    <TokenCard className={cls(styles.gradientTokenCardWrapper)} {...other}>
+      <div
+        className={styles.gradient}
+        style={{ background: generateBalanceGradient(available, staked, undelegating) }}
       />
-      <div className={styles.tokenDenom}>
-        <p className={styles.denom}>{displayDenom}</p>
-        <p className={styles.denomType}>{type}</p>
-      </div>
-      <p>{formatTokenAmount(Number(available), 6, false)}</p>
-      {displayGradient && (
-        <div
-          className={styles.gradient}
-          style={{ background: generateBalanceGradient(available, staked, undelegating) }}
-        />
-      )}
-    </Card>
+    </TokenCard>
   );
 };
-
-export default TokenCard;

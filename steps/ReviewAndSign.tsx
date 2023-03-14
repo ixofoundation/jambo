@@ -62,6 +62,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [amount, setAmount] = useState<number | number[]>(0);
   const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | undefined>();
+  const [toAmount, setToAmount] = useState<number>(0);
+  const [toToken, setToToken] = useState<CURRENCY_TOKEN | undefined>();
   const [dstAddress, setDstAddress] = useState<string | string[]>(''); // destination address
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
   const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
@@ -119,6 +121,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       if (s.id === STEPS.get_delegated_validator_redelegate) {
         setSrcAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
+      }
+      if (s.id === STEPS.select_swap_tokens_and_amount) {
+        setAmount((s.data as StepDataType<STEPS.select_swap_tokens_and_amount>)?.from.amount ?? 0);
+        setToken((s.data as StepDataType<STEPS.select_swap_tokens_and_amount>)?.from.token);
+        setToAmount((s.data as StepDataType<STEPS.select_swap_tokens_and_amount>)?.to.amount ?? 0);
+        setToToken((s.data as StepDataType<STEPS.select_swap_tokens_and_amount>)?.to.token);
       }
     });
   }, [steps]);
@@ -298,6 +306,24 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
             <p>to</p>
             <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+          </form>
+        ) : message === STEPS.wasm_MsgSwap ? (
+          <form className={styles.stepsForm} autoComplete='none'>
+            <p className={utilsStyles.label}>I want to swap</p>
+            <AmountAndDenom
+              amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(
+                Array.isArray(token) ? (token[0] as CURRENCY_TOKEN) : (token as CURRENCY_TOKEN),
+              )}
+              microUnits={0}
+            />
+            <br />
+            <p className={utilsStyles.label}>for</p>
+            <AmountAndDenom
+              amount={toAmount ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(toToken as CURRENCY_TOKEN)}
+              microUnits={0}
+            />
           </form>
         ) : (
           <p>Unsupported review type</p>

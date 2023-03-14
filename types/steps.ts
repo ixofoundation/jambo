@@ -9,6 +9,7 @@ export enum STEPS {
   get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
   get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
   select_token_and_amount = 'select_token_and_amount',
+  select_swap_tokens_and_amount = 'select_swap_tokens_and_amount',
   select_amount_delegate = 'select_amount_delegate',
   select_amount_undelegate = 'select_amount_undelegate',
   select_amount_redelegate = 'select_amount_redelegate',
@@ -17,6 +18,7 @@ export enum STEPS {
   review_and_sign = 'review_and_sign',
   bank_MsgSend = 'bank_MsgSend',
   bank_MsgMultiSend = 'bank_MsgMultiSend',
+  wasm_MsgSwap = 'wasm_MsgSwap',
   staking_MsgDelegate = 'staking_MsgDelegate',
   staking_MsgUndelegate = 'staking_MsgUndelegate',
   staking_MsgRedelegate = 'staking_MsgRedelegate',
@@ -48,6 +50,10 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Get validator address',
   },
   [STEPS.select_token_and_amount]: { id: STEPS.select_token_and_amount, name: 'Select token and amount' },
+  [STEPS.select_swap_tokens_and_amount]: {
+    id: STEPS.select_swap_tokens_and_amount,
+    name: 'Select swap tokens and amount',
+  },
   [STEPS.select_amount_delegate]: { id: STEPS.select_amount_delegate, name: 'Define amount to delegate' },
   [STEPS.select_amount_undelegate]: { id: STEPS.select_amount_undelegate, name: 'Define amount to undelegate' },
   [STEPS.select_amount_redelegate]: { id: STEPS.select_amount_redelegate, name: 'Define amount to redelegate' },
@@ -56,6 +62,7 @@ export const steps: { [key in STEPS]: STEP } = {
   [STEPS.review_and_sign]: { id: STEPS.review_and_sign, name: 'Review and sign' },
   [STEPS.bank_MsgSend]: { id: STEPS.bank_MsgSend, name: 'Review and sign' },
   [STEPS.bank_MsgMultiSend]: { id: STEPS.bank_MsgMultiSend, name: 'Review and sign' },
+  [STEPS.wasm_MsgSwap]: { id: STEPS.wasm_MsgSwap, name: 'Review and sign' },
   [STEPS.staking_MsgDelegate]: { id: STEPS.staking_MsgDelegate, name: 'Review and sign' },
   [STEPS.staking_MsgUndelegate]: { id: STEPS.staking_MsgUndelegate, name: 'Review and sign' },
   [STEPS.staking_MsgRedelegate]: { id: STEPS.staking_MsgRedelegate, name: 'Review and sign' },
@@ -69,6 +76,7 @@ export const steps: { [key in STEPS]: STEP } = {
 export type ReviewStepsTypes =
   | STEPS.bank_MsgSend
   | STEPS.bank_MsgMultiSend
+  | STEPS.wasm_MsgSwap
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
@@ -99,6 +107,10 @@ interface Select_tokens_and_amounts {
   data: Select_token_and_amount[];
   currentIndex: number;
 }
+interface Select_swap_tokens_and_amount {
+  from: Select_token_and_amount;
+  to: Select_token_and_amount;
+}
 interface Define_amount {
   amount: number;
 }
@@ -115,6 +127,7 @@ export type AllStepDataTypes =
   | Get_validator_address
   | Select_token_and_amount
   | Select_tokens_and_amounts
+  | Select_swap_tokens_and_amount
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
@@ -140,6 +153,8 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Select_token_and_amount
   : T extends STEPS.select_amount_redelegate
   ? Select_token_and_amount
+  : T extends STEPS.select_swap_tokens_and_amount
+  ? Select_swap_tokens_and_amount
   : T extends STEPS.define_amount
   ? Define_amount
   : T extends STEPS.send_token_to_receiver

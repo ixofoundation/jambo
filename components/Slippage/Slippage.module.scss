@@ -1,0 +1,20 @@
+.label {
+  font-weight: 400;
+  font-size: 1.1rem;
+
+  .highlight {
+    color: var(--primary-color);
+  }
+}
+
+.slippageButton {
+  & button {
+    font-size: 1rem;
+  }
+
+  &.selected {
+    & button {
+      color: var(--main-font-color-inverted);
+    }
+  }
+}

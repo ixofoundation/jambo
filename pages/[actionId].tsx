@@ -1,21 +1,22 @@
 import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
-import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
-import EmptySteps from '@steps/EmptySteps';
-import ReceiverAddress from '@steps/ReceiverAddress';
-import DefineAmountToken from '@steps/DefineAmountToken';
-import DefineAmountDelegate from '@steps/DefineAmountDelegate';
-import ReviewAndSign from '@steps/ReviewAndSign';
-import { backRoute, replaceRoute } from '@utils/router';
-import { ACTION } from 'types/actions';
-import ValidatorAddress from '@steps/ValidatorAddress';
-import { WalletContext } from '@contexts/wallet';
 import Head from '@components/Head/Head';
-import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import { StepDataType, STEP, STEPS } from 'types/steps';
+import DefineSwapAmountToken from '@steps/DefineSwapAmountToken';
+import DefineAmountDelegate from '@steps/DefineAmountDelegate';
+import DefineAmountToken from '@steps/DefineAmountToken';
+import ValidatorAddress from '@steps/ValidatorAddress';
+import ReceiverAddress from '@steps/ReceiverAddress';
 import ValidatorRewards from '@steps/ClaimRewards';
+import ReviewAndSign from '@steps/ReviewAndSign';
+import EmptySteps from '@steps/EmptySteps';
+import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import config from '@constants/config.json';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
+import { ACTION } from 'types/actions';
+import { backRoute, replaceRoute } from '@utils/router';
+import { WalletContext } from '@contexts/wallet';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -161,6 +162,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             }
           />
         );
+      case STEPS.select_swap_tokens_and_amount:
+        return (
+          <DefineSwapAmountToken
+            onSuccess={handleOnNext<STEPS.select_swap_tokens_and_amount>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.select_swap_tokens_and_amount>}
+            header={action?.name}
+          />
+        );
       case STEPS.distribution_MsgWithdrawDelegatorReward:
         return (
           <ValidatorRewards
@@ -173,6 +183,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
         );
       case STEPS.bank_MsgSend:
       case STEPS.bank_MsgMultiSend:
+      case STEPS.wasm_MsgSwap:
       case STEPS.staking_MsgDelegate:
       case STEPS.staking_MsgUndelegate:
       case STEPS.staking_MsgRedelegate:

@@ -1,63 +1,43 @@
-import { useContext, useEffect, useState } from 'react';
+import { FC } from 'react';
 
-import { WalletContext } from '@contexts/wallet';
-import Loader from '@components/Loader/Loader';
+import utilsStyles from '@styles/utils.module.scss';
 import TokenCard from '@components/TokenCard/TokenCard';
-import { groupWalletAssets } from '@utils/wallets';
 import Card, { CARD_SIZE } from '@components/Card/Card';
-import { TOKEN_BALANCE } from 'types/wallet';
-import {
-  getCoinImageUrlFromCurrencyToken,
-  getDenomFromCurrencyToken,
-  getDisplayDenomFromCurrencyToken,
-  getTokenTypeFromCurrencyToken,
-} from '@utils/currency';
+import Loader from '@components/Loader/Loader';
+import { getDenomFromCurrencyToken } from '@utils/currency';
+import { CURRENCY_TOKEN } from 'types/wallet';
 
-type TokenListProps = {
-  displayGradient?: boolean;
+type TokenCardListProps = {
+  loading?: boolean;
+  emptyMessage: string;
+  tokens: CURRENCY_TOKEN[];
   onTokenClick: (denom: string) => void;
-  filter?: (asset: TOKEN_BALANCE) => boolean;
+  filter?: (asset: CURRENCY_TOKEN) => boolean;
 };
 
-const TokenList = ({ displayGradient, filter = () => true, onTokenClick }: TokenListProps) => {
-  const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
-  const { wallet } = useContext(WalletContext);
-
-  useEffect(() => {
-    const assets = groupWalletAssets(
-      wallet.balances?.data ?? [],
-      wallet.delegations?.data ?? [],
-      wallet.unbondingDelegations?.data ?? [],
+const TokenCardList: FC<TokenCardListProps> = ({
+  tokens,
+  loading,
+  filter = () => true,
+  onTokenClick,
+  emptyMessage,
+}) => {
+  if (loading)
+    return (
+      <div className={utilsStyles.columnCenter}>
+        <Loader size={30} />
+      </div>
     );
-    setTokens(assets);
-  }, [wallet.loading]);
+
+  if (!tokens.length) return <Card size={CARD_SIZE.large}>{emptyMessage ?? 'No tokens available'}</Card>;
 
   return (
     <>
-      {!Array.isArray(tokens) || wallet.loading ? (
-        <Loader size={30} />
-      ) : tokens.length ? (
-        tokens
-          .filter(filter)
-          .map(({ token, available, staked, undelegating }) => (
-            <TokenCard
-              displayGradient={displayGradient}
-              denom={getDenomFromCurrencyToken(token)}
-              image={getCoinImageUrlFromCurrencyToken(token)}
-              displayDenom={getDisplayDenomFromCurrencyToken(token)}
-              available={available}
-              staked={staked}
-              undelegating={undelegating}
-              type={getTokenTypeFromCurrencyToken(token, token.chain)}
-              key={getDenomFromCurrencyToken(token)}
-              onTokenClick={onTokenClick}
-            />
-          ))
-      ) : (
-        <Card size={CARD_SIZE.large}>No Balances to Show</Card>
-      )}
+      {tokens.filter(filter).map((token) => (
+        <TokenCard token={token} onTokenClick={onTokenClick} key={getDenomFromCurrencyToken(token)} />
+      ))}
     </>
   );
 };
 
-export default TokenList;
+export default TokenCardList;

@@ -12,26 +12,42 @@
   "termsAndConditions": "https://my.jambo.earth/legal/termsOfUse",
   "actions": [
     {
+      "id": "eKXPPhewkJDLbE1bq1ibox",
+      "steps": [
+        {
+          "id": "select_swap_tokens_and_amount",
+          "name": "Get swap tokens and amount"
+        },
+        {
+          "id": "wasm_MsgSwap",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Swap",
+      "description": "Crypto Swap",
+      "image": "eKXPPhewkJDLbE1bq1ibox.png"
+    },
+    {
       "id": "eKXPPhewkJDLbE1bq1iboz",
       "steps": [
         {
           "id": "select_token_and_amount",
           "name": "Select token and amount"
-          },
-          {
+        },
+        {
           "id": "get_receiver_address",
           "name": "Get receiver address"
-          },
-          {
+        },
+        {
           "id": "bank_MsgMultiSend",
           "name": "Review and sign"
-          }
+        }
       ],
-      "name": "Send",
+      "name": "Multi Send",
       "description": "Crypto Send",
       "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    }
-    ,{
+    },
+    {
       "id": "eKXPPhewkJDLbE1bq1iboa",
       "steps": [
         {
