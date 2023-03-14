@@ -90,6 +90,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
     hideCancelTransactionModal();
   };
 
+  const handleEditMultiSend = (index: number) => () => {
+    if (handleNextMultiSend) {
+      handleNextMultiSend(index);
+    }
+  };
+
   useEffect(() => {
     steps.forEach((s) => {
       if (s.id === STEPS.select_token_and_amount) {
@@ -241,6 +247,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                       token={addressToken}
                       amount={addressAmount}
                       onDeleteClick={showCancelTransactionModal(index)}
+                      onEditClick={handleEditMultiSend(index)}
                       key={`${address}_${index}`}
                     />
                   );
