@@ -99,7 +99,11 @@ export const getChainOptions = async () => {
 };
 
 export const getChainsByNetwork = (chains: CHAIN_INFO_REQUEST[], chainNetwork: CHAIN_NETWORK_TYPE) =>
-  chains.filter((chain) => chain.chainNetwork === chainNetwork);
+  chains.filter((chain) =>
+    chainNetwork === 'testnet'
+      ? chain.chainNetwork === chainNetwork || chain.chainNetwork === 'devnet'
+      : chain.chainNetwork === chainNetwork,
+  );
 
 export const getChainInfoByChainId = (chains: CHAIN_INFO_REQUEST[], chainId: string) =>
   chains.find((chain) => chain.chainInfo?.chainId === chainId)?.chainInfo;
