@@ -34,13 +34,14 @@ const useGlobalValidators = ({
   const [sortFilter, setSortFilter] = useState<VALIDATOR_FILTER_TYPE>(filter);
   const [searchFilter, setSearchFilter] = useState<string>(search);
   const [loading, setLoading] = useState<boolean>(true);
-  const { updateValidators, validators } = useContext(WalletContext);
+  const { updateValidators, validators, fetchAssets } = useContext(WalletContext);
   const { queryClient } = useContext(ChainContext);
 
   useEffect(() => {
     if (queryClient) {
       setLoading(true);
       updateValidators();
+      fetchAssets();
     }
   }, [queryClient]);
 
@@ -50,7 +51,7 @@ const useGlobalValidators = ({
         ? validators.filter((validator: VALIDATOR) => !!validator.delegation?.balance)
         : validators;
       validatorList = rewardedValidatorsOnly
-        ? validatorList.filter((validator: VALIDATOR) => !!validator.rewards?.length)
+        ? validatorList.filter((validator: VALIDATOR) => !!validator.rewards)
         : validatorList;
       validatorList = validatorList.filter(customFilter);
       validatorList = filterValidators(validatorList, sortFilter, searchFilter);

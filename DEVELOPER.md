@@ -83,7 +83,7 @@ export type StepDataType<T> =
 
 By completing these steps, a new step ID, step config structure, and step data structure will be successfully defined and ready to use in ixo JAMBO client.
 
-### Step 2: Define the step component
+## Step 2: Define the step component
 
 Next we'll have to create a component for the step to capture the step's data. We'll make use of predefined components in most cases and if you want to know what these predefined components have to offer, check them out at `/components/`.
 
@@ -156,7 +156,7 @@ const RequestDonation: FC<RequestDonationProps> = ({ onSuccess, onBack, config, 
 				Conditional rendering based on whether the user has any tokens to donate
 				Show a warning screen when a user has no tokens to donate (!wallet.balances.balances)
 				*/
-        wallet.balances?.balances ? (
+        wallet.balances?.data ? (
           <DonationForm approved={donationApproved} onApprove={setDonationApproved} />
         ) : (
           <IconText title="You don't have any tokens to donate." Img={SadFace} imgSize={50}>
@@ -202,7 +202,7 @@ const getStepComponent = (step: STEP) => {
 
 Once added, the step should display for any action that contains the request_donation step and it should appropriately capture the data it requires. However, it will not be added to the end transaction just yet.
 
-### Step 3: Define the transaction (if applicable)
+## Step 3: Define the transaction (if applicable)
 
 The donation (if approved) will be executed as a send transaction during the action's final "Review and Sign" step. To enable this, we need to extract the donation data where applicable in the [ReviewAndSign.tsx](./steps/ReviewAndSign.tsx) file and add it to the component state so that the Review Component is aware of this transaction.
 

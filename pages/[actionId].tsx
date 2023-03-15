@@ -24,12 +24,11 @@ type ActionPageProps = {
 const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
   const [count, setCount] = useState(0);
   const [action, setAction] = useState<ACTION | null>(null);
-  const { wallet, showWalletModal } = useContext(WalletContext);
+  const { wallet } = useContext(WalletContext);
   const signedIn = wallet.user?.address;
 
   useEffect(() => {
     setAction(actionData);
-    if (!signedIn) showWalletModal();
   }, [actionData]);
 
   function handleOnNext<T>(data: StepDataType<T>) {

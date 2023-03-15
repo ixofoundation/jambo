@@ -14,13 +14,15 @@ import Head from '@components/Head/Head';
 import Document from '@icons/document.svg';
 import { EnableDeveloperMode } from '@constants/chains';
 import config from '@constants/config.json';
+import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { ThemeContext } from '@contexts/theme';
 import { validateUrl } from '@utils/misc';
 
 const Settings: NextPage = () => {
-  const { chain, updateChainNetwork } = useContext(ChainContext);
+  const { updateChainNetwork } = useContext(WalletContext);
   const { theme, updateTheme } = useContext(ThemeContext);
+  const { chain } = useContext(ChainContext);
 
   const handleChainClick = (e: ChangeEvent<HTMLInputElement>) =>
     updateChainNetwork(e.target.checked ? 'testnet' : 'mainnet');
