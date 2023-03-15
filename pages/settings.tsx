@@ -16,14 +16,18 @@ import { EnableDeveloperMode } from '@constants/chains';
 import config from '@constants/config.json';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
+import { ThemeContext } from '@contexts/theme';
 import { validateUrl } from '@utils/misc';
 
 const Settings: NextPage = () => {
   const { updateChainNetwork } = useContext(WalletContext);
+  const { theme, updateTheme } = useContext(ThemeContext);
   const { chain } = useContext(ChainContext);
 
   const handleChainClick = (e: ChangeEvent<HTMLInputElement>) =>
     updateChainNetwork(e.target.checked ? 'testnet' : 'mainnet');
+
+  const handleThemeClick = (e: ChangeEvent<HTMLInputElement>) => updateTheme(e.target.checked ? 'dark' : 'light');
 
   return (
     <>
@@ -52,6 +56,16 @@ const Settings: NextPage = () => {
             <p className={styles.settingLabel}>Terms & Conditions</p>
           </Card>
         </Anchor>
+        <>
+          <div className={utilsStyles.spacer2} />
+          <p className={styles.label}>theme</p>
+          <Card className={utilsStyles.rowAlignSpaceBetween} size={CARD_SIZE.large}>
+            <p className={styles.settingLabel}>light</p>
+            <ToggleSwitch name='theme' toggled={theme === 'dark'} onToggle={handleThemeClick} />
+            <p className={styles.settingLabel}>dark</p>
+          </Card>
+        </>
+
         {EnableDeveloperMode && (
           <>
             <div className={utilsStyles.spacer2} />
