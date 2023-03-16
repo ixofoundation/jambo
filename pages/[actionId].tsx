@@ -3,7 +3,7 @@ import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsCont
 
 import Head from '@components/Head/Head';
 import { StepDataType, STEP, STEPS } from 'types/steps';
-import DefineSwapAmountToken from '@steps/DefineSwapAmountToken';
+import DefineSwapAmountToken from '@steps/SwapTokens';
 import DefineAmountDelegate from '@steps/DefineAmountDelegate';
 import DefineAmountToken from '@steps/DefineAmountToken';
 import ValidatorAddress from '@steps/ValidatorAddress';
@@ -17,6 +17,7 @@ import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
 import { ACTION } from 'types/actions';
 import { backRoute, replaceRoute } from '@utils/router';
 import { WalletContext } from '@contexts/wallet';
+import SwapTokens from '@steps/SwapTokens';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -162,15 +163,6 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             }
           />
         );
-      case STEPS.select_swap_tokens_and_amount:
-        return (
-          <DefineSwapAmountToken
-            onSuccess={handleOnNext<STEPS.select_swap_tokens_and_amount>}
-            onBack={handleBack}
-            data={step.data as StepDataType<STEPS.select_swap_tokens_and_amount>}
-            header={action?.name}
-          />
-        );
       case STEPS.distribution_MsgWithdrawDelegatorReward:
         return (
           <ValidatorRewards
@@ -181,9 +173,18 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
+      case STEPS.wasm_MsgSwap:
+        return (
+          <SwapTokens
+            onSuccess={handleOnNext<STEPS.review_and_sign>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.review_and_sign>}
+            header={action?.name}
+            message={step.id}
+          />
+        );
       case STEPS.bank_MsgSend:
       case STEPS.bank_MsgMultiSend:
-      case STEPS.wasm_MsgSwap:
       case STEPS.staking_MsgDelegate:
       case STEPS.staking_MsgUndelegate:
       case STEPS.staking_MsgRedelegate:

@@ -9,7 +9,6 @@ export enum STEPS {
   get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
   get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
   select_token_and_amount = 'select_token_and_amount',
-  select_swap_tokens_and_amount = 'select_swap_tokens_and_amount',
   select_amount_delegate = 'select_amount_delegate',
   select_amount_undelegate = 'select_amount_undelegate',
   select_amount_redelegate = 'select_amount_redelegate',
@@ -50,10 +49,6 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Get validator address',
   },
   [STEPS.select_token_and_amount]: { id: STEPS.select_token_and_amount, name: 'Select token and amount' },
-  [STEPS.select_swap_tokens_and_amount]: {
-    id: STEPS.select_swap_tokens_and_amount,
-    name: 'Select swap tokens and amount',
-  },
   [STEPS.select_amount_delegate]: { id: STEPS.select_amount_delegate, name: 'Define amount to delegate' },
   [STEPS.select_amount_undelegate]: { id: STEPS.select_amount_undelegate, name: 'Define amount to undelegate' },
   [STEPS.select_amount_redelegate]: { id: STEPS.select_amount_redelegate, name: 'Define amount to redelegate' },
@@ -107,10 +102,6 @@ interface Select_tokens_and_amounts {
   data: Select_token_and_amount[];
   currentIndex: number;
 }
-interface Select_swap_tokens_and_amount {
-  from: Select_token_and_amount;
-  to: Select_token_and_amount;
-}
 interface Define_amount {
   amount: number;
 }
@@ -127,7 +118,6 @@ export type AllStepDataTypes =
   | Get_validator_address
   | Select_token_and_amount
   | Select_tokens_and_amounts
-  | Select_swap_tokens_and_amount
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
@@ -153,8 +143,6 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Select_token_and_amount
   : T extends STEPS.select_amount_redelegate
   ? Select_token_and_amount
-  : T extends STEPS.select_swap_tokens_and_amount
-  ? Select_swap_tokens_and_amount
   : T extends STEPS.define_amount
   ? Define_amount
   : T extends STEPS.send_token_to_receiver

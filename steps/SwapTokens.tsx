@@ -9,24 +9,19 @@ import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
-import {
-  calculateMaxTokenAmount,
-  getAmountFromCurrencyToken,
-  getDenomFromCurrencyToken,
-  validateAmountAgainstBalance,
-} from '@utils/currency';
-import { StepDataType, STEPS } from 'types/steps';
+import { validateAmountAgainstBalance } from '@utils/currency';
+import { ReviewStepsTypes, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import Slippage from '@components/Slippage/Slippage';
 import useModalState from '@hooks/useModalState';
-import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
 
 type DefineSwapAmountTokenProps = {
-  onSuccess: (data: StepDataType<STEPS.select_swap_tokens_and_amount>) => void;
+  onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
   onBack?: () => void;
-  data?: StepDataType<STEPS.select_swap_tokens_and_amount>;
+  data?: StepDataType<STEPS.review_and_sign>;
   header?: string;
+  message: ReviewStepsTypes;
 };
 
 const DUMMY_CHAIN_DATA: CURRENCY_TOKEN[] = [
@@ -74,7 +69,7 @@ const DUMMY_CHAIN_DATA: CURRENCY_TOKEN[] = [
   },
 ];
 
-const DefineSwapAmountToken: FC<DefineSwapAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
+const SwapTokens: FC<DefineSwapAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
   const [slippageVisible, showSlippage, hideSlippage] = useModalState(false);
   const [fromToken, setFromToken] = useState<CURRENCY_TOKEN | undefined>();
   const [fromAmount, setFromAmount] = useState<string>();
@@ -102,22 +97,23 @@ const DefineSwapAmountToken: FC<DefineSwapAmountTokenProps> = ({ onSuccess, onBa
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
     if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
-    onSuccess({
-      from: { amount: Number.parseFloat(fromAmount!), token: fromToken! },
-      to: { amount: Number.parseFloat(toAmount!), token: toToken! },
-    });
+    // TODO: transaction here
   };
 
   // TODO: use current chain fee currency as fee currency
   // TODO: pull in actual slippage on slippage screen
   // TODO: use dollar worths
-  // TODO: when update fromAmount, the auto update toAmount and vice versa
+  // TODO: when update fromAmount, then auto update toAmount and vice versa
   return (
     <>
       <Header header={header} />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-        {wallet.balances?.data ? (
+        {slippageVisible ? (
+          <form className={styles.stepsForm} autoComplete='none'>
+            <Slippage />
+          </form>
+        ) : wallet.balances?.data ? (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
             <p>I want to swap</p>
             <div className={utilsStyles.rowAlignEnd}>
@@ -148,10 +144,6 @@ const DefineSwapAmountToken: FC<DefineSwapAmountTokenProps> = ({ onSuccess, onBa
               <p>0.15 %</p>
             </div>
           </form>
-        ) : slippageVisible ? (
-          <form className={styles.stepsForm} autoComplete='none'>
-            <Slippage />
-          </form>
         ) : (
           <IconText title="You don't have any tokens to swap." Img={SadFace} imgSize={50} />
         )}
@@ -160,10 +152,10 @@ const DefineSwapAmountToken: FC<DefineSwapAmountTokenProps> = ({ onSuccess, onBa
       <Footer
         onBack={onBack}
         onBackUrl={onBack ? undefined : ''}
-        onForward={formIsValid() ? () => handleSubmit(null) : null}
+        onCorrect={formIsValid() ? () => handleSubmit(null) : null}
       />
     </>
   );
 };
 
-export default DefineSwapAmountToken;
+export default SwapTokens;
