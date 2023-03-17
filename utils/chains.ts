@@ -94,7 +94,7 @@ export const getChainOptions = async () => {
 
   const responses = await Promise.allSettled(requests);
   const fulfilledResponses = responses.filter(isFulfilled).map(({ value }): CHAIN_INFO_REQUEST => value);
-  const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
+  // const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
   return fulfilledResponses.filter((x) => x.chainInfo);
 };
 
