@@ -1,6 +1,5 @@
 import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
 import cls from 'classnames';
-
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
@@ -20,7 +19,20 @@ type DefineAmountTokenProps = {
   data?: StepDataType<STEPS.select_token_and_amount>;
   header?: string;
 };
+//work in progres.......
+// const totalAmount = mappedAndFiltered.reduce((acc: Select_token_and_amount, curr: Select_token_and_amount):Select_token_and_amount =>  {
+//   const { amount,token } = curr;
 
+// if(token.token?.coinDenom === currentToken.denom || token.token?.coinMinimalDenom === currentToken.denom){
+//        return Number(acc.amount) - Number(amount);
+
+// }
+// }, currentToken.amount);
+
+// return mappedAndFiltered;
+// };
+
+//work in progres.......
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
   const [amount, setAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
@@ -78,7 +90,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
         ? { ...data, currentIndex: 0, data: [...(data?.data ?? []), newData] }
         : {
             ...data,
-            data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(0, data.currentIndex)],
+            data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(data.currentIndex + 1)],
           },
     );
   };

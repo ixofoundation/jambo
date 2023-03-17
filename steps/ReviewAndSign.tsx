@@ -92,8 +92,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
     hideCancelTransactionModal();
   };
 
-  const handleEditTrxMsg = () => {
-    editMultiSend;
+  const handleEditMultiSend = (index: number) => () => {
+    if (handleNextMultiSend) {
+      handleNextMultiSend(index);
+    }
   };
 
   useEffect(() => {
@@ -247,7 +249,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                       token={addressToken}
                       amount={addressAmount}
                       onDeleteClick={showCancelTransactionModal(index)}
-                      onEditClick={handleEditTrxMsg}
+                      onEditClick={handleEditMultiSend(index)}
                       key={`${address}_${index}`}
                     />
                   );
