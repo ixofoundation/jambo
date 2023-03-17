@@ -56,7 +56,7 @@ const MultiSendCard = ({ address, token, amount, onDeleteClick, onEditClick }: M
             <ColoredIcon icon={Cross} size={23} color={ICON_COLOR.primary} />
           </ButtonRound>
           <ButtonRound
-            className={styles.cancelBtn}
+            className={styles.editBtn}
             size={BUTTON_ROUND_SIZE.mediumLarge}
             color={BUTTON_ROUND_COLOR.white}
             onClick={handleEditClick}

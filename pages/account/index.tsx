@@ -5,6 +5,7 @@ import QRCode from 'react-qr-code';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
+import styles from '@styles/accountPage.module.scss';
 import AddressActionButton from '@components/AddressActionButton/AddressActionButton';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import BottomSheet from '@components/BottomSheet/BottomSheet';
@@ -77,9 +78,11 @@ const Account: NextPage = () => {
                     />
                     <h3 className={utilsStyles.username}>{wallet.user?.name ?? 'Hi'}</h3>
                   </div>
+                  <div className={utilsStyles.spacer1} />
+                  <div className={cls(utilsStyles.columnCenter, styles.qrWrapper)}>
+                    <QRCode value={wallet.user.address} size={150} />
+                  </div>
                   <div className={utilsStyles.spacer2} />
-                  <QRCode value={wallet.user.address} size={150} />
-                  <div className={utilsStyles.spacer3} />
                   <AddressActionButton
                     shortAddress={wallet.user.address.length >= 42 || (width ?? 0) <= 500}
                     address={wallet.user.address}

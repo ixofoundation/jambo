@@ -6,15 +6,18 @@ import '@styles/variables.scss';
 import { ToastContainer } from '@components/Toast/Toast';
 import { WalletProvider } from '@contexts/wallet';
 import { ChainProvider } from '@contexts/chain';
+import { ThemeProvider } from '@contexts/theme';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ChainProvider>
-      <WalletProvider>
-        <ToastContainer />
-        <Component {...pageProps} />
-      </WalletProvider>
-    </ChainProvider>
+    <ThemeProvider>
+      <ChainProvider>
+        <WalletProvider>
+          <ToastContainer />
+          <Component {...pageProps} />
+        </WalletProvider>
+      </ChainProvider>
+    </ThemeProvider>
   );
 }
 

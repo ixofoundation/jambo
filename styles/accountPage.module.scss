@@ -49,3 +49,9 @@
   align-items: center;
   flex-direction: row;
 }
+
+.qrWrapper {
+  padding: var(--button-border-radius);
+  border-radius: var(--button-border-radius);
+  background-color: white;
+}
