@@ -8,7 +8,13 @@ import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import SadFace from '@icons/sad_face.svg';
-import { validateAmountAgainstBalance } from '@utils/currency';
+import {
+  validateAmountAgainstBalance,
+  microAmountToAmount,
+  amountToMicroAmount,
+  getDecimalsFromCurrencyToken,
+  getAmountFromCurrencyToken,
+} from '@utils/currency';
 import { StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { CURRENCY_TOKEN } from 'types/wallet';
@@ -19,20 +25,21 @@ type DefineAmountTokenProps = {
   data?: StepDataType<STEPS.select_token_and_amount>;
   header?: string;
 };
-//work in progres.......
-// const totalAmount = mappedAndFiltered.reduce((acc: Select_token_and_amount, curr: Select_token_and_amount):Select_token_and_amount =>  {
-//   const { amount,token } = curr;
 
-// if(token.token?.coinDenom === currentToken.denom || token.token?.coinMinimalDenom === currentToken.denom){
-//        return Number(acc.amount) - Number(amount);
+const calculateRemainingMax = (currentToken: CURRENCY_TOKEN, prevData: StepDataType<STEPS.select_token_and_amount>) => {
+  if (!currentToken) return 0;
+  const result: number = (prevData.data ?? []).reduce(
+    (acc: number, curr: { token: CURRENCY_TOKEN; amount: number }): number => {
+      const { amount, token } = curr;
+      if (token.token?.coinDenom !== currentToken.denom && token.token?.coinMinimalDenom !== currentToken.denom)
+        return acc;
+      return acc - amount;
+    },
+    microAmountToAmount(getAmountFromCurrencyToken(currentToken), getDecimalsFromCurrencyToken(currentToken)),
+  );
+  return amountToMicroAmount(result, getDecimalsFromCurrencyToken(currentToken));
+};
 
-// }
-// }, currentToken.amount);
-
-// return mappedAndFiltered;
-// };
-
-//work in progres.......
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
   const [amount, setAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
@@ -40,37 +47,11 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
 
-  const calculateRemainingMax = (
-    currentToken: CURRENCY_TOKEN,
-    prevData: StepDataType<STEPS.select_token_and_amount>,
-  ) => {
-    let result;
-    const mapedAndFiltered = prevData.data.reduce(
-      (acc: any, curr) => {
-        const { amount, token } = curr;
-        if (token.token?.coinDenom === currentToken.denom) {
-          result = { amount: Number(acc.amount) - amount };
-        } else {
-          result = acc;
-        }
-      },
-      { amount: currentToken.amount },
-    );
-    result = mapedAndFiltered.amount;
-    return result;
-  };
-
   useEffect(() => {
-    console.log(calculateRemainingMax);
     fetchAssets();
   }, []);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    let newAmount = event.target.value;
-    // cannot use thousands separators
-    // newAmount = formatTokenAmount(formattedAmountToNumber(newAmount), getDecimalsFromCurrencyToken(selectedOption));
-    setAmount(newAmount);
-  };
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value);
 
   const formIsValid = () =>
     !!selectedOption &&
@@ -111,6 +92,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>Enter an amount to send</p>
             <InputWithMax
+              maxAmount={calculateRemainingMax(selectedOption!, data!)}
               maxToken={selectedOption}
               onMaxClick={(maxAmount) => setAmount(maxAmount.toString())}
               name='walletAddress'

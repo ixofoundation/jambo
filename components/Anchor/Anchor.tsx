@@ -1,8 +1,6 @@
 import { ReactNode } from 'react';
 import Link, { LinkProps } from 'next/link';
 
-import styles from './Anchor.module.scss';
-
 type AnchorProps = {
   children: ReactNode;
   active?: boolean;
