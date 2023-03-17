@@ -20,4 +20,28 @@
   --footer-height: 90px;
   --card-border-radius: 16px;
   --max-width: 400px;
+
+  .dark {
+    --bg-color: #0e2235;
+    --primary-color: #1db3d3;
+    --secondary-color: #1297b4;
+    --tertiary-color: #fc9a63;
+    --success-color: #22c55e;
+    --disabled-color: #d1d5db;
+    --footer-bg-color: #0e2235;
+    --grey-color: #9ca3af;
+    --icon-grey-color: #d1d5db;
+    --light-grey-color: #1e686c;
+    --backdrop-color: rgba(255, 255, 255, 0.1);
+    --main-font-size: 16px;
+    --main-font-color: rgba(255, 255, 255, 1);
+    --main-font-color-inverted: rgba(0, 0, 0, 0.9);
+    --button-border-radius: 18px;
+    --header-height: 90px;
+    --header-logo-width: 42px;
+    --header-logo-height: 42px;
+    --footer-height: 90px;
+    --card-border-radius: 16px;
+    --max-width: 400px;
+  }
 }
