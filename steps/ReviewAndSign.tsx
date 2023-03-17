@@ -34,9 +34,8 @@ import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import Plus from '@icons/plus.svg';
-import BottomSheet from '@components/BottomSheet/BottomSheet';
 import { shortenAddress } from '../utils/wallets';
-import MultiSendContent from '../components/BottomSheetContent/MultiSendContent';
+import MultiSendBottomSheet from '../components/MultiSendBottomSheet/MultiSendBottomSheet';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -251,12 +250,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
               <Plus className={styles.plusIcon} />
             </ButtonRound>
             {typeof trxCancelId === 'number' && (
-              <BottomSheet onClose={hideCancelTransactionModal}>
-                <MultiSendContent
-                  onDeleteMsgClicked={handleDeleteMultiSend}
-                  onCloseBottomSheet={hideCancelTransactionModal}
-                />
-              </BottomSheet>
+              <MultiSendBottomSheet
+                onDeleteMsgClicked={handleDeleteMultiSend}
+                onCloseBottomSheet={hideCancelTransactionModal}
+              />
             )}
           </form>
         ) : message === STEPS.staking_MsgDelegate ? (
