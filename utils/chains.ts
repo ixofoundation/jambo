@@ -94,12 +94,16 @@ export const getChainOptions = async () => {
 
   const responses = await Promise.allSettled(requests);
   const fulfilledResponses = responses.filter(isFulfilled).map(({ value }): CHAIN_INFO_REQUEST => value);
-  const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
+  // const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
   return fulfilledResponses.filter((x) => x.chainInfo);
 };
 
 export const getChainsByNetwork = (chains: CHAIN_INFO_REQUEST[], chainNetwork: CHAIN_NETWORK_TYPE) =>
-  chains.filter((chain) => chain.chainNetwork === chainNetwork);
+  chains.filter((chain) =>
+    chainNetwork === 'testnet'
+      ? chain.chainNetwork === chainNetwork || chain.chainNetwork === 'devnet'
+      : chain.chainNetwork === chainNetwork,
+  );
 
 export const getChainInfoByChainId = (chains: CHAIN_INFO_REQUEST[], chainId: string) =>
   chains.find((chain) => chain.chainInfo?.chainId === chainId)?.chainInfo;

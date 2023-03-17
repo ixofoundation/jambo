@@ -96,7 +96,6 @@ const DefineAmountDelegate: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, d
             )}
             <p>{delegated ? config.label : config.defaultLabel}</p>
             <div className={styles.inputRow}>
-              {' '}
               {
                 // TODO: use InputWithMax
               }
