@@ -197,10 +197,8 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
       {!loaded ? (
         <main className={cls(utilsStyles.main, utilsStyles.columnCenter)}>
           <SiteHeader displayLogo displayName />
-          <br />
-          <br />
-          <div className={utilsStyles.spacer2} />
-          <Loader size={25} />
+          <div className={utilsStyles.spacer3} />
+          <Loader size={30} />
         </main>
       ) : (
         children

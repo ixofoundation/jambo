@@ -1,55 +1,36 @@
-.multiMsgAddresses{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .addressCard{
-    margin-left: 10px;
-    margin-top: 8px;
-  }
-  
+.multiMsgAddresses {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-  .wrapper{
-    margin-bottom: 1rem !important;
-  }
-  
-  .cardContent{
-    display: flex;
-  }
-  
-  .cancelBtn{
-    padding-left: 1rem;
-  }
+.addressCard {
+  margin-left: 10px;
+  margin-top: 8px;
+}
 
-  
+.wrapper {
+  margin-bottom: 1rem !important;
+}
 
-  .contentWrapper{
-    flex: 1;
-  }
+.cardContent {
+  display: flex;
+}
 
-  @media only screen and (max-width : 600px){
+.cancelBtn {
+  padding-left: 1rem;
+  margin-bottom: 0.4rem;
+}
 
-    .multiMsgAddresses{
-      display: flex;
-      align-items: center;
-    }
-  
-   
-    .cancelBtn{
-      margin-left: -1rem;
-    }
-  
-    .btnSpacing{
-      display: flex;
-      justify-content: space-between;
-      position: relative;
-      top: 3rem
-    }
-  
-    .cancelBottomSheetBtn{
-      margin-right: 8.5rem;
-    }
-    
-  }
-  
+.editBtn {
+  padding-left: 1rem;
+}
+
+.contentWrapper {
+  flex: 1;
+}
+
+.btnLayout {
+  display: flex;
+  flex-direction: column;
+}

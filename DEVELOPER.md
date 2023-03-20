@@ -1,14 +1,14 @@
 # Developer Documentation: Adding a Step to the ixo JAMBO Client
 
-The ixo JAMBO client is a NEXTJS-based dApp development tool that relies on the @ixo/impactxclient-sdk to facilitate blockchain-related transactions. Each dApp built with this client includes one or more actions, such as sending tokens or delegating to a validator. Each action contains one or more steps, which enable users to either capture data for the transaction or sign and broadcast the transaction.
+JAMBO is a NEXTJS-based dApp development tool that relies on the @ixo/impactxclient-sdk to facilitate blockchain-related transactions. Each dApp built with JAMBO includes one or more actions, such as sending tokens or delegating to a validator. Each action contains one or more steps, which enable users to either capture data for the transaction or sign and broadcast the transaction.
 
-This documentation outlines the process for creating a new step in the ixo JAMBO client and uses an example step that enables users to donate a predefined amount and denom to a predefined address as part of the action.
+This documentation outlines the process for creating a new step in JAMBO and uses an example step that enables users to donate a predefined amount and denom to a predefined address as part of the action.
 
 ### Prerequisites
 
 Before proceeding, ensure that you have the following:
 
-- An understanding of the ixo JAMBO client's structure and functionality
+- An understanding of JAMBO's structure and functionality
 - Familiarity with JavaScript and React
 
 ## Step 1: Define the Step ID and Types
@@ -81,7 +81,7 @@ export type StepDataType<T> =
   // ... the rest of the existing step data types (always end with `never` as default)
 ```
 
-By completing these steps, a new step ID, step config structure, and step data structure will be successfully defined and ready to use in ixo JAMBO client.
+By completing these steps, a new step ID, step config structure, and step data structure will be successfully defined and ready to use in the JAMBO.
 
 ## Step 2: Define the step component
 
@@ -281,7 +281,7 @@ const signTX = async (): Promise<void> => {
 
 With these modifications, the "Review and Sign" screen is now aware of the donation and the user can review it before signing and broadcasting their transaction.
 
-Congratulations! You have successfully added a new donation step to the IXO JAMBO client. Test it out. If it's not working, make sure you followed all the steps of this doc.
+Congratulations! You have successfully added a new donation step to the JAMBO client. Test it out. If it's not working, make sure you followed all the steps of this doc.
 
 However, there is still room for improvement. Here are some ideas:
 

@@ -17,21 +17,21 @@
         {
           "id": "select_token_and_amount",
           "name": "Select token and amount"
-          },
-          {
+        },
+        {
           "id": "get_receiver_address",
           "name": "Get receiver address"
-          },
-          {
+        },
+        {
           "id": "bank_MsgMultiSend",
           "name": "Review and sign"
-          }
+        }
       ],
       "name": "Send",
       "description": "Crypto Send",
       "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    }
-    ,{
+    },
+    {
       "id": "eKXPPhewkJDLbE1bq1iboa",
       "steps": [
         {

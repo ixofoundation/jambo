@@ -5,6 +5,11 @@
   max-width: var(--max-width);
   margin: 0 auto;
   border: 1px solid transparent;
+  color: var(--main-font-color);
+
+  &:disabled {
+    color: var(--main-font-color);
+  }
 }
 
 .squaredCard {
@@ -19,7 +24,7 @@
   width: max-content;
 }
 
-.withWhiteBgColor{
+.withWhiteBgColor {
   background-color: var(--bg-color);
 }
 
