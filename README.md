@@ -1,36 +1,45 @@
-# JAMBO Client
+# JAMBO 🌍
+
+[![ixo](https://img.shields.io/badge/ixo-project-blue)](https://ixo.foundation)
+[![GitHub](https://img.shields.io/github/stars/ixofoundation/jambo?style=social)](https://github.com/ixofoundation/jambo)
+[![Twitter](https://img.shields.io/twitter/follow/ixo_impact?style=social)](https://twitter.com/ixoworld)
+[![Medium](https://img.shields.io/badge/Medium-ixo-green)](https://ixoworld.medium.com/)
+
+<p align="center">
+  <img  src="assets/images/docs/jambo_github_header.png"/>
+</p>
 
 This repo and product is intentionally managed as Open Source and we aim to use this guide to light our way https://opensource.guide/.  
 Let us know how we are doing!
 
 ---
 
-## How to create a dApp using this repo
+## 🚀 How to create a dApp using this repo
 
-The ixo-jambo-client project is a NEXT-based web application for building dApps on the ixo network (or any other cosmos chain). This documentation will guide you to create your own dApp through the process of forking the repository, updating the config file, deploying changes, adding environment variables, and redeploying the site.
+The JAMBO project is a NEXT-based web application for building dApps on the ixo network (or any other cosmos chain). This documentation will guide you to create your own dApp through the process of forking the repository, updating the config file, deploying changes, adding environment variables, and redeploying the site.
 
-### Fork the repo:
+### Fork the repo
 
-To begin, fork the [ixo-jambo-client](https://github.com/ixofoundation/ixo-jambo-client) repository on Github. You can do this by going to the repository's Github page and clicking the "Fork" button in the upper right-hand corner.
+To begin, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on Github. You can do this by going to the repository's Github page and clicking the "Fork" button in the upper right-hand corner.
 
-### Update the config file:
+### Update the config file
 
 After forking the repo, navigate to the "constants" folder in the project's directory and open the "[config.json](#configjson)" file. In this file, update the necessary fields to reflect your desired configurations. After updating the config file, it's time to save and push the changes to your repo.
 
-### Add environment variables:
+### Add environment variables
 
 In order for the changes made in the config file to take effect, you need to add the necessary environment variables.
 Depending on your hosting platform, the method for adding environment variables may vary.\
 For Netlify, you can add environment variables by going to your site's "Settings" page and clicking on the "Build & deploy" tab, then scrolling down to the "Environment" section and clicking on the "Edit variables" button. \
 Add the required environment variables for your configuration changes.
 
-### Redeploy changes:
+### Redeploy changes
 
 After adding the necessary environment variables, it's time to deploy the site to reflect the changes made.
 Depending on your hosting platform, the deployment process may vary.\
 For Netlify, you can deploy the site by pushing changes to the repository's main branch.
 
-### Verify the changes:
+### Verify the changes
 
 After the redeployment process is complete, verify that the changes made in the config file are reflected in the deployed site.
 You can test the site by visiting the deployed URL and ensuring that the site functions as expected.
@@ -38,7 +47,7 @@ That's it! By following these steps, you should be able to successfully create a
 
 ---
 
-### Config.json
+## 📄 Config.json
 
 Here's an overview of each of the properties in the config.json file:
 
@@ -97,47 +106,11 @@ Here's an overview of each of the properties in the config.json file:
     - `distribution_MsgWithdrawDelegatorReward` that generates a claim delegation rewards transaction and allows a user to sign
   - In the example object below, the action is called "Delegate" and has three steps. The first step is "Get validator address", the second is "Define amount to delegate", and the final step is "Review and sign". This particular action allows the user to delegate tokens on the IXO Network. The id property is a unique identifier for the action and it's used for navigation and routing, and the image property represents an image associated with the action (hence the image name corresponds with the action's id).
 
-```json
-{
-  "siteName": "My dApp",
-  "siteUrl": "https://my-dapp.netlify.app",
-  "siteTitleMeta": "My dApp - built with ixo-jambo-client",
-  "siteDescriptionMeta": "A decentralized application built on the ixo network using ixo-jambo-client.",
-  "wcNamespace": "ixo",
-  "fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
-  "fontName": "Roboto",
-  "headerShowName": true,
-  "headerShowLogo": true,
-  "about": "<b>My dApp</b> is a decentralized application built on the ixo network using <i>ixo-jambo-client</i>. Our mission is to provide a platform for users to participate in the creation of impact projects and investments.",
-  "termsAndConditions": "https://my-dapp.com/termsAndConditions",
-  "actions": [
-    {
-      "id": "delegate_abc",
-      "steps": [
-        {
-          "id": "get_validator_delegate",
-          "name": "Get validator address"
-        },
-        {
-          "id": "select_amount_delegate",
-          "name": "Define amount to delegate"
-        },
-        {
-          "id": "staking_MsgDelegate",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Delegate",
-      "description": "Delegate tokens on the IXO Network",
-      "image": "delegate_abc.png"
-    }
-  ]
-}
-```
+![config.json example](/assets/images/docs/config_json_example.png)
 
 After updating the desired configurations in the JSON object, save the changes to the "config.json" file. These changes will be reflected in the deployed site after you deploy the changes and add the necessary environment variables.
 
-### .env
+## 🔧 .env
 
 If you're not sure on what environment variables to set, then duplicate and use the default values as found in ".env.example". Simply duplicate the file and rename it to ".env". Done.
 
@@ -150,15 +123,11 @@ Else if you want to customize the dApp to use different or even multiple chains 
    - NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: This variable specifies the preferred network for the initial load of the dApp. If developer mode (NEXT_PUBLIC_ENABLE_DEVELOPER_MODE) isn't active, this variable gets ignored. This variable defaults to devnet if developer mode is active.
 3. Here is an example of the .env file with the above variables set (as seen in .env.example):
 
-```.env
-NEXT_PUBLIC_CHAIN_NAMES=impacthub,osmosis
-NEXT_PUBLIC_ENABLE_DEVELOPER_MODE=1
-NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK=mainnet
-```
+![.env example](/assets/images/docs/env_example.png)
 
 ---
 
-## Wallets
+## 💼 Wallets
 
 The Ixo JAMBO client makes use of the following wallets:
 
@@ -168,7 +137,7 @@ The Ixo JAMBO client makes use of the following wallets:
 
 ---
 
-## How to contribute to this repo
+## 🌟 How to contribute to this repo
 
 First off, thank you for applying your mind and time to improving this repo - it helps the Internet of Impact to save our planet!  
 Whether you are contributing in your own space-time or following a bounty; we are grateful!
@@ -181,11 +150,11 @@ Whether you are contributing in your own space-time or following a bounty; we ar
 6. Your change will be reviewed as soon as possible with helpful feedback for your further updates to the change.
 7. Finally, when everything is good to go and your PR approved, you can squash and merge your branch.
 
-### How does it work?
+### 🤔 How does it work?
 
 If you want to contribute to the project but aren't sure what to do or how it works, read our [Developer Documentation](/DEVELOPER.md).
 
-## Next + Netlify + TypeScript
+## 💻 Next + Netlify + TypeScript
 
 This is a [Next.js](https://nextjs.org/) project set up to be instantly deployed to [Netlify](https://netlify.com).
 
@@ -202,7 +171,7 @@ Deployment on Netlify can be [configured](https://docs.netlify.com/configure-bui
 
 **Option two:** Manual clone
 
-1. Clone this repo: `git clone https://github.com/ixofoundation/ixo-jambo-client.git`
+1. Clone this repo: `git clone https://github.com/ixofoundation/jambo.git`
 2. Navigate to the directory and run `npm run dev`
 3. Make your changes
 4. Connect to [Netlify](https://netlify.com) manually (the `netlify.toml` file is the one you'll need to make sure stays intact to make sure the export is done and pointed to the right stuff)
@@ -226,3 +195,21 @@ yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the application and see changes in your browser by editing `pages/index.tsx`.
+
+---
+
+## License
+
+This project is licensed under the Apache License 2.0.
+
+Copyright 2023 ixo Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
