@@ -1,9 +1,9 @@
 # JAMBO 🌍
 
-[![ixo](https://img.shields.io/badge/ixo-project-blue)](https://ixo.foundation)
+[![ixo.world](https://img.shields.io/badge/ixo-project-blue)](https://ixo.world)
 [![GitHub](https://img.shields.io/github/stars/ixofoundation/jambo?style=social)](https://github.com/ixofoundation/jambo)
 [![Twitter](https://img.shields.io/twitter/follow/ixo_impact?style=social)](https://twitter.com/ixoworld)
-[![Medium](https://img.shields.io/badge/Medium-ixo-green)](https://ixoworld.medium.com/)
+[![Medium](https://img.shields.io/badge/Medium-ixo-green)](https://medium.com/ixo-blog)
 
 <p align="center">
   <img  src="assets/images/docs/jambo_github_header.png"/>
