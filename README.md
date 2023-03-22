@@ -2,6 +2,9 @@
 
 [![ixo](https://img.shields.io/badge/ixo-project-blue)](https://ixo.foundation)
 [![GitHub](https://img.shields.io/github/stars/ixofoundation/jambo?style=social)](https://github.com/ixofoundation/jambo)
+![GitHub repo size](https://img.shields.io/github/repo-size/ixofoundation/jambo)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/ixofoundation/jambo/blob/main/LICENSE)
+
 [![Twitter](https://img.shields.io/twitter/follow/ixo_impact?style=social)](https://twitter.com/ixoworld)
 [![Medium](https://img.shields.io/badge/Medium-ixo-green)](https://ixoworld.medium.com/)
 
@@ -129,7 +132,7 @@ Else if you want to customize the dApp to use different or even multiple chains 
 
 ## 💼 Wallets
 
-The Ixo JAMBO client makes use of the following wallets:
+The JAMBO client makes use of the following wallets:
 
 - **Keplr**: This is a browser extension wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has a number of features including support for multiple chains, staking, governance voting, and more. Docs available [here](https://docs.keplr.app/api/).
 - **Opera Wallet**: This is a mobile wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has features such as a built-in browser, QR code scanner, and support for multiple chains. Docs available [here](https://help.opera.com/en/crypto/opera-wallet-integration-guide/).
@@ -195,21 +198,3 @@ yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the application and see changes in your browser by editing `pages/index.tsx`.
-
----
-
-## License
-
-This project is licensed under the Apache License 2.0.
-
-Copyright 2023 ixo Foundation
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
