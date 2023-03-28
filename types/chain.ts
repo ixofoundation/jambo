@@ -9,12 +9,6 @@ export type KEPLR_CHAIN_INFO_TYPE = KeplrChainInfo;
 
 export type CHAIN_NETWORK_TYPE = ChainNetwork;
 
-export type CHAIN_DROPDOWN_OPTION_TYPE = {
-  value: string;
-  label: string;
-  img: string;
-};
-
 export type CHAIN_INFO_REQUEST = {
   chainName: string;
   chainNetwork: CHAIN_NETWORK_TYPE;
