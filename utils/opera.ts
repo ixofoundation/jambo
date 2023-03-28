@@ -1,135 +1,35 @@
-import { AccountData, DirectSignResponse, makeSignBytes, OfflineDirectSigner } from '@cosmjs/proto-signing';
-import { SignDoc } from 'cosmjs-types/cosmos/tx/v1beta1/tx';
+import { getOpera as getJamboOpera } from '@ixo/jambo-wallet-sdk';
 import { ChainInfo } from '@keplr-wallet/types';
-import * as crypto from '@cosmjs/crypto';
-import * as amino from '@cosmjs/amino';
 
 import * as Toast from '@components/Toast/Toast';
-import { b58_to_uint8Arr, b64_to_uint8Arr, uint8Arr_to_b64 } from './encoding';
-import { initStargateClient, sendTransaction } from './client';
-import { USER } from 'types/user';
+import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
-// import blocksyncApi from './blocksync';
+import { USER } from 'types/user';
 
-const pubKeyType = 'EcdsaSecp256k1VerificationKey2019';
+export const getOpera = getJamboOpera;
 
-export let address: string;
-export let pubkeyByteArray: Uint8Array;
-
-interface InterchainWallet {
-  getDidDoc: (index: number) => Promise<string>;
-  signMessage: (hexSignDoc: string, signMethod: string, addressIndex: number) => Promise<string>;
-}
-
-export interface OperaInterchain {
-  interchain?: InterchainWallet;
-}
-
-export const getOpera = (): InterchainWallet | undefined => {
-  if (typeof window !== 'undefined' && window.interchain) return window.interchain;
-  return undefined;
-};
-
-export const getAccounts = async (): Promise<readonly AccountData[]> => {
-  const user = await initializeOpera();
-  if (!user) return [];
-  else return [{ address: user.address, algo: 'secp256k1', pubkey: user.pubKey as Uint8Array }];
-};
-
-export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
+export const initializeOpera = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
   const opera = getOpera();
-  const signBytes = makeSignBytes(signDoc);
-  const sha256msg = crypto.sha256(signBytes);
-  const hexValue = Buffer.from(sha256msg).toString('hex');
-  const signature = await opera!.signMessage(hexValue, 'secp256k1', 0);
-  const transformedSignature = transformSignature(signature ?? '');
-  if (!signature || !transformedSignature) throw new Error('No signature, signing failed');
-
-  return {
-    signed: signDoc,
-    signature: {
-      pub_key: {
-        type: amino.pubkeyType.secp256k1,
-        value: uint8Arr_to_b64(pubkeyByteArray),
-      },
-      signature: transformedSignature,
-    },
-  };
-};
-
-export function transformSignature(signature: string): string | undefined {
-  const rawArray = b64_to_uint8Arr(signature);
-
-  let signatureCosmjsBase64 = '';
-  if (rawArray.length < 64 || rawArray.length > 66) {
-    console.log('operahelper.invalid length');
-    return;
-  } else if (rawArray.length == 64) {
-    signatureCosmjsBase64 = signature;
-  } else if (rawArray.length == 65) {
-    if (rawArray[0] == 0x00) {
-      signatureCosmjsBase64 = uint8Arr_to_b64(rawArray.slice(1, 65));
-    } else if (rawArray[32] == 0x00) {
-      signatureCosmjsBase64 = uint8Arr_to_b64(new Uint8Array([...rawArray.slice(0, 32), ...rawArray.slice(33, 65)]));
-    } else {
-      console.log('operahelper.invalid signature array, length 65');
-    }
-  } else if (rawArray.length == 66) {
-    if (rawArray[0] == 0x00 && rawArray[33] == 0x00) {
-      signatureCosmjsBase64 = uint8Arr_to_b64(new Uint8Array([...rawArray.slice(1, 33), ...rawArray.slice(34, 66)]));
-    } else {
-      console.log('operahelper.invalid signature array, length 66');
-    }
-  }
-  console.log('operahelper.signatureCosmjsBase64', signatureCosmjsBase64);
-  return signatureCosmjsBase64 || undefined;
-}
-
-export const getDIDDocJSON = async () => {
+  if (!opera) return;
   try {
-    const opera = getOpera();
-    const didDoc = await opera?.getDidDoc(0);
-    const didDocJSON = JSON.parse(didDoc ?? '{}');
-    return didDocJSON;
+    await opera.experimentalSuggestChain(chainInfo as ChainInfo);
+    await opera.enable(chainInfo.chainId);
+    const key = await opera.getKey(chainInfo.chainId);
+    return key
+      ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
+      : undefined;
   } catch (error) {
-    console.error('getDIDDocJSON::', error);
-    throw error;
+    console.error('Error initializing Opera:: ' + error);
   }
 };
 
-export const initializeOpera = async (): Promise<USER | undefined> => {
-  try {
-    let ledgered = false;
-    const didDocJSON = await getDIDDocJSON();
-
-    // const getDidDoc = await blocksyncApi.user.getDidDoc(didDocJSON.id);
-    // console.log({ getDidDoc });
-    // if (!(getDidDoc as any)?.error) ledgered = true;
-
-    const verificationMethod = didDocJSON.verificationMethod.find((x: any) => x.type == pubKeyType);
-    const pubkeyBase58 = verificationMethod.publicKeyBase58;
-    pubkeyByteArray = b58_to_uint8Arr(pubkeyBase58);
-    const pubkeyBase64 = uint8Arr_to_b64(pubkeyByteArray);
-
-    const pubkey = {
-      type: amino.pubkeyType.secp256k1,
-      value: pubkeyBase64,
-    };
-    address = amino.pubkeyToAddress(pubkey, 'ixo');
-
-    console.log({ didDocJSON, pubkeyBase64, address });
-    return { pubKey: pubkeyByteArray, address, ledgered, algo: 'secp256k1', did: didDocJSON.id };
-  } catch (error) {
-    console.error('Initialize Opera::', error);
-    throw error;
-  }
-};
-
-export const getOfflineSigner = async (): Promise<OfflineDirectSigner | null> => {
+export const connectOperaAccount = async (chainInfo: ChainInfo): Promise<any> => {
   const opera = getOpera();
-  if (!opera) return null;
-  const offlineSigner: OfflineDirectSigner = { getAccounts, signDirect };
-  return offlineSigner;
+  if (!opera) return [null, null];
+  const offlineSigner = await opera.getOfflineSigner(chainInfo.chainId);
+  if (!offlineSigner) return [null, null];
+  const accounts = await offlineSigner.getAccounts();
+  return [accounts, offlineSigner];
 };
 
 const trx_fail = () => {
@@ -144,8 +44,9 @@ export const operaBroadCastMessage = async (
   feeDenom: string,
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
-  const offlineSigner = await getOfflineSigner();
-  if (!address || !offlineSigner) return trx_fail();
+  const [accounts, offlineSigner] = await connectOperaAccount(chainInfo);
+  if (!accounts || !offlineSigner) return trx_fail();
+  const address = accounts[0].address;
   const client = await initStargateClient(chainInfo.rpc, offlineSigner);
 
   const payload = {
