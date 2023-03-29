@@ -76,8 +76,6 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
   const logoutWallet = () => updateWallet({}, true);
 
-  // const clearWallet = () =>
-
   const fetchAssets = () => {
     fetchBalances();
     fetchDelegations();

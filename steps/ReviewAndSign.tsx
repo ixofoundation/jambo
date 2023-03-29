@@ -129,55 +129,66 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
 
   const signTX = async (): Promise<void> => {
     setLoading(true);
-    let trx: TRX_MSG;
+    const trxMsgs: TRX_MSG[] = [];
+    let memo: string | undefined;
     switch (message) {
       case STEPS.bank_MsgSend:
-        trx = generateBankSendTrx({
-          fromAddress: wallet.user!.address,
-          toAddress: dstAddress[0] as string,
-          denom: token ? token[0]?.value : '',
-          amount: getMicroAmount(amount.toString()),
-        });
+        trxMsgs.push(
+          generateBankSendTrx({
+            fromAddress: wallet.user!.address,
+            toAddress: dstAddress[0] as string,
+            denom: token ? token[0]?.value : '',
+            amount: getMicroAmount(amount.toString()),
+          }),
+        );
       case STEPS.bank_MsgMultiSend:
-        trx = generateBankMultiSendTrx({
-          fromAddress: wallet.user!.address,
-          toAddresses: dstAddress as string[],
-          denoms: (token as CURRENCY_TOKEN[]).map((token) => token.denom),
-          amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
-        });
+        trxMsgs.push(
+          generateBankMultiSendTrx({
+            fromAddress: wallet.user!.address,
+            toAddresses: dstAddress as string[],
+            denoms: (token as CURRENCY_TOKEN[]).map((token) => token.denom),
+            amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
+          }),
+        );
         break;
       case STEPS.staking_MsgDelegate:
-        trx = generateDelegateTrx({
-          delegatorAddress: wallet.user!.address,
-          validatorAddress: dstAddress as string,
-          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-          amount: getMicroAmount(amount.toString()),
-        });
+        trxMsgs.push(
+          generateDelegateTrx({
+            delegatorAddress: wallet.user!.address,
+            validatorAddress: dstAddress as string,
+            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+            amount: getMicroAmount(amount.toString()),
+          }),
+        );
         break;
       case STEPS.staking_MsgUndelegate:
-        trx = generateUndelegateTrx({
-          delegatorAddress: wallet.user!.address,
-          validatorAddress: dstAddress as string,
-          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-          amount: getMicroAmount(amount.toString()),
-        });
+        trxMsgs.push(
+          generateUndelegateTrx({
+            delegatorAddress: wallet.user!.address,
+            validatorAddress: dstAddress as string,
+            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+            amount: getMicroAmount(amount.toString()),
+          }),
+        );
         break;
       case STEPS.staking_MsgRedelegate:
-        trx = generateRedelegateTrx({
-          delegatorAddress: wallet.user!.address,
-          validatorSrcAddress: srcAddress,
-          validatorDstAddress: dstAddress as string,
-          denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-          amount: getMicroAmount(amount.toString()),
-        });
+        trxMsgs.push(
+          generateRedelegateTrx({
+            delegatorAddress: wallet.user!.address,
+            validatorSrcAddress: srcAddress,
+            validatorDstAddress: dstAddress as string,
+            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+            amount: getMicroAmount(amount.toString()),
+          }),
+        );
         break;
       default:
         throw new Error('Unsupported review type');
     }
     const hash = await broadCastMessages(
       wallet,
-      [trx],
-      undefined,
+      trxMsgs,
+      memo,
       defaultTrxFeeOption,
       (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
       chainInfo as KEPLR_CHAIN_INFO_TYPE,

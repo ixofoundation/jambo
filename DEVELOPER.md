@@ -76,8 +76,8 @@ export type AllStepDataTypes =
 
 export type StepDataType<T> =
   // ... existing step data types
- ? Request_donation
   : T extends STEPS.request_donation
+  ? Request_donation
   // ... the rest of the existing step data types (always end with `never` as default)
 ```
 
@@ -87,14 +87,17 @@ By completing these steps, a new step ID, step config structure, and step data s
 
 Next we'll have to create a component for the step to capture the step's data. We'll make use of predefined components in most cases and if you want to know what these predefined components have to offer, check them out at `/components/`.
 
+To create the screen for the `request_donation` step, create a new file called `RequestDonation.tsx` under `/steps/` then copy and paste the following react component's code.
+
 ```tsx
-import { FormEvent, useContext, useEffect, useState, FC, MouseEvent } from 'react';
+import { FormEvent, useContext, useState, FC, MouseEvent } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import AmountAndDenom from '@components/AmountAndDenom/AmountAndDenom';
+import Card, { CARD_SIZE } from '@components/Card/Card';
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
@@ -106,11 +109,11 @@ type RequestDonationProps = {
   // onSuccess is a function passed in from higher up that saves the captured data and moves the user to the next step when called
   onSuccess: (data: StepDataType<STEPS.request_donation>) => void;
   // onBack is a function passed in from higher up that navigates the user to the appropriate previous step when called
-  onBack: () => void;
+  onBack?: () => void;
   // data is an optional object that contains previously captured data for this step
   data?: StepDataType<STEPS.request_donation>;
   // config contains the required configuration data for this step
-  config: StepConfigType<STEPS.request_donation>;
+  config?: StepConfigType<STEPS.request_donation>;
   // header is an optional string used to display a title for this step
   header?: string;
 };
@@ -157,7 +160,35 @@ const RequestDonation: FC<RequestDonationProps> = ({ onSuccess, onBack, config, 
 				Show a warning screen when a user has no tokens to donate (!wallet.balances.balances)
 				*/
         wallet.balances?.data ? (
-          <DonationForm approved={donationApproved} onApprove={setDonationApproved} />
+          <form className={styles.stepsForm} autoComplete='none'>
+            <p className={utilsStyles.label}>{config.prompt ?? 'Would you like to make a donation of'}</p>
+            <div className={utilsStyles.spacer1} />
+            <AmountAndDenom amount={config.amount} denom={config.denom} />
+            <div className={utilsStyles.spacer1} />
+            <Card rounded size={CARD_SIZE.mediumLarge}>
+              {config.addressName ?? config.address}
+            </Card>
+            <div className={utilsStyles.spacer3} />
+            <div className={utilsStyles.rowAlignSpaceAround}>
+              <Button
+                label='NO'
+                rounded
+                size={BUTTON_SIZE.mediumLarge}
+                bgColor={!donationApproved ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.lightGrey}
+                color={!donationApproved ? BUTTON_COLOR.lightGrey : BUTTON_COLOR.primary}
+                onClick={handleClick(false)}
+              />
+              <Button
+                label='YES'
+                rounded
+                size={BUTTON_SIZE.mediumLarge}
+                bgColor={donationApproved ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.lightGrey}
+                color={donationApproved ? BUTTON_COLOR.lightGrey : BUTTON_COLOR.primary}
+                onClick={handleClick(true)}
+              />
+            </div>
+            {/* <DonationForm approved={donationApproved} onApprove={setDonationApproved} /> */}
+          </form>
         ) : (
           <IconText title="You don't have any tokens to donate." Img={SadFace} imgSize={50}>
             <Button label='Skip Donation' bgColor={BUTTON_BG_COLOR.lightGrey} />
@@ -280,6 +311,36 @@ const signTX = async (): Promise<void> => {
 ```
 
 With these modifications, the "Review and Sign" screen is now aware of the donation and the user can review it before signing and broadcasting their transaction.
+
+## Step 4: Test the step locally
+
+After completing all of the steps above, you'll have created your own step to be used in a JAMBO dApp's action(s). Next you'll have to test it. You can add the `request_donation` step to any of the example actions in [config.json](constants/config.json) and test it out. Here's an example of a `request_donation` step config (not a real address):
+
+```json
+// ...previous steps
+{
+  "id": "request_donation",
+  "name": "Donate",
+  "config": {
+    "amount": 1,
+    "denom": "ixo",
+    "address": "ixo1ab2cd3ef4gh5ij6kl7mo8np9qr0st",
+    "prompt": "Support the Jambo Developer with a donation?",
+    "addressName": "Jambo Developer"
+  }
+},
+// ...next steps
+```
+
+Make sure you have all the necessary programs and packages installed then run the project locally on your machine with
+
+```sh
+yarn dev
+```
+
+And test your step at `localhost:3000`
+
+## Done
 
 Congratulations! You have successfully added a new donation step to the JAMBO client. Test it out. If it's not working, make sure you followed all the steps of this doc.
 
