@@ -22,6 +22,8 @@
     "@dnd-kit/sortable": "7.0.1",
     "@dnd-kit/utilities": "3.2.0",
     "@ixo/impactxclient-sdk": "0.0.21",
+    "@ixo/jambo-chain-sdk": "0.0.1",
+    "@ixo/jambo-wallet-sdk": "0.0.1",
     "@keplr-wallet/cosmos": "0.11.11",
     "@keplr-wallet/types": "0.11.10",
     "@keplr-wallet/wc-client": "0.11.11",
