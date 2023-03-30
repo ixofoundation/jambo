@@ -27,7 +27,7 @@ To begin, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on
 
 ### Update the config file
 
-After forking the repo, navigate to the "constants" folder in the project's directory and open the "[config.json](#configjson)" file. In this file, update the necessary fields to reflect your desired configurations. After updating the config file, it's time to save and push the changes to your repo.
+After forking the repo, navigate to the "constants" folder in the project's directory and open the "[config.json](#configjson)" file. In this file, update the necessary fields to reflect your desired configurations and don't forget to upload you desired images in the `public/images` folders (your logo, social image and action images). After updating the config file, it's time to save and push the changes to your repo.
 
 ### Add environment variables
 

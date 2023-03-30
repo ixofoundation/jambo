@@ -26,9 +26,6 @@ export const b58_to_uint8Arr = (str: string): Uint8Array => {
 };
 
 export const uint8Arr_to_b64 = (array: Uint8Array): string => {
-  console.log({ array });
-  const b64 = toBase64(array);
-  console.log({ b64 });
   return toBase64(array);
 };
 
