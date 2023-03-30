@@ -1,4 +1,4 @@
-import { getKeplrChainInfo } from '@ixo/jambo-chain-sdk';
+import { getKeplrChainInfo } from '@ixo/cosmos-chain-resolver';
 
 import { CHAIN_INFO_REQUEST, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { ChainNames, DefaultChainName, EnableDeveloperMode } from '@constants/chains';
