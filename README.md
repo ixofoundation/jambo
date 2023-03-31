@@ -19,114 +19,131 @@ Let us know how we are doing!
 
 ## 🚀 How to create a dApp using this repo
 
-The JAMBO project is a NEXT-based web application for building dApps on the ixo network (or any other cosmos chain). This documentation will guide you to create your own dApp through the process of forking the repository, updating the config file, deploying changes, adding environment variables, and redeploying the site.
+JAMBO is a web application based on NEXT.js for building decentralized applications (dApps) on the ixo network or any other cosmos chain. This documentation will guide you through the process of creating your own dApp using JAMBO by forking the repository, configuring your dApp, adding environment variables, testing, and deploying your dApp.
 
-### Fork the repo
+### 1 Fork the repo
 
-To begin, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on Github. You can do this by going to the repository's Github page and clicking the "Fork" button in the upper right-hand corner.
+To get started, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on Github by navigating to the repository page and clicking the "Fork" button in the upper right-hand corner. Once you've done this, clone the repository onto your computer and follow the next steps locally.
 
-### Update the config file
+### 2 Configure the dApp
 
-After forking the repo, navigate to the "constants" folder in the project's directory and open the "[config.json](#configjson)" file. In this file, update the necessary fields to reflect your desired configurations and don't forget to upload you desired images in the `public/images` folders (your logo, social image and action images). After updating the config file, it's time to save and push the changes to your repo.
+In your newly forked JAMBO repository, you'll need to configure your dApp by updating the configuration file, uploading custom images, and setting up your own theme.
 
-### Add environment variables
+To configure your dApp, go to the constants folder and open the config.json file. Here, you can update the necessary fields to reflect your desired configurations. For an overview of each property in the config.json file, refer to the [config.json](#📄-configjson) section below.
 
-In order for the changes made in the config file to take effect, you need to add the necessary environment variables.
-Depending on your hosting platform, the method for adding environment variables may vary.\
-For Netlify, you can add environment variables by going to your site's "Settings" page and clicking on the "Build & deploy" tab, then scrolling down to the "Environment" section and clicking on the "Edit variables" button. \
-Add the required environment variables for your configuration changes.
+Next, upload your custom images into the public/images folder. These images include your logo, social image, and action images. You can also customize the fallback images and wallet images if you wish.
 
-### Redeploy changes
+To set up your custom theme, navigate to the styles folder and open the variables.scss file. In this file, update the CSS styles as needed.
 
-After adding the necessary environment variables, it's time to deploy the site to reflect the changes made.
-Depending on your hosting platform, the deployment process may vary.\
-For Netlify, you can deploy the site by pushing changes to the repository's main branch.
+After configuring the dApp, it's time to save your changes and push them to the repository.
 
-### Verify the changes
+### 3 Add environment variables
 
-After the redeployment process is complete, verify that the changes made in the config file are reflected in the deployed site.
-You can test the site by visiting the deployed URL and ensuring that the site functions as expected.
-That's it! By following these steps, you should be able to successfully create a dApp from Ixo's JAMBO Client with your desired configurations. If you encounter any issues during the deployment process, consult the documentation of your hosting platform for further instructions.
+Before deploying your dApp, you'll need to add the necessary environment variables. This will allow the dApp to use different or multiple chains or chain networks. To achieve this, you can either duplicate the example file .env.example in the root of the project and rename it to .env or create a new .env file in the root of the project and configure the environment variables below:
+
+- NEXT_PUBLIC_CHAIN_NAMES: A comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
+- NEXT_PUBLIC_ENABLE_DEVELOPER_MODE: Set this variable to a truthy value to allow the dApp to support testing on testnets. Otherwise, it can be ignored and the dApp will only support mainnet.
+- NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: Specify the preferred network for the initial load of the dApp if developer mode is active (defaults to devnet). Otherwise, it can be ignored.
+
+![.env example](/assets/images/docs/env_example.png)
+
+Once you've added these variables, you can start a local instance of your dApp with the following terminal command:
+
+```js
+npm run dev
+// or
+yarn dev
+```
+
+After the local instance has started up, you can test your dApp at localhost:3000. If the server fails to start up, ensure that you have the necessary packages installed by running `yarn` or `npm install` in your terminal. Don't forget to restart your local instance after updating any environment variables.
+
+### 4 Deploy your dApp
+
+Once you're satisfied with your dApp, you can proceed with the deployment process. These docs only cover deployment to [Netlify](https://www.netlify.com/), but you can also deploy it via any hosting platform that supports Next.js projects.
+
+To deploy your dApp on Netlify, follow these steps:
+
+1. On your Netlify dashboard, click on the New site from Git button on the Sites panel.
+2. Select the Git provider where your forked repository is located (e.g., GitHub) and choose the forked repository from the list.
+3. Configure the deploy settings, including the branch to deploy, build command, and publish directory. Netlify will detect and auto-populate these settings for you if you're not sure what to do.
+4. Click on the Deploy site button to start the deployment process.
+
+Note that the initial deployment will not work without adding your environment variables from [step 3](#3-add-environment-variables) to your Netlify settings. To do this, navigate to your dApp's `Site Settings` page on Netlify and click on the `Environment Variables` section. There you can add (or edit) your dApp's environment variables as needed.
+
+Once you've added the necessary environment variables, you'll need to redeploy the dApp to reflect the changes. You can do this by clicking on the Trigger deploy button on the Deploys panel of your Netlify dashboard.
+
+If you encounter any issues during the deployment process, feel free to consult the Netlify documentation or reach out to the JAMBO community for support.
+
+🎉 🎉 🎉 That's it!
+
+By following these steps, you should be able to successfully create your own dApp from JAMBO. If you encounter any issues during the deployment process, consult the documentation of your hosting platform for further instructions.
 
 ---
 
 ## 📄 Config.json
 
-Here's an overview of each of the properties in the config.json file:
+The config.json file allows you to configure various aspects of your dApp, including its name, description, metadata and actions. Here's an overview of the available configuration options:
 
-- siteName: The name of your site.
-  - Update this property with the desired name of your site.
-- siteUrl: The URL of your site.
-  - Update this property with the URL of your site.
-- siteTitleMeta: The title of your site.
-  - Update this property with the title of your site that will appear in the browser's tab.
-- siteDescriptionMeta: The description of your site.
-  - Update this property with the description of your site that will appear in search engine results.
-- wcNamespace: The namespace used for ixo-related Web Components.
-  - You can leave this property as-is, as WalletConnect features are still in development.
-- fontUrl: The URL for the Google Fonts.
-  - You can leave this property as-is, unless you have a specific font you'd like to use.
-- fontName: The name of the Google Font used for the site.
-  - You can leave this property as-is, unless you imported a font via fontUrl.
-- headerShowName: Whether or not to display the site name in the header.
-  - Update this property with a boolean value (true or false) to indicate whether or not to display the site name in the header.
-- headerShowLogo: Whether or not to display the site logo in the header.
-  - Update this property with a boolean value (true or false) to indicate whether or not to display the site logo in the header.
-- about: Information about your site displayed on the about page.
-  - Update this property with information about your site that will be displayed in the "About" section.
-  - This can be a string of HTML or plain text or a link to an external site.
-- termsAndConditions: Information about your site displayed on the about page.
-  - Update this property with the terms and conditions of your dApp that will be displayed in the "Terms and Conditions" section.
-  - This can be a string of HTML or plain text or a link to an external site.
-- actions: An array of actions to be used in the dApp.
-  - This property contains an array of objects that represent the actions you want the dApp to use through a series of steps.
-  - Actions are the main functionality of the dApp and can consist of one or more steps. Each step corresponds to a screen being displayed to the user, where the user can input some sort of data required for the action. The final step is the "sign and review" screen, which allows the user to review the data they have entered and sign the transaction for the action they are performing.
-  - Some steps have required prerequisites such as the delegate action needs a validator address and amount before the delegate transaction can be generated and signed. There are limited steps available but more are being developed to allow full customization of any dApp developed by the Ixo JAMBO Client.
-  - Each action object has the following properties:
-    - id: A unique identifier for the action.
-    - steps: An array of steps that make up the action. Each step has an:
-      - id from a list of predefined ids which corresponds to a specific screen to display (as seen below)
-      - name for the step
-      - config to configure the step if applicable
-    - name: The name of the action.
-    - description: A description of what the action does.
-    - image: An image associated with the action.
-  - The steps available for actions are:
-    - `get_receiver_address` that allows a user to provide an address
-    - `get_validator_delegate` that allows a user to select a validator
-    - `get_validator_redelegate` that allows a user to select a validator
-    - `get_delegated_validator_undelegate` that allows a user to select a validator from a list of delegated validators
-    - `get_delegated_validator_redelegate` that allows a user to select a validator from a list of delegated validators
-    - `select_token_and_amount` that allows a user to select a token and provide an amount
-    - `select_amount_delegate` that allows a user to provide an amount
-    - `select_amount_undelegate` that allows a user to select a token and provide an amount
-    - `select_amount_redelegate` that allows a user to select a token and provide an amount
-    - `bank_MsgSend` that generates a send transaction and allows a user to sign
-    - `bank_MsgMultiSend` that generates a multi send transaction and allows a user to sign
-    - `staking_MsgDelegate` that generates a delegate transaction and allows a user to sign
-    - `staking_MsgUndelegate` that generates an undelegate transaction and allows a user to sign
-    - `staking_MsgRedelegate` that generates a redelegate transaction and allows a user to sign
-    - `distribution_MsgWithdrawDelegatorReward` that generates a claim delegation rewards transaction and allows a user to sign
-  - In the example object below, the action is called "Delegate" and has three steps. The first step is "Get validator address", the second is "Define amount to delegate", and the final step is "Review and sign". This particular action allows the user to delegate tokens on the IXO Network. The id property is a unique identifier for the action and it's used for navigation and routing, and the image property represents an image associated with the action (hence the image name corresponds with the action's id).
+- `siteName`: The name of your dApp.
+- `siteUrl`: The URL of your dApp.
+- `siteTitleMeta`: The title of your dApp that will appear in the browser's tab.
+- `siteDescriptionMeta`: The description of your site that will appear in search engine results.
+- `wcNamespace`: The namespace for WalletConnect. Leave this property as-is, as WalletConnect features are still in development.
+- `fontUrl`: The URL for the Google Fonts. Leave this property as-is, unless you have a specific font you'd like to use.
+- `fontName`: The name of the Google Font used for the site. Leave this property as-is, unless you imported a font via `fontUrl`.
+- `headerShowName`: Whether or not to display the site name in the header.
+- `headerShowLogo`: Whether or not to display the site logo in the header.
+- `about`: Information about your site displayed on the about page. This can be a string of HTML or plain text or a link to an external site.
+- `termsAndConditions`: The terms and conditions for the usage of your dApp on the terms page. This can be a string of HTML or plain text or a link to an external site.
+- `actions`: An array of actions to be used in the dApp. Actions are the main functionality of the dApp and can consist of one or more steps. Each step corresponds to a screen being displayed to the user, where the user can input some sort of data required for the action. Conventionally, the final step is the "review and sign" screen, which allows the user to review the data they have entered and sign the transaction for the action they are performing.
+
+Each action object has the following properties:
+
+- `id`: A unique identifier for the action (used for routing).
+- `name`: The name of the action.
+- `description`: A short description of what the action does
+- `image`: An image associated with the action (stored in /public/images/actions).
+- `steps`: An array of steps that make up the action. Each step has an id (from a list of predefined ids which corresponds to a specific screen to display), and a name for the step.
+
+The steps available for actions can be seen in the [steps](#📚-steps) section.
+
+Below is an example configuration for a delegate action, which allows the user to stake tokens to validators. The id property is a unique identifier for the action and is used for navigation and routing, while the image property represents an image associated with the action (hence the image name corresponds with the action's id).
 
 ![config.json example](/assets/images/docs/config_json_example.png)
 
-After updating the desired configurations in the JSON object, save the changes to the "config.json" file. These changes will be reflected in the deployed site after you deploy the changes and add the necessary environment variables.
+---
 
-## 🔧 .env
+## 📚 STEPS
 
-If you're not sure on what environment variables to set, then duplicate and use the default values as found in ".env.example". Simply duplicate the file and rename it to ".env". Done.
+| Send                                                                  |                                                                             |                                                       |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- |
+| get_receiver_address                                                  | select_token_and_amount                                                     | bank_MsgSend                                          |
+| ![get_receiver_address](/assets/images/docs/get_receiver_address.png) | ![select_token_and_amount](/assets/images/docs/select_token_and_amount.png) | ![bank_MsgSend](/assets/images/docs/bank_MsgSend.png) |
 
-Else if you want to customize the dApp to use different or even multiple chains or chain networks then follow the steps below:
+| MultiSend                                                             |                                                                             |                                                                 |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| get_receiver_address                                                  | select_token_and_amount                                                     | bank_MsgMultiSend                                               |
+| ![get_receiver_address](/assets/images/docs/get_receiver_address.png) | ![select_token_and_amount](/assets/images/docs/select_token_and_amount.png) | ![bank_MsgMultiSend](/assets/images/docs/bank_MsgMultiSend.png) |
 
-1. Create a new file named ".env" in the root directory of the project
-2. Add the following environment variables to the .env file:
-   - NEXT_PUBLIC_CHAIN_NAMES: This variable is a comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
-   - NEXT_PUBLIC_ENABLE_DEVELOPER_MODE: This variable determines whether the app can use both testnet and mainnet (truthy value) or mainnet only (falsy value). This is false by default.
-   - NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: This variable specifies the preferred network for the initial load of the dApp. If developer mode (NEXT_PUBLIC_ENABLE_DEVELOPER_MODE) isn't active, this variable gets ignored. This variable defaults to devnet if developer mode is active.
-3. Here is an example of the .env file with the above variables set (as seen in .env.example):
+| Delegate                                                                  |                                                                           |                                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| get_validator_delegate                                                    | select_amount_delegate                                                    | staking_MsgDelegate                                                 |
+| ![get_validator_delegate](/assets/images/docs/get_validator_delegate.png) | ![select_amount_delegate](/assets/images/docs/select_amount_delegate.png) | ![staking_MsgDelegate](/assets/images/docs/staking_MsgDelegate.png) |
 
-![.env example](/assets/images/docs/env_example.png)
+| Undelegate                                                                                        |                                                                               |                                                                         |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| get_delegated_validator_undelegate                                                                | select_amount_undelegate                                                      | staking_MsgUndelegate                                                   |
+| ![get_delegated_validator_undelegate](/assets/images/docs/get_delegated_validator_undelegate.png) | ![select_amount_undelegate](/assets/images/docs/select_amount_undelegate.png) | ![staking_MsgUndelegate](/assets/images/docs/staking_MsgUndelegate.png) |
+
+| Redelegate                                                                                        |                                                                               |                                                                               |                                                                         |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| get_delegated_validator_redelegate                                                                | select_amount_redelegate                                                      | get_validator_redelegate                                                      | staking_MsgRedelegate                                                   |
+| ![get_delegated_validator_redelegate](/assets/images/docs/get_delegated_validator_redelegate.png) | ![select_amount_redelegate](/assets/images/docs/select_amount_redelegate.png) | ![get_validator_redelegate](/assets/images/docs/get_validator_redelegate.png) | ![staking_MsgRedelegate](/assets/images/docs/staking_MsgRedelegate.png) |
+
+| Claim Rewards                                                                                               |     |     |
+| ----------------------------------------------------------------------------------------------------------- | --- | --- |
+| distribution_MsgWithdrawDelegatorReward                                                                     |     |     |
+| ![distribution_MsgWithdrawDelegatorReward](/assets/images/docs/distribution_MsgWithdrawDelegatorReward.png) |     |     |
 
 ---
 
@@ -136,7 +153,7 @@ The JAMBO client makes use of the following wallets:
 
 - **Keplr**: This is a browser extension wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has a number of features including support for multiple chains, staking, governance voting, and more. Docs available [here](https://docs.keplr.app/api/).
 - **Opera Wallet**: This is a mobile wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has features such as a built-in browser, QR code scanner, and support for multiple chains. Docs available [here](https://help.opera.com/en/crypto/opera-wallet-integration-guide/).
-- **WalletConnect**: This is a protocol for connecting decentralized applications to mobile wallets with QR code scanning. It is currently being implemented and will soon be available for use with the dApp.
+- **WalletConnect**: This is a protocol for connecting decentralized applications to mobile wallets with QR code scanning. It is currently being implemented and will soon be available for use with any JAMBO dApp.
 
 ---
 
