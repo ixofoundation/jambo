@@ -87,7 +87,7 @@ export const initializeWallet = async (
     case WALLET_TYPE.keplr:
       return await initializeKeplr(chain as ChainInfo);
     case WALLET_TYPE.opera:
-      return await initializeOpera();
+      return await initializeOpera(chain as ChainInfo);
     case WALLET_TYPE.walletConnect:
       return await initializeWC(chain as ChainInfo);
     default:
