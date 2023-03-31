@@ -141,6 +141,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             amount: getMicroAmount(amount.toString()),
           }),
         );
+        break;
       case STEPS.bank_MsgMultiSend:
         trxMsgs.push(
           generateBankMultiSendTrx({
