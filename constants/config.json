@@ -23,11 +23,31 @@
           "name": "Get receiver address"
         },
         {
-          "id": "bank_MsgMultiSend",
+          "id": "bank_MsgSend",
           "name": "Review and sign"
         }
       ],
       "name": "Send",
+      "description": "Crypto Send",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ib78",
+      "steps": [
+        {
+          "id": "select_token_and_amount",
+          "name": "Select token and amount"
+        },
+        {
+          "id": "get_receiver_address",
+          "name": "Get receiver address"
+        },
+        {
+          "id": "bank_MsgMultiSend",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Multi Send",
       "description": "Crypto Send",
       "image": "eKXPPhewkJDLbE1bq1iboa.png"
     },

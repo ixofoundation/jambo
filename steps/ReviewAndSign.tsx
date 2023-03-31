@@ -137,7 +137,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           generateBankSendTrx({
             fromAddress: wallet.user!.address,
             toAddress: dstAddress[0] as string,
-            denom: token ? token[0]?.value : '',
+            denom: getDenomFromCurrencyToken(Array.isArray(token) ? token[0] : token),
             amount: getMicroAmount(amount.toString()),
           }),
         );
