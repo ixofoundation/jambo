@@ -23,27 +23,27 @@ JAMBO is a web application based on NEXT.js for building decentralized applicati
 
 ### 1 Fork the repo
 
-To get started, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on Github by navigating to the repository page and clicking the "Fork" button in the upper right-hand corner. Once you've done this, clone the repository onto your computer and follow the next steps locally.
+To get started, fork the [JAMBO](https://github.com/ixofoundation/jambo) repository on Github by navigating to the repository page and clicking the `Fork` button in the upper right-hand corner. Once you've done this, clone the repository onto your computer and follow the next steps locally.
 
 ### 2 Configure the dApp
 
 In your newly forked JAMBO repository, you'll need to configure your dApp by updating the configuration file, uploading custom images, and setting up your own theme.
 
-To configure your dApp, go to the constants folder and open the config.json file. Here, you can update the necessary fields to reflect your desired configurations. For an overview of each property in the config.json file, refer to the [config.json](#📄-configjson) section below.
+To configure your dApp, go to the `constants` folder and open the `config.json` file. Here, you can update the necessary fields to reflect your desired configurations. For an overview of each property in the `config.json` file, refer to the [config.json](#📄-configjson) section below.
 
-Next, upload your custom images into the public/images folder. These images include your logo, social image, and action images. You can also customize the fallback images and wallet images if you wish.
+Next, upload your custom images into the `public/images` folder. These images include your logo, social image, and action images. You can also customize the fallback images and wallet images if you wish.
 
-To set up your custom theme, navigate to the styles folder and open the variables.scss file. In this file, update the CSS styles as needed.
+To set up your custom theme, navigate to the `styles` folder and open the `variables.scss` file. In this file, update the CSS styles as needed.
 
 After configuring the dApp, it's time to save your changes and push them to the repository.
 
 ### 3 Add environment variables
 
-Before deploying your dApp, you'll need to add the necessary environment variables. This will allow the dApp to use different or multiple chains or chain networks. To achieve this, you can either duplicate the example file .env.example in the root of the project and rename it to .env or create a new .env file in the root of the project and configure the environment variables below:
+Before deploying your dApp, you'll need to add the necessary environment variables. This will allow the dApp to use different or multiple chains or chain networks thanks to the [cosmos chain resolver](https://www.npmjs.com/package/@ixo/cosmos-chain-resolver). To achieve this, you can either duplicate the example file `.env.example` in the root of the project and rename it to `.env` or create a new `.env` file in the root of the project and configure the environment variables below:
 
-- NEXT_PUBLIC_CHAIN_NAMES: A comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
-- NEXT_PUBLIC_ENABLE_DEVELOPER_MODE: Set this variable to a truthy value to allow the dApp to support testing on testnets. Otherwise, it can be ignored and the dApp will only support mainnet.
-- NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: Specify the preferred network for the initial load of the dApp if developer mode is active (defaults to devnet). Otherwise, it can be ignored.
+- `NEXT_PUBLIC_CHAIN_NAMES`: A comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
+- `NEXT_PUBLIC_ENABLE_DEVELOPER_MODE`: Set this variable to true to allow the dApp to support testing on testnets. Otherwise, it can be ignored and the dApp will only support mainnet.
+- `NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK`: Specify the preferred network for the initial load of the dApp if developer mode is active (defaults to devnet). Otherwise, it can be ignored.
 
 ![.env example](/assets/images/docs/env_example.png)
 
@@ -63,16 +63,16 @@ Once you're satisfied with your dApp, you can proceed with the deployment proces
 
 To deploy your dApp on Netlify, follow these steps:
 
-1. On your Netlify dashboard, click on the New site from Git button on the Sites panel.
+1. On your Netlify dashboard, click on the `New site from Git` button on the Sites panel.
 2. Select the Git provider where your forked repository is located (e.g., GitHub) and choose the forked repository from the list.
 3. Configure the deploy settings, including the branch to deploy, build command, and publish directory. Netlify will detect and auto-populate these settings for you if you're not sure what to do.
-4. Click on the Deploy site button to start the deployment process.
+4. Click on the `Deploy site` button to start the deployment process.
 
 Note that the initial deployment will not work without adding your environment variables from [step 3](#3-add-environment-variables) to your Netlify settings. To do this, navigate to your dApp's `Site Settings` page on Netlify and click on the `Environment Variables` section. There you can add (or edit) your dApp's environment variables as needed.
 
-Once you've added the necessary environment variables, you'll need to redeploy the dApp to reflect the changes. You can do this by clicking on the Trigger deploy button on the Deploys panel of your Netlify dashboard.
+Once you've added the necessary environment variables, you'll need to redeploy the dApp to reflect the changes. You can do this by clicking on the `Trigger deploy` button on the `Deploys` panel of your Netlify dashboard.
 
-If you encounter any issues during the deployment process, feel free to consult the Netlify documentation or reach out to the JAMBO community for support.
+If you encounter any issues during the deployment process, feel free to consult the [Netlify](https://www.netlify.com/) documentation or reach out to the JAMBO community for support.
 
 🎉 🎉 🎉 That's it!
 
@@ -152,7 +152,7 @@ Below is an example configuration for a delegate action, which allows the user t
 The JAMBO client makes use of the following wallets:
 
 - **Keplr**: This is a browser extension wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has a number of features including support for multiple chains, staking, governance voting, and more. Docs available [here](https://docs.keplr.app/api/).
-- **Opera Wallet**: This is a mobile wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has features such as a built-in browser, QR code scanner, and support for multiple chains. Docs available [here](https://help.opera.com/en/crypto/opera-wallet-integration-guide/).
+- **Opera Wallet**: This is a mobile wallet that allows users to store, manage and interact with their cryptocurrencies securely. It has features such as a built-in browser, QR code scanner, and support for multiple chains. Docs available [here](https://www.npmjs.com/package/@ixo/jambo-wallet-sdk) and [here](https://help.opera.com/en/crypto/opera-wallet-integration-guide/).
 - **WalletConnect**: This is a protocol for connecting decentralized applications to mobile wallets with QR code scanning. It is currently being implemented and will soon be available for use with any JAMBO dApp.
 
 ---
