@@ -126,6 +126,18 @@
       "name": "Claim Rewards",
       "description": "Claim rewards on your delegations.",
       "image": "eKXPPhewkJDLbE1bq1ibod.png"
+    },
+    {
+      "id": "Proposals",
+      "steps": [
+        {
+          "id": "select_and_review_proposal",
+          "name": "Proposals"
+        }
+      ],
+      "name": "Vote",
+      "description": "Vote on proposals on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
     }
   ]
 }

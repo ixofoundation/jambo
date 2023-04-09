@@ -8,6 +8,7 @@ import ReceiverAddress from '@steps/ReceiverAddress';
 import DefineAmountToken from '@steps/DefineAmountToken';
 import DefineAmountDelegate from '@steps/DefineAmountDelegate';
 import ReviewAndSign from '@steps/ReviewAndSign';
+import Proposals from '@steps/Proposals';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/ValidatorAddress';
@@ -118,9 +119,9 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             excludeValidators={
               step.id === STEPS.get_validator_redelegate
                 ? (
-                    action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
-                      ?.data as StepDataType<STEPS.get_validator_delegate>
-                  )?.validator?.address || []
+                  action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+                    ?.data as StepDataType<STEPS.get_validator_delegate>
+                )?.validator?.address || []
                 : []
             }
           />
@@ -185,6 +186,11 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             steps={action!.steps}
             header={action?.name}
             message={step.id}
+          />
+        );
+      case STEPS.select_and_review_proposal:
+        return (
+          <Proposals
           />
         );
       default:
