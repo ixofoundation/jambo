@@ -5,10 +5,12 @@ import { StepDataType, STEPS } from 'types/steps';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { format } from 'date-fns';
+import 'swiper/swiper.min.css'
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import cls from 'classnames';
+import { VoteOption } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
+import { createSigningClient } from '@ixo/impactxclient-sdk';
 
 // const RPC_ENDPOINT = 'https://impacthub.ixo.world/rest/cosmos/gov/v1beta1/proposals?pagination.limit=100&proposal_status=2'
 
@@ -22,8 +24,28 @@ type GetProposalsProps = {
     data?: StepDataType<STEPS.select_and_review_proposal>;
 }
 
+const BtnStyles = {
+    backgroundColor: '#1DB3D3',
+    height: '30px',
+    width: '90px',
+    borderRadius: '15px',
+    borderStyle: 'none',
+    color: 'white'
+}
+
 const Proposals: FC<GetProposalsProps> = ({ data }) => {
     const [proposals, setProposals] = useState<Proposal[]>([])
+    const [selected, setSelected] = useState(false);
+
+    const handleSelect = (swiper: unknown) => {
+        if (typeof swiper === 'object' && swiper !== null) {
+            const selectedSlide = (swiper as { slides: HTMLElement[], activeIndex: number }).slides[(swiper as { slides: HTMLElement[], activeIndex: number }).activeIndex];
+            selectedSlide.style.height = selected ? '300px' : '500px';
+            setSelected(prevSelected => !prevSelected);
+        } else {
+            throw new Error('Invalid swiper parameter');
+        }
+    };
 
     useEffect(() => {
         const fetchProposals = async () => {
@@ -57,7 +79,8 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                     centeredSlides
                     slidesPerView='auto'
                     initialSlide={5}
-                    style={{ position: 'relative', top: '10px' }}
+                    // style={{ position: 'relative', top: '10px' }}
+                    onClick={handleSelect}
                 >
 
                     {proposals && proposals.length > 0 ? (
@@ -67,26 +90,34 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                                     key={proposal.proposal_id}
                                     style={{
                                         backgroundColor: '#EBEBEB',
-                                        height: '250px',
+                                        height: '300px',
                                         width: '300px',
                                         padding: '20px',
                                         display: 'flex',
                                         justifyContent: 'center',
-                                        alignItems: 'center',
                                         borderRadius: '15px',
-                                        overflow: 'hidden'
+                                        overflow: 'hidden',
                                     }}
                                 >
-                                    <div className="div">
-                                        <h1 style={{ fontSize: '12px' }} >{proposal.content.title}</h1>
-                                        <p style={{ fontSize: '10px', padding: '2rem' }} >{proposal.content.description}</p>
+                                    <div className="div" >
+                                        {/* <div className="div">
+                                            <p style={{ fontSize: '10px', padding: '2rem' }} >{proposal.submit_time}</p>
+                                        </div> */}
+                                        <h1 style={{ fontSize: '11px', textAlign: 'left' }} >{proposal.content.title}</h1>
+                                        <p style={{ fontSize: '10px', height: '10rem', overflow: 'hidden', textAlign: 'left', width: '16rem' }} >{proposal.content.description}</p>
+                                        <div
+                                            style={{ display: 'flex', justifyContent: 'space-evenly' }}
+                                        >
+                                            <button style={BtnStyles} >Actions</button>
+                                            <button style={BtnStyles} >Resources</button>
+                                        </div>
                                     </div>
                                 </SwiperSlide>
 
                             ))}
                         </div>
                     ) : (
-                        <p>No proposals found.</p>
+                        <p>Loading Proposals...</p>
                     )
                     }
                 </Swiper >
