@@ -3,14 +3,10 @@ import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import { StepDataType, STEPS } from 'types/steps';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
+import { VoteOption } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/swiper.min.css'
-import utilsStyles from '@styles/utils.module.scss';
-import styles from '@styles/stepsPages.module.scss';
-import cls from 'classnames';
-import { VoteOption } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
-import { createSigningClient } from '@ixo/impactxclient-sdk';
+import 'swiper/swiper.min.css';
 
 // const RPC_ENDPOINT = 'https://impacthub.ixo.world/rest/cosmos/gov/v1beta1/proposals?pagination.limit=100&proposal_status=2'
 
@@ -33,19 +29,15 @@ const BtnStyles = {
     color: 'white'
 }
 
-const Proposals: FC<GetProposalsProps> = ({ data }) => {
-    const [proposals, setProposals] = useState<Proposal[]>([])
-    const [selected, setSelected] = useState(false);
+const VoteBtns = {
+    height: '50px',
+    width: '50px',
+    borderRadius: '100%'
+}
 
-    const handleSelect = (swiper: unknown) => {
-        if (typeof swiper === 'object' && swiper !== null) {
-            const selectedSlide = (swiper as { slides: HTMLElement[], activeIndex: number }).slides[(swiper as { slides: HTMLElement[], activeIndex: number }).activeIndex];
-            selectedSlide.style.height = selected ? '300px' : '500px';
-            setSelected(prevSelected => !prevSelected);
-        } else {
-            throw new Error('Invalid swiper parameter');
-        }
-    };
+const Proposals: FC<GetProposalsProps> = ({ data }) => {
+    const [proposals, setProposals] = useState<Proposal[]>([]);
+    const [selected, setSelected] = useState(false);
 
     useEffect(() => {
         const fetchProposals = async () => {
@@ -60,6 +52,22 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
 
         fetchProposals();
     }, [])
+
+    if (!proposals || !proposals.final_tally_result) {
+        // Handle the case where proposals or final_tally_result is undefined
+        console.error('Error: Proposals or final_tally_result is undefined.');
+    } else {
+        const totalVotes = (proposals.final_tally_result.abstain ?? 0) + (proposals.final_tally_result.no ?? 0) + (proposals.final_tally_result.no_with_veto ?? 0) + (proposals.final_tally_result.yes ?? 0);
+        const yesVotes = proposals.final_tally_result.yes ?? 0;
+        const yesPercentage = totalVotes ? (yesVotes / (totalVotes - proposals.final_tally_result.abstain)) * 100 : 0;
+        // Update the progress bar using the yesPercentage value
+    }
+
+
+
+
+    // Update the progress bar using the yesPercentage value
+
 
     return (
         <div className="div">
@@ -79,10 +87,7 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                     centeredSlides
                     slidesPerView='auto'
                     initialSlide={5}
-                    // style={{ position: 'relative', top: '10px' }}
-                    onClick={handleSelect}
                 >
-
                     {proposals && proposals.length > 0 ? (
                         <div>
                             {proposals.map((proposal) => (
@@ -90,7 +95,7 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                                     key={proposal.proposal_id}
                                     style={{
                                         backgroundColor: '#EBEBEB',
-                                        height: '300px',
+                                        height: selected ? '400px' : '300px',
                                         width: '300px',
                                         padding: '20px',
                                         display: 'flex',
@@ -99,16 +104,30 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                                         overflow: 'hidden',
                                     }}
                                 >
-                                    <div className="div" >
-                                        {/* <div className="div">
-                                            <p style={{ fontSize: '10px', padding: '2rem' }} >{proposal.submit_time}</p>
-                                        </div> */}
+                                    <div className="div">
                                         <h1 style={{ fontSize: '11px', textAlign: 'left' }} >{proposal.content.title}</h1>
-                                        <p style={{ fontSize: '10px', height: '10rem', overflow: 'hidden', textAlign: 'left', width: '16rem' }} >{proposal.content.description}</p>
+
+                                        <div style={{ width: '100%', height: '20px', backgroundColor: '#f0f0f0', borderRadius: '10px' }}>
+                                            <div style={{ width: `${yesPercentage}%`, height: '100%', backgroundColor: 'blue', borderRadius: '10px' }}></div>
+                                        </div>
+
+                                        <p>{proposal.final_tally_result.yes}</p>
+                                        <p
+                                            style={{
+                                                fontSize: '10px',
+                                                height: selected ? '15rem' : '10rem',
+                                                overflow: 'hidden',
+                                                textAlign: 'left',
+                                                width: '16rem',
+                                                overflowY: 'auto'
+                                            }}
+                                        >
+                                            {proposal.content.description}
+                                        </p>
                                         <div
                                             style={{ display: 'flex', justifyContent: 'space-evenly' }}
                                         >
-                                            <button style={BtnStyles} >Actions</button>
+                                            <button style={BtnStyles} onClick={() => setSelected(!selected)} >Actions</button>
                                             <button style={BtnStyles} >Resources</button>
                                         </div>
                                     </div>
@@ -122,7 +141,28 @@ const Proposals: FC<GetProposalsProps> = ({ data }) => {
                     }
                 </Swiper >
             </div>
-            <Footer onBackUrl='/' backLabel='Home' />
+
+            {
+                selected ? (
+                    <div
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-evenly',
+                            position: 'fixed',
+                            width: '100%',
+                            bottom: '20px'
+                        }}
+                    >
+                        <button style={VoteBtns}>YES</button>
+                        <button style={VoteBtns}>MORE</button>
+                        <button style={VoteBtns}>NO</button>
+                    </div>
+                ) : (
+
+                    <Footer onBackUrl='/' backLabel='Home' />
+                )
+            }
+
         </div >
     )
 }
