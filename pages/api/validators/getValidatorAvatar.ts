@@ -9,7 +9,6 @@ export type GetValidatorAvatarResponse = {
 const keybaseRequest = async (path: string) => {
   try {
     const response = await axios.get(`https://keybase.io/_/api/1.0${path}`);
-
     return Promise.resolve(response.data);
   } catch (error) {
     return Promise.reject(error);

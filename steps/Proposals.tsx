@@ -5,6 +5,9 @@ import { StepDataType, STEPS } from 'types/steps';
 import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
+import { queryAllProposals } from '@utils/query';
+import { QUERY_CLIENT } from 'types/query';
+import { ProposalStatus } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 // const RPC_ENDPOINT = 'https://impacthub.ixo.world/rest/cosmos/gov/v1beta1/proposals?pagination.limit=100&proposal_status=2'
 
@@ -18,6 +21,11 @@ type GetProposalsProps = {
     data?: StepDataType<STEPS.select_and_review_proposal>;
     proposalId: string;
     proposal: Proposal[];
+    queryClient: QUERY_CLIENT;
+    proposalStatus: ProposalStatus;
+    voter: string;
+    depositor: string;
+    pagination?: undefined;
 }
 
 const BtnStyles = {
@@ -40,7 +48,7 @@ interface Proposal {
     proposal_id: string;
 }
 
-const Proposals: FC<GetProposalsProps> = () => {
+const Proposals: FC<GetProposalsProps> = ({ queryClient, proposalStatus, voter, depositor, pagination }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [selected, setSelected] = useState(false);
     const [selectedValue, setSelectedValue] = useState(false);
@@ -55,27 +63,35 @@ const Proposals: FC<GetProposalsProps> = () => {
     }
 
     useEffect(() => {
-        const fetchProposals = async () => {
-            try {
-                const response = await api.get('/proposals');
-                setProposals(response.data.proposals);
-                console.log(response.data.proposals)
-            } catch (error) {
-                console.error(error);
-            }
-        };
-        fetchProposals();
+        async function getProposals() {
+            const proposals = await queryAllProposals(queryClient, proposalStatus, voter, depositor, pagination);
+            console.log(proposals);
+        }
+        getProposals()
     }, [])
 
-    if (!proposals || !proposals.final_tally_result) {
-        // Handle the case where proposals or final_tally_result is undefined
-        console.error('Error: Proposals or final_tally_result is undefined.');
-    } else {
-        const totalVotes = (proposals.final_tally_result.abstain ?? 0) + (proposals.final_tally_result.no ?? 0) + (proposals.final_tally_result.no_with_veto ?? 0) + (proposals.final_tally_result.yes ?? 0);
-        const yesVotes = proposals.final_tally_result.yes ?? 0;
-        const yesPercentage = totalVotes ? (yesVotes / (totalVotes - proposals.final_tally_result.abstain)) * 100 : 0;
-        // Update the progress bar using the yesPercentage value
-    }
+    // useEffect(() => {
+    //     const fetchProposals = async () => {
+    //         try {
+    //             const response = await api.get('/proposals');
+    //             setProposals(response.data.proposals);
+    //             console.log(response.data.proposals)
+    //         } catch (error) {
+    //             console.error(error);
+    //         }
+    //     };
+    //     fetchProposals();
+    // }, [])
+
+    // if (!proposals || !proposals.final_tally_result) {
+    //     // Handle the case where proposals or final_tally_result is undefined
+    //     console.error('Error: Proposals or final_tally_result is undefined.');
+    // } else {
+    //     const totalVotes = (proposals.final_tally_result.abstain ?? 0) + (proposals.final_tally_result.no ?? 0) + (proposals.final_tally_result.no_with_veto ?? 0) + (proposals.final_tally_result.yes ?? 0);
+    //     const yesVotes = proposals.final_tally_result.yes ?? 0;
+    //     const yesPercentage = totalVotes ? (yesVotes / (totalVotes - proposals.final_tally_result.abstain)) * 100 : 0;
+    //     // Update the progress bar using the yesPercentage value
+    // }
 
     return (
         <div className="div">

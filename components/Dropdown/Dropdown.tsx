@@ -1,7 +1,6 @@
 import { FC } from 'react';
 import cls from 'classnames';
 import Select, { components } from 'react-select';
-
 import styles from './Dropdown.module.scss';
 import { getCSSVariable } from '@utils/styles';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';

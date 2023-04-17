@@ -1,6 +1,5 @@
 import { HTMLAttributes } from 'react';
 import cls from 'classnames';
-
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './Wallets.module.scss';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';

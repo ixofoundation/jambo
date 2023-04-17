@@ -1,6 +1,5 @@
 import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
-
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
 import {
   DELEGATION,
@@ -13,14 +12,37 @@ import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
 import { TOKEN_ASSET } from './currency';
+import { QueryProposalRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
+import { ProposalStatus } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   const client = await createQueryClient(blockchainRpcUrl);
   return client;
 };
 
-export const queryAllBalances = async (
+export const queryAllProposals = async (
   queryClient: QUERY_CLIENT,
+  proposalStatus: ProposalStatus,
+  voter: string = '',
+  depositor: string = '',
+  pagination?: undefined,
+): Promise<QueryProposalRequest[]> => {
+  try {
+    const response = await queryClient.cosmos.gov.v1beta1.proposals({
+      proposalStatus: proposalStatus,
+      voter: voter,
+      depositor: depositor,
+      pagination: pagination,
+    });
+    return response.proposals;
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+
+export const queryAllBalances = async (
+  queryClient: QUERY_CLIENT, 
   chain: string,
   address: string,
 ): Promise<CURRENCY_TOKEN[]> => {
@@ -89,12 +111,12 @@ export const queryDelegationTotalRewards = async (
     const delegationTotalRewards = {
       total: totalRewards
         ? {
-            amount: totalRewards.amount.slice(0, totalRewards.amount.length - 18),
-            denom: totalRewards.denom,
-            ibc: false,
-            chain,
-            token: stakeCurrency,
-          }
+          amount: totalRewards.amount.slice(0, totalRewards.amount.length - 18),
+          denom: totalRewards.denom,
+          ibc: false,
+          chain,
+          token: stakeCurrency,
+        }
         : undefined,
       // total: response.total.map(
       //   (total: CURRENCY): CURRENCY_TOKEN => ({
@@ -112,12 +134,12 @@ export const queryDelegationTotalRewards = async (
           validatorAddress: reward.validatorAddress,
           rewards: delegationReward
             ? {
-                amount: delegationReward.amount.slice(0, delegationReward.amount.length - 18),
-                denom: delegationReward.denom ?? stakeCurrency.coinMinimalDenom,
-                ibc: false,
-                chain,
-                token: stakeCurrency,
-              }
+              amount: delegationReward.amount.slice(0, delegationReward.amount.length - 18),
+              denom: delegationReward.denom ?? stakeCurrency.coinMinimalDenom,
+              ibc: false,
+              chain,
+              token: stakeCurrency,
+            }
             : undefined,
         };
       }),
@@ -208,3 +230,6 @@ export const queryValidators = async (queryClient: QUERY_CLIENT) => {
     return [];
   }
 };
+
+
+

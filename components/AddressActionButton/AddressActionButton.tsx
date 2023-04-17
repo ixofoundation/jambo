@@ -1,6 +1,5 @@
 import { HTMLAttributes, useState } from 'react';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-
 import styles from './AddressActionButton.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';

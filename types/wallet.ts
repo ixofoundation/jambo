@@ -1,5 +1,4 @@
 import { DecCoin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
-
 import { DELEGATION, DELEGATION_REWARDS, UNBONDING_DELEGATION } from './validators';
 import { TOKEN_ASSET } from '@utils/currency';
 import { USER } from './user';
