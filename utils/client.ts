@@ -3,6 +3,7 @@ import { createSigningClient, SigningStargateClient, cosmos } from '@ixo/impactx
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_FEE_OPTIONS, TRX_MSG } from 'types/transactions';
 import { EncodeObject } from '@cosmjs/proto-signing';
+import { assertIsDeliverTxSuccess } from '@cosmjs/stargate';
 
 export const initStargateClient = async (endpoint: string, offlineSigner: any): Promise<SigningStargateClient> => {
   const cosmJS = await createSigningClient(endpoint, offlineSigner);
@@ -53,11 +54,9 @@ export const sendTransaction = async (
       ],
       gas: String(Math.round(gas)),
     };
-    // const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, fee, payload.memo);
-    const result = await client.sign(delegatorAddress, payload.msgs as any, fee, payload.memo);
+    const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, fee, payload.memo);
     console.log('sendTransaction::result', result);
-    // assertIsDeliverTxSuccess(result);
-    throw new Error('hello');
+    assertIsDeliverTxSuccess(result);
     return result;
   } catch (e) {
     console.error('sendTransaction', e);

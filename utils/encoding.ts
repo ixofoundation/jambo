@@ -93,7 +93,7 @@ export const stringifySignDoc = (signDoc: SignDoc) => {
   return Object.assign(Object.assign({}, signDoc), {
     bodyBytes: toHex(signDoc.bodyBytes),
     authInfoBytes: toHex(signDoc.authInfoBytes),
-    accountNumber: signDoc.accountNumber.toString(16),
+    accountNumber: signDoc.accountNumber.toString(),
   });
 };
 

@@ -1,4 +1,4 @@
-import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
+import { AccountData, Algo, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing';
 import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 import SignClient from '@walletconnect/sign-client';
 import { SessionTypes } from '@walletconnect/types';
@@ -13,6 +13,7 @@ import { USER } from 'types/user';
 import { stringifySignDoc } from './encoding';
 import config from '@constants/config.json';
 import { WalletConnectProjectId } from '@constants/wallet';
+import { fromHex } from '@cosmjs/encoding';
 
 let signClient: SignClient;
 export let address: string;
@@ -28,7 +29,6 @@ export const getWalletConnect = () => !!WalletConnectProjectId;
 
 const getCurrentSession = () => {
   const sessions = signClient?.session?.getAll();
-  console.log('getCurrentSession', sessions);
   if (!sessions.length) throw new Error('No current sessions');
   return sessions[0];
 };
@@ -164,7 +164,14 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
     const [namespace, chainId, address] = namespaceAccount.split(':');
     const chain = `${namespace}:${chainId}`;
 
-    const accounts = await signClient.request<AccountData[]>({
+    const accounts = await signClient.request<
+      {
+        address: string;
+        algo: Algo;
+        // pubkey from wallet connect is hex encoded, must od decoding to byte array self
+        pubkey: string;
+      }[]
+    >({
       topic: _session.topic,
       chainId: chain,
       request: {
@@ -173,7 +180,7 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
       },
     });
     console.log({ accounts });
-    return accounts;
+    return accounts.map((a) => ({ ...a, pubkey: fromHex(a.pubkey) }));
   } catch (error) {
     console.error('walletConnect::getAccounts::', error);
     return [];
@@ -238,7 +245,6 @@ export const WCBroadCastMessage = async (
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
   const [accounts, offlineSigner] = await connectWalletConnectAccount(chainInfo);
-  console.log('WCBroadCastMessage::accounts', { accounts });
   if (!accounts || !offlineSigner) return trx_fail();
   const address = accounts[0].address;
   const client = await initStargateClient(chainInfo.rpc, offlineSigner);
