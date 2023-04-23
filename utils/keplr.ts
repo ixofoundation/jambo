@@ -4,6 +4,7 @@ import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
+import { uint8Arr_to_b64 } from './encoding';
 
 export const getKeplr = (): Keplr | undefined => {
   if (typeof window !== 'undefined' && window.keplr) return window.keplr;
@@ -11,8 +12,8 @@ export const getKeplr = (): Keplr | undefined => {
 };
 
 export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
-  const keplr = getKeplr();
   try {
+    const keplr = getKeplr();
     await keplr?.experimentalSuggestChain(chainInfo as ChainInfo);
     await keplr?.enable(chainInfo.chainId);
     const key = await keplr?.getKey(chainInfo.chainId);
@@ -20,9 +21,9 @@ export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | unde
       ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
       : undefined;
   } catch (error) {
-    console.error('Error initializing Keplr:: ' + error);
+    console.error('initializeKeplr:: ' + error);
+    return;
   }
-  return;
 };
 
 export const connectKeplrAccount = async (chainInfo: ChainInfo): Promise<any> => {
