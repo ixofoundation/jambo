@@ -11,8 +11,8 @@ export const getKeplr = (): Keplr | undefined => {
 };
 
 export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
-  const keplr = getKeplr();
   try {
+    const keplr = getKeplr();
     await keplr?.experimentalSuggestChain(chainInfo as ChainInfo);
     await keplr?.enable(chainInfo.chainId);
     const key = await keplr?.getKey(chainInfo.chainId);
@@ -20,9 +20,9 @@ export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | unde
       ? { name: key.name, pubKey: key.pubKey, address: key.bech32Address, algo: key.algo, ledgered: true }
       : undefined;
   } catch (error) {
-    console.error('Error initializing Keplr:: ' + error);
+    console.error('initializeKeplr:: ' + error);
+    return;
   }
-  return;
 };
 
 export const connectKeplrAccount = async (chainInfo: ChainInfo): Promise<any> => {
@@ -35,11 +35,6 @@ export const connectKeplrAccount = async (chainInfo: ChainInfo): Promise<any> =>
   return [accounts, offlineSigner];
 };
 
-const trx_fail = () => {
-  Toast.errorToast(`Transaction Failed`);
-  return null;
-};
-
 export const keplrBroadCastMessage = async (
   msgs: TRX_MSG[],
   memo = '',
@@ -47,28 +42,28 @@ export const keplrBroadCastMessage = async (
   feeDenom: string,
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
-  const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);
-  if (!accounts || !offlineSigner) return trx_fail();
-  const address = accounts[0].address;
-  const client = await initStargateClient(chainInfo.rpc, offlineSigner);
-
-  const payload = {
-    msgs,
-    chain_id: chainInfo.chainId,
-    fee,
-    feeDenom,
-    memo,
-  };
-
   try {
+    const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);
+
+    if (!accounts) throw new Error('No accounts found to broadcast transaction');
+    if (!offlineSigner) throw new Error('No offlineSigner found to broadcast transaction');
+
+    const address = accounts[0].address;
+    const client = await initStargateClient(chainInfo.rpc, offlineSigner);
+    const payload = {
+      msgs,
+      chain_id: chainInfo.chainId,
+      fee,
+      feeDenom,
+      memo,
+    };
     const result = await sendTransaction(client, address, payload);
-    if (result) {
-      // Toast.successToast(`Transaction Successful`);
-      return result.transactionHash;
-    } else {
-      throw 'transaction failed';
-    }
+
+    if (!result) throw new Error('Transaction Failed');
+
+    return result.transactionHash;
   } catch (e) {
-    return trx_fail();
+    Toast.errorToast(`Transaction Failed`);
+    return null;
   }
 };

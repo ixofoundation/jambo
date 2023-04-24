@@ -32,11 +32,6 @@ export const connectOperaAccount = async (chainInfo: ChainInfo): Promise<any> =>
   return [accounts, offlineSigner];
 };
 
-const trx_fail = () => {
-  Toast.errorToast(`Transaction Failed`);
-  return null;
-};
-
 export const operaBroadCastMessage = async (
   msgs: TRX_MSG[],
   memo = '',
@@ -44,27 +39,28 @@ export const operaBroadCastMessage = async (
   feeDenom: string,
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
-  const [accounts, offlineSigner] = await connectOperaAccount(chainInfo);
-  if (!accounts || !offlineSigner) return trx_fail();
-  const address = accounts[0].address;
-  const client = await initStargateClient(chainInfo.rpc, offlineSigner);
-
-  const payload = {
-    msgs,
-    chain_id: chainInfo.chainId,
-    fee,
-    feeDenom,
-    memo,
-  };
-
   try {
+    const [accounts, offlineSigner] = await connectOperaAccount(chainInfo);
+
+    if (!accounts) throw new Error('No accounts found to broadcast transaction');
+    if (!offlineSigner) throw new Error('No offlineSigner found to broadcast transaction');
+
+    const address = accounts[0].address;
+    const client = await initStargateClient(chainInfo.rpc, offlineSigner);
+    const payload = {
+      msgs,
+      chain_id: chainInfo.chainId,
+      fee,
+      feeDenom,
+      memo,
+    };
     const result = await sendTransaction(client, address, payload);
-    if (result) {
-      return result.transactionHash;
-    } else {
-      throw 'transaction failed';
-    }
+
+    if (!result) throw new Error('Transaction Failed');
+
+    return result.transactionHash;
   } catch (e) {
-    return trx_fail();
+    Toast.errorToast(`Transaction Failed`);
+    return null;
   }
 };
