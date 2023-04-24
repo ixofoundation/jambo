@@ -5,20 +5,22 @@ import { SessionTypes } from '@walletconnect/types';
 import { getSdkError } from '@walletconnect/utils';
 import { Web3Modal } from '@web3modal/standalone';
 import { ChainInfo } from '@keplr-wallet/types';
+import { fromHex } from '@cosmjs/encoding';
 
 import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
-import { stringifySignDoc } from './encoding';
-import config from '@constants/config.json';
 import { WalletConnectProjectId } from '@constants/wallet';
-import { fromHex } from '@cosmjs/encoding';
+import { EVENT_LISTENER_TYPE } from '@constants/events';
+import config from '@constants/config.json';
+import { stringifySignDoc } from './encoding';
 
 let signClient: SignClient;
 export let address: string;
 export let pubkeyByteArray: Uint8Array;
 let web3Modal: Web3Modal;
+let web3ModalSubscription: undefined | (() => void);
 
 export enum WC_METHODS {
   signDirect = 'cosmos_signDirect',
@@ -31,6 +33,22 @@ const getCurrentSession = () => {
   const sessions = signClient?.session?.getAll();
   if (!sessions.length) throw new Error('No current sessions');
   return sessions[0];
+};
+
+const deleteSession = () => {
+  const event = new Event(EVENT_LISTENER_TYPE.wc_sessiondelete);
+  window.dispatchEvent(event);
+
+  // clear wc sessions and pairings
+  (signClient.session.getAll() ?? []).forEach((session) =>
+    signClient.session.delete(session.topic, getSdkError('USER_DISCONNECTED')),
+  );
+  (signClient.pairing.getAll() ?? []).forEach((pairing) =>
+    signClient.pairing.delete(pairing.topic, getSdkError('USER_DISCONNECTED')),
+  );
+
+  // clear web3modal subscription in case still active
+  if (web3ModalSubscription) web3ModalSubscription();
 };
 
 export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
@@ -63,24 +81,14 @@ export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefin
     if (typeof signClient === 'undefined') throw new Error('WalletConnect is not initialized');
 
     signClient.on('session_event', (p) => {
-      console.log('EVENT', 'session_event', p);
+      const event = new Event(EVENT_LISTENER_TYPE.wc_sessionevent);
+      window.dispatchEvent(event);
     });
     signClient.on('session_update', ({ topic, params }) => {
-      console.log('EVENT', 'session_update', { topic, params });
-      // const { accounts, chainId } = payload.params[0];
-      // updateWallet({ accounts, chainId });
+      const event = new Event(EVENT_LISTENER_TYPE.wc_sessionupdate);
+      window.dispatchEvent(event);
     });
-    signClient.on('session_delete', () => {
-      // setWallet(undefined);
-      // (signClient.session.getAll() ?? []).forEach((session) =>
-      //   signClient.session.delete(session.topic, getSdkError('USER_DISCONNECTED')),
-      // );
-      // (signClient.pairing.getAll() ?? []).forEach((pairing) =>
-      //   signClient.pairing.delete(pairing.topic, getSdkError('USER_DISCONNECTED')),
-      // );
-      console.log('EVENT', 'session_delete');
-      // 	connector.killSession();
-    });
+    signClient.once('session_delete', deleteSession);
 
     let _session: SessionTypes.Struct;
 
@@ -122,6 +130,15 @@ export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefin
     // Open QRCode modal if a URI was returned (i.e. we're not connecting an existing pairing).
     if (!uri) throw new Error('Failed to connect via WalletConnect');
 
+    web3ModalSubscription = web3Modal.subscribeModal(({ open }) => {
+      console.log('web3Modal.subscribeModal::', open);
+      if (!open)
+        setTimeout(() => {
+          console.log('web3ModalSubscription::', !!_session);
+          if (!_session) deleteSession();
+        }, 1500);
+    });
+
     await web3Modal.openModal({
       uri,
       standaloneChains: namespaces.ixo.chains,
@@ -129,16 +146,16 @@ export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefin
     // Await session approval from the wallet.
     _session = await approval();
 
-    // Handle the returned session (e.g. update UI to "connected" state).
-    console.log({ _session });
-
     if (!_session) throw new Error('WalletConnect connection rejected');
 
     const account = await onSessionConnected(_session);
     return account;
   } catch (e) {
     console.error('walletConnect::initializeWC::', e);
+    deleteSession();
   } finally {
+    // clear web3modal subscription in case still active
+    if (web3ModalSubscription) web3ModalSubscription();
     // Close the QRCode modal in case it was open.
     web3Modal.closeModal();
   }
@@ -151,7 +168,7 @@ const onSessionConnected = async (session: SessionTypes.Struct): Promise<USER | 
     const account = accounts[0];
     return { name: 'WalletConnect', pubKey: account.pubkey, address: account.address, algo: account.algo };
   } catch (error) {
-    console.log('walletConnect::onSessionConnected::', error);
+    console.error('walletConnect::onSessionConnected::', error);
   }
   return undefined;
 };
@@ -179,7 +196,7 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
         params: undefined,
       },
     });
-    console.log({ accounts });
+
     return accounts.map((a) => ({ ...a, pubkey: fromHex(a.pubkey) }));
   } catch (error) {
     console.error('walletConnect::getAccounts::', error);
@@ -190,13 +207,10 @@ export const getAccounts = async (): Promise<readonly AccountData[]> => {
 export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promise<DirectSignResponse> => {
   try {
     const _session = getCurrentSession();
-    // console.log('session namespaces: ' + _session.namespaces);
     const namespaceAccount = Object.values(_session.namespaces)?.[0]?.accounts?.[0];
-    console.log('namespaceAccount: ' + namespaceAccount);
     const [namespace, reference, address] = namespaceAccount.split(':');
     const chainId = `${namespace}:${reference}`;
-    let result: { signature: string; pub_key: { type: string; value: string } };
-    result = await signClient.request<typeof result>({
+    const result = await signClient.request<{ signature: string; pub_key: { type: string; value: string } }>({
       topic: _session!.topic,
       chainId,
       request: {
@@ -206,8 +220,6 @@ export const signDirect = async (signerAddress: string, signDoc: SignDoc): Promi
     });
 
     if (!result.signature) throw new Error('Failed to sign transaction with WalletConnect');
-
-    console.log('signDirect::result::', { result });
 
     return {
       signed: signDoc,
@@ -232,11 +244,6 @@ export const connectWalletConnectAccount = async (chainInfo: ChainInfo): Promise
   return [accounts, offlineSigner];
 };
 
-const trx_fail = () => {
-  Toast.errorToast(`Transaction Failed`);
-  return null;
-};
-
 export const WCBroadCastMessage = async (
   msgs: TRX_MSG[],
   memo = '',
@@ -244,28 +251,28 @@ export const WCBroadCastMessage = async (
   feeDenom: string,
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
-  const [accounts, offlineSigner] = await connectWalletConnectAccount(chainInfo);
-  if (!accounts || !offlineSigner) return trx_fail();
-  const address = accounts[0].address;
-  const client = await initStargateClient(chainInfo.rpc, offlineSigner);
-
-  const payload = {
-    msgs,
-    chain_id: chainInfo.chainId,
-    fee,
-    feeDenom,
-    memo,
-  };
-
   try {
+    const [accounts, offlineSigner] = await connectWalletConnectAccount(chainInfo);
+
+    if (!accounts) throw new Error('No accounts found to broadcast transaction');
+    if (!offlineSigner) throw new Error('No offlineSigner found to broadcast transaction');
+
+    const address = accounts[0].address;
+    const client = await initStargateClient(chainInfo.rpc, offlineSigner);
+    const payload = {
+      msgs,
+      chain_id: chainInfo.chainId,
+      fee,
+      feeDenom,
+      memo,
+    };
     const result = await sendTransaction(client, address, payload);
-    if (result) {
-      // Toast.successToast(`Transaction Successful`);
-      return result.transactionHash;
-    } else {
-      throw 'transaction failed';
-    }
+
+    if (!result) throw new Error('Transaction Failed');
+
+    return result.transactionHash;
   } catch (e) {
-    return trx_fail();
+    Toast.errorToast(`Transaction Failed`);
+    return null;
   }
 };
