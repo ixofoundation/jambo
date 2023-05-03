@@ -44,7 +44,9 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
   const [loaded, setLoaded] = useState<boolean>(false);
   const [validators, setValidators] = useState<VALIDATOR[]>();
   const { chain, chainInfo, queryClient, updateChainId, updateChainNetwork } = useContext(ChainContext);
+
   const [balances, fetchBalances, clearBalances] = useWalletData(queryAllBalances, wallet?.user?.address);
+  
   const [delegations, fetchDelegations, clearDelegations] = useWalletData(
     queryDelegatorDelegations,
     wallet?.user?.address,

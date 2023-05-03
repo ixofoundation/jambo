@@ -1,6 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
-
 import config from '@constants/config.json';
 import { StepDataType, STEP, STEPS } from 'types/steps';
 import EmptySteps from '@steps/EmptySteps';
@@ -17,12 +16,17 @@ import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
+import { QUERY_CLIENT } from 'types/query';
+import { ProposalStatus } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
+
 
 type ActionPageProps = {
   actionData: ACTION;
 };
 
-const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
+const ActionExecution: NextPage<ActionPageProps> = ({
+  actionData,
+}) => {
   const [count, setCount] = useState(0);
   const [action, setAction] = useState<ACTION | null>(null);
   const { wallet } = useContext(WalletContext);
@@ -190,8 +194,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
         );
       case STEPS.select_and_review_proposal:
         return (
-          <Proposals
-          />
+          <Proposals />
         );
       default:
         return <EmptySteps loading={true} />;

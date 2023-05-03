@@ -5,7 +5,6 @@ import SignClient from '@walletconnect/sign-client';
 import { SessionTypes } from '@walletconnect/types';
 import { ChainInfo } from '@keplr-wallet/types';
 import * as amino from '@cosmjs/amino';
-
 import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';

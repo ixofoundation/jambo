@@ -1,32 +1,15 @@
-import React, { FC, useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-import { StepDataType, STEPS } from 'types/steps';
-import axios from 'axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
-import { queryAllProposals } from '@utils/query';
-import { QUERY_CLIENT } from 'types/query';
-import { ProposalStatus } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
+import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
+import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
+import useQueryClient from '@hooks/useQueryClient';
+import { generateVoteTrx } from '@utils/transactions';
+import { cosmos } from '@ixo/impactxclient-sdk';
+import { TRX_MSG } from 'types/transactions';
 
-// const RPC_ENDPOINT = 'https://impacthub.ixo.world/rest/cosmos/gov/v1beta1/proposals?pagination.limit=100&proposal_status=2'
-
-const API_BASE_URL = 'https://impacthub.ixo.world';
-
-const api = axios.create({
-    baseURL: `${API_BASE_URL}/rest/cosmos/gov/v1beta1`,
-});
-
-type GetProposalsProps = {
-    data?: StepDataType<STEPS.select_and_review_proposal>;
-    proposalId: string;
-    proposal: Proposal[];
-    queryClient: QUERY_CLIENT;
-    proposalStatus: ProposalStatus;
-    voter: string;
-    depositor: string;
-    pagination?: undefined;
-}
 
 const BtnStyles = {
     backgroundColor: '#1DB3D3',
@@ -43,55 +26,54 @@ const VoteBtns = {
     borderRadius: '100%'
 }
 
-interface Proposal {
-    id: number;
-    proposal_id: string;
-}
-
-const Proposals: FC<GetProposalsProps> = ({ queryClient, proposalStatus, voter, depositor, pagination }) => {
+const Proposals = () => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [selected, setSelected] = useState(false);
     const [selectedValue, setSelectedValue] = useState(false);
 
-    const handleSelect = (proposal_id: number) => {
-        const selectedProposal = proposals.find((proposal) => proposal.id === proposal_id);
+    const { queryClient } = useQueryClient();
+
+    useEffect(() => {
+        const castVote = async () => {
+            const proposalId = '1';
+            const voterAddress = 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg';
+            const option = 'VOTE_OPTION_YES';
+            const trxMsg = generateVoteTrx({ proposalId, voterAddress, option });
+
+            const txBody = cosmos.tx.v1beta1.TxBody.fromJSON({
+                messages: [trxMsg],
+                memo: ''
+            });
+
+            const client = cosmos.tx.v1beta1.broadcastModeToJSON(txBody);
+            delete client.mode;
+            console.log(client)
+        }
+        castVote()
+    }, [])
+
+    const handleSelect = async (proposalId: number) => {
+        const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposal.proposalId);
         if (selectedProposal) {
             setSelectedValue(!selectedValue);
         } else {
-            console.log(`${proposal_id}`);
+            console.log(`${proposalId}`);
         }
     }
 
     useEffect(() => {
-        async function getProposals() {
-            const proposals = await queryAllProposals(queryClient, proposalStatus, voter, depositor, pagination);
-            console.log(proposals);
+        const fetchProposals = async () => {
+            const proposalsRequest: QueryProposalsRequest = {
+                proposalStatus: "",
+                voter: "",
+                depositor: "",
+            }
+            const response = await queryClient?.cosmos.gov.v1beta1.proposals(proposalsRequest);
+            console.log(response?.proposals)
+            setProposals(response?.proposals)
         }
-        getProposals()
+        fetchProposals()
     }, [])
-
-    // useEffect(() => {
-    //     const fetchProposals = async () => {
-    //         try {
-    //             const response = await api.get('/proposals');
-    //             setProposals(response.data.proposals);
-    //             console.log(response.data.proposals)
-    //         } catch (error) {
-    //             console.error(error);
-    //         }
-    //     };
-    //     fetchProposals();
-    // }, [])
-
-    // if (!proposals || !proposals.final_tally_result) {
-    //     // Handle the case where proposals or final_tally_result is undefined
-    //     console.error('Error: Proposals or final_tally_result is undefined.');
-    // } else {
-    //     const totalVotes = (proposals.final_tally_result.abstain ?? 0) + (proposals.final_tally_result.no ?? 0) + (proposals.final_tally_result.no_with_veto ?? 0) + (proposals.final_tally_result.yes ?? 0);
-    //     const yesVotes = proposals.final_tally_result.yes ?? 0;
-    //     const yesPercentage = totalVotes ? (yesVotes / (totalVotes - proposals.final_tally_result.abstain)) * 100 : 0;
-    //     // Update the progress bar using the yesPercentage value
-    // }
 
     return (
         <div className="div">
@@ -116,7 +98,7 @@ const Proposals: FC<GetProposalsProps> = ({ queryClient, proposalStatus, voter, 
                         <div>
                             {proposals.map((proposal) => (
                                 <SwiperSlide
-                                    key={proposal.proposal_id}
+                                    key={proposal.proposalId}
                                     onClick={() => handleSelect(proposal.proposal_id)}
                                     // className={selectedValue === proposal.proposal_id ? 'selected' : ''}
                                     style={{
@@ -136,11 +118,11 @@ const Proposals: FC<GetProposalsProps> = ({ queryClient, proposalStatus, voter, 
                                     <div className="div">
                                         <h1 style={{ fontSize: '11px', textAlign: 'left' }} >{proposal.content.title}</h1>
 
-                                        <div style={{ width: '100%', height: '5px', backgroundColor: '#f0f0f0', borderRadius: '10px' }}>
+                                        {/* <div style={{ width: '100%', height: '5px', backgroundColor: '#f0f0f0', borderRadius: '10px' }}>
                                             <div style={{ width: `${yesPercentage}%`, height: '100%', backgroundColor: 'blue', borderRadius: '10px' }}></div>
-                                        </div>
+                                        </div> */}
 
-                                        <p>{proposal.final_tally_result.yes}</p>
+                                        {/* <p>{proposal.final_tally_result.yes}</p> */}
                                         <p
                                             style={{
                                                 fontSize: '10px',
@@ -151,8 +133,9 @@ const Proposals: FC<GetProposalsProps> = ({ queryClient, proposalStatus, voter, 
                                                 overflowY: 'auto',
                                             }}
                                         >
-                                            {proposal.content.description}
+                                            {proposal.status}
                                         </p>
+                                        {/* <div className="div">{proposal.depositEndTime?.nanos}</div> */}
                                         <div
                                             style={{
 

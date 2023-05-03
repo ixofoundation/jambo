@@ -19,7 +19,7 @@ type CHAIN_STATE_TYPE = {
   chainLoading: boolean;
 };
 
-const DEFAULT_CHAIN: CHAIN_STATE_TYPE = {
+export const DEFAULT_CHAIN: CHAIN_STATE_TYPE = {
   chainId: '',
   chainNetwork: DefaultChainNetwork as CHAIN_NETWORK_TYPE,
   chainLoading: true,
