@@ -17,6 +17,7 @@ import Input from '@components/Input/Input';
 import Anchor from '@components/Anchor/Anchor';
 import Success from '@icons/success.svg';
 import Plus from '@icons/plus.svg';
+import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
 import { broadCastMessages, shortenAddress } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
@@ -31,6 +32,7 @@ import {
   generateDelegateTrx,
   generateRedelegateTrx,
   generateUndelegateTrx,
+  generateVoteTrx
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
@@ -66,6 +68,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
+  const [proposals, setProposals] = useState<Proposal[]>([]);
 
   const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
@@ -123,6 +126,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       if (s.id === STEPS.get_delegated_validator_redelegate) {
         setSrcAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
+      }
+      if (s.id === STEPS.select_and_review_proposal) {
+        setSrcAddress((s.data as StepDataType<STEPS.select_and_review_proposal>)?.proposals?.address ?? '');
       }
     });
   }, [steps]);
@@ -183,6 +189,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           }),
         );
         break;
+      case STEPS.select_and_review_proposal:
+        trxMsgs.push(
+          generateVoteTrx({
+
+          })
+        )
       default:
         throw new Error('Unsupported review type');
     }
@@ -285,7 +297,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgUndelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -298,7 +310,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgRedelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -310,9 +322,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             />
             <br />
             <p>from</p>
-            <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={srcValidator!} onClick={() => () => { }} />
             <p>to</p>
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : (
           <p>Unsupported review type</p>

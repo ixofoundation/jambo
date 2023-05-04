@@ -62,7 +62,7 @@ export type StepConfigType<T> =
 Lastly, if the step captures data, its structure needs to be defined. For this example, the step only needs to capture whether the user approves donating the predefined amount to the address. Add the following code to the [/types/steps.ts](/types/steps.ts) file:
 
 ```ts
-interface Request_donation {
+interface Request_donation { 
   donate: boolean;
 }
 ```
@@ -266,7 +266,7 @@ useEffect(() => {
     // other steps' logic
     if (s.id === STEPS.request_donation) {
       if ((s.data as StepDataType<STEPS.request_donation>)?.donate && s.config)
-        setDonation({ address: s.config?.address, amount: s.config?.amount, denom: s.config?.denom });
+      setDonation({ address: s.config?.address, amount: s.config?.amount, denom: s.config?.denom });
     }
   });
 }, [steps]);

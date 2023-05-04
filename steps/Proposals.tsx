@@ -1,15 +1,21 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, FC } from 'react';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
+import { STEPS, StepDataType } from 'types/steps';
 import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import useQueryClient from '@hooks/useQueryClient';
 import { generateVoteTrx } from '@utils/transactions';
 import { cosmos } from '@ixo/impactxclient-sdk';
-import { TRX_MSG } from 'types/transactions';
 
+type ProposalsProps = {
+    onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
+    onBack?: () => void;
+    data?: StepDataType<STEPS.select_and_review_proposal>;
+    header?: string;
+};
 
 const BtnStyles = {
     backgroundColor: '#1DB3D3',
@@ -26,7 +32,7 @@ const VoteBtns = {
     borderRadius: '100%'
 }
 
-const Proposals = () => {
+const Proposals: FC<ProposalsProps> = ({ onSuccess, onBack, data, header }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [selected, setSelected] = useState(false);
     const [selectedValue, setSelectedValue] = useState(false);

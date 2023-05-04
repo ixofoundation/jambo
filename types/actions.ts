@@ -7,3 +7,9 @@ export type ACTION = {
   steps: STEP[];
   image: string;
 };
+
+export type VOTE = {
+  address: string;
+  amount: number;
+  denom: string;
+}

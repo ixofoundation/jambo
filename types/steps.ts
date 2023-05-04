@@ -76,7 +76,8 @@ export type ReviewStepsTypes =
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
-  | STEPS.distribution_MsgWithdrawDelegatorReward;
+  | STEPS.distribution_MsgWithdrawDelegatorReward
+  | STEPS.select_and_review_proposal;
 
 export type AllStepConfigTypes = never;
 
