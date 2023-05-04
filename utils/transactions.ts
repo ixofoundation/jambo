@@ -15,7 +15,7 @@ export const generateVoteTrx = ({
   voterAddress,
   option,
 }: {
-  proposalId: string;
+  proposalId: '3';
   voterAddress: 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg';
   option: 'VOTE_OPTION_YES' | 'VOTE_OPTION_ABSTAIN' | 'VOTE_OPTION_NO' | 'VOTE_OPTION_NO_WITH_VETO';
 }): TRX_MSG => ({
@@ -63,6 +63,7 @@ export const generateBankSendTrx = ({
     amount: [cosmos.base.v1beta1.Coin.fromPartial({ amount, denom })],
   }),
 });
+
 export const generateBankMultiSendTrx = ({
   fromAddress,
   toAddresses,

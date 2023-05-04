@@ -128,7 +128,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
       }
       if (s.id === STEPS.select_and_review_proposal) {
-        setSrcAddress((s.data as StepDataType<STEPS.select_and_review_proposal>)?.proposals?.address ?? '');
+        setProposals((s.data as StepDataType<STEPS.select_and_review_proposal>)?.proposals ?? []);
       }
     });
   }, [steps]);
@@ -192,7 +192,9 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       case STEPS.select_and_review_proposal:
         trxMsgs.push(
           generateVoteTrx({
-
+            proposalId: '3',
+            voterAddress: 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg',
+            option: 'VOTE_OPTION_YES',
           })
         )
       default:

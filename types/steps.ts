@@ -1,10 +1,13 @@
 import { VALIDATOR } from './validators';
 import { CURRENCY_TOKEN } from './wallet';
+import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 export enum STEPS {
   check_user_balance = 'check_user_balance',
   get_receiver_address = 'get_receiver_address',
+
   get_validator_delegate = 'get_validator_delegate',
+
   get_validator_redelegate = 'get_validator_redelegate',
   get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
   get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
@@ -22,7 +25,6 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
-  // Proposal STEP
   select_and_review_proposal = 'select_and_review_proposal'
 }
 
@@ -66,7 +68,6 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
-  // Proposal STEPS
   [STEPS.select_and_review_proposal]: { id: STEPS.select_and_review_proposal, name: 'Select and review proposal' }
 };
 
@@ -111,11 +112,16 @@ interface Send_token_to_receiver {
   done: boolean;
 }
 interface Review_and_sign {
+  proposals: never[];
   done: boolean;
 }
-// Proposals
+
+interface Get_Proposals_Data {
+  proposals: Proposal;
+}
+
 interface Get_Proposals {
-  data: Get_Proposals[]
+  data: Get_Proposals_Data[];
 };
 
 export type AllStepDataTypes =
@@ -159,7 +165,6 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.claim
-  // Proposals
   ? Get_Proposals
   : T extends STEPS.select_and_review_proposal
   ? Review_and_sign
