@@ -330,6 +330,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <p>to</p>
             <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
+        ) : message === STEPS.select_and_review_proposal ? (
+          <form className={styles.stepsForm} autoComplete='none' >
+            <p>Cast Vote on Proposal</p>
+          </form>
         ) : (
           <p>Unsupported review type</p>
         )}

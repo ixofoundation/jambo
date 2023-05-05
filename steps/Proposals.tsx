@@ -1,15 +1,31 @@
 import React, { useState, useEffect, useContext, FC } from 'react';
+import cls from 'classnames';
+
+import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
+import Loader from '@components/Loader/Loader';
+import Anchor from '@components/Anchor/Anchor';
+import SadFace from '@icons/sad_face.svg';
+import Success from '@icons/success.svg';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
 import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
 import useQueryClient from '@hooks/useQueryClient';
+import { broadCastMessages } from '@utils/wallets';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import styles from '@styles/stepsPages.module.scss';
-import { generateVoteTrx } from '@utils/transactions';
+import { generateVoteTrx, defaultTrxFeeOption } from '@utils/transactions';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { TRX_MSG } from 'types/transactions';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
+import IconText from '@components/IconText/IconText';
+import { ViewOnExplorerButton } from '@components/Button/Button';
+import { FiThumbsUp, FiThumbsDown } from 'react-icons/fi'
+import { MdOutlineFrontHand } from 'react-icons/md'
+import { AiOutlineQuestionCircle } from 'react-icons/ai'
 
 type RequestProposalsProps = {
     onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
@@ -19,10 +35,39 @@ type RequestProposalsProps = {
     header?: string;
 };
 
-const VoteBtns = {
-    height: '50px',
-    width: '50px',
-    borderRadius: '100%'
+interface Props {
+    backgroundColor: string;
+    children: React.ReactNode;
+}
+
+const VoteButton = ({ backgroundColor, children }: Props) => {
+    const VoteBtnsStyle = {
+        height: '50px',
+        width: '70%',
+        backgroundColor: backgroundColor,
+        borderRadius: '30px',
+        margin: '5px',
+        borderStyle: 'none',
+        color: 'white',
+        fontSize: '15px',
+        textAlign: 'left',
+        display: 'flex',
+        alignItems: 'center'
+    }
+
+    return (
+        <button style={VoteBtnsStyle}>
+            {children}
+        </button>
+    )
+}
+
+
+const tableRowStyle = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
 }
 
 type Proposal = {
@@ -36,7 +81,12 @@ type Proposal = {
 const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data, header }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [selected, setSelected] = useState(false);
+    const [toggleVoteActions, setToggleVoteActions] = useState(false);
+    const [successHash, setSuccessHash] = useState<string | undefined>();
+    const [loading, setLoading] = useState(true);
     const { queryClient } = useQueryClient();
+    const { wallet } = useContext(WalletContext);
+    const { chainInfo } = useContext(ChainContext);
 
     // useEffect(() => {
     //     const castVote = async () => {
@@ -69,7 +119,10 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         }
         console.log(proposalId.toString())
     }
-    
+
+    const toggelVotes = () => {
+        setToggleVoteActions(!toggleVoteActions)
+    }
 
     useEffect(() => {
         const fetchProposals = async () => {
@@ -84,6 +137,48 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         }
         fetchProposals()
     }, [])
+
+    const signTX = async (): Promise<void> => {
+        setLoading(true);
+        const trxMsg: TRX_MSG[] = [
+            generateVoteTrx({
+                proposalId: '3',
+                voterAddress: 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg',
+                option: 'VOTE_OPTION_YES',
+            })
+        ];
+        let memo: string | undefined;
+        const hash = await broadCastMessages(
+            wallet,
+            trxMsg,
+            undefined,
+            defaultTrxFeeOption,
+            '',
+            chainInfo as KEPLR_CHAIN_INFO_TYPE,
+        );
+        if (hash) setSuccessHash(hash);
+
+        setLoading(false);
+    };
+
+    if (successHash)
+        return (
+            <>
+                <Header header={header} />
+
+                <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+                    <IconText title='Your transaction was successful!' Img={Success} imgSize={50}>
+                        {chainInfo?.txExplorer && (
+                            <Anchor active openInNewTab href={`${chainInfo.txExplorer.txUrl.replace(/\${txHash}/i, successHash)}`}>
+                                <ViewOnExplorerButton explorer={chainInfo.txExplorer.name} />
+                            </Anchor>
+                        )}
+                    </IconText>
+                </main>
+
+                <Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
+            </>
+        );
 
     return (
         <div className="div">
@@ -153,15 +248,50 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
             </div>
             {
                 selected ? (
-                    <Footer
-                        onBack={onBack}
-                        onBackUrl={onBack ? undefined : ''}
-                    />
+                    <>
+                        {
+                            toggleVoteActions ? (
+                                <div
+                                    style={{
+                                        top: '310px',
+                                        zIndex: 1,
+                                        position: 'fixed',
+                                        backgroundColor: '#F0F0F0',
+                                        width: '100%',
+                                        height: '20rem',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <table style={{ width: '100%', display: 'relative', justifyContent: 'center', alignItems: 'center' }} >
+                                        <tr><button onClick={toggelVotes} >CLOSE</button></tr>
+                                        <tr style={tableRowStyle}><VoteButton backgroundColor='#1DB3D3' >< FiThumbsUp />Yes</VoteButton></tr>
+                                        <tr style={tableRowStyle} ><VoteButton backgroundColor='#F59E0B' ><FiThumbsDown />No</VoteButton></tr>
+                                        <tr style={tableRowStyle}  ><VoteButton backgroundColor='#D97706' ><MdOutlineFrontHand />No with veto</VoteButton></tr>
+                                        <tr style={tableRowStyle} ><VoteButton backgroundColor='#9CA3AF' ><AiOutlineQuestionCircle />Abstain</VoteButton></tr>
+                                    </table>
+                                </div>
+                            ) : (
+                                <Footer
+                                    onBack={successHash ? null : onBack}
+                                    selectVoteAction={toggelVotes}
+                                    onCorrect={loading || !!successHash ? null : signTX}
+                                />
+                            )
+                        }
+
+                    </>
+
                 ) : (
 
                     <Footer
-                        onBack={onBack}
+                        onBack={successHash ? null : onBack}
                         onBackUrl={onBack ? undefined : ''}
+                        onCorrect={loading || !!successHash ? null : signTX}
+                        correctLabel={loading ? 'Claiming' : !successHash ? 'Claim' : undefined}
+                        showAccountButton={!!successHash}
+                        showActionsButton={!!successHash}
                     />
                 )
             }
