@@ -194,7 +194,12 @@ const ActionExecution: NextPage<ActionPageProps> = ({
         );
       case STEPS.select_and_review_proposal:
         return (
-          <Proposals />
+          <Proposals
+            onSuccess={handleOnNext<STEPS.select_and_review_proposal>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.select_and_review_proposal>}
+            header={action?.name}
+          />
         );
       default:
         return <EmptySteps loading={true} />;

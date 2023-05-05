@@ -1,6 +1,6 @@
 import { VALIDATOR } from './validators';
+import { PROPOSAL_DATA } from './proposals';
 import { CURRENCY_TOKEN } from './wallet';
-import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 export enum STEPS {
   check_user_balance = 'check_user_balance',
@@ -112,16 +112,14 @@ interface Send_token_to_receiver {
   done: boolean;
 }
 interface Review_and_sign {
-  proposals: never[];
+  proposalId: string;
+  voteOption: string;
   done: boolean;
 }
 
-interface Get_Proposals_Data {
-  proposals: Proposal;
-}
-
 interface Get_Proposals {
-  data: Get_Proposals_Data[];
+  data: Get_Proposals[];
+  proposal: PROPOSAL_DATA;
 };
 
 export type AllStepDataTypes =

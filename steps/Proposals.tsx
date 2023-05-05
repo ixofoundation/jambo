@@ -1,24 +1,23 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, FC } from 'react';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
 import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
-import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import useQueryClient from '@hooks/useQueryClient';
+import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import styles from '@styles/stepsPages.module.scss';
 import { generateVoteTrx } from '@utils/transactions';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { TRX_MSG } from 'types/transactions';
 
-
-const BtnStyles = {
-    backgroundColor: '#1DB3D3',
-    height: '30px',
-    width: '90px',
-    borderRadius: '15px',
-    borderStyle: 'none',
-    color: 'white'
-}
+type RequestProposalsProps = {
+    onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
+    onBack?: () => void;
+    data?: StepDataType<STEPS.select_and_review_proposal>;
+    config?: StepConfigType<STEPS.select_and_review_proposal>;
+    header?: string;
+};
 
 const VoteBtns = {
     height: '50px',
@@ -26,32 +25,51 @@ const VoteBtns = {
     borderRadius: '100%'
 }
 
-const Proposals = () => {
+type Proposal = {
+    proposalId: number;
+    proposalType: string;
+    title: string;
+    description: string;
+    status: string;
+};
+
+const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data, header }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [selected, setSelected] = useState(false);
-    const [selectedValue, setSelectedValue] = useState(false);
-
     const { queryClient } = useQueryClient();
 
-    useEffect(() => {
-        const castVote = async () => {
-            const proposalId = '3';
-            const voterAddress = 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg';
-            const option = 'VOTE_OPTION_YES';
-            const trxMsg = generateVoteTrx({ proposalId, voterAddress, option });
-            console.log(trxMsg)
-        }
-        castVote()
-    }, [])
+    // useEffect(() => {
+    //     const castVote = async () => {
+    //         const proposalId = '3';
+    //         const voterAddress = 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg';
+    //         const option = 'VOTE_OPTION_YES';
+    //         const trxMsg = generateVoteTrx({ proposalId, voterAddress, option });
+    //         console.log(trxMsg)
+    //     }
+    //     castVote()
+    // }, [])
 
-    const handleSelect = async (proposalId: number) => {
-        const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposal.proposalId);
+    // const handleSelect = async (proposalId: number) => {
+    //     const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposalId);
+    //     if (selectedProposal) {
+    //         setSelectedValue(!selectedValue);
+    //     } else {
+    //         console.log(`${proposalId}`);
+    //     }
+    // }
+
+    const handleSelect = (proposalId: number) => {
+        const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposalId);
         if (selectedProposal) {
-            setSelectedValue(!selectedValue);
-        } else {
-            console.log(`${proposalId}`);
+            if (selectedProposal === selected) {
+                setSelected(null);
+            } else {
+                setSelected(selectedProposal)
+            }
         }
+        console.log(proposalId.toString())
     }
+    
 
     useEffect(() => {
         const fetchProposals = async () => {
@@ -69,7 +87,7 @@ const Proposals = () => {
 
     return (
         <div className="div">
-            <Header />
+            <Header header={header} />
             <br></br>
             <br></br>
             <br></br>
@@ -90,60 +108,39 @@ const Proposals = () => {
                         <div>
                             {proposals.map((proposal) => (
                                 <SwiperSlide
-                                    key={proposal.proposalId}
-                                    onClick={() => handleSelect(proposal.proposal_id)}
+                                    key={proposal.proposalId.toString()}
+                                    onClick={() => handleSelect(proposal.proposalId)}
                                     // className={selectedValue === proposal.proposal_id ? 'selected' : ''}
                                     style={{
                                         backgroundColor: '#EBEBEB',
-                                        height: selected ? '400px' : '300px',
+                                        height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
                                         width: '300px',
                                         padding: '20px',
                                         display: 'flex',
                                         justifyContent: 'center',
                                         borderRadius: '15px',
                                         overflow: 'hidden',
-                                        borderStyle: selectedValue ? 'solid' : '',
+                                        borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
                                         borderColor: 'lightblue'
                                     }}
 
                                 >
-                                    <div className="div">
-                                        <h1 style={{ fontSize: '11px', textAlign: 'left' }} >{proposal.content.title}</h1>
-
-                                        {/* <div style={{ width: '100%', height: '5px', backgroundColor: '#f0f0f0', borderRadius: '10px' }}>
-                                            <div style={{ width: `${yesPercentage}%`, height: '100%', backgroundColor: 'blue', borderRadius: '10px' }}></div>
-                                        </div> */}
-
-                                        {/* <p>{proposal.final_tally_result.yes}</p> */}
-                                        <p
-                                            style={{
-                                                fontSize: '10px',
-                                                height: selected ? '15rem' : '10rem',
-                                                overflow: 'hidden',
-                                                textAlign: 'left',
-                                                width: '16rem',
-                                                overflowY: 'auto',
-                                            }}
-                                        >
-                                            {proposal.status}
-                                        </p>
-                                        {/* <div className="div">{proposal.depositEndTime?.nanos}</div> */}
-                                        <div
-                                            style={{
-
-                                                display: 'flex',
-                                                justifyContent: 'space-evenly',
-                                                alignItems: 'center',
-                                                position: 'relative',
-                                                height: '70px',
-                                                bottom: '50px',
-                                                backgroundColor: '#EBEBEB'
-                                            }}
-                                        >
-                                            <button style={BtnStyles} onClick={() => setSelected(!selected)} >Actions</button>
-                                            <button style={BtnStyles} >Resources</button>
+                                    <form className={styles.stepsForm} autoComplete='none' >
+                                        <div className="div">
+                                            <p
+                                                style={{
+                                                    fontSize: '10px',
+                                                    height: selected ? '15rem' : '10rem',
+                                                    overflow: 'hidden',
+                                                    textAlign: 'left',
+                                                    width: '16rem',
+                                                    overflowY: 'auto',
+                                                }}
+                                            >
+                                                Proposal Status code: {proposal.status}
+                                            </p>
                                         </div>
-                                    </div>
+                                    </form>
                                 </SwiperSlide>
 
                             ))}
@@ -156,22 +153,16 @@ const Proposals = () => {
             </div>
             {
                 selected ? (
-                    <div
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-evenly',
-                            position: 'fixed',
-                            width: '100%',
-                            bottom: '20px',
-                        }}
-                    >
-                        <button style={VoteBtns}>YES</button>
-                        <button style={VoteBtns}>MORE</button>
-                        <button style={VoteBtns}>NO</button>
-                    </div>
+                    <Footer
+                        onBack={onBack}
+                        onBackUrl={onBack ? undefined : ''}
+                    />
                 ) : (
 
-                    <Footer onBackUrl='/' backLabel='Home' />
+                    <Footer
+                        onBack={onBack}
+                        onBackUrl={onBack ? undefined : ''}
+                    />
                 )
             }
 

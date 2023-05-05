@@ -133,12 +133,6 @@ const RequestDonation: FC<RequestDonationProps> = ({ onSuccess, onBack, config, 
   // Define the formIsValid function which checks if the donationApproved state variable has a valid boolean value
   const formIsValid = () => typeof donationApproved === 'boolean';
 
-  // Define the handleSubmit function which triggers the onSuccess function with the donationApproved value as input
-  const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
-    event?.preventDefault();
-    if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
-    onSuccess({ donate: donationApproved as boolean });
-  };
 
   return (
     <>

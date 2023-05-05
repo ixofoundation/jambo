@@ -17,13 +17,13 @@ import Input from '@components/Input/Input';
 import Anchor from '@components/Anchor/Anchor';
 import Success from '@icons/success.svg';
 import Plus from '@icons/plus.svg';
-import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
 import { broadCastMessages, shortenAddress } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
 import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
+import { VOTE } from 'types/actions'
 import { TRX_MSG } from 'types/transactions';
 import {
   defaultTrxFeeOption,
@@ -68,7 +68,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [voteTx, setVoteTx] = useState<VOTE | undefined>();
+
 
   const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
@@ -128,7 +129,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
       }
       if (s.id === STEPS.select_and_review_proposal) {
-        setProposals((s.data as StepDataType<STEPS.select_and_review_proposal>)?.proposals ?? []);
+        if ((s.data as StepDataType<STEPS.select_and_review_proposal>)?.voteOption && s.config)
+          setVoteTx({ proposalId: s.config?.proposalId, voteOption: (s.data as StepDataType<STEPS.select_and_review_proposal>)?.voteOption });
       }
     });
   }, [steps]);

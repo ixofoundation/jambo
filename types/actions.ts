@@ -9,7 +9,7 @@ export type ACTION = {
 };
 
 export type VOTE = {
-  address: string;
-  amount: number;
-  denom: string;
-}
+  proposalId: string;
+  voteOption: string;
+};
+
