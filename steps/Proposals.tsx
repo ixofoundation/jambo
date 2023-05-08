@@ -50,7 +50,7 @@ const VoteButton = ({ backgroundColor, children }: Props) => {
         borderStyle: 'none',
         color: 'white',
         fontSize: '15px',
-        textAlign: 'left',
+        textAlign: 'left' as const,
         display: 'flex',
         alignItems: 'center'
     }
@@ -61,7 +61,6 @@ const VoteButton = ({ backgroundColor, children }: Props) => {
         </button>
     )
 }
-
 
 const tableRowStyle = {
     width: '100%',
@@ -143,11 +142,11 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         const trxMsg: TRX_MSG[] = [
             generateVoteTrx({
                 proposalId: '3',
-                voterAddress: 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg',
-                option: 'VOTE_OPTION_YES',
+                voterAddress: 'ixo1lxyxync9hn05mcure3j9rnj56llqtwzsx5j0j3',
+                option: '4',
             })
         ];
-        let memo: string | undefined;
+        // let memo: string | undefined;
         const hash = await broadCastMessages(
             wallet,
             trxMsg,
@@ -156,10 +155,16 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
             '',
             chainInfo as KEPLR_CHAIN_INFO_TYPE,
         );
-        if (hash) setSuccessHash(hash);
-
+        if (hash) {
+            setSuccessHash(hash);
+            console.log("Transaction hash: ", hash);
+        }
         setLoading(false);
     };
+
+    useEffect(() => {
+        signTX()
+    }, [])
 
     if (successHash)
         return (

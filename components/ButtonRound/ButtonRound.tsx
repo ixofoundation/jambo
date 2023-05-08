@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes } from 'react';
+import { ButtonHTMLAttributes, useState } from 'react';
 import cls from 'classnames';
 
 import styles from './ButtonRound.module.scss';
@@ -29,7 +29,7 @@ type ButtonRoundProps = {
   label?: string;
   color?: BUTTON_ROUND_COLOR;
   size?: BUTTON_ROUND_SIZE;
-  successMark?: boolean;
+  successMark?: boolean; 
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 const ButtonRound = ({
