@@ -141,8 +141,8 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         setLoading(true);
         const trxMsg: TRX_MSG[] = [
             generateVoteTrx({
-                proposalId: '3',
-                voterAddress: 'ixo1lxyxync9hn05mcure3j9rnj56llqtwzsx5j0j3',
+                proposalId: selected,
+                voterAddress: wallet.user!.address,
                 option: '4',
             })
         ];
