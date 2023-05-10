@@ -1,7 +1,6 @@
-import React, { useContext } from 'react';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
-import { WalletContext } from '@contexts/wallet';
+
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
 export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';
@@ -18,7 +17,7 @@ export const generateVoteTrx = ({
   option,
 }: {
   proposalId: '3';
-  voterAddress: 'ixo1rkyhrz6qz6ydgadwyqjs7cf6ezvz8j2sht0uxg';
+  voterAddress: 'ixo1lxyxync9hn05mcure3j9rnj56llqtwzsx5j0j3';
   option: '4';
 }): TRX_MSG => ({
   typeUrl: '/cosmos.gov.v1beta1.MsgVote',

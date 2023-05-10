@@ -13,6 +13,7 @@ export enum BUTTON_ROUND_COLOR {
   grey = 'withGreyBgColor',
   lightGrey = 'withLightGreyBgColor',
   white = 'withWhiteBgColor',
+  darkOrange = '#D97706'
 }
 
 export enum BUTTON_ROUND_SIZE {
@@ -29,7 +30,7 @@ type ButtonRoundProps = {
   label?: string;
   color?: BUTTON_ROUND_COLOR;
   size?: BUTTON_ROUND_SIZE;
-  successMark?: boolean; 
+  successMark?: boolean;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 const ButtonRound = ({
