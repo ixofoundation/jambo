@@ -4,7 +4,6 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/Header/Header';
 // import Footer from '@components/Footer/Footer';
-
 import styles from '../components/Footer/Footer.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
@@ -24,7 +23,7 @@ import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
-import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
+import { QueryProposalsRequest, QueryProposalRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
 import useQueryClient from '@hooks/useQueryClient';
 import { broadCastMessages } from '@utils/wallets';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
@@ -97,6 +96,12 @@ const tableRowStyle = {
     alignItems: 'center',
 }
 
+interface ProposalData {
+    proposer: string;
+    title: string;
+    description: string;
+}
+
 // type Proposal = {
 //     proposalId: number;
 //     proposalType: string;
@@ -114,10 +119,11 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
     const [successHash, setSuccessHash] = useState<string | undefined>();
     const [loading, setLoading] = useState(true);
     const [toggleIcon, setToggleIcon] = useState(false);
+    const [filterStatus, setFilterStatus] = useState("all");
     const { queryClient } = useQueryClient();
     const { wallet } = useContext(WalletContext);
     const { chainInfo } = useContext(ChainContext);
-
+    console.log(filterStatus);
     // useEffect(() => {
     //     const castVote = async () => {
     //         const proposalId = '3';
@@ -273,6 +279,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                 const response = await queryClient?.cosmos.gov.v1beta1.proposals(proposalsRequest);
                 if (response && response.proposals) {
                     console.log(response.proposals);
+                    const proposalsArray: ProposalData[] = [];
                     response.proposals.forEach((proposal) => {
                         const proposalContentBytes = proposal.content?.value;
                         const proposalType = proposal.content?.typeUrl.split('/')[1];
@@ -280,9 +287,17 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                             const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposalContentBytes);
                             const proposalTitle = proposalContent.title;
                             const proposalDescription = proposalContent.description;
-                            console.log(proposalTitle, proposalDescription);
+                            const proposer = proposal.proposer;
+                            // const proposer = proposal.proposer?.address || '';
+                            const proposalData: ProposalData = {
+                                proposer: proposer,
+                                title: proposalTitle,
+                                description: proposalDescription,
+                            };
+                            proposalsArray.push(proposalData);
                         }
                     });
+                    console.log(proposalsArray);
                     setProposals(response.proposals);
                 }
             } catch (error) {
@@ -368,65 +383,123 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
             <br></br>
             <br></br>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                <button>Filter</button>
+                <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '5px', borderStyle: 'none', height: '2rem', width: '4rem', color: 'white' }} onClick={() => {
+                    switch (filterStatus) {
+                        case "all":
+                            setFilterStatus("deposit");
+                            break;
+                        case "deposit":
+                            setFilterStatus("voting");
+                            break;
+                        case "voting":
+                            setFilterStatus("passed");
+                            break;
+                        case "passed":
+                            setFilterStatus("rejected");
+                            break;
+                        case "rejected":
+                            setFilterStatus("failed");
+                            break;
+                        case "failed":
+                            setFilterStatus("unrecognized");
+                            break;
+                        case "unrecognized":
+                            setFilterStatus("all");
+                            break;
+                    }
+                }}>Filter</button>
             </div>
             <div className="div">
-                <Swiper
-                    className="proposals-swiper"
-                    spaceBetween={10}
-                    centeredSlides
-                    slidesPerView='auto'
-                    initialSlide={5}
-                >
-                    {proposals && proposals.length > 0 ? (
-                        <div>
-                            {proposals.map((proposal) => (
-                                <SwiperSlide
-                                    key={proposal.proposalId.toString()}
-                                    onClick={() => handleSelect(proposal.proposalId)}
-                                    // className={selectedValue === proposal.proposal_id ? 'selected' : ''}
-                                    style={{
-                                        backgroundColor: '#EBEBEB',
-                                        height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
-                                        width: '300px',
-                                        padding: '20px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        borderRadius: '15px',
-                                        overflow: 'hidden',
-                                        borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
-                                        borderColor: 'lightblue'
-                                    }}
+                <form autoComplete='none'   >
+                    <div className="div">
+                        <Swiper
+                            className="proposals-swiper"
+                            spaceBetween={15}
+                            centeredSlides
+                            slidesPerView='auto'
+                            initialSlide={5}
+                        >
+                            {proposals.filter(proposal => {
+                                switch (filterStatus) {
+                                    case "deposit":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_DEPOSIT_PERIOD;
+                                    case "voting":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD;
+                                    case "passed":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_PASSED;
+                                    case "rejected":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_REJECTED;
+                                    case "failed":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_FAILED;
+                                    case "unrecognized":
+                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.UNRECOGNIZED;
+                                    default:
+                                        return true;
+                                }
+                            }).map(proposal => {
+                                if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
+                                    const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
+                                    const proposalTitle = proposalContent.title;
+                                    const proposalDescription = proposalContent.description;
+                                    const proposerAddress = proposal.proposer?.address;
+                                    const submitTime = proposal.submitTime
+                                    const finalTallyYes = proposal.finalTallyResult?.yes
+                                    const finalTallyNo = proposal.finalTallyResult?.no
+                                    const finalTallyAbstain = proposal.finalTallyResult?.abstain
+                                    const finalTallyVeto = proposal.finalTallyResult?.noWithVeto
 
-                                >
-                                    <form className={styles.stepsForm} autoComplete='none' >
-                                        <div className="div">
-                                            {proposals.map((proposal) => {
-                                                if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
-                                                    const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
-                                                    const proposalTitle = proposalContent.title;
-                                                    const proposalDescription = proposalContent.description;
+                                    return (
+                                        <SwiperSlide
+                                            key={proposal.proposalId}
+                                            onClick={() => handleSelect(proposal.proposalId)}
+                                            style={{
+                                                backgroundColor: '#EBEBEB',
+                                                height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
+                                                width: '290px',
+                                                padding: '20px',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                borderRadius: '15px',
+                                                overflow: 'auto',
+                                                borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
+                                                borderColor: 'lightblue'
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
+                                                    <p style={{
+                                                        fontSize: '10px',
+                                                        color: '#D1D5DB'
+                                                    }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
+                                                    <p style={{
+                                                        fontSize: '10px',
+                                                        color: '#D1D5DB'
+                                                    }}>
+                                                        {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
+                                                    </p>
+                                                </div>
+                                                <div style={{ background: `linear-gradient(90deg, #2ECC71 ${finalTallyYes}%, #E74C3C ${finalTallyNo}%, #F1C40F ${finalTallyAbstain}%, #8E44AD ${finalTallyVeto}%)`, borderRadius: '50px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <div style={{ backgroundColor: '#2ECC71' }}>Yes</div>
+                                                        <div style={{ backgroundColor: '#E74C3C' }}>No</div>
+                                                        <div style={{ backgroundColor: '#F1C40F' }}>Abstain</div>
+                                                        <div style={{ backgroundColor: '#8E44AD' }}>No with Veto</div>
+                                                    </div>
+                                                </div>
+                                                <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
+                                                <p style={{
+                                                    fontSize: '12px',
+                                                }} >{proposalDescription}</p>
+                                            </div>
+                                        </SwiperSlide>
+                                    );
+                                }
+                                return null;
+                            })}
+                        </Swiper>
+                    </div>
+                </form>
 
-                                                    return (
-                                                        <div key={proposal.proposalId}>
-                                                            <h3>{proposalTitle}</h3>
-                                                            <p>{proposalDescription}</p>
-                                                        </div>
-                                                    );
-                                                }
-                                                return null;
-                                            })}
-                                        </div>
-                                    </form>
-                                </SwiperSlide>
-
-                            ))}
-                        </div>
-                    ) : (
-                        <p>Loading Proposals...</p>
-                    )
-                    }
-                </Swiper >
             </div>
             {
                 selected ? (
