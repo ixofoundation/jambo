@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, FC } from 'react';
+import React, { useState, useEffect, useContext, FC, useRef } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -23,7 +23,7 @@ import SadFace from '@icons/sad_face.svg';
 import Success from '@icons/success.svg';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
-import { QueryProposalsRequest, QueryProposalRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
+import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
 import useQueryClient from '@hooks/useQueryClient';
 import { broadCastMessages } from '@utils/wallets';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
@@ -36,9 +36,12 @@ import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import IconText from '@components/IconText/IconText';
 import { ViewOnExplorerButton } from '@components/Button/Button';
-import { FiThumbsUp, FiThumbsDown } from 'react-icons/fi'
-import { MdOutlineFrontHand } from 'react-icons/md'
-import { AiOutlineQuestionCircle } from 'react-icons/ai'
+import { FiThumbsUp, FiThumbsDown } from 'react-icons/fi';
+import { MdOutlineFrontHand } from 'react-icons/md';
+import { AiOutlineQuestionCircle, AiOutlineUser } from 'react-icons/ai';
+import { BsHourglass } from 'react-icons/bs';
+import { HiOutlineDotsVertical } from 'react-icons/hi'
+import { IoHandRightOutline } from 'react-icons/io5'
 
 type RequestProposalsProps = {
     onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
@@ -211,8 +214,8 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         {selectedVoteOption === '1' && <FiThumbsUp style={{ width: '24px', height: '24px' }} />}
                         {selectedVoteOption === '2' && <AiOutlineQuestionCircle style={{ width: '24px', height: '24px' }} />}
                         {selectedVoteOption === '3' && <FiThumbsDown style={{ width: '24px', height: '24px' }} />}
-                        {selectedVoteOption === '4' && <MdOutlineFrontHand style={{ width: '24px', height: '24px' }} />}
-                        {!selectedVoteOption && <Dots width='24px' height='24px' />}
+                        {selectedVoteOption === '4' && <IoHandRightOutline style={{ width: '24px', height: '24px' }} />}
+                        {!selectedVoteOption && <HiOutlineDotsVertical color={'#1DB3D3'} size={'24px'} />}
                     </ButtonRound>
                 )}
                 {onCorrect !== undefined && (
@@ -239,6 +242,27 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         );
     };
 
+    const modalRef = useRef<HTMLDivElement>(null);
+    const proposalRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutsideModal = (event: MouseEvent) => {
+            if (
+                modalRef.current &&
+                !modalRef.current.contains(event.target as Node) &&
+                proposalRef.current &&
+                !proposalRef.current.contains(event.target as Node)
+            ) {
+                setToggleVoteActions(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutsideModal);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideModal);
+        };
+    }, []);
+
+
     const handleVoteOption = (option: any) => {
         setSelectedOption(option);
         setToggleIcon(!toggleIcon);
@@ -247,25 +271,30 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
     };
 
     const handleSelect = (proposalId: number) => {
-        const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposalId);
-        if (selectedProposal) {
-            if (selected && selected.proposalId === proposalId) {
-                setSelected(null);
-            } else {
-                setSelected(selectedProposal)
-                const voteTrx = generateVoteTrx({
-                    proposalId: selectedProposal.proposalId,
-                    voterAddress: wallet.user!.address,
-                    option: selectedOption,
-                });
-                console.log(voteTrx);
+        if (!toggleVoteActions) {
+            const selectedProposal = proposals.find((proposal) => proposal.proposalId === proposalId);
+            if (selectedProposal) {
+                if (selected && selected.proposalId === proposalId) {
+                    setSelected(null);
+                } else {
+                    setSelected(selectedProposal);
+                    const voteTrx = generateVoteTrx({
+                        proposalId: selectedProposal.proposalId,
+                        voterAddress: wallet.user!.address,
+                        option: selectedOption,
+                    });
+                    console.log(voteTrx);
+                }
             }
+            console.log(proposalId.toString());
         }
-        console.log(proposalId.toString())
     }
 
     const toggelVotes = () => {
         setToggleVoteActions(!toggleVoteActions)
+    }
+    const toggelVotesClose = () => {
+        setToggleVoteActions(false)
     }
 
     useEffect(() => {
@@ -326,13 +355,13 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
 
     const signTX = async (): Promise<void> => {
         setLoading(true);
-        if (selected) {
+        if (selectedOption && selected) {
             const trxMsg: TRX_MSG[] = [
                 generateVoteTrx({
                     proposalId: selected.proposalId,
                     voterAddress: wallet.user!.address,
                     option: selectedOption,
-                })
+                }),
             ];
             // let memo: string | undefined;
             const hash = await broadCastMessages(
@@ -341,19 +370,19 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                 undefined,
                 defaultTrxFeeOption,
                 '',
-                chainInfo as KEPLR_CHAIN_INFO_TYPE,
+                chainInfo as KEPLR_CHAIN_INFO_TYPE
             );
             if (hash) {
                 setSuccessHash(hash);
-                console.log("Transaction hash: ", hash);
+                console.log('Transaction hash: ', hash);
             }
         }
         setLoading(false);
     };
 
-    useEffect(() => {
-        signTX()
-    }, [])
+    // useEffect(() => {
+    //     signTX()
+    // }, [])
 
     if (successHash)
         return (
@@ -383,7 +412,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
             <br></br>
             <br></br>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '5px', borderStyle: 'none', height: '2rem', width: '4rem', color: 'white' }} onClick={() => {
+                <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
                     switch (filterStatus) {
                         case "all":
                             setFilterStatus("deposit");
@@ -418,6 +447,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                             centeredSlides
                             slidesPerView='auto'
                             initialSlide={5}
+                            onClick={toggelVotesClose}
                         >
                             {proposals.filter(proposal => {
                                 switch (filterStatus) {
@@ -442,16 +472,25 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                     const proposalTitle = proposalContent.title;
                                     const proposalDescription = proposalContent.description;
                                     const proposerAddress = proposal.proposer?.address;
-                                    const submitTime = proposal.submitTime
-                                    const finalTallyYes = proposal.finalTallyResult?.yes
-                                    const finalTallyNo = proposal.finalTallyResult?.no
-                                    const finalTallyAbstain = proposal.finalTallyResult?.abstain
-                                    const finalTallyVeto = proposal.finalTallyResult?.noWithVeto
+                                    const submitTime = proposal.submitTime;
+                                    const proposalId = proposal.proposalId.toNumber();
+
+                                    const finalTallyYes = Number(proposal.finalTallyResult?.yes);
+                                    const finalTallyNo = Number(proposal.finalTallyResult?.no);
+                                    const finalTallyAbstain = Number(proposal.finalTallyResult?.abstain);
+                                    const finalTallyVeto = Number(proposal.finalTallyResult?.noWithVeto);
+
+                                    const total = (finalTallyYes || 0) + (finalTallyNo || 0) + (finalTallyAbstain || 0) + (finalTallyVeto || 0);
+                                    const yesPercentage = (finalTallyYes / total) * 100;
+                                    const noPercentage = (finalTallyNo / total) * 100;
+                                    const abstainPercentage = (finalTallyAbstain / total) * 100;
+                                    const noWithVetoPercentage = (finalTallyVeto / total) * 100;
 
                                     return (
                                         <SwiperSlide
                                             key={proposal.proposalId}
                                             onClick={() => handleSelect(proposal.proposalId)}
+                                            ref={proposalRef}
                                             style={{
                                                 backgroundColor: '#EBEBEB',
                                                 height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
@@ -460,30 +499,41 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                                 display: 'flex',
                                                 justifyContent: 'center',
                                                 borderRadius: '15px',
-                                                overflow: 'auto',
+                                                overflow: 'hidden',
                                                 borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
                                                 borderColor: 'lightblue'
                                             }}
                                         >
                                             <div>
+                                                <p style={{ fontSize: '7px', margin: '-5px', width: '100%', textAlign: 'center' }} >{proposalId}</p>
                                                 <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
-                                                    <p style={{
-                                                        fontSize: '10px',
-                                                        color: '#D1D5DB'
-                                                    }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
-                                                    <p style={{
-                                                        fontSize: '10px',
-                                                        color: '#D1D5DB'
-                                                    }}>
-                                                        {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
-                                                    </p>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                                        <p style={{
+                                                            fontSize: '10px',
+                                                            color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
+                                                            // color: '#D1D5DB'
+                                                        }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                        <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                                        <p style={{
+                                                            fontSize: '10px',
+                                                            color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
+                                                            // color: '#D1D5DB'
+                                                        }}>
+                                                            {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div style={{ background: `linear-gradient(90deg, #2ECC71 ${finalTallyYes}%, #E74C3C ${finalTallyNo}%, #F1C40F ${finalTallyAbstain}%, #8E44AD ${finalTallyVeto}%)`, borderRadius: '50px' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <div style={{ backgroundColor: '#2ECC71' }}>Yes</div>
-                                                        <div style={{ backgroundColor: '#E74C3C' }}>No</div>
-                                                        <div style={{ backgroundColor: '#F1C40F' }}>Abstain</div>
-                                                        <div style={{ backgroundColor: '#8E44AD' }}>No with Veto</div>
+                                                <div style={{ backgroundColor: "#f2f2f2", borderRadius: '50px', height: '10px' }}>
+                                                    <div style={{ background: `linear-gradient(90deg, #1DB3D3 ${yesPercentage}%, #F59E0B ${noPercentage}%, #F1C40F ${abstainPercentage}%, #8E44AD ${noWithVetoPercentage}%)`, borderRadius: '50px', height: '10px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                            <div style={{ minWidth: '20px', width: `${yesPercentage}%`, backgroundColor: '#1DB3D3', borderRadius: '50px 0px 0px 50px', height: '10px', fontSize: '7px' }}>{finalTallyYes || 0}</div>
+                                                            <div style={{ minWidth: '20px', width: `${noPercentage}%`, backgroundColor: '#F59E0B', height: '10px', fontSize: '7px' }}>{finalTallyNo || 0}</div>
+                                                            <div style={{ minWidth: '20px', width: `${abstainPercentage}%`, backgroundColor: '#9CA3AF', height: '10px', fontSize: '7px' }}>{finalTallyAbstain || 0}</div>
+                                                            <div style={{ minWidth: '20px', width: `${noWithVetoPercentage}%`, backgroundColor: '#D97706', borderRadius: '0px 50px 50px 0px', height: '10px', fontSize: '7px' }}>{finalTallyVeto || 0}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
@@ -507,6 +557,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         {
                             toggleVoteActions ? (
                                 <div
+                                    ref={modalRef}
                                     style={{
                                         top: '310px',
                                         zIndex: 1,
@@ -521,11 +572,6 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                 >
                                     <table style={{ width: '100%', display: 'block', justifyContent: 'center', alignItems: 'center' }} >
                                         <tbody style={{ width: '100%', display: 'block', justifyContent: 'center', alignItems: 'center' }}>
-                                            <tr>
-                                                <td>
-                                                    <button onClick={toggelVotes} >CLOSE</button>
-                                                </td>
-                                            </tr>
                                             <tr style={tableRowStyle} >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                                                     <VoteButton backgroundColor='#1DB3D3' onClick={() => handleVoteOption('1')} >< FiThumbsUp />Yes</VoteButton>
@@ -538,7 +584,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                             </tr>
                                             <tr style={tableRowStyle}  >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                    <VoteButton backgroundColor='#D97706' onClick={() => handleVoteOption('4')} ><MdOutlineFrontHand />No with veto</VoteButton>
+                                                    <VoteButton backgroundColor='#D97706' onClick={() => handleVoteOption('4')} ><IoHandRightOutline />No with veto</VoteButton>
                                                 </td>
                                             </tr>
                                             <tr style={tableRowStyle} >
@@ -553,7 +599,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                 <Footer
                                     onBack={successHash ? null : onBack}
                                     selectVoteAction={toggelVotes}
-                                    onCorrect={loading || !!successHash ? null : signTX}
+                                    onCorrect={!!successHash || !selectedOption ? null : signTX}
                                 />
                             )
                         }
@@ -565,7 +611,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                     <Footer
                         onBack={successHash ? null : onBack}
                         onBackUrl={onBack ? undefined : ''}
-                        onCorrect={loading || !!successHash ? null : signTX}
+                        // onCorrect={loading || !!successHash ? null : signTX}
                         correctLabel={loading ? 'Claiming' : !successHash ? 'Claim' : undefined}
                         showAccountButton={!!successHash}
                         showActionsButton={!!successHash}
