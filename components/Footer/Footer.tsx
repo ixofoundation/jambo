@@ -10,7 +10,6 @@ import ArrowLeft from '@icons/arrow_left.svg';
 import Correct from '@icons/correct.svg';
 import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
-import Dots from '@icons/vertical_dots.svg'
 // import useWindowDimensions from '@hooks/windowDimensions';
 import { backRoute, replaceRoute } from '@utils/router';
 
@@ -24,7 +23,6 @@ type FooterProps = {
   forwardLabel?: string;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
-  selectVoteAction?: (() => void) | null;
 };
 
 /**
@@ -40,7 +38,6 @@ const Footer = ({
   // forwardLabel,
   showAccountButton,
   showActionsButton,
-  selectVoteAction,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const { asPath } = useRouter();
@@ -80,15 +77,6 @@ const Footer = ({
         >
           <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
-        </ButtonRound>
-      )}
-      {selectVoteAction !== undefined && (
-        <ButtonRound
-          color={selectVoteAction ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-          onClick={selectVoteAction ?? undefined}
-          size={BUTTON_ROUND_SIZE.large}
-        >
-          <Dots width='24px' height='24px' />
         </ButtonRound>
       )}
       {onCorrect !== undefined && (

@@ -10,24 +10,6 @@ export const defaultTrxFee: TRX_FEE = {
   gas: String(300000),
 };
 
-
-export const generateVoteTrx = ({
-  proposalId,
-  voterAddress,
-  option,
-}: {
-  proposalId: '3';
-  voterAddress: 'ixo1lxyxync9hn05mcure3j9rnj56llqtwzsx5j0j3';
-  option: '4';
-}): TRX_MSG => ({
-  typeUrl: '/cosmos.gov.v1beta1.MsgVote',
-  value: cosmos.gov.v1beta1.MsgVote.fromPartial({
-    proposalId: proposalId,
-    voter: voterAddress,
-    option: option,
-  }),
-});
-
 const generateCoins = (denoms: string[], amounts: string[]): Coin[] => {
   const coinMap: Record<string, number> = {};
   for (let i = 0; i < denoms!.length; i++) {

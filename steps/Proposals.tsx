@@ -316,8 +316,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                             const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposalContentBytes);
                             const proposalTitle = proposalContent.title;
                             const proposalDescription = proposalContent.description;
-                            const proposer = proposal.proposer;
-                            // const proposer = proposal.proposer?.address || '';
+                            const proposer = proposal.proposer?.address || '';
                             const proposalData: ProposalData = {
                                 proposer: proposer,
                                 title: proposalTitle,
@@ -474,6 +473,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                     const proposerAddress = proposal.proposer?.address;
                                     const submitTime = proposal.submitTime;
                                     const proposalId = proposal.proposalId.toNumber();
+                                    const proposalStatus = proposal.status.toString();
 
                                     const finalTallyYes = Number(proposal.finalTallyResult?.yes);
                                     const finalTallyNo = Number(proposal.finalTallyResult?.no);
@@ -536,6 +536,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                                         </div>
                                                     </div>
                                                 </div>
+                                                {/* <p>{proposalStatus}</p> */}
                                                 <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
                                                 <p style={{
                                                     fontSize: '12px',
