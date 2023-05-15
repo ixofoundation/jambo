@@ -386,7 +386,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         );
 
     return (
-        <div className={cls(utilsStyles.main)} >
+        <div className={cls(utilsStyles.main)} style={{ position: 'relative', top: '-20px' }} >
             <Header header={header} />
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                 <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
