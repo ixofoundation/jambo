@@ -5,6 +5,7 @@ import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/Header/Header';
 // import Footer from '@components/Footer/Footer';
 import styles from '../components/Footer/Footer.module.scss';
+import styles1 from '@styles/stepsPages.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 // import Anchor from '@components/Anchor/Anchor';
@@ -437,121 +438,114 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                     }
                 }}>Filter</button>
             </div>
-            <div className="div">
-                <form autoComplete='none'   >
-                    <div className="div">
-                        <Swiper
-                            className="proposals-swiper"
-                            spaceBetween={15}
-                            centeredSlides
-                            slidesPerView='auto'
-                            initialSlide={5}
-                            onClick={toggelVotesClose}
-                        >
-                            {proposals.filter(proposal => {
-                                switch (filterStatus) {
-                                    case "deposit":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_DEPOSIT_PERIOD;
-                                    case "voting":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD;
-                                    case "passed":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_PASSED;
-                                    case "rejected":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_REJECTED;
-                                    case "failed":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_FAILED;
-                                    case "unrecognized":
-                                        return proposal.status === cosmos.gov.v1beta1.ProposalStatus.UNRECOGNIZED;
-                                    default:
-                                        return true;
-                                }
-                            }).map(proposal => {
-                                if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
-                                    const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
-                                    const proposalTitle = proposalContent.title;
-                                    const proposalDescription = proposalContent.description;
-                                    const proposerAddress = proposal.proposer?.address;
-                                    const submitTime = proposal.submitTime;
-                                    const proposalId = proposal.proposalId.toNumber();
-                                    const proposalStatus = proposal.status.toString();
+            <Swiper
+                className="proposals-swiper"
+                spaceBetween={15}
+                centeredSlides
+                slidesPerView='auto'
+                initialSlide={5}
+                onClick={toggelVotesClose}
+            >
+                {proposals.filter(proposal => {
+                    switch (filterStatus) {
+                        case "deposit":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_DEPOSIT_PERIOD;
+                        case "voting":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_VOTING_PERIOD;
+                        case "passed":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_PASSED;
+                        case "rejected":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_REJECTED;
+                        case "failed":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_FAILED;
+                        case "unrecognized":
+                            return proposal.status === cosmos.gov.v1beta1.ProposalStatus.UNRECOGNIZED;
+                        default:
+                            return true;
+                    }
+                }).map(proposal => {
+                    if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
+                        const proposalContent = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
+                        const proposalTitle = proposalContent.title;
+                        const proposalDescription = proposalContent.description;
+                        const proposerAddress = proposal.proposer?.address;
+                        const submitTime = proposal.submitTime;
+                        const proposalId = proposal.proposalId.toNumber();
+                        const proposalStatus = proposal.status.toString();
 
-                                    const finalTallyYes = Number(proposal.finalTallyResult?.yes);
-                                    const finalTallyNo = Number(proposal.finalTallyResult?.no);
-                                    const finalTallyAbstain = Number(proposal.finalTallyResult?.abstain);
-                                    const finalTallyVeto = Number(proposal.finalTallyResult?.noWithVeto);
+                        const finalTallyYes = Number(proposal.finalTallyResult?.yes);
+                        const finalTallyNo = Number(proposal.finalTallyResult?.no);
+                        const finalTallyAbstain = Number(proposal.finalTallyResult?.abstain);
+                        const finalTallyVeto = Number(proposal.finalTallyResult?.noWithVeto);
 
-                                    const total = (finalTallyYes || 0) + (finalTallyNo || 0) + (finalTallyAbstain || 0) + (finalTallyVeto || 0);
-                                    const yesPercentage = (finalTallyYes / total) * 100;
-                                    const noPercentage = (finalTallyNo / total) * 100;
-                                    const abstainPercentage = (finalTallyAbstain / total) * 100;
-                                    const noWithVetoPercentage = (finalTallyVeto / total) * 100;
+                        const total = (finalTallyYes || 0) + (finalTallyNo || 0) + (finalTallyAbstain || 0) + (finalTallyVeto || 0);
+                        const yesPercentage = (finalTallyYes / total) * 100;
+                        const noPercentage = (finalTallyNo / total) * 100;
+                        const abstainPercentage = (finalTallyAbstain / total) * 100;
+                        const noWithVetoPercentage = (finalTallyVeto / total) * 100;
 
-                                    return (
-                                        <SwiperSlide
-                                            key={proposal.proposalId}
-                                            onClick={() => handleSelect(proposal.proposalId)}
-                                            ref={proposalRef}
-                                            style={{
-                                                backgroundColor: '#EBEBEB',
-                                                height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
-                                                width: '290px',
-                                                padding: '20px',
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                borderRadius: '15px',
-                                                overflow: 'hidden',
-                                                borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
-                                                borderColor: 'lightblue'
-                                            }}
-                                        >
-                                            <div>
-                                                <p style={{ fontSize: '7px', margin: '-5px', width: '100%', textAlign: 'center' }} >{proposalId}</p>
-                                                <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
-                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                        <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
-                                                        <p style={{
-                                                            fontSize: '10px',
-                                                            color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
-                                                            // color: '#D1D5DB'
-                                                        }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
-                                                    </div>
-                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                        <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
-                                                        <p style={{
-                                                            fontSize: '10px',
-                                                            color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
-                                                            // color: '#D1D5DB'
-                                                        }}>
-                                                            {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div style={{ backgroundColor: "#f2f2f2", borderRadius: '50px', height: '10px' }}>
-                                                    <div style={{ background: `linear-gradient(90deg, #1DB3D3 ${yesPercentage}%, #F59E0B ${noPercentage}%, #F1C40F ${abstainPercentage}%, #8E44AD ${noWithVetoPercentage}%)`, borderRadius: '50px', height: '10px' }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                            <div style={{ minWidth: '20px', width: `${yesPercentage}%`, backgroundColor: '#1DB3D3', borderRadius: '50px 0px 0px 50px', height: '10px', fontSize: '7px' }}>{finalTallyYes || 0}</div>
-                                                            <div style={{ minWidth: '20px', width: `${noPercentage}%`, backgroundColor: '#F59E0B', height: '10px', fontSize: '7px' }}>{finalTallyNo || 0}</div>
-                                                            <div style={{ minWidth: '20px', width: `${abstainPercentage}%`, backgroundColor: '#9CA3AF', height: '10px', fontSize: '7px' }}>{finalTallyAbstain || 0}</div>
-                                                            <div style={{ minWidth: '20px', width: `${noWithVetoPercentage}%`, backgroundColor: '#D97706', borderRadius: '0px 50px 50px 0px', height: '10px', fontSize: '7px' }}>{finalTallyVeto || 0}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {/* <p>{proposalStatus}</p> */}
-                                                <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
-                                                <p style={{
-                                                    fontSize: '12px',
-                                                }} >{proposalDescription}</p>
+                        return (
+                            <SwiperSlide
+                                key={proposal.proposalId}
+                                onClick={() => handleSelect(proposal.proposalId)}
+                                ref={proposalRef}
+                                style={{
+                                    backgroundColor: '#EBEBEB',
+                                    height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
+                                    width: '290px',
+                                    padding: '20px',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    borderRadius: '15px',
+                                    overflow: 'hidden',
+                                    borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
+                                    borderColor: 'lightblue'
+                                }}
+                            >
+                                <div>
+                                    <p style={{ fontSize: '7px', margin: '-5px', width: '100%', textAlign: 'center' }} >{proposalId}</p>
+                                    <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                            <p style={{
+                                                fontSize: '10px',
+                                                color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
+                                                // color: '#D1D5DB'
+                                            }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                            <p style={{
+                                                fontSize: '10px',
+                                                color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
+                                                // color: '#D1D5DB'
+                                            }}>
+                                                {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div style={{ backgroundColor: "#f2f2f2", borderRadius: '50px', height: '10px' }}>
+                                        <div style={{ background: `linear-gradient(90deg, #1DB3D3 ${yesPercentage}%, #F59E0B ${noPercentage}%, #F1C40F ${abstainPercentage}%, #8E44AD ${noWithVetoPercentage}%)`, borderRadius: '50px', height: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <div style={{ minWidth: '20px', width: `${yesPercentage}%`, backgroundColor: '#1DB3D3', borderRadius: '50px 0px 0px 50px', height: '10px', fontSize: '7px' }}>{finalTallyYes || 0}</div>
+                                                <div style={{ minWidth: '20px', width: `${noPercentage}%`, backgroundColor: '#F59E0B', height: '10px', fontSize: '7px' }}>{finalTallyNo || 0}</div>
+                                                <div style={{ minWidth: '20px', width: `${abstainPercentage}%`, backgroundColor: '#9CA3AF', height: '10px', fontSize: '7px' }}>{finalTallyAbstain || 0}</div>
+                                                <div style={{ minWidth: '20px', width: `${noWithVetoPercentage}%`, backgroundColor: '#D97706', borderRadius: '0px 50px 50px 0px', height: '10px', fontSize: '7px' }}>{finalTallyVeto || 0}</div>
                                             </div>
-                                        </SwiperSlide>
-                                    );
-                                }
-                                return null;
-                            })}
-                        </Swiper>
-                    </div>
-                </form>
-
-            </div>
+                                        </div>
+                                    </div>
+                                    {/* <p>{proposalStatus}</p> */}
+                                    <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
+                                    <p style={{
+                                        fontSize: '12px',
+                                    }} >{proposalDescription}</p>
+                                </div>
+                            </SwiperSlide>
+                        );
+                    }
+                    return null;
+                })}
+            </Swiper>
             {
                 selected ? (
                     <>
