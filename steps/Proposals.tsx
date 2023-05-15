@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useContext, FC, useRef } from 'react';
 import cls from 'classnames';
-
 import utilsStyles from '@styles/utils.module.scss';
 import Header from '@components/Header/Header';
-// import Footer from '@components/Footer/Footer';
 import styles from '../components/Footer/Footer.module.scss';
 import styles1 from '@styles/stepsPages.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
-// import Anchor from '@components/Anchor/Anchor';
 import ArrowRight from '@icons/arrow_right.svg';
 import ArrowLeft from '@icons/arrow_left.svg';
 import Correct from '@icons/correct.svg';
@@ -28,7 +25,6 @@ import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosm
 import useQueryClient from '@hooks/useQueryClient';
 import { broadCastMessages } from '@utils/wallets';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
-// import styles from '@styles/stepsPages.module.scss';
 import { defaultTrxFeeOption } from '@utils/transactions';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { TRX_MSG } from 'types/transactions';
@@ -105,14 +101,6 @@ interface ProposalData {
     title: string;
     description: string;
 }
-
-// type Proposal = {
-//     proposalId: number;
-//     proposalType: string;
-//     title: string;
-//     description: string;
-//     status: string;
-// };
 
 const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data, header }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -363,7 +351,6 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                     option: selectedOption,
                 }),
             ];
-            // let memo: string | undefined;
             const hash = await broadCastMessages(
                 wallet,
                 trxMsg,
@@ -380,15 +367,10 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         setLoading(false);
     };
 
-    // useEffect(() => {
-    //     signTX()
-    // }, [])
-
     if (successHash)
         return (
             <>
                 <Header header={header} />
-
                 <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
                     <IconText title='Your transaction was successful!' Img={Success} imgSize={50}>
                         {chainInfo?.txExplorer && (
@@ -404,13 +386,8 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         );
 
     return (
-        <div className="div">
+        <div className={cls(utilsStyles.main)} >
             <Header header={header} />
-            <br></br>
-            <br></br>
-            <br></br>
-            <br></br>
-            <br></br>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                 <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
                     switch (filterStatus) {
@@ -472,18 +449,15 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         const submitTime = proposal.submitTime;
                         const proposalId = proposal.proposalId.toNumber();
                         const proposalStatus = proposal.status.toString();
-
                         const finalTallyYes = Number(proposal.finalTallyResult?.yes);
                         const finalTallyNo = Number(proposal.finalTallyResult?.no);
                         const finalTallyAbstain = Number(proposal.finalTallyResult?.abstain);
                         const finalTallyVeto = Number(proposal.finalTallyResult?.noWithVeto);
-
                         const total = (finalTallyYes || 0) + (finalTallyNo || 0) + (finalTallyAbstain || 0) + (finalTallyVeto || 0);
                         const yesPercentage = (finalTallyYes / total) * 100;
                         const noPercentage = (finalTallyNo / total) * 100;
                         const abstainPercentage = (finalTallyAbstain / total) * 100;
                         const noWithVetoPercentage = (finalTallyVeto / total) * 100;
-
                         return (
                             <SwiperSlide
                                 key={proposal.proposalId}
@@ -534,7 +508,6 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                             </div>
                                         </div>
                                     </div>
-                                    {/* <p>{proposalStatus}</p> */}
                                     <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
                                     <p style={{
                                         fontSize: '12px',
