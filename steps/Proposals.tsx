@@ -15,9 +15,13 @@ import Dots from '@icons/vertical_dots.svg'
 import { backRoute, replaceRoute } from '@utils/router';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import { useRouter } from 'next/router';
-import Loader from '@components/Loader/Loader';
 import Anchor from '@components/Anchor/Anchor';
+import Loader from '@components/Loader/Loader';
 import SadFace from '@icons/sad_face.svg';
+import Thumbsup from '@icons/thumbs-up.svg';
+import Thumbsdown from '@icons/thumbs-down.svg';
+import NoWithVeto from '@icons/no-with-veto.svg';
+import Abstain from '@icons/abstain.svg';
 import Success from '@icons/success.svg';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper.min.css';
@@ -33,12 +37,6 @@ import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import IconText from '@components/IconText/IconText';
 import { ViewOnExplorerButton } from '@components/Button/Button';
-import { FiThumbsUp, FiThumbsDown } from 'react-icons/fi';
-import { MdOutlineFrontHand } from 'react-icons/md';
-import { AiOutlineQuestionCircle, AiOutlineUser } from 'react-icons/ai';
-import { BsHourglass } from 'react-icons/bs';
-import { HiOutlineDotsVertical } from 'react-icons/hi'
-import { IoHandRightOutline } from 'react-icons/io5'
 
 type RequestProposalsProps = {
     onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
@@ -200,11 +198,11 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         onClick={selectVoteAction ?? undefined}
                         size={BUTTON_ROUND_SIZE.large}
                     >
-                        {selectedVoteOption === '1' && <FiThumbsUp style={{ width: '24px', height: '24px' }} />}
-                        {selectedVoteOption === '2' && <AiOutlineQuestionCircle style={{ width: '24px', height: '24px' }} />}
-                        {selectedVoteOption === '3' && <FiThumbsDown style={{ width: '24px', height: '24px' }} />}
-                        {selectedVoteOption === '4' && <IoHandRightOutline style={{ width: '24px', height: '24px' }} />}
-                        {!selectedVoteOption && <HiOutlineDotsVertical color={'#1DB3D3'} size={'24px'} />}
+                        {selectedVoteOption === '1' && <ColoredIcon icon={Thumbsup} size={24} color={ICON_COLOR.white} />}
+                        {selectedVoteOption === '2' && <ColoredIcon icon={Abstain} size={24} color={ICON_COLOR.white} />}
+                        {selectedVoteOption === '3' && <ColoredIcon icon={Thumbsdown} size={24} color={ICON_COLOR.white} />}
+                        {selectedVoteOption === '4' && <ColoredIcon icon={NoWithVeto} size={24} color={ICON_COLOR.white} />}
+                        {!selectedVoteOption && <ColoredIcon icon={Dots} size={24} color={ICON_COLOR.primary} />}
                     </ButtonRound>
                 )}
                 {onCorrect !== undefined && (
@@ -480,7 +478,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                     <p style={{ fontSize: '7px', margin: '-5px', width: '100%', textAlign: 'center' }} >{proposalId}</p>
                                     <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
                                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                            {/* <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} /> */}
                                             <p style={{
                                                 fontSize: '10px',
                                                 color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
@@ -488,7 +486,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                             }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} />
+                                            {/* <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} /> */}
                                             <p style={{
                                                 fontSize: '10px',
                                                 color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
@@ -542,22 +540,38 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                         <tbody style={{ width: '100%', display: 'block', justifyContent: 'center', alignItems: 'center' }}>
                                             <tr style={tableRowStyle} >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                    <VoteButton backgroundColor='#1DB3D3' onClick={() => handleVoteOption('1')} >< FiThumbsUp />Yes</VoteButton>
+                                                    <VoteButton backgroundColor='#1DB3D3' onClick={() => handleVoteOption('1')} >
+                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                            <ColoredIcon icon={Thumbsup} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >Yes</span>
+                                                        </div>
+                                                    </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr style={tableRowStyle} >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                    <VoteButton backgroundColor='#F59E0B' onClick={() => handleVoteOption('3')} ><FiThumbsDown />No</VoteButton>
+                                                    <VoteButton backgroundColor='#F59E0B' onClick={() => handleVoteOption('3')} >
+                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                            <ColoredIcon icon={Thumbsdown} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >No</span>
+                                                        </div>
+                                                    </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr style={tableRowStyle}  >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                    <VoteButton backgroundColor='#D97706' onClick={() => handleVoteOption('4')} ><IoHandRightOutline />No with veto</VoteButton>
+                                                    <VoteButton backgroundColor='#D97706' onClick={() => handleVoteOption('4')} >
+                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                            <ColoredIcon icon={NoWithVeto} size={17} color={ICON_COLOR.white} /> <span style={{ margin: '15px' }} >No with veto</span>
+                                                        </div>
+                                                    </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr style={tableRowStyle} >
                                                 <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                    <VoteButton backgroundColor='#9CA3AF' onClick={() => handleVoteOption('2')} ><AiOutlineQuestionCircle />Abstain</VoteButton>
+                                                    <VoteButton backgroundColor='#9CA3AF' onClick={() => handleVoteOption('2')} >
+                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                            <ColoredIcon icon={Abstain} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >Abstain</span>
+                                                        </div>
+                                                    </VoteButton>
                                                 </td>
                                             </tr>
                                         </tbody>
