@@ -3,8 +3,8 @@ import { CopyToClipboard } from 'react-copy-to-clipboard';
 import styles from './AddressActionButton.module.scss';
 import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
+import Card, { CARD_BORDER_COLOR, CARD_SIZE } from '@components/Card/Card';
 import ChainSelector from '@components/ChainSelector/ChainSelector';
-import Card, { CARD_SIZE } from '@components/Card/Card';
 import QR from '@icons/qr_code.svg';
 import Copy from '@icons/copy.svg';
 import { shortenAddress } from '@utils/wallets';
@@ -45,7 +45,13 @@ const AddressActionButton = ({
       {allowChainChange && <ChainSelector />}
       <div className={styles.column}>
         <CopyToClipboard text={address} onCopy={onCopy}>
-          <Card className={styles.address} title={address} size={CARD_SIZE.mediumLarge} rounded>
+          <Card
+            borderColor={copied ? CARD_BORDER_COLOR.primary : CARD_BORDER_COLOR.lightGrey}
+            className={styles.address}
+            title={address}
+            size={CARD_SIZE.mediumLarge}
+            rounded
+          >
             {addressToDisplay}
           </Card>
         </CopyToClipboard>

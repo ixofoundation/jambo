@@ -88,7 +88,6 @@ The config.json file allows you to configure various aspects of your dApp, inclu
 - `siteUrl`: The URL of your dApp.
 - `siteTitleMeta`: The title of your dApp that will appear in the browser's tab.
 - `siteDescriptionMeta`: The description of your site that will appear in search engine results.
-- `wcNamespace`: The namespace for WalletConnect. Leave this property as-is, as WalletConnect features are still in development.
 - `fontUrl`: The URL for the Google Fonts. Leave this property as-is, unless you have a specific font you'd like to use.
 - `fontName`: The name of the Google Font used for the site. Leave this property as-is, unless you imported a font via `fontUrl`.
 - `headerShowName`: Whether or not to display the site name in the header.
