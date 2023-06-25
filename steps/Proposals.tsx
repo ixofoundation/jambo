@@ -378,13 +378,12 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         )}
                     </IconText>
                 </main>
-
                 <Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
             </>
         );
 
     return (
-        <div className={cls(utilsStyles.main)} style={{ position: 'relative', top: '-20px' }} >
+        <div style={{ position: 'relative', top: '90px' }} >
             <Header header={header} />
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
                 <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
@@ -414,7 +413,8 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                 }}>Filter</button>
             </div>
             <Swiper
-                className="proposals-swiper"
+                // className="proposals-swiper"
+                className={cls(utilsStyles.main)}
                 spaceBetween={15}
                 centeredSlides
                 slidesPerView='auto'
@@ -474,8 +474,9 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                                     borderColor: 'lightblue'
                                 }}
                             >
-                                <div>
+                                <div  >
                                     <p style={{ fontSize: '7px', margin: '-5px', width: '100%', textAlign: 'center' }} >{proposalId}</p>
+                                    {/* <p>{proposalStatus}</p> */}
                                     <div style={{ display: 'flex', justifyContent: 'space-evenly', textAlign: 'left' }} >
                                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                             {/* <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} /> */}
