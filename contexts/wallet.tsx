@@ -18,8 +18,9 @@ import {
   queryDelegatorUnbondingDelegations,
   queryValidators,
 } from '@utils/query';
-import { ChainContext } from './chain';
+import { EVENT_LISTENER_TYPE } from '@constants/events';
 import useWalletData from '@hooks/useWalletData';
+import { ChainContext } from './chain';
 
 export const WalletContext = createContext({
   wallet: {} as WALLET,
@@ -131,6 +132,10 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     if (loaded && wallet.walletType) initializeWallets();
   };
 
+  const updateWalletConnectWallet = async () => {
+    if (loaded && wallet.walletType) initializeWallets();
+  };
+
   useEffect(() => {
     if (loaded) fetchAssets();
     // @ts-ignore
@@ -143,11 +148,25 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
   useEffect(() => {
     if (loaded && wallet.walletType) initializeWallets();
-    if (wallet.walletType !== WALLET_TYPE.keplr) {
-      window.removeEventListener('keplr_keystorechange', updateKeplrWallet);
+    if (wallet.walletType === WALLET_TYPE.keplr) {
+      window.addEventListener(EVENT_LISTENER_TYPE.wc_sessionupdate, updateWalletConnectWallet);
+      window.removeEventListener(EVENT_LISTENER_TYPE.wc_sessiondelete, logoutWallet);
+      window.addEventListener(EVENT_LISTENER_TYPE.keplr_keystorechange, updateKeplrWallet);
+
+      return () => window.removeEventListener(EVENT_LISTENER_TYPE.keplr_keystorechange, updateKeplrWallet);
+    } else if (wallet.walletType === WALLET_TYPE.walletConnect) {
+      window.removeEventListener(EVENT_LISTENER_TYPE.keplr_keystorechange, updateKeplrWallet);
+      window.addEventListener(EVENT_LISTENER_TYPE.wc_sessionupdate, updateWalletConnectWallet);
+      window.addEventListener(EVENT_LISTENER_TYPE.wc_sessiondelete, logoutWallet);
+
+      return () => {
+        window.removeEventListener(EVENT_LISTENER_TYPE.wc_sessionupdate, updateWalletConnectWallet);
+        window.removeEventListener(EVENT_LISTENER_TYPE.wc_sessiondelete, logoutWallet);
+      };
     } else {
-      window.addEventListener('keplr_keystorechange', updateKeplrWallet);
-      return () => window.removeEventListener('keplr_keystorechange', updateKeplrWallet);
+      window.removeEventListener(EVENT_LISTENER_TYPE.keplr_keystorechange, updateKeplrWallet);
+      window.removeEventListener(EVENT_LISTENER_TYPE.wc_sessionupdate, updateWalletConnectWallet);
+      window.removeEventListener(EVENT_LISTENER_TYPE.wc_sessiondelete, logoutWallet);
     }
   }, [wallet.walletType, chain.chainId, chain.chainNetwork]);
 

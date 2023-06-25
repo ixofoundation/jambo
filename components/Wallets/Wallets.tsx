@@ -5,10 +5,11 @@ import styles from './Wallets.module.scss';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import WalletCard from '@components/CardWallet/CardWallet';
 import WalletImg from '@icons/wallet.svg';
-import { WALLETS } from '@constants/wallet';
-import { WALLET_TYPE } from 'types/wallet';
+import { getWalletConnect } from '@utils/walletConnect';
 import { getOpera } from '@utils/opera';
 import { getKeplr } from '@utils/keplr';
+import { WALLETS } from '@constants/wallet';
+import { WALLET_TYPE } from 'types/wallet';
 
 type WalletsProps = {
   onSelected: (type: WALLET_TYPE) => void;
@@ -17,33 +18,36 @@ type WalletsProps = {
 const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
   const keplrWallet = getKeplr();
   const operaWallet = getOpera();
+  const walletConnect = getWalletConnect();
 
   return (
     <div className={cls(styles.wallets, className)} {...other}>
-      {operaWallet || keplrWallet ? (
+      {operaWallet || keplrWallet || walletConnect ? (
         <>
           <div className={utilsStyles.spacer3} />
           <h3>Choose your wallet</h3>
           <div className={utilsStyles.spacer3} />
-          {keplrWallet && (
+          {!!keplrWallet && (
             <WalletCard
               name={WALLETS.keplr.name}
               img={WALLETS.keplr.img}
               onClick={() => onSelected(WALLET_TYPE.keplr)}
             />
           )}
-          {operaWallet && (
+          {!!operaWallet && (
             <WalletCard
               name={WALLETS.opera.name}
               img={WALLETS.opera.img}
               onClick={() => onSelected(WALLET_TYPE.opera)}
             />
           )}
-          {/* <WalletCard
-						name={WALLETS.walletConnect.name}
-						img="{WALLETS.walletConnect.img}
-						onClick={() => onSelected(WALLET_TYPE.walletConnect)}
-					/> */}
+          {!!walletConnect && (
+            <WalletCard
+              name={WALLETS.walletConnect.name}
+              img={WALLETS.walletConnect.img}
+              onClick={() => onSelected(WALLET_TYPE.walletConnect)}
+            />
+          )}
         </>
       ) : (
         <>
