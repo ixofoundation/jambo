@@ -13,7 +13,6 @@ export enum BUTTON_ROUND_COLOR {
   grey = 'withGreyBgColor',
   lightGrey = 'withLightGreyBgColor',
   white = 'withWhiteBgColor',
-  darkOrange = '#D97706'
 }
 
 export enum BUTTON_ROUND_SIZE {
