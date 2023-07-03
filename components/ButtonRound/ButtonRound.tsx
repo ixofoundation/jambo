@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, useState } from 'react';
+import { ButtonHTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './ButtonRound.module.scss';
