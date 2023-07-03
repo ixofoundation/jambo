@@ -2,8 +2,8 @@ import { AccountData, Algo, DirectSignResponse, OfflineDirectSigner } from '@cos
 import { SignDoc } from '@ixo/impactxclient-sdk/types/codegen/cosmos/tx/v1beta1/tx';
 import SignClient from '@walletconnect/sign-client';
 import { SessionTypes } from '@walletconnect/types';
-import { getSdkError } from '@walletconnect/utils';
-import { Web3Modal } from '@web3modal/standalone';
+import getSdkError from '@walletconnect/utils';
+import Web3Modal from '@web3modal/standalone';
 import { ChainInfo } from '@keplr-wallet/types';
 import * as amino from '@cosmjs/amino';
 import * as Toast from '@components/Toast/Toast';
