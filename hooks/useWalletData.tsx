@@ -40,8 +40,8 @@ const useWalletData = (fetchData: FetchWalletData, address: string | undefined):
       const result = await fetchData(queryClient!, chainInfo?.chainName!, address, chainInfo?.stakeCurrency);
       setData((prevState) => ({ ...prevState, loading: false, data: result }));
     } catch (error) {
+      console.error('useWalletData::fetch::', error);
       setData((prevState) => ({ ...prevState, loading: false, error: getErrorMessage(error) }));
-      console.error('useWalletData error::', error);
     }
   };
 

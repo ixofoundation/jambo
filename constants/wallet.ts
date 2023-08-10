@@ -17,3 +17,5 @@ export const WALLETS = {
     type: WALLET_TYPE.walletConnect,
   },
 };
+
+export const WalletConnectProjectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
