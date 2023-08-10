@@ -1,11 +1,11 @@
 import { FC, useState, useContext } from 'react';
 import cls from 'classnames';
-import { useRouter } from 'next/router';
+// import { useRouter } from 'next/router';
 import utilsStyles from '@styles/utils.module.scss';
 import styles1 from '@styles/stepsPages.module.scss';
 import WalletCard from '@components/CardWallet/CardWallet';
 import Header from '@components/Header/Header';
-// import Footer from '@components/Footer/Footer';
+import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
 import WalletImg from '@icons/wallet.svg';
 import { pushNewRoute } from '@utils/router';
@@ -13,18 +13,6 @@ import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
-import styles from '../components/Footer/Footer.module.scss';
-import ButtonRound, { BUTTON_ROUND_COLOR, BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
-import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
-import Anchor from '@components/Anchor/Anchor';
-import ArrowRight from '@icons/arrow_right.svg';
-import ArrowLeft from '@icons/arrow_left.svg';
-import Correct from '@icons/correct.svg';
-import Wallet from '@icons/wallet.svg';
-import Touch from '@icons/touch.svg';
-import Slider from '@icons/slider.svg';
-// import useWindowDimensions from '@hooks/windowDimensions';
-import { backRoute, replaceRoute } from '@utils/router';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -34,19 +22,6 @@ type SwapTokensProps = {
   header?: string;
   loading?: boolean;
   signedIn?: boolean;
-};
-
-type FooterProps = {
-  onBackUrl?: string;
-  onBack?: (() => void) | null;
-  backLabel?: string;
-  onCorrect?: (() => void) | null;
-  correctLabel?: string;
-  onForward?: (() => void) | null;
-  forwardLabel?: string;
-  showAccountButton?: boolean;
-  showActionsButton?: boolean;
-  sliderActionButton?: (() => void) | null;
 };
 
 const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, header, loading = false, signedIn = true }) => {
@@ -75,93 +50,8 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: "0px, 8rem, 0px, 8rem"
+    margin: "0px 8px 0px 8px",
   }
-
-  const Footer = ({
-    onBack,
-    // backLabel,
-    onBackUrl,
-    onCorrect,
-    // correctLabel,
-    onForward,
-    // forwardLabel,
-    showAccountButton,
-    showActionsButton,
-    sliderActionButton,
-  }: FooterProps) => {
-    // const { width } = useWindowDimensions();
-    const { asPath } = useRouter();
-
-    return (
-      <footer className={styles.footer}>
-        {showAccountButton && (
-          <Anchor href='/account' active={asPath !== '/account'}>
-            <ButtonRound
-              size={BUTTON_ROUND_SIZE.large}
-              color={/^\/account/i.test(asPath) ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-            >
-              <ColoredIcon
-                icon={Wallet}
-                size={24}
-                color={/^\/account/i.test(asPath) ? ICON_COLOR.white : ICON_COLOR.primary}
-              />
-              {/* {!!width && width > 425 && <p className={styles.label}>Account</p>} */}
-            </ButtonRound>
-          </Anchor>
-        )}
-        {showActionsButton && (
-          <Anchor href='/' active={asPath !== '/'}>
-            <ButtonRound
-              size={BUTTON_ROUND_SIZE.large}
-              color={asPath === '/' ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-            >
-              <ColoredIcon icon={Touch} size={24} color={asPath === '/' ? ICON_COLOR.white : ICON_COLOR.primary} />
-            </ButtonRound>
-          </Anchor>
-        )}
-        {(onBack || onBackUrl || onBackUrl === '') && (
-          <ButtonRound
-            onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
-            color={BUTTON_ROUND_COLOR.lightGrey}
-            size={BUTTON_ROUND_SIZE.large}
-          >
-            <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
-            {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
-          </ButtonRound>
-        )}
-        {sliderActionButton && (
-          <ButtonRound
-            onClick={toggleSlider}
-            size={BUTTON_ROUND_SIZE.large}
-            color={asPath === '/' ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-          >
-            <Slider width='24px' height='24px' />
-          </ButtonRound>
-        )}
-        {onCorrect !== undefined && (
-          <ButtonRound
-            color={onCorrect ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-            onClick={onCorrect ?? undefined}
-            size={BUTTON_ROUND_SIZE.large}
-          >
-            <Correct width='24px' height='24px' />
-            {/* {!!width && width > 425 && <p className={styles.label}>{correctLabel ?? 'Next'}</p>} */}
-          </ButtonRound>
-        )}
-        {onForward !== undefined && (
-          <ButtonRound
-            color={onForward ? undefined : BUTTON_ROUND_COLOR.lightGrey}
-            onClick={onForward ?? undefined}
-            size={BUTTON_ROUND_SIZE.large}
-          >
-            <ArrowRight width='24px' height='24px' />
-            {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
-          </ButtonRound>
-        )}
-      </footer>
-    );
-  };
 
   return (
     <>
@@ -176,6 +66,46 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
         ) : (
           <div className='mainInterface'>
             {toggleSliderAction ? (
+              <div>
+                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} ><p>Set max slippage to <span style={{ color: "#1DB3D3" }} >{slippage}%</span></p></div>
+                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} >
+                  <div
+                    className='hug_1'
+                    style={Hugstyles}
+                  >
+                    1%
+                  </div>
+                  <div
+                    className='hug_2'
+                    style={Hugstyles}
+                  >
+                    2%
+                  </div>
+                  <div
+                    className='hug_3'
+                    style={Hugstyles}
+                  >
+                    3%
+                  </div>
+                  <div
+                    className='hug_4'
+                    style={Hugstyles}
+                  >
+                    5%
+                  </div>
+                </div>
+                <input
+                  style={{ width: "268px", padding: "20px 0px 20px 0px" }}
+                  type="range"
+                  id="slippageSlider"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={slippage}
+                  onChange={handleSlippageChange}
+                />
+              </div>
+            ) : (
               <div>
                 {/* I want to swap */}
                 <div style={{ textAlign: "center" }} >
@@ -272,46 +202,6 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <p>Set max slappage to {slippage}%</p>
-                <div style={{ display: "flex" }} >
-                  <div
-                    className='hug_1'
-                    style={Hugstyles}
-                  >
-                    1%
-                  </div>
-                  <div
-                    className='hug_2'
-                    style={Hugstyles}
-                  >
-                    2%
-                  </div>
-                  <div
-                    className='hug_3'
-                    style={Hugstyles}
-                  >
-                    3%
-                  </div>
-                  <div
-                    className='hug_4'
-                    style={Hugstyles}
-                  >
-                    5%
-                  </div>
-                </div>
-                <input
-                  style={{ width: "268px" }}
-                  type="range"
-                  id="slippageSlider"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={slippage}
-                  onChange={handleSlippageChange}
-                />
               </div>
             )
             }
