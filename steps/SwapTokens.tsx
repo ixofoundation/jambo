@@ -13,6 +13,7 @@ import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
+import { ChainContext } from '@contexts/chain';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -24,34 +25,50 @@ type SwapTokensProps = {
   signedIn?: boolean;
 };
 
-const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, header, loading = false, signedIn = true }) => {
+const SwapTokens: FC<SwapTokensProps> = ({
+  onSuccess,
+  onBack,
+  config,
+  data,
+  header,
+  loading = false,
+  signedIn = true,
+}) => {
   const [amount, setAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
-  const { wallet, fetchAssets } = useContext(WalletContext);
-  const navigateToAccount = () => pushNewRoute('/account');
-  const [toggleSliderAction, setToggleSliderAction] = useState(false)
-  const toggleSlider = () => {
-    setToggleSliderAction(!toggleSliderAction);
-  }
+  const [toggleSliderAction, setToggleSliderAction] = useState(false);
   const [slippage, setSlippage] = useState(1);
 
-  const handleSlippageChange = (event: { target: { value: string; }; }) => {
+  const { wallet, fetchAssets } = useContext(WalletContext);
+  const { queryClient } = useContext(ChainContext);
+
+  const navigateToAccount = () => pushNewRoute('/account');
+  const handleSlippageChange = (event: { target: { value: string } }) => {
     const newSlippage = parseInt(event.target.value);
     setSlippage(newSlippage);
   };
+  const toggleSlider = () => {
+    setToggleSliderAction(!toggleSliderAction);
+  };
+  const getTokenOptions = (): CURRENCY_TOKEN[] => {
+    const walletBalancesOptions = wallet.balances?.data ?? [];
+    const walletTokensOptions = wallet.tokenBalances?.data ?? [];
+
+    return [...walletBalancesOptions, ...walletTokensOptions];
+  };
 
   const Hugstyles = {
-    height: "40px",
-    width: "40px",
-    backgroundColor: "#F0F0F0",
-    borderRadius: "20px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    margin: "0px 8px 0px 8px",
-  }
+    height: '40px',
+    width: '40px',
+    backgroundColor: '#F0F0F0',
+    borderRadius: '20px',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: '0px 8px 0px 8px',
+  };
 
   return (
     <>
@@ -67,37 +84,29 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
           <div className='mainInterface'>
             {toggleSliderAction ? (
               <div>
-                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} ><p>Set max slippage to <span style={{ color: "#1DB3D3" }} >{slippage}%</span></p></div>
-                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} >
-                  <div
-                    className='hug_1'
-                    style={Hugstyles}
-                  >
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <p>
+                    Set max slippage to <span style={{ color: '#1DB3D3' }}>{slippage}%</span>
+                  </p>
+                </div>
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <div className='hug_1' style={Hugstyles}>
                     1%
                   </div>
-                  <div
-                    className='hug_2'
-                    style={Hugstyles}
-                  >
+                  <div className='hug_2' style={Hugstyles}>
                     2%
                   </div>
-                  <div
-                    className='hug_3'
-                    style={Hugstyles}
-                  >
+                  <div className='hug_3' style={Hugstyles}>
                     3%
                   </div>
-                  <div
-                    className='hug_4'
-                    style={Hugstyles}
-                  >
+                  <div className='hug_4' style={Hugstyles}>
                     5%
                   </div>
                 </div>
                 <input
-                  style={{ width: "268px", padding: "20px 0px 20px 0px" }}
-                  type="range"
-                  id="slippageSlider"
+                  style={{ width: '268px', padding: '20px 0px 20px 0px' }}
+                  type='range'
+                  id='slippageSlider'
                   min={1}
                   max={5}
                   step={1}
@@ -108,27 +117,27 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
             ) : (
               <div>
                 {/* I want to swap */}
-                <div style={{ textAlign: "center" }} >
+                <div style={{ textAlign: 'center' }}>
                   <p>I want to swap</p>
                   <div
                     className='container'
                     style={{
                       display: 'flex',
-                      justifyContent: "space-between",
-                      alignItems: "center"
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                     }}
                   >
                     <div
                       className='amount'
                       style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "163px",
-                        borderRadius: "23px",
+                        backgroundColor: '#F0F0F0',
+                        margin: '10px',
+                        height: '46px',
+                        width: '163px',
+                        borderRadius: '23px',
                         display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
                       token amount
@@ -136,47 +145,48 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                     <div
                       className='token'
                       style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "140px",
-                        borderRadius: "23px",
+                        backgroundColor: '#F0F0F0',
+                        margin: '10px',
+                        height: '46px',
+                        width: '140px',
+                        borderRadius: '23px',
                         display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
                       <TokenSelector
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
-                        options={wallet.balances?.data ?? []}
+                        options={getTokenOptions()}
+                        tokensIncluded
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* For */}
-                <div style={{ textAlign: "center" }} >
+                <div style={{ textAlign: 'center' }}>
                   <p>for</p>
                   <div
                     className='container'
                     style={{
                       display: 'flex',
-                      justifyContent: "space-between",
-                      alignItems: "center"
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
                     }}
                   >
                     <div
                       className='amount'
                       style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "163px",
-                        borderRadius: "23px",
+                        backgroundColor: '#F0F0F0',
+                        margin: '10px',
+                        height: '46px',
+                        width: '163px',
+                        borderRadius: '23px',
                         display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
                       token amount
@@ -184,38 +194,33 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                     <div
                       className='token'
                       style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "140px",
-                        borderRadius: "23px",
+                        backgroundColor: '#F0F0F0',
+                        margin: '10px',
+                        height: '46px',
+                        width: '140px',
+                        borderRadius: '23px',
                         display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
                     >
                       <TokenSelector
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
-                        options={wallet.balances?.data ?? []}
+                        options={getTokenOptions()}
+                        tokensIncluded
                       />
                     </div>
                   </div>
                 </div>
               </div>
-            )
-            }
+            )}
           </div>
         )}
         <div className={utilsStyles.spacer3} />
       </main>
 
-      <Footer
-        sliderActionButton={toggleSlider}
-        onBackUrl='/'
-        backLabel='Home'
-        onCorrect={null}
-      />
+      <Footer sliderActionButton={toggleSlider} onBackUrl='/' backLabel='Home' onCorrect={null} />
     </>
   );
 };

@@ -16,6 +16,7 @@ import {
   queryDelegationTotalRewards,
   queryDelegatorDelegations,
   queryDelegatorUnbondingDelegations,
+  queryTokenBalances,
   queryValidators,
 } from '@utils/query';
 import { EVENT_LISTENER_TYPE } from '@constants/events';
@@ -58,6 +59,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     queryDelegatorUnbondingDelegations,
     wallet?.user?.address,
   );
+  const [tokenBalances] = useWalletData(queryTokenBalances, wallet?.user?.address);
 
   const updateWallet = (newWallet: WALLET, override: boolean = false) => {
     if (override) setWallet({ ...DEFAULT_WALLET, ...newWallet });
@@ -184,6 +186,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     wallet: {
       ...wallet,
       balances,
+      tokenBalances,
       delegations,
       delegationRewards,
       unbondingDelegations,

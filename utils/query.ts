@@ -2,6 +2,7 @@ import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/code
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
+import { Token, TokenType, tokens } from '@constants/pools';
 import {
   DELEGATION,
   DELEGATION_REWARDS,
@@ -13,10 +14,65 @@ import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
 import { TOKEN_ASSET } from './currency';
+import { strToArray, uint8ArrayToStr } from './encoding';
+import BigNumber from 'bignumber.js';
 
 export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   const client = await createQueryClient(blockchainRpcUrl);
   return client;
+};
+
+export const queryTokenBalances = async (
+  queryClient: QUERY_CLIENT,
+  chain: string,
+  address: string,
+): Promise<CURRENCY_TOKEN[]> => {
+  console.log();
+  try {
+    const balances: CURRENCY_TOKEN[] = [];
+    for (const [denom, token] of tokens) {
+      switch (token.type) {
+        case TokenType.Cw1155: {
+          const ownerTokensQuery = { tokens: { owner: address } };
+          const ownerTokensResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
+            address: token.address,
+            queryData: strToArray(JSON.stringify(ownerTokensQuery)),
+          });
+
+          const ownerBalancesQuery = {
+            batch_balance: {
+              owner: address,
+              token_ids: JSON.parse(uint8ArrayToStr(ownerTokensResponse.data)).tokens,
+            },
+          };
+          const ownerBalancesResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
+            address: token.address,
+            queryData: strToArray(JSON.stringify(ownerBalancesQuery)),
+          });
+          const ownerBalances: BigNumber[] = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
+          const totalBalance = ownerBalances.reduce((prev, current) => BigNumber(prev).plus(BigNumber(current)));
+
+          balances.push({ denom, amount: totalBalance.toString(), ibc: false, chain });
+          break;
+        }
+        case TokenType.Cw20: {
+          const query = { balance: { address } };
+          const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+            address: token.address,
+            queryData: strToArray(JSON.stringify(query)),
+          });
+
+          balances.push({ denom, amount: JSON.parse(uint8ArrayToStr(response.data)).balance, ibc: false, chain });
+          break;
+        }
+      }
+    }
+
+    return balances;
+  } catch (error) {
+    console.error('queryTokenBalances::', error);
+    return [];
+  }
 };
 
 export const queryAllBalances = async (

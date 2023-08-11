@@ -24,6 +24,7 @@
     "undelegate",
     "undelegation",
     "uosmo",
-    "walletconnect"
-  ]
+    "walletconnect",
+    "denoms"
+  ],
 }

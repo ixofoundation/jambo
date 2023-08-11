@@ -15,11 +15,12 @@ import {
 
 type TokenListProps = {
   displayGradient?: boolean;
+  tokensIncluded?: boolean;
   onTokenClick: (denom: string) => void;
   filter?: (asset: TOKEN_BALANCE) => boolean;
 };
 
-const TokenList = ({ displayGradient, filter = () => true, onTokenClick }: TokenListProps) => {
+const TokenList = ({ displayGradient, tokensIncluded, filter = () => true, onTokenClick }: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
 
@@ -28,6 +29,7 @@ const TokenList = ({ displayGradient, filter = () => true, onTokenClick }: Token
       wallet.balances?.data ?? [],
       wallet.delegations?.data ?? [],
       wallet.unbondingDelegations?.data ?? [],
+      tokensIncluded ? wallet.tokenBalances?.data ?? [] : [],
     );
     setTokens(assets);
   }, [wallet.loading]);

@@ -23,6 +23,7 @@ export type WALLET = {
   loading?: boolean;
   user?: USER;
   balances?: WALLET_BALANCES;
+  tokenBalances?: WALLET_TOKEN_BALANCES;
   delegations?: WALLET_DELEGATIONS;
   delegationRewards?: WALLET_DELEGATION_REWARDS;
   unbondingDelegations?: WALLET_UNBONDING;
@@ -31,6 +32,12 @@ export type WALLET = {
 export type WALLET_KEYS = 'balances' | 'delegations' | 'rewards' | 'unbonding';
 
 export type WALLET_ASSETS = WALLET_BALANCES | WALLET_DELEGATIONS | WALLET_DELEGATION_REWARDS | WALLET_UNBONDING;
+
+export type WALLET_TOKEN_BALANCES = {
+  loading?: boolean;
+  error?: string;
+  data?: CURRENCY_TOKEN[];
+};
 
 export type WALLET_BALANCES = {
   loading?: boolean;

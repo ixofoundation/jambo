@@ -22,6 +22,7 @@ export const groupWalletAssets = (
   balances: CURRENCY_TOKEN[],
   delegations: DELEGATION[],
   unbondingDelegations: UNBONDING_DELEGATION[],
+  tokenBalances?: CURRENCY_TOKEN[],
 ): TOKEN_BALANCE[] => {
   const assets = new Map<string, TOKEN_BALANCE>();
   for (const balance of balances) {
@@ -75,6 +76,19 @@ export const groupWalletAssets = (
           },
     );
   }
+
+  if (tokenBalances) {
+    for (const tokenBalance of tokenBalances) {
+      assets.set(tokenBalance.denom, {
+        denom: tokenBalance.denom,
+        available: Number(tokenBalance.amount ?? 0),
+        staked: 0,
+        undelegating: 0,
+        token: tokenBalance,
+      });
+    }
+  }
+
   return Array.from(assets.values());
 };
 
