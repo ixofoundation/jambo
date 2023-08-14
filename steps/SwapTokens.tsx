@@ -132,6 +132,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                       }}
                     >
                       token amount
+                      {/* Use the component import with max to set the amount */}
                     </div>
                     <div
                       className='token'
@@ -151,6 +152,8 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                         onChange={setSelectedOption}
                         options={wallet.balances?.data ?? []}
                       />
+                      {/* The token selector only retrieves the balance */}
+                      {/* Adjust so that it retrieves the list of available tokens for swapping */}
                     </div>
                   </div>
                 </div>
