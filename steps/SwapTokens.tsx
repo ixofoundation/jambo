@@ -1,8 +1,8 @@
-import { FC, useState, useContext } from 'react';
+import { FC, useState, useContext, ChangeEvent } from 'react';
 import cls from 'classnames';
 // import { useRouter } from 'next/router';
 import utilsStyles from '@styles/utils.module.scss';
-import styles1 from '@styles/stepsPages.module.scss';
+import styles from '@styles/stepsPages.module.scss';
 import WalletCard from '@components/CardWallet/CardWallet';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
@@ -15,6 +15,7 @@ import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { tokens } from '@constants/pools';
+import Input, { InputWithMax } from '@components/Input/Input';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -35,10 +36,14 @@ const SwapTokens: FC<SwapTokensProps> = ({
   loading = false,
   signedIn = true,
 }) => {
-  const [amount, setAmount] = useState(
+  const [inputAmount, setInputAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
-  const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
+  const [outputAmount, setOutputAmount] = useState(
+    data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
+  );
+  const [inputToken, setInputToken] = useState<CURRENCY_TOKEN | undefined>();
+  const [outputToken, setOutputToken] = useState<CURRENCY_TOKEN | undefined>();
   const [toggleSliderAction, setToggleSliderAction] = useState(false);
   const [slippage, setSlippage] = useState(1);
 
@@ -59,6 +64,26 @@ const SwapTokens: FC<SwapTokensProps> = ({
 
     return [...walletBalancesOptions.filter((balance) => tokens.has(balance.denom)), ...walletTokensOptions];
   };
+  const handleInputAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setInputAmount(event.target.value);
+  };
+  const handleOutputAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setOutputAmount(event.target.value);
+  };
+  const handleInputTokenChange = (token: CURRENCY_TOKEN) => {
+    if (token == outputToken) {
+      setOutputToken(inputToken);
+    }
+
+    setInputToken(token);
+  };
+  const handleOutputTokenChange = (token: CURRENCY_TOKEN) => {
+    if (token == inputToken) {
+      setInputToken(outputToken);
+    }
+
+    setOutputToken(token);
+  };
 
   const Hugstyles = {
     height: '40px',
@@ -75,7 +100,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
     <>
       <Header />
 
-      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles1.stepContainer)}>
+      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
         {loading ? (
           <Loader />
@@ -131,17 +156,26 @@ const SwapTokens: FC<SwapTokensProps> = ({
                     <div
                       className='amount'
                       style={{
-                        backgroundColor: '#F0F0F0',
                         margin: '10px',
                         height: '46px',
                         width: '163px',
                         borderRadius: '23px',
                         display: 'flex',
+                        flexDirection: 'column',
                         justifyContent: 'center',
                         alignItems: 'center',
                       }}
                     >
-                      token amount
+                      <InputWithMax
+                        maxToken={inputToken}
+                        onMaxClick={(maxAmount) => setInputAmount(maxAmount.toString())}
+                        name='walletAddress'
+                        type='number'
+                        required
+                        value={inputAmount}
+                        className={cls(styles.swapInput, styles.alignRight)}
+                        onChange={handleInputAmountChange}
+                      />
                     </div>
                     <div
                       className='token'
@@ -157,8 +191,8 @@ const SwapTokens: FC<SwapTokensProps> = ({
                       }}
                     >
                       <TokenSelector
-                        value={selectedOption as CURRENCY_TOKEN}
-                        onChange={setSelectedOption}
+                        value={inputToken as CURRENCY_TOKEN}
+                        onChange={handleInputTokenChange}
                         options={getTokenOptions()}
                         displaySwapOptions
                       />
@@ -190,7 +224,14 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         alignItems: 'center',
                       }}
                     >
-                      token amount
+                      <Input
+                        name='walletAddress'
+                        type='number'
+                        required
+                        value={outputAmount}
+                        className={cls(styles.stepInput, styles.alignRight)}
+                        onChange={handleOutputAmountChange}
+                      />
                     </div>
                     <div
                       className='token'
@@ -206,8 +247,8 @@ const SwapTokens: FC<SwapTokensProps> = ({
                       }}
                     >
                       <TokenSelector
-                        value={selectedOption as CURRENCY_TOKEN}
-                        onChange={setSelectedOption}
+                        value={outputToken as CURRENCY_TOKEN}
+                        onChange={handleOutputTokenChange}
                         options={getTokenOptions()}
                         displaySwapOptions
                       />

@@ -27,9 +27,9 @@ export const queryTokenBalances = async (
   chain: string,
   address: string,
 ): Promise<CURRENCY_TOKEN[]> => {
-  console.log();
   try {
     const balances: CURRENCY_TOKEN[] = [];
+    const batches: Map<string, string> = new Map();
     for (const [denom, token] of tokens) {
       switch (token.type) {
         case TokenType.Cw1155: {
@@ -38,11 +38,12 @@ export const queryTokenBalances = async (
             address: token.address!,
             queryData: strToArray(JSON.stringify(ownerTokensQuery)),
           });
+          const ownerTokenIds: string[] = JSON.parse(uint8ArrayToStr(ownerTokensResponse.data)).tokens;
 
           const ownerBalancesQuery = {
             batch_balance: {
               owner: address,
-              token_ids: JSON.parse(uint8ArrayToStr(ownerTokensResponse.data)).tokens,
+              token_ids: ownerTokenIds,
             },
           };
           const ownerBalancesResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
@@ -52,7 +53,11 @@ export const queryTokenBalances = async (
           const ownerBalances: BigNumber[] = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
           const totalBalance = ownerBalances.reduce((prev, current) => BigNumber(prev).plus(BigNumber(current)));
 
-          balances.push({ denom, amount: totalBalance.toString(), ibc: false, chain });
+          for (const [index, tokenId] of ownerTokenIds.entries()) {
+            batches.set(tokenId, ownerBalances[index].toString());
+          }
+
+          balances.push({ denom, amount: totalBalance.toString(), batches, ibc: false, chain });
           break;
         }
         case TokenType.Cw20: {

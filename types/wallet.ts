@@ -10,6 +10,7 @@ export type CURRENCY_TOKEN = {
   token?: TOKEN_ASSET;
   ibc?: boolean;
   chain?: string;
+  batches?: Map<string, string>;
 } & CURRENCY;
 
 export enum WALLET_TYPE {
