@@ -2,7 +2,7 @@ import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/code
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { Token, TokenType, tokens } from '@constants/pools';
+import { TokenType, tokens } from '@constants/pools';
 import {
   DELEGATION,
   DELEGATION_REWARDS,
@@ -35,7 +35,7 @@ export const queryTokenBalances = async (
         case TokenType.Cw1155: {
           const ownerTokensQuery = { tokens: { owner: address } };
           const ownerTokensResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
-            address: token.address,
+            address: token.address!,
             queryData: strToArray(JSON.stringify(ownerTokensQuery)),
           });
 
@@ -46,7 +46,7 @@ export const queryTokenBalances = async (
             },
           };
           const ownerBalancesResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
-            address: token.address,
+            address: token.address!,
             queryData: strToArray(JSON.stringify(ownerBalancesQuery)),
           });
           const ownerBalances: BigNumber[] = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
@@ -58,7 +58,7 @@ export const queryTokenBalances = async (
         case TokenType.Cw20: {
           const query = { balance: { address } };
           const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
-            address: token.address,
+            address: token.address!,
             queryData: strToArray(JSON.stringify(query)),
           });
 

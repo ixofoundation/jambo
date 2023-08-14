@@ -11,20 +11,14 @@ import { initializeOpera, operaBroadCastMessage } from './opera';
 import { getFeeDenom, TOKEN_ASSET } from './currency';
 import { DELEGATION, UNBONDING_DELEGATION } from 'types/validators';
 import { sumArray } from './misc';
+import { tokens } from '@constants/pools';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
   (address?.length && address.length > 19 ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : address) ??
   '';
 
-// TODO: provide denom as 5th param to only group for the denom
-export const groupWalletAssets = (
-  balances: CURRENCY_TOKEN[],
-  delegations: DELEGATION[],
-  unbondingDelegations: UNBONDING_DELEGATION[],
-  tokenBalances?: CURRENCY_TOKEN[],
-): TOKEN_BALANCE[] => {
-  const assets = new Map<string, TOKEN_BALANCE>();
+const setAssetsByBalances = (assets: Map<string, TOKEN_BALANCE>, balances: CURRENCY_TOKEN[]) => {
   for (const balance of balances) {
     assets.set(balance.denom, {
       denom: balance.denom,
@@ -34,6 +28,29 @@ export const groupWalletAssets = (
       token: balance,
     });
   }
+};
+
+export const groupWalletSwapAssets = (balances: CURRENCY_TOKEN[], tokenBalances: CURRENCY_TOKEN[]): TOKEN_BALANCE[] => {
+  const assets = new Map<string, TOKEN_BALANCE>();
+
+  setAssetsByBalances(
+    assets,
+    balances.filter((balance) => tokens.has(balance.denom)),
+  );
+  setAssetsByBalances(assets, tokenBalances);
+
+  return Array.from(assets.values());
+};
+
+// TODO: provide denom as 5th param to only group for the denom
+export const groupWalletAssets = (
+  balances: CURRENCY_TOKEN[],
+  delegations: DELEGATION[],
+  unbondingDelegations: UNBONDING_DELEGATION[],
+): TOKEN_BALANCE[] => {
+  const assets = new Map<string, TOKEN_BALANCE>();
+  setAssetsByBalances(assets, balances);
+
   for (const delegation of delegations) {
     const asset = assets.get(delegation.balance.denom);
     assets.set(
@@ -75,18 +92,6 @@ export const groupWalletAssets = (
             },
           },
     );
-  }
-
-  if (tokenBalances) {
-    for (const tokenBalance of tokenBalances) {
-      assets.set(tokenBalance.denom, {
-        denom: tokenBalance.denom,
-        available: Number(tokenBalance.amount ?? 0),
-        staked: 0,
-        undelegating: 0,
-        token: tokenBalance,
-      });
-    }
   }
 
   return Array.from(assets.values());

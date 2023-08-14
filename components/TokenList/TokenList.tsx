@@ -1,9 +1,10 @@
 import { useContext, useEffect, useState } from 'react';
 
+import { tokens as poolTokens } from '@constants/pools';
 import { WalletContext } from '@contexts/wallet';
 import Loader from '@components/Loader/Loader';
 import TokenCard from '@components/TokenCard/TokenCard';
-import { groupWalletAssets } from '@utils/wallets';
+import { groupWalletAssets, groupWalletSwapAssets } from '@utils/wallets';
 import Card, { CARD_SIZE } from '@components/Card/Card';
 import { TOKEN_BALANCE } from 'types/wallet';
 import {
@@ -25,12 +26,10 @@ const TokenList = ({ displayGradient, tokensIncluded, filter = () => true, onTok
   const { wallet } = useContext(WalletContext);
 
   useEffect(() => {
-    const assets = groupWalletAssets(
-      wallet.balances?.data ?? [],
-      wallet.delegations?.data ?? [],
-      wallet.unbondingDelegations?.data ?? [],
-      tokensIncluded ? wallet.tokenBalances?.data ?? [] : [],
-    );
+    const balances = wallet.balances?.data ?? [];
+    const assets = tokensIncluded
+      ? groupWalletSwapAssets(balances, wallet.tokenBalances?.data ?? [])
+      : groupWalletAssets(balances, wallet.delegations?.data ?? [], wallet.unbondingDelegations?.data ?? []);
     setTokens(assets);
   }, [wallet.loading]);
 

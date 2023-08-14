@@ -14,6 +14,7 @@ import TokenSelector from '@components/TokenSelector/TokenSelector';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
+import { tokens } from '@constants/pools';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -56,7 +57,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
     const walletBalancesOptions = wallet.balances?.data ?? [];
     const walletTokensOptions = wallet.tokenBalances?.data ?? [];
 
-    return [...walletBalancesOptions, ...walletTokensOptions];
+    return [...walletBalancesOptions.filter((balance) => tokens.has(balance.denom)), ...walletTokensOptions];
   };
 
   const Hugstyles = {
