@@ -160,7 +160,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
                         options={getTokenOptions()}
-                        tokensIncluded
+                        displaySwapOptions
                       />
                     </div>
                   </div>
@@ -209,7 +209,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
                         options={getTokenOptions()}
-                        tokensIncluded
+                        displaySwapOptions
                       />
                     </div>
                   </div>

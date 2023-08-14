@@ -16,18 +16,18 @@ import {
 
 type TokenListProps = {
   displayGradient?: boolean;
-  tokensIncluded?: boolean;
+  displaySwapOptions?: boolean;
   onTokenClick: (denom: string) => void;
   filter?: (asset: TOKEN_BALANCE) => boolean;
 };
 
-const TokenList = ({ displayGradient, tokensIncluded, filter = () => true, onTokenClick }: TokenListProps) => {
+const TokenList = ({ displayGradient, displaySwapOptions, filter = () => true, onTokenClick }: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
 
   useEffect(() => {
     const balances = wallet.balances?.data ?? [];
-    const assets = tokensIncluded
+    const assets = displaySwapOptions
       ? groupWalletSwapAssets(balances, wallet.tokenBalances?.data ?? [])
       : groupWalletAssets(balances, wallet.delegations?.data ?? [], wallet.unbondingDelegations?.data ?? []);
     setTokens(assets);

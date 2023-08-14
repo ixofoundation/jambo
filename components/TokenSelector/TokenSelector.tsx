@@ -16,11 +16,11 @@ import { CURRENCY_TOKEN } from 'types/wallet';
 type TokenSelectorProps = {
   value?: CURRENCY_TOKEN;
   options: CURRENCY_TOKEN[];
-  tokensIncluded?: boolean;
+  displaySwapOptions?: boolean;
   onChange: (token: CURRENCY_TOKEN) => void;
 };
 
-const TokenSelector = ({ value, options, tokensIncluded, onChange }: TokenSelectorProps) => {
+const TokenSelector = ({ value, options, displaySwapOptions, onChange }: TokenSelectorProps) => {
   const [search, setSearch] = useState<string>('');
   const [tokenSelectVisible, showTokenSelect, hideTokenSelect] = useModalState(false);
 
@@ -64,9 +64,9 @@ const TokenSelector = ({ value, options, tokensIncluded, onChange }: TokenSelect
           />
           <br />
           <TokenList
-            tokensIncluded={tokensIncluded}
             filter={(asset) => asset.denom.includes(search)}
             onTokenClick={handleTokenSelect}
+            displaySwapOptions={displaySwapOptions}
           />
         </BottomSheet>
       )}
