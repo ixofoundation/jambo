@@ -50,8 +50,8 @@ export const queryTokenBalances = async (
             address: token.address!,
             queryData: strToArray(JSON.stringify(ownerBalancesQuery)),
           });
-          const ownerBalances: BigNumber[] = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
-          const totalBalance = ownerBalances.reduce((prev, current) => BigNumber(prev).plus(BigNumber(current)));
+          const ownerBalances = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
+          const totalBalance = ownerBalances.reduce((prev: string, current: string) => Number(prev) + Number(current));
 
           for (const [index, tokenId] of ownerTokenIds.entries()) {
             batches.set(tokenId, ownerBalances[index].toString());

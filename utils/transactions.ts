@@ -1,7 +1,9 @@
-import { cosmos } from '@ixo/impactxclient-sdk';
+import { cosmos, cosmwasm } from '@ixo/impactxclient-sdk';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
+import { strToArray } from './encoding';
+import { TokenSelect } from '@constants/pools';
 
 export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';
 
@@ -148,5 +150,27 @@ export const generateWithdrawRewardTrx = ({
   value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
     delegatorAddress,
     validatorAddress,
+  }),
+});
+
+export const generateSwapTrx = ({
+  contractAddress,
+  inputTokenSelect,
+}: {
+  contractAddress: string;
+  inputTokenSelect: TokenSelect;
+}): TRX_MSG => ({
+  typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+  value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
+    contract: contractAddress,
+    msg: strToArray(
+      JSON.stringify({
+        swap: {
+          input_token: inputTokenSelect,
+          input_amount: '123',
+          min_output: '123',
+        },
+      }),
+    ),
   }),
 });

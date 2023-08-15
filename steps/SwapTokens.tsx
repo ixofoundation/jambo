@@ -14,8 +14,11 @@ import TokenSelector from '@components/TokenSelector/TokenSelector';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
-import { tokens } from '@constants/pools';
+import { AmountType, pools, TokenAmount, tokens, TokenSelect, TokenType } from '@constants/pools';
 import Input, { InputWithMax } from '@components/Input/Input';
+import { TRX_MSG } from 'types/transactions';
+import { validateAmountAgainstBalance } from '@utils/currency';
+import { generateSwapTrx } from '@utils/transactions';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -83,6 +86,50 @@ const SwapTokens: FC<SwapTokensProps> = ({
     }
 
     setOutputToken(token);
+  };
+  const formIsValid = () => {
+    const inputValid =
+      !!inputToken &&
+      Number.parseFloat(inputAmount) > 0 &&
+      validateAmountAgainstBalance(Number.parseFloat(inputAmount), Number(inputToken.amount), false);
+    const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
+
+    return inputValid && outputValid;
+  };
+
+  const signTX = async (): Promise<void> => {
+    if (!inputToken || !outputToken) return;
+
+    const inputTokenSelect =
+      tokens.get(inputToken.denom)?.type === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
+    const contractAddress =
+      inputTokenSelect === TokenSelect.Token1155
+        ? pools.get({ token1155: inputToken.denom, token2: outputToken?.denom })
+        : pools.get({ token1155: outputToken.denom, token2: inputToken?.denom });
+
+    let totalInputAmountRest = Number(inputAmount);
+    let inputTokenBatches = new Map<string, string>();
+    for (const [tokenId, amount] of inputToken?.batches!) {
+      const tokenAmount = Number(amount);
+
+      if (tokenAmount > totalInputAmountRest) {
+        inputTokenBatches.set(tokenId, totalInputAmountRest.toString());
+        totalInputAmountRest = 0;
+      } else {
+        inputTokenBatches.set(tokenId, amount);
+        totalInputAmountRest -= tokenAmount;
+      }
+
+      if (!totalInputAmountRest) return;
+    }
+
+    console.log(inputTokenBatches);
+
+    const inputTokenAmount: TokenAmount =
+      inputTokenSelect === TokenSelect.Token1155 ? { multiple: new Map<string, string>() } : { single: '123' };
+    const outputTokenAmount: TokenAmount =
+      inputTokenSelect === TokenSelect.Token1155 ? { single: '123' } : { multiple: new Map<string, string>() };
+    const trx = generateSwapTrx({ contractAddress, inputTokenSelect });
   };
 
   const Hugstyles = {
@@ -183,7 +230,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         backgroundColor: '#F0F0F0',
                         margin: '10px',
                         height: '46px',
-                        width: '140px',
+                        width: '170px',
                         borderRadius: '23px',
                         display: 'flex',
                         justifyContent: 'center',
@@ -239,7 +286,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         backgroundColor: '#F0F0F0',
                         margin: '10px',
                         height: '46px',
-                        width: '140px',
+                        width: '170px',
                         borderRadius: '23px',
                         display: 'flex',
                         justifyContent: 'center',
@@ -262,7 +309,12 @@ const SwapTokens: FC<SwapTokensProps> = ({
         <div className={utilsStyles.spacer3} />
       </main>
 
-      <Footer sliderActionButton={toggleSlider} onBackUrl='/' backLabel='Home' onCorrect={null} />
+      <Footer
+        sliderActionButton={toggleSlider}
+        onBackUrl='/'
+        backLabel='Home'
+        onCorrect={formIsValid() ? signTX : null}
+      />
     </>
   );
 };

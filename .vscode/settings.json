@@ -5,6 +5,8 @@
     "bech",
     "codegen",
     "cosmjs",
+    "cosmwasm",
+    "denoms",
     "devnet",
     "impactxclient",
     "jambo",
@@ -24,7 +26,6 @@
     "undelegate",
     "undelegation",
     "uosmo",
-    "walletconnect",
-    "denoms"
+    "walletconnect"
   ],
 }
