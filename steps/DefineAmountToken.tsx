@@ -70,9 +70,9 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
       !isEditing
         ? { ...data, currentIndex: 0, data: [...(data?.data ?? []), newData] }
         : {
-            ...data,
-            data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(data.currentIndex + 1)],
-          },
+          ...data,
+          data: [...data.data.slice(0, data.currentIndex), newData, ...data.data.slice(data.currentIndex + 1)],
+        },
     );
   };
 

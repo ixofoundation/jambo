@@ -11,6 +11,7 @@ import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
 // import useWindowDimensions from '@hooks/windowDimensions';
 import { backRoute, replaceRoute } from '@utils/router';
+import Slider from '@icons/slider.svg';
 
 type FooterProps = {
   onBackUrl?: string;
@@ -22,6 +23,7 @@ type FooterProps = {
   forwardLabel?: string;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
+  sliderActionButton?: (() => void) | null;
 };
 
 /**
@@ -37,6 +39,7 @@ const Footer = ({
   // forwardLabel,
   showAccountButton,
   showActionsButton,
+  sliderActionButton,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const { asPath } = useRouter();
@@ -76,6 +79,15 @@ const Footer = ({
         >
           <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
+        </ButtonRound>
+      )}
+      {sliderActionButton !== undefined && (
+        <ButtonRound
+          color={sliderActionButton ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
+          onClick={sliderActionButton ?? undefined}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          <Slider width='24px' height='24px' />
         </ButtonRound>
       )}
       {onCorrect !== undefined && (

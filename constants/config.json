@@ -125,6 +125,18 @@
       "name": "Claim Rewards",
       "description": "Claim rewards on your delegations.",
       "image": "eKXPPhewkJDLbE1bq1ibod.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ibod5",
+      "steps": [
+        {
+          "id": "swap_tokens",
+          "name": "Swap Tokens"
+        }
+      ],
+      "name": "Swap Tokens",
+      "description": "Swap your tokens on the IXO network.",
+      "image": "eKXPPhewkJDLbE1bq1ibod.png"
     }
   ]
 }

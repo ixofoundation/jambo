@@ -11,6 +11,7 @@ import ReviewAndSign from '@steps/ReviewAndSign';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/ValidatorAddress';
+import SwapTokens from '@steps/SwapTokens'
 import { WalletContext } from '@contexts/wallet';
 import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
@@ -118,9 +119,9 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             excludeValidators={
               step.id === STEPS.get_validator_redelegate
                 ? (
-                    action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
-                      ?.data as StepDataType<STEPS.get_validator_delegate>
-                  )?.validator?.address || []
+                  action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+                    ?.data as StepDataType<STEPS.get_validator_delegate>
+                )?.validator?.address || []
                 : []
             }
           />
@@ -187,6 +188,16 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
+      case STEPS.swap_tokens:
+        return (
+          <SwapTokens
+            onSuccess={handleOnNext<STEPS.swap_tokens>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.swap_tokens>}
+            header={action?.name}
+            // config={step.config as StepConfigType<STEPS.swap_tokens>}
+          />
+        )  
       default:
         return <EmptySteps loading={true} />;
     }
