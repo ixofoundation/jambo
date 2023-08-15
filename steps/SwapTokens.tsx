@@ -1,18 +1,19 @@
 import { FC, useState, useContext } from 'react';
 import cls from 'classnames';
-// import { useRouter } from 'next/router';
 import utilsStyles from '@styles/utils.module.scss';
-import styles1 from '@styles/stepsPages.module.scss';
+import styles from '@styles/stepsPages.module.scss';
 import WalletCard from '@components/CardWallet/CardWallet';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
+import Slider from '@components/Slider/Slider'
 import WalletImg from '@icons/wallet.svg';
 import { pushNewRoute } from '@utils/router';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
 import { CURRENCY_TOKEN } from 'types/wallet';
 import { WalletContext } from '@contexts/wallet';
+import Input, { InputWithMax } from '@components/Input/Input';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -35,29 +36,10 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
   const toggleSlider = () => {
     setToggleSliderAction(!toggleSliderAction);
   }
-  const [slippage, setSlippage] = useState(1);
-
-  const handleSlippageChange = (event: { target: { value: string; }; }) => {
-    const newSlippage = parseInt(event.target.value);
-    setSlippage(newSlippage);
-  };
-
-  const Hugstyles = {
-    height: "40px",
-    width: "40px",
-    backgroundColor: "#F0F0F0",
-    borderRadius: "20px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    margin: "0px 8px 0px 8px",
-  }
-
   return (
     <>
       <Header />
-
-      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles1.stepContainer)}>
+      <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
         {loading ? (
           <Loader />
@@ -67,136 +49,41 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
           <div className='mainInterface'>
             {toggleSliderAction ? (
               <div>
-                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} ><p>Set max slippage to <span style={{ color: "#1DB3D3" }} >{slippage}%</span></p></div>
-                <div style={{ width: "100%", display: "flex", justifyContent: "center" }} >
-                  <div
-                    className='hug_1'
-                    style={Hugstyles}
-                  >
-                    1%
-                  </div>
-                  <div
-                    className='hug_2'
-                    style={Hugstyles}
-                  >
-                    2%
-                  </div>
-                  <div
-                    className='hug_3'
-                    style={Hugstyles}
-                  >
-                    3%
-                  </div>
-                  <div
-                    className='hug_4'
-                    style={Hugstyles}
-                  >
-                    5%
-                  </div>
-                </div>
-                <input
-                  style={{ width: "268px", padding: "20px 0px 20px 0px" }}
-                  type="range"
-                  id="slippageSlider"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={slippage}
-                  onChange={handleSlippageChange}
-                />
+                <Slider />
               </div>
             ) : (
-              <div>
+              <form className={styles.stepsForm} autoComplete='none' >
                 {/* I want to swap */}
-                <div style={{ textAlign: "center" }} >
-                  <p>I want to swap</p>
-                  <div
-                    className='container'
-                    style={{
-                      display: 'flex',
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <div
-                      className='amount'
-                      style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "163px",
-                        borderRadius: "23px",
-                        display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      token amount
-                      {/* Use the component import with max to set the amount */}
+                <div className={utilsStyles.columnAlignCenter} >
+                  <p className={cls(styles.label, styles.titleWithSubtext)}>I want to swap</p>
+                  <div className={utilsStyles.rowAlignCenter}>
+                    <div>
+                      <InputWithMax
+                        className={cls(styles.stepInput)}
+                        onMaxClick={(maxAmount) => setAmount(maxAmount.toString())}
+                        required
+                      />
                     </div>
-                    <div
-                      className='token'
-                      style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "140px",
-                        borderRadius: "23px",
-                        display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
+                    <div className={utilsStyles.paddingToken} >
                       <TokenSelector
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
                         options={wallet.balances?.data ?? []}
                       />
-                      {/* The token selector only retrieves the balance */}
-                      {/* Adjust so that it retrieves the list of available tokens for swapping */}
                     </div>
                   </div>
                 </div>
-
                 {/* For */}
-                <div style={{ textAlign: "center" }} >
-                  <p>for</p>
-                  <div
-                    className='container'
-                    style={{
-                      display: 'flex',
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
-                    <div
-                      className='amount'
-                      style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "163px",
-                        borderRadius: "23px",
-                        display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
-                      token amount
+                <div className={utilsStyles.columnAlignCenter} >
+                  <p className={cls(styles.label, styles.titleWithSubtext)}>for</p>
+                  <div className={utilsStyles.rowAlignCenter} >
+                    <div>
+                      <Input
+                        type='number'
+                        className={cls(styles.stepInput)}
+                      />
                     </div>
-                    <div
-                      className='token'
-                      style={{
-                        backgroundColor: "#F0F0F0",
-                        margin: "10px",
-                        height: "46px",
-                        width: "140px",
-                        borderRadius: "23px",
-                        display: 'flex',
-                        justifyContent: "center",
-                        alignItems: "center",
-                      }}
-                    >
+                    <div className={utilsStyles.paddingTop} >
                       <TokenSelector
                         value={selectedOption as CURRENCY_TOKEN}
                         onChange={setSelectedOption}
@@ -205,7 +92,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
                     </div>
                   </div>
                 </div>
-              </div>
+              </form>
             )
             }
           </div>
@@ -215,7 +102,8 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
 
       <Footer
         sliderActionButton={toggleSlider}
-        onBackUrl='/'
+        onBack={onBack}
+        onBackUrl={onBack ? undefined : ''}
         backLabel='Home'
         onCorrect={null}
       />
@@ -224,3 +112,4 @@ const SwapTokens: FC<SwapTokensProps> = ({ onSuccess, onBack, config, data, head
 };
 
 export default SwapTokens;
+
