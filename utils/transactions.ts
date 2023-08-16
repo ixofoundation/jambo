@@ -3,7 +3,7 @@ import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/c
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { strToArray } from './encoding';
-import { TokenSelect } from '@constants/pools';
+import { TokenAmount, TokenSelect } from '@constants/pools';
 
 export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';
 
@@ -27,6 +27,7 @@ const generateCoins = (denoms: string[], amounts: string[]): Coin[] => {
   for (const [denom, amount] of Object.entries(coinMap)) {
     coins.push(cosmos.base.v1beta1.Coin.fromPartial({ denom, amount: amount.toString() }));
   }
+
   return coins;
 };
 
@@ -155,10 +156,18 @@ export const generateWithdrawRewardTrx = ({
 
 export const generateSwapTrx = ({
   contractAddress,
+  senderAddress,
   inputTokenSelect,
+  inputTokenAmount,
+  outputTokenAmount,
+  funds,
 }: {
   contractAddress: string;
+  senderAddress: string;
   inputTokenSelect: TokenSelect;
+  inputTokenAmount: TokenAmount;
+  outputTokenAmount: TokenAmount;
+  funds: Map<string, string>;
 }): TRX_MSG => ({
   typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
   value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
@@ -167,10 +176,12 @@ export const generateSwapTrx = ({
       JSON.stringify({
         swap: {
           input_token: inputTokenSelect,
-          input_amount: '123',
-          min_output: '123',
+          input_amount: inputTokenAmount,
+          min_output: outputTokenAmount,
         },
       }),
     ),
+    sender: senderAddress,
+    funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
   }),
 });

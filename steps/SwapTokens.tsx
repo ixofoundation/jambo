@@ -6,7 +6,7 @@ import WalletCard from '@components/CardWallet/CardWallet';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
-import Slider from '@components/Slider/Slider'
+import Slider from '@components/Slider/Slider';
 import WalletImg from '@icons/wallet.svg';
 import { pushNewRoute } from '@utils/router';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
@@ -18,7 +18,10 @@ import { AmountType, pools, TokenAmount, tokens, TokenSelect, TokenType } from '
 import Input, { InputWithMax } from '@components/Input/Input';
 import { TRX_MSG } from 'types/transactions';
 import { validateAmountAgainstBalance } from '@utils/currency';
-import { generateSwapTrx } from '@utils/transactions';
+import { defaultTrxFeeOption, generateSwapTrx } from '@utils/transactions';
+import { broadCastMessages } from '@utils/wallets';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { getMicroAmount } from '@utils/encoding';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -49,9 +52,10 @@ const SwapTokens: FC<SwapTokensProps> = ({
   const [outputToken, setOutputToken] = useState<CURRENCY_TOKEN | undefined>();
   const [toggleSliderAction, setToggleSliderAction] = useState(false);
   const [slippage, setSlippage] = useState(1);
+  const [trxLoading, setTrxLoading] = useState(false);
 
   const { wallet, fetchAssets } = useContext(WalletContext);
-  const { queryClient } = useContext(ChainContext);
+  const { queryClient, chainInfo } = useContext(ChainContext);
 
   const navigateToAccount = () => pushNewRoute('/account');
   const handleSlippageChange = (event: { target: { value: string } }) => {
@@ -76,6 +80,8 @@ const SwapTokens: FC<SwapTokensProps> = ({
   const handleInputTokenChange = (token: CURRENCY_TOKEN) => {
     if (token == outputToken) {
       setOutputToken(inputToken);
+      setOutputAmount(inputAmount);
+      setInputAmount(outputAmount);
     }
 
     setInputToken(token);
@@ -83,6 +89,8 @@ const SwapTokens: FC<SwapTokensProps> = ({
   const handleOutputTokenChange = (token: CURRENCY_TOKEN) => {
     if (token == inputToken) {
       setInputToken(outputToken);
+      setInputAmount(outputAmount);
+      setOutputAmount(inputAmount);
     }
 
     setOutputToken(token);
@@ -94,42 +102,72 @@ const SwapTokens: FC<SwapTokensProps> = ({
       validateAmountAgainstBalance(Number.parseFloat(inputAmount), Number(inputToken.amount), false);
     const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
 
-    return inputValid && outputValid;
+    return inputToken !== outputToken && inputValid && outputValid;
   };
 
   const signTX = async (): Promise<void> => {
     if (!inputToken || !outputToken) return;
+    setTrxLoading(true);
 
-    const inputTokenSelect =
-      tokens.get(inputToken.denom)?.type === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
+    const inputTokenType = tokens.get(inputToken.denom)?.type;
+    const inputTokenSelect = inputTokenType === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
     const contractAddress =
       inputTokenSelect === TokenSelect.Token1155
         ? pools.get({ token1155: inputToken.denom, token2: outputToken?.denom })
         : pools.get({ token1155: outputToken.denom, token2: inputToken?.denom });
 
-    let totalInputAmountRest = Number(inputAmount);
-    let inputTokenBatches = new Map<string, string>();
-    for (const [tokenId, amount] of inputToken?.batches!) {
-      const tokenAmount = Number(amount);
+    let inputTokenAmount: TokenAmount;
+    if (inputTokenSelect === TokenSelect.Token1155 && inputToken?.batches) {
+      let totalInputAmountRest = Number(inputAmount);
+      let inputTokenBatches = new Map<string, string>();
+      for (const [tokenId, amount] of inputToken?.batches) {
+        const tokenAmount = Number(amount);
 
-      if (tokenAmount > totalInputAmountRest) {
-        inputTokenBatches.set(tokenId, totalInputAmountRest.toString());
-        totalInputAmountRest = 0;
-      } else {
-        inputTokenBatches.set(tokenId, amount);
-        totalInputAmountRest -= tokenAmount;
+        if (tokenAmount) {
+          if (tokenAmount > totalInputAmountRest) {
+            inputTokenBatches.set(tokenId, totalInputAmountRest.toString());
+            totalInputAmountRest = 0;
+          } else {
+            inputTokenBatches.set(tokenId, amount);
+            totalInputAmountRest -= tokenAmount;
+          }
+        }
+
+        if (!totalInputAmountRest) break;
       }
 
-      if (!totalInputAmountRest) return;
+      inputTokenAmount = { multiple: Object.fromEntries(inputTokenBatches) };
+    } else {
+      inputTokenAmount = { single: getMicroAmount(inputAmount) };
     }
 
-    console.log(inputTokenBatches);
+    const outputAmountNumber = Number.parseFloat(outputAmount);
+    const outPutAmountWithSlippage = outputAmountNumber - outputAmountNumber * (slippage / 100);
+    const outputTokenAmount = { single: getMicroAmount(outPutAmountWithSlippage.toString()) };
 
-    const inputTokenAmount: TokenAmount =
-      inputTokenSelect === TokenSelect.Token1155 ? { multiple: new Map<string, string>() } : { single: '123' };
-    const outputTokenAmount: TokenAmount =
-      inputTokenSelect === TokenSelect.Token1155 ? { single: '123' } : { multiple: new Map<string, string>() };
-    const trx = generateSwapTrx({ contractAddress, inputTokenSelect });
+    const funds = new Map<string, string>();
+    if (inputTokenType === TokenType.Native) {
+      funds.set(inputToken.denom, getMicroAmount(inputAmount));
+    }
+
+    const trx = generateSwapTrx({
+      contractAddress,
+      inputTokenSelect,
+      inputTokenAmount,
+      outputTokenAmount,
+      senderAddress: wallet.user?.address!,
+      funds,
+    });
+    const hash = await broadCastMessages(
+      wallet,
+      [trx],
+      undefined,
+      defaultTrxFeeOption,
+      '',
+      chainInfo as KEPLR_CHAIN_INFO_TYPE,
+    );
+
+    setTrxLoading(false);
   };
 
   return (
@@ -137,7 +175,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
       <Header />
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
-        {loading ? (
+        {loading || trxLoading ? (
           <Loader />
         ) : !signedIn ? (
           <WalletCard name='Connect your Wallet' Img={WalletImg} onClick={navigateToAccount} />
@@ -148,9 +186,9 @@ const SwapTokens: FC<SwapTokensProps> = ({
                 <Slider />
               </div>
             ) : (
-              <form className={styles.stepsForm} autoComplete='none' >
+              <form className={styles.stepsForm} autoComplete='none'>
                 {/* I want to swap */}
-                <div className={utilsStyles.columnAlignCenter} >
+                <div className={utilsStyles.columnAlignCenter}>
                   <p className={cls(styles.label, styles.titleWithSubtext)}>I want to swap</p>
                   <div className={utilsStyles.rowAlignCenter}>
                     <div>
@@ -165,7 +203,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         onChange={handleInputAmountChange}
                       />
                     </div>
-                    <div className={utilsStyles.paddingToken} >
+                    <div className={utilsStyles.paddingToken}>
                       <TokenSelector
                         value={inputToken as CURRENCY_TOKEN}
                         onChange={handleInputTokenChange}
@@ -176,9 +214,9 @@ const SwapTokens: FC<SwapTokensProps> = ({
                   </div>
                 </div>
                 {/* For */}
-                <div className={utilsStyles.columnAlignCenter} >
+                <div className={utilsStyles.columnAlignCenter}>
                   <p className={cls(styles.label, styles.titleWithSubtext)}>for</p>
-                  <div className={utilsStyles.rowAlignCenter} >
+                  <div className={utilsStyles.rowAlignCenter}>
                     <div>
                       <Input
                         name='walletAddress'
@@ -189,7 +227,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         onChange={handleOutputAmountChange}
                       />
                     </div>
-                    <div className={utilsStyles.paddingTop} >
+                    <div className={utilsStyles.paddingTop}>
                       <TokenSelector
                         value={outputToken as CURRENCY_TOKEN}
                         onChange={handleOutputTokenChange}
@@ -200,8 +238,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                   </div>
                 </div>
               </form>
-            )
-            }
+            )}
           </div>
         )}
         <div className={utilsStyles.spacer3} />
@@ -219,4 +256,3 @@ const SwapTokens: FC<SwapTokensProps> = ({
 };
 
 export default SwapTokens;
-
