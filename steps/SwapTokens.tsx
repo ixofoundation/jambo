@@ -1,12 +1,12 @@
 import { FC, useState, useContext, ChangeEvent } from 'react';
 import cls from 'classnames';
-// import { useRouter } from 'next/router';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import WalletCard from '@components/CardWallet/CardWallet';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
+import Slider from '@components/Slider/Slider'
 import WalletImg from '@icons/wallet.svg';
 import { pushNewRoute } from '@utils/router';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
@@ -132,21 +132,9 @@ const SwapTokens: FC<SwapTokensProps> = ({
     const trx = generateSwapTrx({ contractAddress, inputTokenSelect });
   };
 
-  const Hugstyles = {
-    height: '40px',
-    width: '40px',
-    backgroundColor: '#F0F0F0',
-    borderRadius: '20px',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: '0px 8px 0px 8px',
-  };
-
   return (
     <>
       <Header />
-
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
         {loading ? (
@@ -157,62 +145,15 @@ const SwapTokens: FC<SwapTokensProps> = ({
           <div className='mainInterface'>
             {toggleSliderAction ? (
               <div>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                  <p>
-                    Set max slippage to <span style={{ color: '#1DB3D3' }}>{slippage}%</span>
-                  </p>
-                </div>
-                <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                  <div className='hug_1' style={Hugstyles}>
-                    1%
-                  </div>
-                  <div className='hug_2' style={Hugstyles}>
-                    2%
-                  </div>
-                  <div className='hug_3' style={Hugstyles}>
-                    3%
-                  </div>
-                  <div className='hug_4' style={Hugstyles}>
-                    5%
-                  </div>
-                </div>
-                <input
-                  style={{ width: '268px', padding: '20px 0px 20px 0px' }}
-                  type='range'
-                  id='slippageSlider'
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={slippage}
-                  onChange={handleSlippageChange}
-                />
+                <Slider />
               </div>
             ) : (
-              <div>
+              <form className={styles.stepsForm} autoComplete='none' >
                 {/* I want to swap */}
-                <div style={{ textAlign: 'center' }}>
-                  <p>I want to swap</p>
-                  <div
-                    className='container'
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div
-                      className='amount'
-                      style={{
-                        margin: '10px',
-                        height: '46px',
-                        width: '163px',
-                        borderRadius: '23px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
+                <div className={utilsStyles.columnAlignCenter} >
+                  <p className={cls(styles.label, styles.titleWithSubtext)}>I want to swap</p>
+                  <div className={utilsStyles.rowAlignCenter}>
+                    <div>
                       <InputWithMax
                         maxToken={inputToken}
                         onMaxClick={(maxAmount) => setInputAmount(maxAmount.toString())}
@@ -220,23 +161,11 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         type='number'
                         required
                         value={inputAmount}
-                        className={cls(styles.swapInput, styles.alignRight)}
+                        className={cls(styles.stepInput)}
                         onChange={handleInputAmountChange}
                       />
                     </div>
-                    <div
-                      className='token'
-                      style={{
-                        backgroundColor: '#F0F0F0',
-                        margin: '10px',
-                        height: '46px',
-                        width: '170px',
-                        borderRadius: '23px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div className={utilsStyles.paddingToken} >
                       <TokenSelector
                         value={inputToken as CURRENCY_TOKEN}
                         onChange={handleInputTokenChange}
@@ -246,53 +175,21 @@ const SwapTokens: FC<SwapTokensProps> = ({
                     </div>
                   </div>
                 </div>
-
                 {/* For */}
-                <div style={{ textAlign: 'center' }}>
-                  <p>for</p>
-                  <div
-                    className='container'
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div
-                      className='amount'
-                      style={{
-                        backgroundColor: '#F0F0F0',
-                        margin: '10px',
-                        height: '46px',
-                        width: '163px',
-                        borderRadius: '23px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
+                <div className={utilsStyles.columnAlignCenter} >
+                  <p className={cls(styles.label, styles.titleWithSubtext)}>for</p>
+                  <div className={utilsStyles.rowAlignCenter} >
+                    <div>
                       <Input
                         name='walletAddress'
                         type='number'
                         required
                         value={outputAmount}
-                        className={cls(styles.stepInput, styles.alignRight)}
+                        className={cls(styles.stepInput)}
                         onChange={handleOutputAmountChange}
                       />
                     </div>
-                    <div
-                      className='token'
-                      style={{
-                        backgroundColor: '#F0F0F0',
-                        margin: '10px',
-                        height: '46px',
-                        width: '170px',
-                        borderRadius: '23px',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <div className={utilsStyles.paddingTop} >
                       <TokenSelector
                         value={outputToken as CURRENCY_TOKEN}
                         onChange={handleOutputTokenChange}
@@ -302,8 +199,9 @@ const SwapTokens: FC<SwapTokensProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              </form>
+            )
+            }
           </div>
         )}
         <div className={utilsStyles.spacer3} />
@@ -311,7 +209,8 @@ const SwapTokens: FC<SwapTokensProps> = ({
 
       <Footer
         sliderActionButton={toggleSlider}
-        onBackUrl='/'
+        onBack={onBack}
+        onBackUrl={onBack ? undefined : ''}
         backLabel='Home'
         onCorrect={formIsValid() ? signTX : null}
       />
@@ -320,3 +219,4 @@ const SwapTokens: FC<SwapTokensProps> = ({
 };
 
 export default SwapTokens;
+

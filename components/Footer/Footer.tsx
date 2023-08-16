@@ -81,11 +81,11 @@ const Footer = ({
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
         </ButtonRound>
       )}
-      {sliderActionButton && (
+      {sliderActionButton !== undefined && (
         <ButtonRound
+          color={sliderActionButton ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
           onClick={sliderActionButton ?? undefined}
           size={BUTTON_ROUND_SIZE.large}
-          color={asPath === '/' ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
         >
           <Slider width='24px' height='24px' />
         </ButtonRound>
