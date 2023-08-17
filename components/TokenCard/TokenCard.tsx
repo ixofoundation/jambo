@@ -1,12 +1,14 @@
 import { HTMLAttributes } from 'react';
+
 import cls from 'classnames';
 
-import styles from './TokenCard.module.scss';
-import utilsStyles from '@styles/utils.module.scss';
-import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import Card, { CARD_SIZE } from '@components/Card/Card';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
+import utilsStyles from '@styles/utils.module.scss';
 import { formatTokenAmount } from '@utils/currency';
 import { getCSSVariable } from '@utils/styles';
+
+import styles from './TokenCard.module.scss';
 
 // TODO: find dolor values
 
@@ -56,6 +58,7 @@ const TokenCard = ({
   undelegating,
   displayGradient = false,
   onTokenClick = (denom: string) => {},
+  className,
 }: TokenCardProps) => {
   if (!denom) return null;
 
@@ -69,6 +72,7 @@ const TokenCard = ({
         styles.tokenCardWrapper,
         utilsStyles.rowAlignCenter,
         displayGradient && styles.gradientTokenCardWrapper,
+        className,
       )}
     >
       <ImageWithFallback

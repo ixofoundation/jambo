@@ -1,27 +1,40 @@
-import { FC, useState, useContext, ChangeEvent } from 'react';
+import { ChangeEvent, FC, useContext, useState } from 'react';
+
 import cls from 'classnames';
-import utilsStyles from '@styles/utils.module.scss';
-import styles from '@styles/stepsPages.module.scss';
+
+import Anchor from '@components/Anchor/Anchor';
+import { ViewOnExplorerButton } from '@components/Button/Button';
 import WalletCard from '@components/CardWallet/CardWallet';
-import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
+import Header from '@components/Header/Header';
+import IconText from '@components/IconText/IconText';
+import Input, { InputWithMax } from '@components/Input/Input';
 import Loader from '@components/Loader/Loader';
 import Slider from '@components/Slider/Slider';
-import WalletImg from '@icons/wallet.svg';
-import { pushNewRoute } from '@utils/router';
-import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import TokenCard from '@components/TokenCard/TokenCard';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
-import { CURRENCY_TOKEN } from 'types/wallet';
-import { WalletContext } from '@contexts/wallet';
+import { pools, TokenAmount, tokens, TokenSelect, TokenType } from '@constants/pools';
 import { ChainContext } from '@contexts/chain';
-import { AmountType, pools, TokenAmount, tokens, TokenSelect, TokenType } from '@constants/pools';
-import Input, { InputWithMax } from '@components/Input/Input';
-import { TRX_MSG } from 'types/transactions';
-import { validateAmountAgainstBalance } from '@utils/currency';
-import { defaultTrxFeeOption, generateSwapTrx } from '@utils/transactions';
+import { WalletContext } from '@contexts/wallet';
+import Success from '@icons/success.svg';
+import WalletImg from '@icons/wallet.svg';
+import styles from '@styles/stepsPages.module.scss';
+import utilsStyles from '@styles/utils.module.scss';
+import {
+  getCoinImageUrlFromCurrencyToken,
+  getDenomFromCurrencyToken,
+  getDisplayDenomFromCurrencyToken,
+  getTokenTypeFromCurrencyToken,
+  validateAmountAgainstBalance,
+} from '@utils/currency';
+import { getMicroAmount } from '@utils/encoding';
+import { queryTrxResult } from '@utils/query';
+import { pushNewRoute } from '@utils/router';
+import { defaultTrxFeeOption, generateSwapTrx, getValueFromTrxEvents } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { getMicroAmount } from '@utils/encoding';
+import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import { CURRENCY_TOKEN } from 'types/wallet';
 
 type SwapTokensProps = {
   onSuccess: (data: StepDataType<STEPS.swap_tokens>) => void;
@@ -48,20 +61,19 @@ const SwapTokens: FC<SwapTokensProps> = ({
   const [outputAmount, setOutputAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
+  const [updatedInputAmount, setUpdatedInputAmount] = useState<number | undefined>();
+  const [updatedOutputAmount, setUpdatedOutputAmount] = useState<number | undefined>();
   const [inputToken, setInputToken] = useState<CURRENCY_TOKEN | undefined>();
   const [outputToken, setOutputToken] = useState<CURRENCY_TOKEN | undefined>();
   const [toggleSliderAction, setToggleSliderAction] = useState(false);
   const [slippage, setSlippage] = useState(1);
   const [trxLoading, setTrxLoading] = useState(false);
+  const [successHash, setSuccessHash] = useState<string | undefined>();
 
   const { wallet, fetchAssets } = useContext(WalletContext);
   const { queryClient, chainInfo } = useContext(ChainContext);
 
   const navigateToAccount = () => pushNewRoute('/account');
-  const handleSlippageChange = (event: { target: { value: string } }) => {
-    const newSlippage = parseInt(event.target.value);
-    setSlippage(newSlippage);
-  };
   const toggleSlider = () => {
     setToggleSliderAction(!toggleSliderAction);
   };
@@ -71,12 +83,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
 
     return [...walletBalancesOptions.filter((balance) => tokens.has(balance.denom)), ...walletTokensOptions];
   };
-  const handleInputAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setInputAmount(event.target.value);
-  };
-  const handleOutputAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setOutputAmount(event.target.value);
-  };
+
   const handleInputTokenChange = (token: CURRENCY_TOKEN) => {
     if (token == outputToken) {
       setOutputToken(inputToken);
@@ -138,12 +145,12 @@ const SwapTokens: FC<SwapTokensProps> = ({
 
       inputTokenAmount = { multiple: Object.fromEntries(inputTokenBatches) };
     } else {
-      inputTokenAmount = { single: getMicroAmount(inputAmount) };
+      inputTokenAmount = { single: inputAmount };
     }
 
     const outputAmountNumber = Number.parseFloat(outputAmount);
     const outPutAmountWithSlippage = outputAmountNumber - outputAmountNumber * (slippage / 100);
-    const outputTokenAmount = { single: getMicroAmount(outPutAmountWithSlippage.toString()) };
+    const outputTokenAmount = { single: outPutAmountWithSlippage.toFixed() };
 
     const funds = new Map<string, string>();
     if (inputTokenType === TokenType.Native) {
@@ -167,12 +174,64 @@ const SwapTokens: FC<SwapTokensProps> = ({
       chainInfo as KEPLR_CHAIN_INFO_TYPE,
     );
 
+    if (hash && queryClient) {
+      const trxRes = await queryTrxResult(queryClient, hash);
+      const tokenAmountSold = getValueFromTrxEvents(trxRes.txResponse!, 'wasm', 'token_sold');
+      const tokenAmountBought = getValueFromTrxEvents(trxRes.txResponse!, 'wasm', 'token_bought');
+
+      setUpdatedInputAmount(Number(inputToken.amount) - Number(tokenAmountSold));
+      setUpdatedOutputAmount(Number(outputToken.amount) + Number(tokenAmountBought));
+
+      setSuccessHash(hash);
+    }
+
     setTrxLoading(false);
   };
+
+  if (successHash && inputToken && outputToken && updatedInputAmount && updatedOutputAmount)
+    return (
+      <>
+        <Header header={header} />
+
+        <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+          <IconText title='Your swap was successful!' Img={Success} imgSize={50} className={cls(styles.result)}>
+            <div>
+              <p className={cls(styles.title)}>New token balances:</p>
+              <TokenCard
+                denom={getDenomFromCurrencyToken(inputToken)}
+                image={getCoinImageUrlFromCurrencyToken(inputToken)}
+                displayDenom={getDisplayDenomFromCurrencyToken(inputToken)}
+                type={getTokenTypeFromCurrencyToken(inputToken, inputToken.chain)}
+                available={updatedInputAmount}
+                onTokenClick={() => {}}
+                className={cls(styles.card)}
+              ></TokenCard>
+              <TokenCard
+                denom={getDenomFromCurrencyToken(outputToken)}
+                image={getCoinImageUrlFromCurrencyToken(outputToken)}
+                displayDenom={getDisplayDenomFromCurrencyToken(outputToken)}
+                type={getTokenTypeFromCurrencyToken(outputToken, outputToken.chain)}
+                available={updatedOutputAmount}
+                onTokenClick={() => {}}
+                className={cls(styles.card)}
+              ></TokenCard>
+            </div>
+            {chainInfo?.txExplorer && (
+              <Anchor active openInNewTab href={`${chainInfo.txExplorer.txUrl.replace(/\${txHash}/i, successHash)}`}>
+                <ViewOnExplorerButton explorer={chainInfo.txExplorer.name} />
+              </Anchor>
+            )}
+          </IconText>
+        </main>
+
+        <Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
+      </>
+    );
 
   return (
     <>
       <Header />
+
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
         {loading || trxLoading ? (
@@ -183,7 +242,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
           <div className='mainInterface'>
             {toggleSliderAction ? (
               <div>
-                <Slider />
+                <Slider value={slippage} onChange={setSlippage} />
               </div>
             ) : (
               <form className={styles.stepsForm} autoComplete='none'>
@@ -200,12 +259,12 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         required
                         value={inputAmount}
                         className={cls(styles.stepInput)}
-                        onChange={handleInputAmountChange}
+                        onChange={(e) => setInputAmount(e.target.value)}
                       />
                     </div>
                     <div className={utilsStyles.paddingToken}>
                       <TokenSelector
-                        value={inputToken as CURRENCY_TOKEN}
+                        value={inputToken}
                         onChange={handleInputTokenChange}
                         options={getTokenOptions()}
                         displaySwapOptions
@@ -224,12 +283,12 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         required
                         value={outputAmount}
                         className={cls(styles.stepInput)}
-                        onChange={handleOutputAmountChange}
+                        onChange={(e) => setOutputAmount(e.target.value)}
                       />
                     </div>
                     <div className={utilsStyles.paddingTop}>
                       <TokenSelector
-                        value={outputToken as CURRENCY_TOKEN}
+                        value={outputToken}
                         onChange={handleOutputTokenChange}
                         options={getTokenOptions()}
                         displaySwapOptions

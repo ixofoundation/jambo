@@ -1,9 +1,11 @@
 import { cosmos, cosmwasm } from '@ixo/impactxclient-sdk';
+import { TxResponse } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/abci/v1beta1/abci';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 
-import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
-import { strToArray } from './encoding';
 import { TokenAmount, TokenSelect } from '@constants/pools';
+import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
+
+import { strToArray } from './encoding';
 
 export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';
 
@@ -185,3 +187,8 @@ export const generateSwapTrx = ({
     funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
   }),
 });
+
+export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string, messageIndex = 0) =>
+  JSON.parse(trxRes?.rawLog!)
+    [messageIndex]['events'].find((e: any) => e.type === event)
+    ['attributes'].find((e: any) => e.key === attribute)['value'];

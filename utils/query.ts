@@ -1,8 +1,9 @@
-import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
+import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { TokenType, tokens } from '@constants/pools';
+import { tokens, TokenType } from '@constants/pools';
+import { QUERY_CLIENT } from 'types/query';
 import {
   DELEGATION,
   DELEGATION_REWARDS,
@@ -10,17 +11,19 @@ import {
   VALIDATOR,
   VALIDATOR_FILTER_TYPE,
 } from 'types/validators';
-import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
-import { QUERY_CLIENT } from 'types/query';
-import { filterValidators } from './filters';
+import { CURRENCY_TOKEN } from 'types/wallet';
+
 import { TOKEN_ASSET } from './currency';
 import { strToArray, uint8ArrayToStr } from './encoding';
-import BigNumber from 'bignumber.js';
+import { filterValidators } from './filters';
 
 export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   const client = await createQueryClient(blockchainRpcUrl);
   return client;
 };
+
+export const queryTrxResult = async (queryClient: QUERY_CLIENT, trxHash: string) =>
+  queryClient.cosmos.tx.v1beta1.getTx({ hash: trxHash });
 
 export const queryTokenBalances = async (
   queryClient: QUERY_CLIENT,

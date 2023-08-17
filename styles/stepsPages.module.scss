@@ -55,6 +55,25 @@
       margin: 4px 0;
     }
   }
+
+  .result {
+    .card {
+      width: 300px;
+      text-align: left;
+
+      p {
+        margin-top: 0;
+      }
+    }
+
+    .title {
+      margin-bottom: 10px;
+    }
+
+    button {
+      margin-top: 40px;
+    }
+  }
 }
 
 .qrScan {
