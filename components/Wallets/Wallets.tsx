@@ -7,6 +7,7 @@ import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import WalletCard from '@components/CardWallet/CardWallet';
 import WalletImg from '@icons/wallet.svg';
 import { getWalletConnect } from '@utils/walletConnect';
+import { getImpactsX } from '@utils/impactsX';
 import { getOpera } from '@utils/opera';
 import { getKeplr } from '@utils/keplr';
 import { WALLETS } from '@constants/wallet';
@@ -19,6 +20,7 @@ type WalletsProps = {
 const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
   const keplrWallet = getKeplr();
   const operaWallet = getOpera();
+  const impactsXWallet = getImpactsX();
   const walletConnect = getWalletConnect();
 
   return (
@@ -40,6 +42,13 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
               name={WALLETS.opera.name}
               img={WALLETS.opera.img}
               onClick={() => onSelected(WALLET_TYPE.opera)}
+            />
+          )}
+          {!!impactsXWallet && (
+            <WalletCard
+              name={WALLETS.impactsX.name}
+              img={WALLETS.impactsX.img}
+              onClick={() => onSelected(WALLET_TYPE.impactsX)}
             />
           )}
           {!!walletConnect && (
