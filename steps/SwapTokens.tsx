@@ -124,10 +124,10 @@ const SwapTokens: FC<SwapTokensProps> = ({
         : pools.get({ token1155: outputToken.denom, token2: inputToken?.denom });
 
     let inputTokenAmount: TokenAmount;
-    if (inputTokenSelect === TokenSelect.Token1155 && inputToken?.batches) {
+    if (inputTokenSelect === TokenSelect.Token1155 && inputToken.batches) {
       let totalInputAmountRest = Number(inputAmount);
       let inputTokenBatches = new Map<string, string>();
-      for (const [tokenId, amount] of inputToken?.batches) {
+      for (const [tokenId, amount] of inputToken.batches) {
         const tokenAmount = Number(amount);
 
         if (tokenAmount) {
