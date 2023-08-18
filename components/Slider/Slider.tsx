@@ -28,28 +28,28 @@ const Slider = ({ value, onChange }: SliderProps) => {
       </div>
       <div className={styles.container}>
         <ButtonRound
-          color={value === 1 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.grey}
+          color={value === 1 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
           size={BUTTON_ROUND_SIZE.large}
           onClick={() => handleButtonClick(1)}
         >
           1%
         </ButtonRound>
         <ButtonRound
-          color={value === 2 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.grey}
+          color={value === 2 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
           size={BUTTON_ROUND_SIZE.large}
           onClick={() => handleButtonClick(2)}
         >
           2%
         </ButtonRound>
         <ButtonRound
-          color={value === 3 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.grey}
+          color={value === 3 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
           size={BUTTON_ROUND_SIZE.large}
           onClick={() => handleButtonClick(3)}
         >
           3%
         </ButtonRound>
         <ButtonRound
-          color={value === 5 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.grey}
+          color={value === 5 ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
           size={BUTTON_ROUND_SIZE.large}
           onClick={() => handleButtonClick(5)}
         >

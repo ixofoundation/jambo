@@ -41,6 +41,14 @@
   margin: 4px 0;
 }
 
+.exceededMax {
+  outline: solid 1px var(--red-color);
+
+  &:focus {
+    outline: solid 1px var(--red-color);
+  }
+}
+
 .inputWithMax {
   padding: 15px;
 }

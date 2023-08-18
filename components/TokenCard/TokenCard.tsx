@@ -4,6 +4,7 @@ import cls from 'classnames';
 
 import Card, { CARD_SIZE } from '@components/Card/Card';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
+import { tokens, TokenType } from '@constants/pools';
 import utilsStyles from '@styles/utils.module.scss';
 import { formatTokenAmount } from '@utils/currency';
 import { getCSSVariable } from '@utils/styles';
@@ -86,7 +87,7 @@ const TokenCard = ({
         <p className={styles.denom}>{displayDenom}</p>
         <p className={styles.denomType}>{type}</p>
       </div>
-      <p>{formatTokenAmount(Number(available), 6, false)}</p>
+      <p>{formatTokenAmount(Number(available), tokens.get(denom)?.type === TokenType.Cw1155 ? 0 : 6, false)}</p>
       {displayGradient && (
         <div
           className={styles.gradient}

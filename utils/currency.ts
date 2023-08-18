@@ -1,5 +1,5 @@
-import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/currency.types';
 import { customQueries } from '@ixo/impactxclient-sdk';
+import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/currency.types';
 
 import { ArrayElement } from 'types/general';
 import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
@@ -31,9 +31,18 @@ export const formatTokenAmount = (amount: number, microUnits: number = 6, floorA
   return formatterTokenAmount.format(tokenAmount);
 };
 
-export const calculateMaxTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
+export const calculateMaxTokenAmount = (
+  amount: number,
+  microUnits: number = 6,
+  floorAmount: boolean = false,
+  isCoin: boolean = true,
+) => {
   // assist user: subtract 0.3 for gas fees
-  const maxTokenAmount = calculateTokenAmount(amount >= 0.3 ? amount - 0.3 : 0, microUnits, floorAmount);
+  const maxTokenAmount = calculateTokenAmount(
+    isCoin ? (amount >= 0.3 ? amount - 0.3 : 0) : amount,
+    microUnits,
+    floorAmount,
+  );
   return formatterTokenAmount.format(maxTokenAmount);
 };
 

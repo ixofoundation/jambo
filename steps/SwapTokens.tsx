@@ -1,4 +1,4 @@
-import { ChangeEvent, FC, useContext, useState } from 'react';
+import { FC, useContext, useState } from 'react';
 
 import cls from 'classnames';
 
@@ -46,15 +46,7 @@ type SwapTokensProps = {
   signedIn?: boolean;
 };
 
-const SwapTokens: FC<SwapTokensProps> = ({
-  onSuccess,
-  onBack,
-  config,
-  data,
-  header,
-  loading = false,
-  signedIn = true,
-}) => {
+const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false, signedIn = true }) => {
   const [inputAmount, setInputAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
@@ -106,7 +98,11 @@ const SwapTokens: FC<SwapTokensProps> = ({
     const inputValid =
       !!inputToken &&
       Number.parseFloat(inputAmount) > 0 &&
-      validateAmountAgainstBalance(Number.parseFloat(inputAmount), Number(inputToken.amount), false);
+      validateAmountAgainstBalance(
+        Number.parseFloat(inputAmount),
+        Number(inputToken.amount),
+        tokens.get(inputToken.denom)?.type === TokenType.Cw1155 ? false : true,
+      );
     const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
 
     return inputToken !== outputToken && inputValid && outputValid;
@@ -145,10 +141,14 @@ const SwapTokens: FC<SwapTokensProps> = ({
 
       inputTokenAmount = { multiple: Object.fromEntries(inputTokenBatches) };
     } else {
-      inputTokenAmount = { single: inputAmount };
+      inputTokenAmount = { single: getMicroAmount(inputAmount) };
     }
 
-    const outputAmountNumber = Number.parseFloat(outputAmount);
+    const outputTokenType = tokens.get(outputToken.denom)?.type;
+    const outputAmountNumber =
+      outputTokenType === TokenType.Cw1155
+        ? Number.parseFloat(outputAmount)
+        : Number.parseFloat(getMicroAmount(outputAmount));
     const outPutAmountWithSlippage = outputAmountNumber - outputAmountNumber * (slippage / 100);
     const outputTokenAmount = { single: outPutAmountWithSlippage.toFixed() };
 
@@ -260,9 +260,10 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         value={inputAmount}
                         className={cls(styles.stepInput)}
                         onChange={(e) => setInputAmount(e.target.value)}
+                        isCoin={false}
                       />
                     </div>
-                    <div className={utilsStyles.paddingToken}>
+                    <div className={cls(utilsStyles.paddingToken, utilsStyles.widthToken)}>
                       <TokenSelector
                         value={inputToken}
                         onChange={handleInputTokenChange}
@@ -286,7 +287,7 @@ const SwapTokens: FC<SwapTokensProps> = ({
                         onChange={(e) => setOutputAmount(e.target.value)}
                       />
                     </div>
-                    <div className={utilsStyles.paddingTop}>
+                    <div className={cls(utilsStyles.paddingTop, utilsStyles.widthToken)}>
                       <TokenSelector
                         value={outputToken}
                         onChange={handleOutputTokenChange}
