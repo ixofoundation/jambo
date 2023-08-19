@@ -23,7 +23,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
-  select_and_review_proposal = 'select_and_review_proposal',
+  gov_MsgVote = 'gov_MsgVote'
 }
 
 export type STEP = {
@@ -66,7 +66,7 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
-  [STEPS.select_and_review_proposal]: { id: STEPS.select_and_review_proposal, name: 'Select and review proposal' },
+  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Select and vote on proposals' },
 };
 
 export type ReviewStepsTypes =
@@ -76,7 +76,7 @@ export type ReviewStepsTypes =
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
   | STEPS.distribution_MsgWithdrawDelegatorReward
-  | STEPS.select_and_review_proposal;
+  | STEPS.gov_MsgVote;
 
 export type AllStepConfigTypes = never;
 
@@ -112,8 +112,8 @@ interface Send_token_to_receiver {
 interface Review_and_sign {
   done: boolean;
 }
-interface Get_Proposals {
-  data: Get_Proposals[];
+interface Gov_MsgVote {
+  data: Gov_MsgVote[];
   proposal: PROPOSAL_DATA;
 };
 
@@ -127,7 +127,7 @@ export type AllStepDataTypes =
   | Define_amount
   | Send_token_to_receiver
   | Review_and_sign
-  | Get_Proposals;
+  | Gov_MsgVote;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Check_user_balance
@@ -158,7 +158,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.claim
-  ? Get_Proposals
-  : T extends STEPS.select_and_review_proposal
+  ? Gov_MsgVote
+  : T extends STEPS.gov_MsgVote
   ? Review_and_sign
   : never;

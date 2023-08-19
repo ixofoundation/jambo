@@ -39,10 +39,10 @@ import IconText from '@components/IconText/IconText';
 import { ViewOnExplorerButton } from '@components/Button/Button';
 
 type RequestProposalsProps = {
-    onSuccess: (data: StepDataType<STEPS.select_and_review_proposal>) => void;
+    onSuccess: (data: StepDataType<STEPS.gov_MsgVote>) => void;
     onBack?: () => void;
-    data?: StepDataType<STEPS.select_and_review_proposal>;
-    config?: StepConfigType<STEPS.select_and_review_proposal>;
+    data?: StepDataType<STEPS.gov_MsgVote>;
+    config?: StepConfigType<STEPS.gov_MsgVote>;
     header?: string;
 };
 

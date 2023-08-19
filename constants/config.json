@@ -131,7 +131,7 @@
       "id": "Proposals",
       "steps": [
         {
-          "id": "select_and_review_proposal",
+          "id": "gov_MsgVote",
           "name": "Proposals"
         }
       ],

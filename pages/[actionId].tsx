@@ -188,12 +188,12 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
-      case STEPS.select_and_review_proposal:
+      case STEPS.gov_MsgVote:
         return (
           <Proposals
-            onSuccess={handleOnNext<STEPS.select_and_review_proposal>}
+            onSuccess={handleOnNext<STEPS.gov_MsgVote>}
             onBack={handleBack}
-            data={step.data as StepDataType<STEPS.select_and_review_proposal>}
+            data={step.data as StepDataType<STEPS.gov_MsgVote>}
             header={action?.name}
           />
         );
