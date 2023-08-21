@@ -9,6 +9,11 @@ import ArrowLeft from '@icons/arrow_left.svg';
 import Correct from '@icons/correct.svg';
 import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
+import Thumbsup from '@icons/thumbs-up.svg';
+import Thumbsdown from '@icons/thumbs-down.svg';
+import NoWithVeto from '@icons/no-with-veto.svg';
+import Abstain from '@icons/abstain.svg';
+import Dots from '@icons/vertical_dots.svg';
 // import useWindowDimensions from '@hooks/windowDimensions';
 import { backRoute, replaceRoute } from '@utils/router';
 
@@ -22,6 +27,9 @@ type FooterProps = {
   forwardLabel?: string;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
+  selectVoteAction?: (() => void) | null;
+  selectedVoteOption: string;
+  setSelectedVoteOption: (() => void) | null;
 };
 
 /**
@@ -37,6 +45,9 @@ const Footer = ({
   // forwardLabel,
   showAccountButton,
   showActionsButton,
+  selectVoteAction,
+  selectedVoteOption,
+  setSelectedVoteOption,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const { asPath } = useRouter();
@@ -76,6 +87,25 @@ const Footer = ({
         >
           <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
+        </ButtonRound>
+      )}
+      {selectVoteAction !== undefined && (
+        <ButtonRound
+          color={
+            selectedVoteOption === '1' ? BUTTON_ROUND_COLOR.primary :
+              selectedVoteOption === '2' ? BUTTON_ROUND_COLOR.grey :
+                selectedVoteOption === '3' ? BUTTON_ROUND_COLOR.tertiary :
+                  selectedVoteOption === '4' ? BUTTON_ROUND_COLOR.tertiary :
+                    BUTTON_ROUND_COLOR.lightGrey
+          }
+          onClick={selectVoteAction ?? undefined}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          {selectedVoteOption === '1' && <ColoredIcon icon={Thumbsup} size={24} color={ICON_COLOR.white} />}
+          {selectedVoteOption === '2' && <ColoredIcon icon={Abstain} size={24} color={ICON_COLOR.white} />}
+          {selectedVoteOption === '3' && <ColoredIcon icon={Thumbsdown} size={24} color={ICON_COLOR.white} />}
+          {selectedVoteOption === '4' && <ColoredIcon icon={NoWithVeto} size={24} color={ICON_COLOR.white} />}
+          {!selectedVoteOption && <ColoredIcon icon={Dots} size={24} color={ICON_COLOR.primary} />}
         </ButtonRound>
       )}
       {onCorrect !== undefined && (

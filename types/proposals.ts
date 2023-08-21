@@ -1,8 +1,10 @@
-import { Proposal } from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
-import { Deposit } from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
-import { WeightedVoteOption } from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
-import { TallyResult } from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
-import { Vote } from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
+import {
+    Proposal,
+    Deposit,
+    WeightedVoteOption,
+    TallyResult,
+    Vote
+} from "@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov";
 
 export type PROPOSAL = Proposal
 

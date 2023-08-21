@@ -172,6 +172,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
+      case STEPS.gov_MsgVote:
+        return (
+          <Proposals
+            onSuccess={handleOnNext<STEPS.gov_MsgVote>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.gov_MsgVote>}
+            header={action?.name}
+          />
+        );
       case STEPS.bank_MsgSend:
       case STEPS.bank_MsgMultiSend:
       case STEPS.staking_MsgDelegate:
@@ -186,15 +195,6 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             steps={action!.steps}
             header={action?.name}
             message={step.id}
-          />
-        );
-      case STEPS.gov_MsgVote:
-        return (
-          <Proposals
-            onSuccess={handleOnNext<STEPS.gov_MsgVote>}
-            onBack={handleBack}
-            data={step.data as StepDataType<STEPS.gov_MsgVote>}
-            header={action?.name}
           />
         );
       default:
