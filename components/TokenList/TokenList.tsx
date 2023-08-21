@@ -1,18 +1,17 @@
 import { useContext, useEffect, useState } from 'react';
 
-import { tokens as poolTokens } from '@constants/pools';
-import { WalletContext } from '@contexts/wallet';
+import Card, { CARD_SIZE } from '@components/Card/Card';
 import Loader from '@components/Loader/Loader';
 import TokenCard from '@components/TokenCard/TokenCard';
-import { groupWalletAssets, groupWalletSwapAssets } from '@utils/wallets';
-import Card, { CARD_SIZE } from '@components/Card/Card';
-import { TOKEN_BALANCE } from 'types/wallet';
+import { WalletContext } from '@contexts/wallet';
 import {
   getCoinImageUrlFromCurrencyToken,
   getDenomFromCurrencyToken,
   getDisplayDenomFromCurrencyToken,
   getTokenTypeFromCurrencyToken,
 } from '@utils/currency';
+import { groupWalletAssets, groupWalletSwapAssets } from '@utils/wallets';
+import { TOKEN_BALANCE } from 'types/wallet';
 
 type TokenListProps = {
   displayGradient?: boolean;
