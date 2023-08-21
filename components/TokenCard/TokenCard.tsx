@@ -4,10 +4,10 @@ import cls from 'classnames';
 
 import Card, { CARD_SIZE } from '@components/Card/Card';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
-import { tokens, TokenType } from '@constants/pools';
 import utilsStyles from '@styles/utils.module.scss';
-import { formatTokenAmount } from '@utils/currency';
+import { formatTokenAmount, formatTokenAmountByDenom } from '@utils/currency';
 import { getCSSVariable } from '@utils/styles';
+import { isCw1155Token } from '@utils/swap';
 
 import styles from './TokenCard.module.scss';
 
@@ -87,7 +87,7 @@ const TokenCard = ({
         <p className={styles.denom}>{displayDenom}</p>
         <p className={styles.denomType}>{type}</p>
       </div>
-      <p>{formatTokenAmount(Number(available), tokens.get(denom)?.type === TokenType.Cw1155 ? 0 : 6, false)}</p>
+      <p>{formatTokenAmountByDenom(denom, available)}</p>
       {displayGradient && (
         <div
           className={styles.gradient}

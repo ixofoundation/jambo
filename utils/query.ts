@@ -2,8 +2,9 @@ import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
 import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
-import { tokens, TokenType } from '@constants/pools';
+import { tokens } from '@constants/pools';
 import { QUERY_CLIENT } from 'types/query';
+import { TokenAmount, TokenSelect, TokenType } from 'types/swap';
 import {
   DELEGATION,
   DELEGATION_REWARDS,
@@ -22,8 +23,46 @@ export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   return client;
 };
 
-export const queryTrxResult = async (queryClient: QUERY_CLIENT, trxHash: string) =>
-  queryClient.cosmos.tx.v1beta1.getTx({ hash: trxHash });
+export const queryOutputAmountByInputAmount = async (
+  queryClient: QUERY_CLIENT,
+  inputToken: TokenSelect,
+  inputAmount: TokenAmount,
+  address: string,
+): Promise<string> => {
+  try {
+    const queryAmount = async (address: string, query: string) =>
+      queryClient.cosmwasm.wasm.v1.smartContractState({
+        address,
+        queryData: strToArray(query),
+      });
+    switch (inputToken) {
+      case TokenSelect.Token1155: {
+        const query = { token1155_for_token2_price: { token1155_amount: inputAmount } };
+        const response = await queryAmount(address, JSON.stringify(query));
+
+        return JSON.parse(uint8ArrayToStr(response.data)).token2_amount;
+      }
+      case TokenSelect.Token2: {
+        const query = { token2_for_token1155_price: { token2_amount: inputAmount } };
+        const response = await queryAmount(address, JSON.stringify(query));
+
+        return JSON.parse(uint8ArrayToStr(response.data)).token1155_amount;
+      }
+    }
+  } catch (error) {
+    console.error('queryOutputAmountByInputAmount::', error);
+    return '0';
+  }
+};
+
+export const queryTrxResult = async (queryClient: QUERY_CLIENT, trxHash: string) => {
+  try {
+    return queryClient.cosmos.tx.v1beta1.getTx({ hash: trxHash });
+  } catch (error) {
+    console.error('queryTrxResult::', error);
+    return;
+  }
+};
 
 export const queryTokenBalances = async (
   queryClient: QUERY_CLIENT,

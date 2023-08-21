@@ -4,6 +4,8 @@ import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/currency
 import { ArrayElement } from 'types/general';
 import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
 
+import { isCw1155Token } from './swap';
+
 export const formatUSDAmount = (amount: number) => formatterUSD.format(amount);
 
 export const formatterUSD = new Intl.NumberFormat('en-US', {
@@ -25,6 +27,9 @@ export const calculateTokenAmount = (amount: number, microUnits: number = 6, flo
   if (floorAmount && tokenAmount >= 1) tokenAmount = Math.floor(tokenAmount);
   return tokenAmount;
 };
+
+export const formatTokenAmountByDenom = (denom: string, amount: number) =>
+  formatTokenAmount(Number(amount), isCw1155Token(denom) ? 0 : 6, false);
 
 export const formatTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   const tokenAmount = calculateTokenAmount(amount, microUnits, floorAmount);
