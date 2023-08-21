@@ -7,6 +7,7 @@ import VoteButton from '@components/VoteButton/VoteButton';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import Anchor from '@components/Anchor/Anchor';
+import FilterButton from '@components/FilterButton/FilterButton';
 import Thumbsup from '@icons/thumbs-up.svg';
 import Thumbsdown from '@icons/thumbs-down.svg';
 import NoWithVeto from '@icons/no-with-veto.svg';
@@ -35,12 +36,12 @@ type RequestProposalsProps = {
     header?: string;
 };
 
-const tableRowStyle = {
-    width: '100%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-}
+// const tableRowStyle = {
+//     width: '100%',
+//     display: 'flex',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+// }
 
 interface ProposalData {
     proposer: string;
@@ -86,12 +87,12 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
     }, []);
 
 
-    const handleVoteOption = (option: any) => {
-        setSelectedOption(option);
-        setToggleIcon(!toggleIcon);
-        setSelectedVoteOption(option);
-        console.log(`Selected option: ${option}`);
-    };
+    // const handleVoteOption = (option: any) => {
+    //     setSelectedOption(option);
+    //     setToggleIcon(!toggleIcon);
+    //     setSelectedVoteOption(option);
+    //     console.log(`Selected option: ${option}`);
+    // };
 
     const handleSelect = (proposalId: number) => {
         if (!toggleVoteActions) {
@@ -113,9 +114,9 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         }
     }
 
-    const toggelVotes = () => {
-        setToggleVoteActions(!toggleVoteActions)
-    }
+    // const toggelVotes = () => {
+    //     setToggleVoteActions(!toggleVoteActions)
+    // }
     const toggelVotesClose = () => {
         setToggleVoteActions(false)
     }
@@ -158,31 +159,31 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
         fetchProposals()
     }, [])
 
-    const signTX = async (): Promise<void> => {
-        setLoading(true);
-        if (selectedOption && selected) {
-            const trxMsg: TRX_MSG[] = [
-                generateVoteTrx({
-                    proposalId: selected.proposalId,
-                    voterAddress: wallet.user!.address,
-                    option: selectedOption,
-                }),
-            ];
-            const hash = await broadCastMessages(
-                wallet,
-                trxMsg,
-                undefined,
-                defaultTrxFeeOption,
-                '',
-                chainInfo as KEPLR_CHAIN_INFO_TYPE
-            );
-            if (hash) {
-                setSuccessHash(hash);
-                console.log('Transaction hash: ', hash);
-            }
-        }
-        setLoading(false);
-    };
+    // const signTX = async (): Promise<void> => {
+    //     setLoading(true);
+    //     if (selectedOption && selected) {
+    //         const trxMsg: TRX_MSG[] = [
+    //             generateVoteTrx({
+    //                 proposalId: selected.proposalId,
+    //                 voterAddress: wallet.user!.address,
+    //                 option: selectedOption,
+    //             }),
+    //         ];
+    //         const hash = await broadCastMessages(
+    //             wallet,
+    //             trxMsg,
+    //             undefined,
+    //             defaultTrxFeeOption,
+    //             '',
+    //             chainInfo as KEPLR_CHAIN_INFO_TYPE
+    //         );
+    //         if (hash) {
+    //             setSuccessHash(hash);
+    //             console.log('Transaction hash: ', hash);
+    //         }
+    //     }
+    //     setLoading(false);
+    // };
 
     // if (successHash)
     //     return (
@@ -204,33 +205,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
     return (
         <div style={{ position: 'relative', top: '90px' }} >
             <Header header={header} />
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
-                    switch (filterStatus) {
-                        case "all":
-                            setFilterStatus("deposit");
-                            break;
-                        case "deposit":
-                            setFilterStatus("voting");
-                            break;
-                        case "voting":
-                            setFilterStatus("passed");
-                            break;
-                        case "passed":
-                            setFilterStatus("rejected");
-                            break;
-                        case "rejected":
-                            setFilterStatus("failed");
-                            break;
-                        case "failed":
-                            setFilterStatus("unrecognized");
-                            break;
-                        case "unrecognized":
-                            setFilterStatus("all");
-                            break;
-                    }
-                }}>Filter</button>
-            </div>
+            <FilterButton />
             <Swiper
                 // className="proposals-swiper"
                 className={cls(utilsStyles.main)}
@@ -337,7 +312,7 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                     return null;
                 })}
             </Swiper>
-            {
+            {/* {
                 selected ? (
                     <>
                         {
@@ -421,8 +396,16 @@ const Proposals: FC<RequestProposalsProps> = ({ onSuccess, onBack, config, data,
                         selectedVoteOption={''}
                         setSelectedVoteOption={null} />
                 )
-            }
-
+            } */}
+            <Footer
+                onBack={successHash ? null : onBack}
+                onBackUrl={onBack ? undefined : ''}
+                // onCorrect={loading || !!successHash ? null : signTX}
+                correctLabel={loading ? 'Claiming' : !successHash ? 'Claim' : undefined}
+                showAccountButton={!!successHash}
+                showActionsButton={!!successHash}
+                selectedVoteOption={''}
+                setSelectedVoteOption={null} />
         </div >
     )
 }

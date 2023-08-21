@@ -31,6 +31,7 @@ import {
   generateDelegateTrx,
   generateRedelegateTrx,
   generateUndelegateTrx,
+  generateVoteTrx,
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
@@ -183,6 +184,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           }),
         );
         break;
+      case STEPS.gov_MsgVote:
+        trxMsgs.push(
+          generateVoteTrx({
+            proposalId: selected.proposalId,
+            voterAddress: wallet.user!.address,
+            option: selectedOption,
+          }),
+        );
+        break;
       default:
         throw new Error('Unsupported review type');
     }
@@ -313,6 +323,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <ValidatorListItem validator={srcValidator!} onClick={() => () => { }} />
             <p>to</p>
             <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
+          </form>
+        ) : message === STEPS.gov_MsgVote ? (
+          <form className={styles.stepsForm} autoComplete='none' >
+
           </form>
         ) : (
           <p>Unsupported review type</p>
