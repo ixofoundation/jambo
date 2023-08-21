@@ -1,17 +1,18 @@
 // A file to combine all wallet types methods into one callback function
 import { ChainInfo } from '@keplr-wallet/types';
 
-import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { TOKEN_BALANCE, WALLET, WALLET_TYPE, CURRENCY_TOKEN } from 'types/wallet';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
-import { initializeWC, WCBroadCastMessage } from './walletConnect';
-import { initializeKeplr, keplrBroadCastMessage } from './keplr';
-import { initializeOpera, operaBroadCastMessage } from './opera';
-import { getFeeDenom, TOKEN_ASSET } from './currency';
 import { DELEGATION, UNBONDING_DELEGATION } from 'types/validators';
+import { CURRENCY_TOKEN, TOKEN_BALANCE, WALLET, WALLET_TYPE } from 'types/wallet';
+
+import { getFeeDenom, TOKEN_ASSET } from './currency';
+import { initializeKeplr, keplrBroadCastMessage } from './keplr';
 import { sumArray } from './misc';
-import { tokens } from '@constants/pools';
+import { initializeOpera, operaBroadCastMessage } from './opera';
+import { getSwapTokens } from './swap';
+import { initializeWC, WCBroadCastMessage } from './walletConnect';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
@@ -33,10 +34,7 @@ const setAssetsByBalances = (assets: Map<string, TOKEN_BALANCE>, balances: CURRE
 export const groupWalletSwapAssets = (balances: CURRENCY_TOKEN[], tokenBalances: CURRENCY_TOKEN[]): TOKEN_BALANCE[] => {
   const assets = new Map<string, TOKEN_BALANCE>();
 
-  setAssetsByBalances(
-    assets,
-    balances.filter((balance) => tokens.has(balance.denom)),
-  );
+  setAssetsByBalances(assets, getSwapTokens(balances));
   setAssetsByBalances(assets, tokenBalances);
 
   return Array.from(assets.values());
