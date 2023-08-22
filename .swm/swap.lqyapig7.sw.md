@@ -5,7 +5,7 @@ file_version: 1.1.3
 app_version: 1.15.3
 ---
 
-In this document will be discovered utils for swaps.
+In this document will be discovered utils for swap.
 
 <br/>
 

@@ -5,7 +5,145 @@ file_version: 1.1.3
 app_version: 1.15.3
 ---
 
-queries
+In this document will be discovered queries for swap.
+
+<br/>
+
+Returns the possible output token amount based on provided input token amount and type selection.
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/query.ts
+
+<!-- collapsed -->
+
+```typescript
+26     export const queryOutputAmountByInputAmount = async (
+27       queryClient: QUERY_CLIENT,
+28       inputToken: TokenSelect,
+29       inputAmount: TokenAmount,
+30       address: string,
+31     ): Promise<string> => {
+32       try {
+33         const queryAmount = async (address: string, query: string) =>
+34           queryClient.cosmwasm.wasm.v1.smartContractState({
+35             address,
+36             queryData: strToArray(query),
+37           });
+38         switch (inputToken) {
+39           case TokenSelect.Token1155: {
+40             const query = { token1155_for_token2_price: { token1155_amount: inputAmount } };
+41             const response = await queryAmount(address, JSON.stringify(query));
+42
+43             return JSON.parse(uint8ArrayToStr(response.data)).token2_amount;
+44           }
+45           case TokenSelect.Token2: {
+46             const query = { token2_for_token1155_price: { token2_amount: inputAmount } };
+47             const response = await queryAmount(address, JSON.stringify(query));
+48
+49             return JSON.parse(uint8ArrayToStr(response.data)).token1155_amount;
+50           }
+51         }
+52       } catch (error) {
+53         console.error('queryOutputAmountByInputAmount::', error);
+54         return '0';
+55       }
+56     };
+```
+
+<br/>
+
+Returns transaction result based on provided transaction hash.
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/query.ts
+
+<!-- collapsed -->
+
+```typescript
+58     export const queryTrxResult = async (queryClient: QUERY_CLIENT, trxHash: string) => {
+59       try {
+60         return queryClient.cosmos.tx.v1beta1.getTx({ hash: trxHash });
+61       } catch (error) {
+62         console.error('queryTrxResult::', error);
+63         return;
+64       }
+65     };
+```
+
+<br/>
+
+Returns balances of all available for swap tokens. In case of
+
+- `Cw1155`<swm-token data-swm-token=":types/swap.ts:31:1:1:`  Cw1155,`"/> token, fetches batches and balances of them from token contract
+
+- `Cw20`<swm-token data-swm-token=":types/swap.ts:32:1:1:`  Cw20,`"/> token, fetches just balance from token contract
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/query.ts
+
+<!-- collapsed -->
+
+```typescript
+67     export const queryTokenBalances = async (
+68       queryClient: QUERY_CLIENT,
+69       chain: string,
+70       address: string,
+71     ): Promise<CURRENCY_TOKEN[]> => {
+72       try {
+73         const balances: CURRENCY_TOKEN[] = [];
+74         const batches: Map<string, string> = new Map();
+75         for (const [denom, token] of tokens) {
+76           switch (token.type) {
+77             case TokenType.Cw1155: {
+78               const ownerTokensQuery = { tokens: { owner: address } };
+79               const ownerTokensResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
+80                 address: token.address!,
+81                 queryData: strToArray(JSON.stringify(ownerTokensQuery)),
+82               });
+83               const ownerTokenIds: string[] = JSON.parse(uint8ArrayToStr(ownerTokensResponse.data)).tokens;
+84
+85               const ownerBalancesQuery = {
+86                 batch_balance: {
+87                   owner: address,
+88                   token_ids: ownerTokenIds,
+89                 },
+90               };
+91               const ownerBalancesResponse = await queryClient.cosmwasm.wasm.v1.smartContractState({
+92                 address: token.address!,
+93                 queryData: strToArray(JSON.stringify(ownerBalancesQuery)),
+94               });
+95               const ownerBalances = JSON.parse(uint8ArrayToStr(ownerBalancesResponse.data)).balances;
+96               const totalBalance = ownerBalances.reduce((prev: string, current: string) => Number(prev) + Number(current));
+97
+98               for (const [index, tokenId] of ownerTokenIds.entries()) {
+99                 batches.set(tokenId, ownerBalances[index].toString());
+100              }
+101
+102              balances.push({ denom, amount: totalBalance.toString(), batches, ibc: false, chain });
+103              break;
+104            }
+105            case TokenType.Cw20: {
+106              const query = { balance: { address } };
+107              const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+108                address: token.address!,
+109                queryData: strToArray(JSON.stringify(query)),
+110              });
+111
+112              balances.push({ denom, amount: JSON.parse(uint8ArrayToStr(response.data)).balance, ibc: false, chain });
+113              break;
+114            }
+115          }
+116        }
+117
+118        return balances;
+119      } catch (error) {
+120        console.error('queryTokenBalances::', error);
+121        return [];
+122      }
+123    };
+```
 
 <br/>
 

@@ -5,9 +5,8 @@ import cls from 'classnames';
 import Card, { CARD_SIZE } from '@components/Card/Card';
 import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 import utilsStyles from '@styles/utils.module.scss';
-import { formatTokenAmount, formatTokenAmountByDenom } from '@utils/currency';
+import { formatTokenAmountByDenom } from '@utils/currency';
 import { getCSSVariable } from '@utils/styles';
-import { isCw1155Token } from '@utils/swap';
 
 import styles from './TokenCard.module.scss';
 

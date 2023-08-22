@@ -2,9 +2,9 @@ import { cosmos, cosmwasm } from '@ixo/impactxclient-sdk';
 import { TxResponse } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/abci/v1beta1/abci';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 
-import { TokenAmount, TokenSelect } from '@constants/pools';
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
+import { TokenAmount, TokenSelect } from './../types/swap';
 import { strToArray } from './encoding';
 
 export const defaultTrxFeeOption: TRX_FEE_OPTION = 'average';

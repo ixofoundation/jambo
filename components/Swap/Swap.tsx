@@ -11,7 +11,13 @@ import styles from '@styles/stepsPages.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
 import { formatTokenAmountByDenom } from '@utils/currency';
 import { queryOutputAmountByInputAmount } from '@utils/query';
-import { getInputTokenAmount, getSwapContractAddress, getSwapTokens, getTokenSelectByDenom } from '@utils/swap';
+import {
+  getInputTokenAmount,
+  getSwapContractAddress,
+  getSwapTokens,
+  getTokenSelectByDenom,
+  isCw1155Token,
+} from '@utils/swap';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 import swapStyles from './Swap.module.scss';
@@ -108,7 +114,7 @@ export const Swap = (props: SwapProps) => {
               value={inputAmount}
               className={cls(styles.stepInput)}
               onChange={(e) => setInputAmount(e.target.value)}
-              isCoin={false}
+              decimalAmount={inputToken ? isCw1155Token(inputToken?.denom) : true}
             />
           </div>
           <div className={cls(utilsStyles.paddingToken, utilsStyles.widthToken)}>

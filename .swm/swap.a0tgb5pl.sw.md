@@ -5,7 +5,7 @@ file_version: 1.1.3
 app_version: 1.15.3
 ---
 
-In this document will be discovered types for swaps.
+In this document will be discovered types for swap.
 
 # `Pool`<swm-token data-swm-token=":types/swap.ts:1:4:4:`export type Pool = {`"/>
 

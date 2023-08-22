@@ -56,7 +56,7 @@ export default Input;
 type InputWithMaxProps = {
   maxAmount?: number;
   maxToken?: CURRENCY_TOKEN;
-  isCoin?: boolean;
+  decimalAmount?: boolean;
   onMaxClick: (amount: number) => void;
 } & InputProps;
 
@@ -64,7 +64,7 @@ export const InputWithMax = ({
   maxAmount,
   maxToken,
   onMaxClick,
-  isCoin = true,
+  decimalAmount = true,
   className,
   onChange,
   ...other
@@ -74,7 +74,7 @@ export const InputWithMax = ({
     maxAmount ?? getAmountFromCurrencyToken(maxToken),
     getDecimalsFromCurrencyToken(maxToken),
     true,
-    isCoin,
+    decimalAmount,
   );
   const denom = getDisplayDenomFromCurrencyToken(maxToken);
 

@@ -5,7 +5,64 @@ file_version: 1.1.3
 app_version: 1.15.3
 ---
 
-123
+In this document will be discovered utils for transactions.
+
+<br/>
+
+Returnes transcation message for swap execution based on provided input and output tokens.
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/transactions.ts
+
+```typescript
+159    export const generateSwapTrx = ({
+160      contractAddress,
+161      senderAddress,
+162      inputTokenSelect,
+163      inputTokenAmount,
+164      outputTokenAmount,
+165      funds,
+166    }: {
+167      contractAddress: string;
+168      senderAddress: string;
+169      inputTokenSelect: TokenSelect;
+170      inputTokenAmount: TokenAmount;
+171      outputTokenAmount: TokenAmount;
+172      funds: Map<string, string>;
+173    }): TRX_MSG => ({
+174      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+175      value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
+176        contract: contractAddress,
+177        msg: strToArray(
+178          JSON.stringify({
+179            swap: {
+180              input_token: inputTokenSelect,
+181              input_amount: inputTokenAmount,
+182              min_output: outputTokenAmount,
+183            },
+184          }),
+185        ),
+186        sender: senderAddress,
+187        funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
+188      }),
+189    });
+```
+
+<br/>
+
+Returnes needed attribute from event based on successful transaction response.
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/transactions.ts
+
+```typescript
+191    export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string, messageIndex = 0) =>
+192      JSON.parse(trxRes?.rawLog!)
+193        [messageIndex]['events'].find((e: any) => e.type === event)
+194        ['attributes'].find((e: any) => e.key === attribute)['value'];
+```
 
 <br/>
 

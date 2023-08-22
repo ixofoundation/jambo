@@ -40,11 +40,11 @@ export const calculateMaxTokenAmount = (
   amount: number,
   microUnits: number = 6,
   floorAmount: boolean = false,
-  isCoin: boolean = true,
+  decimalAmount: boolean = true,
 ) => {
   // assist user: subtract 0.3 for gas fees
   const maxTokenAmount = calculateTokenAmount(
-    isCoin ? (amount >= 0.3 ? amount - 0.3 : 0) : amount,
+    decimalAmount ? (amount >= 0.3 ? amount - 0.3 : 0) : amount,
     microUnits,
     floorAmount,
   );
