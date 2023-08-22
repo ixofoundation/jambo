@@ -146,9 +146,9 @@ export const Swap = (props: SwapProps) => {
         </div>
       </div>
       {amountLoading ? (
-        <p className={cls(swapStyles.amountLoading)}>
+        <div className={cls(swapStyles.amountLoading)}>
           <Loader size={20} /> Fetching output amount
-        </p>
+        </div>
       ) : null}
     </form>
   );

@@ -33,7 +33,7 @@ export enum TokenType {
   Native,
 }
 export type TokenAmount = {
-  [key in AmountType]?: string | { [key: string]: string };
+  [key in AmountType]?: string | ObjectMap;
 };
 export enum AmountType {
   Single = 'single',
