@@ -33,10 +33,9 @@ export const getInputTokenAmount = (
     return { single: getMicroAmount(tokenAmount) };
   }
 };
-export const getOutputTokenAmount = (token: CURRENCY_TOKEN, tokenAmount: string, slippage: number): TokenAmount => {
-  const outputTokenType = getTokenTypeByDenom(token.denom);
+export const getOutputTokenAmount = (tokenSelect: TokenSelect, tokenAmount: string, slippage: number): TokenAmount => {
   const outputAmountNumber =
-    outputTokenType === TokenType.Cw1155
+    tokenSelect === TokenSelect.Token1155
       ? Number.parseFloat(tokenAmount)
       : Number.parseFloat(getMicroAmount(tokenAmount));
   const outPutAmountWithSlippage = outputAmountNumber - outputAmountNumber * (slippage / 100);
@@ -45,7 +44,7 @@ export const getOutputTokenAmount = (token: CURRENCY_TOKEN, tokenAmount: string,
 };
 
 export const getSwapTokens = (walletTokens: CURRENCY_TOKEN[]): CURRENCY_TOKEN[] =>
-  walletTokens.filter((balance) => tokens.has(balance.denom));
+  walletTokens.filter((token) => tokens.has(token.denom));
 export const getSwapContractAddress = (inputDenom: string, outputDenom: string): string =>
   getTokenSelectByDenom(inputDenom) === TokenSelect.Token1155
     ? pools.get({ token1155: inputDenom, token2: outputDenom })

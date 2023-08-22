@@ -83,7 +83,8 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
     const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
     const inputTokenAmount = getInputTokenAmount(inputToken, inputTokenSelect, inputAmount);
 
-    const outputTokenAmount = getOutputTokenAmount(outputToken, outputAmount, slippage);
+    const outputTokenSelect = getTokenSelectByDenom(outputToken.denom);
+    const outputTokenAmount = getOutputTokenAmount(outputTokenSelect, outputAmount, slippage);
 
     const funds = getSwapFunds(inputToken.denom, inputAmount);
     const contractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
