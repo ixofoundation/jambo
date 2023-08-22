@@ -1,14 +1,20 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 
 import cls from 'classnames';
 
 import Input, { InputWithMax } from '@components/Input/Input';
+import Loader from '@components/Loader/Loader';
 import TokenSelector from '@components/TokenSelector/TokenSelector';
+import { ChainContext } from '@contexts/chain';
 import { WalletContext } from '@contexts/wallet';
 import styles from '@styles/stepsPages.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
-import { getSwapTokens } from '@utils/swap';
+import { formatTokenAmountByDenom } from '@utils/currency';
+import { queryOutputAmountByInputAmount } from '@utils/query';
+import { getInputTokenAmount, getSwapContractAddress, getSwapTokens, getTokenSelectByDenom } from '@utils/swap';
 import { CURRENCY_TOKEN } from 'types/wallet';
+
+import swapStyles from './Swap.module.scss';
 
 type SwapProps = {
   inputToken: CURRENCY_TOKEN | undefined;
@@ -32,7 +38,35 @@ export const Swap = (props: SwapProps) => {
     setInputAmount,
     setOutputAmount,
   } = props;
+
+  const [amountLoading, setAmountLoading] = useState(false);
+
   const { wallet } = useContext(WalletContext);
+  const { queryClient } = useContext(ChainContext);
+
+  useEffect(() => {
+    const getOutputAmount = async () => {
+      if (queryClient && inputToken && outputToken && inputAmount && inputToken !== outputToken) {
+        setAmountLoading(true);
+
+        const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
+        const inputTokenAmount = getInputTokenAmount(inputToken, inputTokenSelect, inputAmount);
+        const contractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
+
+        const outputAmount = await queryOutputAmountByInputAmount(
+          queryClient,
+          inputTokenSelect,
+          inputTokenAmount,
+          contractAddress,
+        );
+
+        setOutputAmount(formatTokenAmountByDenom(outputToken.denom, Number(outputAmount)));
+        setAmountLoading(false);
+      }
+    };
+
+    getOutputAmount();
+  }, [inputAmount]);
 
   const getTokenOptions = (): CURRENCY_TOKEN[] => {
     const walletBalancesOptions = wallet.balances?.data ?? [];
@@ -96,6 +130,7 @@ export const Swap = (props: SwapProps) => {
               type='number'
               required
               value={outputAmount}
+              disabled={amountLoading}
               className={cls(styles.stepInput)}
               onChange={(e) => setOutputAmount(e.target.value)}
             />
@@ -110,6 +145,11 @@ export const Swap = (props: SwapProps) => {
           </div>
         </div>
       </div>
+      {amountLoading ? (
+        <p className={cls(swapStyles.amountLoading)}>
+          <Loader size={20} /> Fetching output amount
+        </p>
+      ) : null}
     </form>
   );
 };

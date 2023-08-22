@@ -11,7 +11,8 @@
     outline: solid 1px var(--primary-color);
   }
 
-  &::placeholder {
+  &::placeholder,
+  &:disabled {
     color: var(--grey-color);
     opacity: 1;
   }

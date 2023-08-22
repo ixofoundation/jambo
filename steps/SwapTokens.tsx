@@ -1,4 +1,4 @@
-import { FC, useContext, useEffect, useState } from 'react';
+import { FC, useContext, useState } from 'react';
 
 import cls from 'classnames';
 
@@ -14,8 +14,7 @@ import { WalletContext } from '@contexts/wallet';
 import WalletImg from '@icons/wallet.svg';
 import styles from '@styles/stepsPages.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
-import { formatTokenAmountByDenom, validateAmountAgainstBalance } from '@utils/currency';
-import { queryOutputAmountByInputAmount, queryTrxResult } from '@utils/query';
+import { validateAmountAgainstBalance } from '@utils/currency';
 import { pushNewRoute } from '@utils/router';
 import {
   getInputTokenAmount,
@@ -56,28 +55,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
   const [successHash, setSuccessHash] = useState<string | undefined>();
 
   const { wallet } = useContext(WalletContext);
-  const { queryClient, chainInfo } = useContext(ChainContext);
-
-  useEffect(() => {
-    const getOutputAmount = async () => {
-      if (queryClient && inputToken && outputToken && inputAmount && inputToken !== outputToken) {
-        const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
-        const inputTokenAmount = getInputTokenAmount(inputToken, inputTokenSelect, inputAmount);
-        const contractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
-
-        const outputAmount = await queryOutputAmountByInputAmount(
-          queryClient,
-          inputTokenSelect,
-          inputTokenAmount,
-          contractAddress,
-        );
-
-        setOutputAmount(formatTokenAmountByDenom(outputToken.denom, Number(outputAmount)));
-      }
-    };
-
-    getOutputAmount();
-  }, [inputAmount]);
+  const { chainInfo } = useContext(ChainContext);
 
   const navigateToAccount = () => pushNewRoute('/account');
   const toggleSlider = () => {
