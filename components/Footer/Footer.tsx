@@ -45,9 +45,9 @@ const Footer = ({
   // forwardLabel,
   showAccountButton,
   showActionsButton,
-  selectVoteAction,
   selectedVoteOption,
   setSelectedVoteOption,
+  selectVoteAction,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const { asPath } = useRouter();

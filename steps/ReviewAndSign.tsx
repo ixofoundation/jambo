@@ -184,15 +184,6 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           }),
         );
         break;
-      case STEPS.gov_MsgVote:
-        trxMsgs.push(
-          generateVoteTrx({
-            proposalId: selected.proposalId,
-            voterAddress: wallet.user!.address,
-            option: selectedOption,
-          }),
-        );
-        break;
       default:
         throw new Error('Unsupported review type');
     }

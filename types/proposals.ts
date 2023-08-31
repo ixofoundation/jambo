@@ -25,4 +25,4 @@ export type PROPOSAL_DATA = {
     weightedVoteOptions: WeightedVoteOption[];
     tallyResult: TallyResult;
     votes: Vote[];
-} & PROPOSAL
+};
