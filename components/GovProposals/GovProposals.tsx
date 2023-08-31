@@ -176,7 +176,33 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
         );
 
     return (
-        <div>
+        <div>            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+            <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
+                switch (filterStatus) {
+                    case "all":
+                        setFilterStatus("deposit");
+                        break;
+                    case "deposit":
+                        setFilterStatus("voting");
+                        break;
+                    case "voting":
+                        setFilterStatus("passed");
+                        break;
+                    case "passed":
+                        setFilterStatus("rejected");
+                        break;
+                    case "rejected":
+                        setFilterStatus("failed");
+                        break;
+                    case "failed":
+                        setFilterStatus("unrecognized");
+                        break;
+                    case "unrecognized":
+                        setFilterStatus("all");
+                        break;
+                }
+            }}>Filter</button>
+        </div>
             <Swiper
                 // className="proposals-swiper"
                 className={cls(utilsStyles.main)}
