@@ -7,6 +7,7 @@
     border-radius: 15px;
     overflow: hidden;
     border-color: lightblue;
+    transition: 0.2s;
 }
 
 .voteBtnContainer {
@@ -39,4 +40,65 @@
     display: flex;
     justify-content: space-evenly;
     text-align: left;
+}
+
+.voteTable {
+    width: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+}
+
+.voteTableBody {
+    width: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+}
+
+.tableData {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.colorIconContainer {
+    margin-left: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: 'center'
+}
+
+.voteSpan {
+    margin-right: 15px;
+}
+
+.filterBtnContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.filterBtn {
+    background-color: #E5E7EB;
+    border-radius: 20px;
+    margin: 1px;
+    border-style: none;
+    height: 2rem;
+    width: 5rem;
+    color: white;
+}
+
+.voteBtnStyles {
+    height: 50px;
+    width: 70%;
+    border-radius: 30px;
+    margin: 5px;
+    border-style: none;
+    color: white;
+    font-size: 15px;
+    text-align: left;
+    display: flex;
+    align-items: center;
 }

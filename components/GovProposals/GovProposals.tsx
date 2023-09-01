@@ -10,7 +10,6 @@ import { WalletContext } from '@contexts/wallet';
 import useQueryClient from '@hooks/useQueryClient';
 import { ChainContext } from '@contexts/chain';
 import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
-import VoteButton from '@components/VoteButton/VoteButton';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import Thumbsup from '@icons/thumbs-up.svg';
 import Thumbsdown from '@icons/thumbs-down.svg';
@@ -40,6 +39,27 @@ interface ProposalData {
     description: string;
 }
 
+interface VoteBtnProps {
+    backgroundColor: string;
+    children: React.ReactNode;
+    onClick: () => void
+}
+
+const VoteButton = ({ backgroundColor, children, onClick }: VoteBtnProps) => {
+    const VoteBtnsStyle = {
+        backgroundColor: backgroundColor,
+    }
+
+    return (
+        <button
+            className={styles.voteBtnStyles}
+            style={VoteBtnsStyle}
+            onClick={onClick} >
+            {children}
+        </button>
+    )
+}
+
 const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, header }) => {
     const [proposals, setProposals] = useState<Proposal[]>([]);
     const [toggleVoteActions, setToggleVoteActions] = useState(false);
@@ -64,8 +84,6 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
 
     const proposalRef = useRef<HTMLDivElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
-    const swiperHeight = selected && selected.proposalId === proposals.proposalId ? '400px' : '300px';
-    const swiperBorder = selected && selected.proposalId === proposals.proposalId ? 'solid' : '';
 
     const handleVoteOption = (option: any) => {
         setSelectedOption(option);
@@ -176,35 +194,35 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
         );
 
     return (
-        <div>            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-            <button style={{ backgroundColor: '#E5E7EB', borderRadius: '20px', margin: '1px', borderStyle: 'none', height: '2rem', width: '5rem', color: 'white' }} onClick={() => {
-                switch (filterStatus) {
-                    case "all":
-                        setFilterStatus("deposit");
-                        break;
-                    case "deposit":
-                        setFilterStatus("voting");
-                        break;
-                    case "voting":
-                        setFilterStatus("passed");
-                        break;
-                    case "passed":
-                        setFilterStatus("rejected");
-                        break;
-                    case "rejected":
-                        setFilterStatus("failed");
-                        break;
-                    case "failed":
-                        setFilterStatus("unrecognized");
-                        break;
-                    case "unrecognized":
-                        setFilterStatus("all");
-                        break;
-                }
-            }}>Filter</button>
-        </div>
+        <div>
+            <div className={styles.filterBtnContainer} >
+                <button className={styles.filterBtn} onClick={() => {
+                    switch (filterStatus) {
+                        case "all":
+                            setFilterStatus("deposit");
+                            break;
+                        case "deposit":
+                            setFilterStatus("voting");
+                            break;
+                        case "voting":
+                            setFilterStatus("passed");
+                            break;
+                        case "passed":
+                            setFilterStatus("rejected");
+                            break;
+                        case "rejected":
+                            setFilterStatus("failed");
+                            break;
+                        case "failed":
+                            setFilterStatus("unrecognized");
+                            break;
+                        case "unrecognized":
+                            setFilterStatus("all");
+                            break;
+                    }
+                }}>Filter</button>
+            </div>
             <Swiper
-                // className="proposals-swiper"
                 className={cls(utilsStyles.main)}
                 spaceBetween={15}
                 centeredSlides
@@ -249,40 +267,43 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
                         const noWithVetoPercentage = (finalTallyVeto / total) * 100;
                         return (
                             <SwiperSlide
-                                key={proposal.proposalId}
+                                key={proposal.proposalId.toString()}
                                 onClick={() => handleSelect(proposal.proposalId)}
                                 ref={proposalRef}
                                 className={styles.swiperSlide}
                                 style={{
                                     height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
                                     borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
-                                }}
-                            >
-                                <div  >
+                                }}>
+                                    
+                                <div>
                                     <p className={styles.proposalId} >{proposalId}</p>
-                                    {/* <p>{proposalStatus}</p> */}
                                     <div className={styles.proposalContent} >
                                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            {/* <AiOutlineUser size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} /> */}
                                             <p style={{
                                                 fontSize: '10px',
                                                 color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
-                                                // color: '#D1D5DB'
                                             }}>{proposerAddress ? proposerAddress : 'Error: proposer not found'}</p>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            {/* <BsHourglass size={'10px'} style={{ color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black' }} /> */}
                                             <p style={{
                                                 fontSize: '10px',
                                                 color: selected && selected.proposalId === proposal.proposalId ? '#D1D5DB' : 'black'
-                                                // color: '#D1D5DB'
                                             }}>
                                                 {submitTime ? new Date(submitTime.seconds.toNumber() * 1000 + submitTime.nanos / 1000000).toLocaleString() : 'Error: submit time not found'}
                                             </p>
                                         </div>
                                     </div>
+
                                     <div style={{ backgroundColor: "#f2f2f2", borderRadius: '50px', height: '10px' }}>
-                                        <div style={{ background: `linear-gradient(90deg, #1DB3D3 ${yesPercentage}%, #F59E0B ${noPercentage}%, #F1C40F ${abstainPercentage}%, #8E44AD ${noWithVetoPercentage}%)`, borderRadius: '50px', height: '10px' }}>
+                                        <div style={{
+                                            background: `linear-gradient(90deg, #1DB3D3 ${yesPercentage}%,
+                                             #F59E0B ${noPercentage}%,
+                                              #F1C40F ${abstainPercentage}%,
+                                               #8E44AD ${noWithVetoPercentage}%)`,
+                                            borderRadius: '50px',
+                                            height: '10px'
+                                        }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <div style={{ minWidth: '20px', width: `${yesPercentage}%`, backgroundColor: '#1DB3D3', borderRadius: '50px 0px 0px 50px', height: '10px', fontSize: '7px' }}>{finalTallyYes || 0}</div>
                                                 <div style={{ minWidth: '20px', width: `${noPercentage}%`, backgroundColor: '#F59E0B', height: '10px', fontSize: '7px' }}>{finalTallyNo || 0}</div>
@@ -291,6 +312,7 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
                                             </div>
                                         </div>
                                     </div>
+
                                     <h3 style={{ fontSize: '14px' }} >{proposalTitle}</h3>
                                     <p style={{
                                         fontSize: '12px',
@@ -311,40 +333,56 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
                                     ref={modalRef}
                                     className={styles.voteBtnContainer}
                                 >
-                                    <table style={{ width: '100%', display: 'block', justifyContent: 'center', alignItems: 'center' }} >
-                                        <tbody style={{ width: '100%', display: 'block', justifyContent: 'center', alignItems: 'center' }}>
+                                    <table className={styles.voteTable} >
+                                        <tbody className={styles.voteTableBody}>
                                             <tr className={styles.tableRow} >
-                                                <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                <td className={styles.tableData} >
                                                     <VoteButton backgroundColor='#1DB3D3' onClick={() => handleVoteOption('1')} >
-                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                            <ColoredIcon icon={Thumbsup} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >Yes</span>
+                                                        <div className={styles.colorIconContainer}>
+                                                            <ColoredIcon
+                                                                icon={Thumbsup}
+                                                                size={17}
+                                                                color={ICON_COLOR.white} />
+                                                            <span className={styles.voteSpan} >Yes</span>
                                                         </div>
                                                     </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr className={styles.tableRow} >
-                                                <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                <td className={styles.tableData} >
                                                     <VoteButton backgroundColor='#F59E0B' onClick={() => handleVoteOption('3')} >
-                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                            <ColoredIcon icon={Thumbsdown} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >No</span>
+                                                        <div className={styles.colorIconContainer} >
+                                                            <ColoredIcon
+                                                                icon={Thumbsdown}
+                                                                size={17}
+                                                                color={ICON_COLOR.white} />
+                                                            <span className={styles.voteSpan} >No</span>
                                                         </div>
                                                     </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr className={styles.tableRow}  >
-                                                <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                <td className={styles.tableData} >
                                                     <VoteButton backgroundColor='#D97706' onClick={() => handleVoteOption('4')} >
-                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
-                                                            <ColoredIcon icon={NoWithVeto} size={17} color={ICON_COLOR.white} /> <span style={{ margin: '15px' }} >No with veto</span>
+                                                        <div className={styles.colorIconContainer} >
+                                                            <ColoredIcon
+                                                                icon={NoWithVeto}
+                                                                size={17}
+                                                                color={ICON_COLOR.white} />
+                                                            <span className={styles.voteSpan} >No with veto</span>
                                                         </div>
                                                     </VoteButton>
                                                 </td>
                                             </tr>
                                             <tr className={styles.tableRow} >
-                                                <td style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }} >
+                                                <td className={styles.tableData} >
                                                     <VoteButton backgroundColor='#9CA3AF' onClick={() => handleVoteOption('2')} >
-                                                        <div style={{ marginLeft: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                                            <ColoredIcon icon={Abstain} size={17} color={ICON_COLOR.white} /><span style={{ margin: '15px' }} >Abstain</span>
+                                                        <div className={styles.colorIconContainer}>
+                                                            <ColoredIcon
+                                                                icon={Abstain}
+                                                                size={17}
+                                                                color={ICON_COLOR.white} />
+                                                            <span className={styles.voteSpan} >Abstain</span>
                                                         </div>
                                                     </VoteButton>
                                                 </td>
@@ -367,7 +405,6 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
                     <Footer
                         onBack={successHash ? null : onBack}
                         onBackUrl={onBack ? undefined : ''}
-                        // onCorrect={loading || !!successHash ? null : signTX}
                         correctLabel={loading ? 'Claiming' : !successHash ? 'Claim' : undefined}
                         showAccountButton={!!successHash}
                         showActionsButton={!!successHash}
