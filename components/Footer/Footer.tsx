@@ -9,17 +9,19 @@ import ArrowLeft from '@icons/arrow_left.svg';
 import Correct from '@icons/correct.svg';
 import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
-// import useWindowDimensions from '@hooks/windowDimensions';
 import { backRoute, replaceRoute } from '@utils/router';
 
 type FooterProps = {
   onBackUrl?: string;
   onBack?: (() => void) | null;
+  backIcon?: React.ElementType;
   backLabel?: string;
   onCorrect?: (() => void) | null;
   correctLabel?: string;
+  correctIcon?: React.ElementType;
   onForward?: (() => void) | null;
   forwardLabel?: string;
+  forwardIcon?: React.ElementType;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
 };
@@ -30,15 +32,17 @@ type FooterProps = {
 const Footer = ({
   onBack,
   // backLabel,
+  backIcon: BackIcon = ArrowLeft,
   onBackUrl,
   onCorrect,
   // correctLabel,
+  correctIcon: CorrectIcon = Correct,
   onForward,
   // forwardLabel,
+  forwardIcon: ForwardIcon = ArrowRight,
   showAccountButton,
   showActionsButton,
 }: FooterProps) => {
-  // const { width } = useWindowDimensions();
   const { asPath } = useRouter();
 
   return (
@@ -74,7 +78,7 @@ const Footer = ({
           color={BUTTON_ROUND_COLOR.lightGrey}
           size={BUTTON_ROUND_SIZE.large}
         >
-          <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
+          <ColoredIcon icon={BackIcon} size={24} color={ICON_COLOR.primary} />
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
         </ButtonRound>
       )}
@@ -84,7 +88,7 @@ const Footer = ({
           onClick={onCorrect ?? undefined}
           size={BUTTON_ROUND_SIZE.large}
         >
-          <Correct width='24px' height='24px' />
+          <ColoredIcon icon={CorrectIcon} size={24} color={ICON_COLOR.white} />
           {/* {!!width && width > 425 && <p className={styles.label}>{correctLabel ?? 'Next'}</p>} */}
         </ButtonRound>
       )}
@@ -94,7 +98,7 @@ const Footer = ({
           onClick={onForward ?? undefined}
           size={BUTTON_ROUND_SIZE.large}
         >
-          <ArrowRight width='24px' height='24px' />
+          <ColoredIcon icon={ForwardIcon} size={24} color={ICON_COLOR.white} />
           {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
         </ButtonRound>
       )}

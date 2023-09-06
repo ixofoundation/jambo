@@ -1,21 +1,24 @@
 import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
-import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
-import EmptySteps from '@steps/EmptySteps';
-import ReceiverAddress from '@steps/ReceiverAddress';
-import DefineAmountToken from '@steps/DefineAmountToken';
-import DefineAmountDelegate from '@steps/DefineAmountDelegate';
-import ReviewAndSign from '@steps/ReviewAndSign';
-import { backRoute, replaceRoute } from '@utils/router';
-import { ACTION } from 'types/actions';
-import ValidatorAddress from '@steps/ValidatorAddress';
-import { WalletContext } from '@contexts/wallet';
 import Head from '@components/Head/Head';
-import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import DefineAmountDelegate from '@steps/DefineAmountDelegate';
+import DefineAmountToken from '@steps/DefineAmountToken';
+import ValidatorAddress from '@steps/ValidatorAddress';
+import ReadInformation from '@steps/ReadInformation';
+import ReceiverAddress from '@steps/ReceiverAddress';
 import ValidatorRewards from '@steps/ClaimRewards';
+import GetCameraImage from '@steps/GetCameraImage';
+import ReviewAndSign from '@steps/ReviewAndSign';
+import EmptySteps from '@steps/EmptySteps';
+import GetQRConsent from '@steps/GetQRConsent';
+import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
+import config from '@constants/config.json';
+import { StepDataType, STEP, STEPS, StepConfigType } from 'types/steps';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
+import { ACTION } from 'types/actions';
+import { backRoute, replaceRoute } from '@utils/router';
+import { WalletContext } from '@contexts/wallet';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -90,6 +93,36 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
 
   const getStepComponent = (step: STEP) => {
     switch (step?.id) {
+      case STEPS.read_information:
+        return (
+          <ReadInformation
+            onSuccess={handleOnNext<STEPS.read_information>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.read_information>}
+            config={step.config as StepConfigType<STEPS.read_information>}
+            header={action?.name}
+          />
+        );
+      case STEPS.get_qr_consent:
+        return (
+          <GetQRConsent
+            onSuccess={handleOnNext<STEPS.get_qr_consent>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.get_qr_consent>}
+            config={step.config as StepConfigType<STEPS.get_qr_consent>}
+            header={action?.name}
+          />
+        );
+      case STEPS.get_camera_image:
+        return (
+          <GetCameraImage
+            onSuccess={handleOnNext<STEPS.get_camera_image>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.get_camera_image>}
+            config={step.config as StepConfigType<STEPS.get_camera_image>}
+            header={action?.name}
+          />
+        );
       case STEPS.get_receiver_address:
         return (
           <ReceiverAddress
@@ -176,6 +209,7 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
       case STEPS.staking_MsgDelegate:
       case STEPS.staking_MsgUndelegate:
       case STEPS.staking_MsgRedelegate:
+      case STEPS.claims_MsgSubmitClaim:
         return (
           <ReviewAndSign
             onSuccess={handleOnNext<STEPS.review_and_sign>}

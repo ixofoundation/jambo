@@ -5,9 +5,15 @@ type ModalState = [boolean, () => void, () => void];
 const useModalState = (defaultState: boolean = false): ModalState => {
   const [modalState, setModalState] = useState<boolean>(!!defaultState);
 
-  const showModal = () => setModalState(true);
+  const showModal = (callback?: Function) => {
+    setModalState(true);
+    if (callback && typeof callback === 'function') callback();
+  };
 
-  const hideModal = () => setModalState(false);
+  const hideModal = (callback?: Function) => {
+    setModalState(false);
+    if (callback && typeof callback === 'function') callback();
+  };
 
   return [modalState, showModal, hideModal];
 };

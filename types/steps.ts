@@ -2,12 +2,15 @@ import { VALIDATOR } from './validators';
 import { CURRENCY_TOKEN } from './wallet';
 
 export enum STEPS {
+  read_information = 'read_information',
   check_user_balance = 'check_user_balance',
   get_receiver_address = 'get_receiver_address',
   get_validator_delegate = 'get_validator_delegate',
   get_validator_redelegate = 'get_validator_redelegate',
   get_delegated_validator_undelegate = 'get_delegated_validator_undelegate',
   get_delegated_validator_redelegate = 'get_delegated_validator_redelegate',
+  get_qr_consent = 'get_qr_consent',
+  get_camera_image = 'get_camera_image',
   select_token_and_amount = 'select_token_and_amount',
   select_amount_delegate = 'select_amount_delegate',
   select_amount_undelegate = 'select_amount_undelegate',
@@ -21,7 +24,7 @@ export enum STEPS {
   staking_MsgUndelegate = 'staking_MsgUndelegate',
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
-  claim = 'claim',
+  claims_MsgSubmitClaim = 'claims_MsgSubmitClaim',
 }
 
 export type STEP = {
@@ -32,6 +35,7 @@ export type STEP = {
 };
 
 export const steps: { [key in STEPS]: STEP } = {
+  [STEPS.read_information]: { id: STEPS.read_information, name: 'Read information' },
   [STEPS.check_user_balance]: { id: STEPS.check_user_balance, name: 'Check user balance' },
   [STEPS.get_receiver_address]: { id: STEPS.get_receiver_address, name: 'Get receiver address' },
   [STEPS.get_validator_delegate]: { id: STEPS.get_validator_delegate, name: 'Get validator address' },
@@ -63,7 +67,9 @@ export const steps: { [key in STEPS]: STEP } = {
     id: STEPS.distribution_MsgWithdrawDelegatorReward,
     name: 'Review and sign',
   },
-  [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
+  [STEPS.claims_MsgSubmitClaim]: { id: STEPS.claims_MsgSubmitClaim, name: 'Submit Claim' },
+  [STEPS.get_qr_consent]: { id: STEPS.get_qr_consent, name: 'Get consent' },
+  [STEPS.get_camera_image]: { id: STEPS.get_camera_image, name: 'Get consent' },
 };
 
 export type ReviewStepsTypes =
@@ -72,12 +78,57 @@ export type ReviewStepsTypes =
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
+  | STEPS.claims_MsgSubmitClaim
   | STEPS.distribution_MsgWithdrawDelegatorReward;
 
-export type AllStepConfigTypes = never;
+interface Read_information_config {
+  image?: string;
+  title?: string;
+  description: string;
+}
+interface Get_qr_consent_config {
+  title: string;
+  description: string;
+}
+interface Get_camera_image_config {
+  width?: number;
+  height?: number;
+}
 
-export type StepConfigType<T> = never;
+interface Claims_MsgSubmitClaim_config {
+  claimId: string;
+  adminAddress: string;
+  collectionId: string;
+  // structure: {
+  //   [stepId: string]: any;
+  // };
+}
 
+export type AllStepConfigTypes =
+  | Read_information_config
+  | Get_qr_consent_config
+  | Get_camera_image_config
+  | Claims_MsgSubmitClaim_config
+  | never;
+
+export type StepConfigType<T> = T extends STEPS.read_information
+  ? Read_information_config
+  : T extends STEPS.get_qr_consent
+  ? Get_qr_consent_config
+  : T extends STEPS.get_camera_image
+  ? Get_camera_image_config
+  : T extends STEPS.claims_MsgSubmitClaim
+  ? Claims_MsgSubmitClaim_config
+  : never;
+
+interface Get_camera_image {
+  image: string;
+  width: number;
+  height: number;
+}
+interface Read_information {
+  read: boolean;
+}
 interface Check_user_balance {
   balance: number;
 }
@@ -110,6 +161,8 @@ interface Review_and_sign {
 }
 
 export type AllStepDataTypes =
+  | Read_information
+  | Get_camera_image
   | Get_receiver_address
   | Get_receiver_addresses
   | Get_validator_address
@@ -120,8 +173,12 @@ export type AllStepDataTypes =
   | Send_token_to_receiver
   | Review_and_sign;
 
-export type StepDataType<T> = T extends STEPS.check_user_balance
+export type StepDataType<T> = T extends STEPS.read_information
+  ? Read_information
+  : T extends STEPS.check_user_balance
   ? Check_user_balance
+  : T extends STEPS.get_qr_consent
+  ? Get_receiver_address
   : T extends STEPS.get_receiver_address
   ? Get_receiver_addresses
   : T extends STEPS.get_validator_delegate
@@ -144,10 +201,12 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Define_amount
   : T extends STEPS.send_token_to_receiver
   ? Send_token_to_receiver
+  : T extends STEPS.get_camera_image
+  ? Get_camera_image
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
-  : T extends STEPS.claim
+  : T extends STEPS.claims_MsgSubmitClaim
   ? Review_and_sign
   : never;

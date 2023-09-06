@@ -1,4 +1,4 @@
-import { cosmos } from '@ixo/impactxclient-sdk';
+import { cosmos, ixo } from '@ixo/impactxclient-sdk';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
@@ -148,5 +148,28 @@ export const generateWithdrawRewardTrx = ({
   value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
     delegatorAddress,
     validatorAddress,
+  }),
+});
+
+export const generateSubmitClaimTrx = ({
+  collectionId,
+  claimId,
+  agentDid,
+  agentAddress,
+  adminAddress,
+}: {
+  collectionId: string;
+  claimId: string;
+  agentDid: string;
+  agentAddress: string;
+  adminAddress: string;
+}): TRX_MSG => ({
+  typeUrl: '/ixo.claims.v1beta1.MsgSubmitClaim',
+  value: ixo.claims.v1beta1.MsgSubmitClaim.fromPartial({
+    collectionId,
+    claimId,
+    agentDid,
+    agentAddress,
+    adminAddress,
   }),
 });

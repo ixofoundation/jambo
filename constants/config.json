@@ -11,120 +11,54 @@
   "termsAndConditions": "https://my.jambo.earth/legal/termsOfUse",
   "actions": [
     {
-      "id": "eKXPPhewkJDLbE1bq1iboz",
+      "id": "eKXPPhewkJDLbE1bq2ibaog",
       "steps": [
         {
-          "id": "select_token_and_amount",
-          "name": "Select token and amount"
+          "id": "read_information",
+          "name": "info",
+          "config": {
+            "image": "/images/customer_outline.png",
+            "title": "At SupaMoto we want to know our customers personally.",
+            "description": "<p>Make your customer look great for their profile pic and receive <span style='color: var(--primary-color)'>50 SUPA</span> reward points.<p/><p>Remember to get the customer's consent before taking their photo.</p>"
+          }
         },
         {
-          "id": "get_receiver_address",
-          "name": "Get receiver address"
+          "id": "get_qr_consent",
+          "name": "Customer Consent",
+          "config": {
+            "title": "Customer Consent",
+            "description": "<p>We would like to take a profile photo of you to display on our website, social media channels, or other promotional materials. This photo will be used to help identify you as a customer, and to personalize your experience with our products or services.</p><p>By allowing one of our agents to scan your wallet’s QR code, you give us permission to take and use your photo for these purposes. You also acknowledge that the photo may be publicly displayed on the web, and that you will not receive any payment or compensation for its use.</p><p>By letting the agent scan your QR code, you confirm that you have read and understood our intentions for using your photo publicly. You also agree to hold us harmless from any liability that may arise from the use of your photo.<br />Thank you for your cooperation.</p><p>Sincerely, SupaMoto</p>"
+          }
         },
         {
-          "id": "bank_MsgSend",
-          "name": "Review and sign"
+          "id": "read_information",
+          "name": "info",
+          "config": {
+            "image": "/images/picture.png",
+            "description": "<p>SMILE :-)<br />Take your best shot to make the customer look happy! Use good natural lighting.</p>"
+          }
+        },
+        {
+          "id": "get_camera_image",
+          "name": "Customer Consent",
+          "config": {
+            "width": 300,
+            "height": 300
+          }
+        },
+        {
+          "id": "claims_MsgSubmitClaim",
+          "name": "Submit Claim",
+          "config": {
+            "claimId": "1",
+            "collectionId": "1",
+            "adminAddress": "ixo1cfh9n2h2wzt0t0hpeyra6xwre865dtppjwuc40"
+          }
         }
       ],
-      "name": "Send",
-      "description": "Crypto Send",
-      "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    },
-    {
-      "id": "eKXPPhewkJDLbE1bq1ib78",
-      "steps": [
-        {
-          "id": "select_token_and_amount",
-          "name": "Select token and amount"
-        },
-        {
-          "id": "get_receiver_address",
-          "name": "Get receiver address"
-        },
-        {
-          "id": "bank_MsgMultiSend",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Multi Send",
-      "description": "Crypto Send",
-      "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    },
-    {
-      "id": "eKXPPhewkJDLbE1bq1iboa",
-      "steps": [
-        {
-          "id": "get_validator_delegate",
-          "name": "Get validator address"
-        },
-        {
-          "id": "select_amount_delegate",
-          "name": "Define amount to delegate"
-        },
-        {
-          "id": "staking_MsgDelegate",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Delegate",
-      "description": "Delegate tokens on the IXO Network",
-      "image": "eKXPPhewkJDLbE1bq1iboa.png"
-    },
-    {
-      "id": "eKXPPhewkJDLbE1bq1ibob",
-      "steps": [
-        {
-          "id": "get_delegated_validator_undelegate",
-          "name": "Get delegation validator address"
-        },
-        {
-          "id": "select_amount_undelegate",
-          "name": "Define amount to undelegate"
-        },
-        {
-          "id": "staking_MsgUndelegate",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Undelegate",
-      "description": "Undelegate tokens on the IXO Network",
-      "image": "eKXPPhewkJDLbE1bq1ibob.png"
-    },
-    {
-      "id": "eKXPPhewkJDLbE1bq1iboc",
-      "steps": [
-        {
-          "id": "get_delegated_validator_redelegate",
-          "name": "Get delegation validator address"
-        },
-        {
-          "id": "select_amount_redelegate",
-          "name": "Define amount to redelegate"
-        },
-        {
-          "id": "get_validator_redelegate",
-          "name": "Get validator address"
-        },
-        {
-          "id": "staking_MsgRedelegate",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Redelegate",
-      "description": "Redelegate tokens on the IXO Network",
-      "image": "eKXPPhewkJDLbE1bq1iboc.png"
-    },
-    {
-      "id": "eKXPPhewkJDLbE1bq1ibod",
-      "steps": [
-        {
-          "id": "distribution_MsgWithdrawDelegatorReward",
-          "name": "Review and sign"
-        }
-      ],
-      "name": "Claim Rewards",
-      "description": "Claim rewards on your delegations.",
-      "image": "eKXPPhewkJDLbE1bq1ibod.png"
+      "name": "Customer Profile Pic",
+      "description": "Take and Submit customer profile pics for SUPA rewards",
+      "image": "eKXPPhewkJDLbE1bq2ibaog.png"
     }
   ]
 }

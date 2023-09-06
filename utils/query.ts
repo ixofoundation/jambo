@@ -37,6 +37,12 @@ export const queryAllBalances = async (
         balances.push({ ...balance, ibc: isIbc, token, chain });
       }
     }
+    const testIbc = 'ibc/9F9B07EF9AD291167CF5700628145DE1DEB777C2CFC7907553B24446515F6D0E';
+    console.log({ testIbc }); //test
+
+    const res = await queryClient.ixo.claims.v1beta1.collectionList({});
+    console.log({ collectionList: res });
+
     return balances.sort((a, b) => (a.ibc ? 1 : -1));
   } catch (error) {
     console.error('queryAllBalances::', error);

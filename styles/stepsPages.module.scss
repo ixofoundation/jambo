@@ -28,8 +28,14 @@
     .alignLeft {
       text-align: left;
     }
+    &.alignLeft {
+      text-align: left;
+    }
 
     .alignRight {
+      text-align: right;
+    }
+    &.alignRight {
       text-align: right;
     }
 
@@ -37,8 +43,28 @@
       margin-bottom: 4px;
     }
 
+    .marginX10 {
+      margin-left: 10px;
+      margin-right: 10px;
+    }
+
+    .marginX20 {
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+
     .label {
       font-size: 1.1rem;
+      font-weight: 400;
+      line-height: 1.5rem;
+    }
+
+    .paragraph {
+      word-wrap: break-word;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      font-weight: 400;
+      line-height: 1.3rem;
     }
 
     .caption {
@@ -68,7 +94,6 @@
 }
 
 .validatorWrapper {
-  // cursor: pointer;
   width: 100%;
   background-color: var(--light-grey-color);
   border: none;
@@ -88,7 +113,6 @@
   .validatorRank {
     font-weight: 500;
     margin-right: 0.7rem;
-    // font-size: 1.2rem;
   }
 
   .validatorAvatar {
@@ -149,4 +173,9 @@
 }
 .plusIcon {
   font-size: 1.5rem;
+}
+
+.image {
+  border: 3px solid var(--primary-color) !important;
+  border-radius: var(--card-border-radius);
 }

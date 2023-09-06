@@ -16,11 +16,7 @@ import Loader from '@components/Loader/Loader';
 import Input from '@components/Input/Input';
 import Anchor from '@components/Anchor/Anchor';
 import Success from '@icons/success.svg';
-import Plus from '@icons/plus.svg';
-import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
-import { broadCastMessages, shortenAddress } from '@utils/wallets';
-import { getMicroAmount } from '@utils/encoding';
-import { ReviewStepsTypes, STEP, StepDataType, STEPS } from 'types/steps';
+import { ReviewStepsTypes, STEP, StepConfigType, StepDataType, STEPS } from 'types/steps';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { VALIDATOR } from 'types/validators';
 import { TRX_MSG } from 'types/transactions';
@@ -30,11 +26,13 @@ import {
   generateBankSendTrx,
   generateDelegateTrx,
   generateRedelegateTrx,
+  generateSubmitClaimTrx,
   generateUndelegateTrx,
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import ImageWithFallback from '@components/ImageFallback/ImageFallback';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -64,6 +62,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
   const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
+  const [image, setImage] = useState<any>();
+  const [claimConfig, setClaimConfig] = useState<any>();
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
 
@@ -109,8 +109,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         setAmount((s.data as StepDataType<STEPS.select_amount_delegate>)?.amount ?? 0);
         setToken((s.data as StepDataType<STEPS.select_amount_delegate>)?.token);
       }
-      if (s.id === STEPS.get_receiver_address) {
-        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.data.map((v) => v.address) ?? []);
+      if (s.id === STEPS.get_receiver_address || s.id === STEPS.get_qr_consent) {
+        setDstAddress((s.data as StepDataType<STEPS.get_receiver_address>)?.address ?? '');
       }
       if (
         s.id === STEPS.get_validator_delegate ||
@@ -123,6 +123,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       if (s.id === STEPS.get_delegated_validator_redelegate) {
         setSrcAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
+      }
+      if (s.id === STEPS.get_camera_image) {
+        setImage(s.data as StepDataType<STEPS.get_camera_image>);
+      }
+      if (s.id === STEPS.claims_MsgSubmitClaim) {
+        setClaimConfig(s.config as StepConfigType<STEPS.claims_MsgSubmitClaim>);
       }
     });
   }, [steps]);
@@ -183,9 +189,19 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           }),
         );
         break;
+      case STEPS.claims_MsgSubmitClaim:
+        trx = generateSubmitClaimTrx({
+          claimId: claimConfig.claimId!,
+          collectionId: claimConfig.collectionId!,
+          adminAddress: claimConfig.adminAddress!,
+          agentDid: wallet.user?.did!,
+          agentAddress: wallet.user?.address!,
+        });
+        break;
       default:
         throw new Error('Unsupported review type');
     }
+    console.log('trx', trx);
     const hash = await broadCastMessages(
       wallet,
       trxMsgs,
@@ -244,35 +260,30 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <p className={utilsStyles.label}>to the address:</p>
             <Input name='address' required value={dstAddress} className={styles.stepInput} align='center' disabled />
           </form>
-        ) : message === STEPS.bank_MsgMultiSend ? (
+        ) : message === STEPS.claims_MsgSubmitClaim ? (
           <form className={styles.stepsForm} autoComplete='none'>
-            <p className={utilsStyles.label}>Confirm to Send</p>
-            <div>
-              {Array.isArray(dstAddress) &&
-                dstAddress.map((address, index) => {
-                  const addressAmount = amount![index];
-                  const addressToken = token![index];
-                  return (
-                    <MultiSendCard
-                      address={shortenAddress(address)}
-                      token={addressToken}
-                      amount={addressAmount}
-                      onDeleteClick={showCancelTransactionModal(index)}
-                      onEditClick={handleEditMultiSend(index)}
-                      key={`${address}_${index}`}
-                    />
-                  );
-                })}
-            </div>
-            <ButtonRound size={BUTTON_ROUND_SIZE.mediumLarge} onClick={addingNewTransaction}>
-              <Plus className={styles.plusIcon} />
-            </ButtonRound>
-            {typeof trxCancelId === 'number' && (
-              <MultiSendBottomSheet
-                onDeleteMsgClicked={handleDeleteMultiSend}
-                onCloseBottomSheet={hideCancelTransactionModal}
-              />
+            {!!image && (
+              <>
+                <ImageWithFallback
+                  fallbackSrc='/images/picture.png'
+                  src={image.image}
+                  width={image.width * 0.75}
+                  height={image.height * 0.75}
+                  alt='image'
+                  className={styles.image}
+                />
+                <br />
+              </>
             )}
+            <br />
+            <p className={utilsStyles.paragraph}>Does the customer like their new pic?</p>
+            <p className={utilsStyles.paragraph}>
+              <em>
+                Approve to submit or
+                <br />
+                Cancel to take a new photo
+              </em>
+            </p>
           </form>
         ) : message === STEPS.staking_MsgDelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
