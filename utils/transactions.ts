@@ -156,16 +156,39 @@ export const generateWithdrawRewardTrx = ({
   }),
 });
 
+export const generateApproveTrx = ({
+  contract,
+  sender,
+  operator,
+}: {
+  contract: string;
+  sender: string;
+  operator: string;
+}): TRX_MSG => ({
+  typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+  value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
+    contract,
+    msg: strToArray(
+      JSON.stringify({
+        approve_all: {
+          operator,
+        },
+      }),
+    ),
+    sender,
+  }),
+});
+
 export const generateSwapTrx = ({
-  contractAddress,
-  senderAddress,
+  contract,
+  sender,
   inputTokenSelect,
   inputTokenAmount,
   outputTokenAmount,
   funds,
 }: {
-  contractAddress: string;
-  senderAddress: string;
+  contract: string;
+  sender: string;
   inputTokenSelect: TokenSelect;
   inputTokenAmount: TokenAmount;
   outputTokenAmount: TokenAmount;
@@ -173,7 +196,7 @@ export const generateSwapTrx = ({
 }): TRX_MSG => ({
   typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
   value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
-    contract: contractAddress,
+    contract,
     msg: strToArray(
       JSON.stringify({
         swap: {
@@ -183,12 +206,21 @@ export const generateSwapTrx = ({
         },
       }),
     ),
-    sender: senderAddress,
+    sender,
     funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
   }),
 });
 
-export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string, messageIndex = 0) =>
-  JSON.parse(trxRes?.rawLog!)
-    [messageIndex]['events'].find((e: any) => e.type === event)
-    ['attributes'].find((e: any) => e.key === attribute)['value'];
+export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string) => {
+  const log = JSON.parse(trxRes?.rawLog!);
+
+  for (let i = 0; i < log.length; i++) {
+    const msgEvent = log[i]['events'].find((e: any) => e.type === event);
+
+    if (!msgEvent) continue;
+
+    const eventAttribute = msgEvent['attributes'].find((e: any) => e.key === attribute);
+
+    if (eventAttribute) return eventAttribute['value'];
+  }
+};

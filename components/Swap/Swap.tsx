@@ -9,7 +9,7 @@ import { ChainContext } from '@contexts/chain';
 import { WalletContext } from '@contexts/wallet';
 import styles from '@styles/stepsPages.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
-import { formatTokenAmountByDenom } from '@utils/currency';
+import { formattedAmountToNumber, formatTokenAmountByDenom } from '@utils/currency';
 import { queryOutputAmountByInputAmount } from '@utils/query';
 import {
   getInputTokenAmount,
@@ -114,7 +114,7 @@ export const Swap = (props: SwapProps) => {
               value={inputAmount}
               className={cls(styles.stepInput)}
               onChange={(e) => setInputAmount(e.target.value)}
-              decimalAmount={inputToken ? isCw1155Token(inputToken?.denom) : true}
+              decimalAmount={inputToken ? isCw1155Token(inputToken.denom) : true}
             />
           </div>
           <div className={cls(utilsStyles.paddingToken, utilsStyles.widthToken)}>
@@ -135,7 +135,7 @@ export const Swap = (props: SwapProps) => {
               name='walletAddress'
               type='number'
               required
-              value={outputAmount}
+              value={outputAmount && formattedAmountToNumber(outputAmount)}
               disabled={amountLoading}
               className={cls(styles.stepInput)}
               onChange={(e) => setOutputAmount(e.target.value)}

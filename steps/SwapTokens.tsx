@@ -15,19 +15,22 @@ import WalletImg from '@icons/wallet.svg';
 import styles from '@styles/stepsPages.module.scss';
 import utilsStyles from '@styles/utils.module.scss';
 import { validateAmountAgainstBalance } from '@utils/currency';
+import { queryApprovalVerification } from '@utils/query';
 import { pushNewRoute } from '@utils/router';
 import {
   getInputTokenAmount,
   getOutputTokenAmount,
   getSwapContractAddress,
   getSwapFunds,
+  getTokenInfoByDenom,
   getTokenSelectByDenom,
   isCw1155Token,
 } from '@utils/swap';
-import { defaultTrxFeeOption, generateSwapTrx, getValueFromTrxEvents } from '@utils/transactions';
+import { defaultTrxFeeOption, generateApproveTrx, generateSwapTrx, getValueFromTrxEvents } from '@utils/transactions';
 import { broadCastMessages } from '@utils/wallets';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import { TokenType } from 'types/swap';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 type SwapTokensProps = {
@@ -55,7 +58,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
   const [successHash, setSuccessHash] = useState<string | undefined>();
 
   const { wallet } = useContext(WalletContext);
-  const { chainInfo } = useContext(ChainContext);
+  const { chainInfo, queryClient } = useContext(ChainContext);
 
   const navigateToAccount = () => pushNewRoute('/account');
   const toggleSlider = () => {
@@ -69,7 +72,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
       validateAmountAgainstBalance(
         Number.parseFloat(inputAmount),
         Number(inputToken.amount),
-        isCw1155Token(inputToken.denom) ? false : true,
+        !isCw1155Token(inputToken.denom),
       );
     const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
 
@@ -77,7 +80,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
   };
 
   const signTX = async (): Promise<void> => {
-    if (!inputToken || !outputToken) return;
+    if (!inputToken || !outputToken || !queryClient) return;
     setTrxLoading(true);
 
     const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
@@ -87,19 +90,42 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
     const outputTokenAmount = getOutputTokenAmount(outputTokenSelect, outputAmount, slippage);
 
     const funds = getSwapFunds(inputToken.denom, inputAmount);
-    const contractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
+    const swapContractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
 
-    const trx = generateSwapTrx({
-      contractAddress,
-      inputTokenSelect,
-      inputTokenAmount,
-      outputTokenAmount,
-      senderAddress: wallet.user?.address!,
-      funds,
-    });
+    const trxs = [];
+    const tokenInfo = getTokenInfoByDenom(inputToken.denom);
+    if (tokenInfo.type == TokenType.Cw1155) {
+      const isSwapContractApproved = await queryApprovalVerification(
+        queryClient,
+        wallet.user?.address!,
+        swapContractAddress,
+        tokenInfo.address!,
+      );
+      console.log(isSwapContractApproved);
+
+      if (!isSwapContractApproved)
+        trxs.push(
+          generateApproveTrx({
+            contract: tokenInfo.address!,
+            operator: swapContractAddress,
+            sender: wallet.user?.address!,
+          }),
+        );
+    }
+
+    trxs.push(
+      generateSwapTrx({
+        contract: swapContractAddress,
+        inputTokenSelect,
+        inputTokenAmount,
+        outputTokenAmount,
+        sender: wallet.user?.address!,
+        funds,
+      }),
+    );
     const hash = await broadCastMessages(
       wallet,
-      [trx],
+      trxs,
       undefined,
       defaultTrxFeeOption,
       '',

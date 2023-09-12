@@ -23,6 +23,27 @@ export const initializeQueryClient = async (blockchainRpcUrl: string) => {
   return client;
 };
 
+export const queryApprovalVerification = async (
+  queryClient: QUERY_CLIENT,
+  owner: string,
+  operator: string,
+  address: string,
+): Promise<boolean> => {
+  const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+    address,
+    queryData: strToArray(
+      JSON.stringify({
+        is_approved_for_all: {
+          owner,
+          operator,
+        },
+      }),
+    ),
+  });
+
+  return JSON.parse(uint8ArrayToStr(response.data)).approved;
+};
+
 export const queryOutputAmountByInputAmount = async (
   queryClient: QUERY_CLIENT,
   inputToken: TokenSelect,
@@ -35,6 +56,7 @@ export const queryOutputAmountByInputAmount = async (
         address,
         queryData: strToArray(query),
       });
+
     switch (inputToken) {
       case TokenSelect.Token1155: {
         const query = { token1155_for_token2_price: { token1155_amount: inputAmount } };

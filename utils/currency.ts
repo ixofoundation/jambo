@@ -29,7 +29,7 @@ export const calculateTokenAmount = (amount: number, microUnits: number = 6, flo
 };
 
 export const formatTokenAmountByDenom = (denom: string, amount: number) =>
-  formatTokenAmount(Number(amount), isCw1155Token(denom) ? 0 : 6, false);
+  formatTokenAmount(amount, isCw1155Token(denom) ? 0 : 6, false);
 
 export const formatTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   const tokenAmount = calculateTokenAmount(amount, microUnits, floorAmount);

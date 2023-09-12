@@ -1,5 +1,5 @@
 import { pools, tokens } from '@constants/pools';
-import { TokenAmount, TokenSelect, TokenType } from 'types/swap';
+import { Token, TokenAmount, TokenSelect, TokenType } from 'types/swap';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 import { getMicroAmount } from './encoding';
@@ -51,7 +51,7 @@ export const getSwapContractAddress = (inputDenom: string, outputDenom: string):
     : pools.get({ token1155: outputDenom, token2: inputDenom });
 export const getSwapFunds = (inputTokenDenom: string, inputAmount: string): Map<string, string> => {
   const funds = new Map<string, string>();
-  if (getTokenTypeByDenom(inputTokenDenom) === TokenType.Native) {
+  if (getTokenInfoByDenom(inputTokenDenom).type === TokenType.Native) {
     funds.set(inputTokenDenom, getMicroAmount(inputAmount));
   }
 
@@ -59,27 +59,6 @@ export const getSwapFunds = (inputTokenDenom: string, inputAmount: string): Map<
 };
 
 export const getTokenSelectByDenom = (denom: string): TokenSelect =>
-  getTokenTypeByDenom(denom) === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
-export const getTokenTypeByDenom = (denom: string): TokenType => tokens.get(denom)?.type!;
-export const isCw1155Token = (denom: string) => getTokenTypeByDenom(denom) === TokenType.Cw1155;
-
-// const getSupportedDenomsForDenom = (denom: Denom): Denom[] => {
-//   const supportedDenoms: Denom[] = [];
-
-//   for (const [pool, _] of pools) {
-//     if (pool.token1155 == denom) {
-//       supportedDenoms.push(pool.token2);
-//     } else if (pool.token2 == denom) {
-//       supportedDenoms.push(pool.token1155);
-//     }
-//   }
-
-//   return supportedDenoms;
-// };
-
-// export const getIntermediateTokenForSwap = (firstDenom: Denom, secondDenom: Denom): Denom | undefined => {
-//   const supportedDenomsForFirstDenom = getSupportedDenomsForDenom(firstDenom);
-//   const supportedDenomsForSecondDenom = getSupportedDenomsForDenom(secondDenom);
-
-//   return supportedDenomsForFirstDenom.filter((denom) => supportedDenomsForSecondDenom.indexOf(denom) !== -1)[0];
-// };
+  getTokenInfoByDenom(denom).type === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
+export const getTokenInfoByDenom = (denom: string): Token => tokens.get(denom)!;
+export const isCw1155Token = (denom: string) => getTokenInfoByDenom(denom)?.type === TokenType.Cw1155;
