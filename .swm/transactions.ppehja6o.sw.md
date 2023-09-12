@@ -9,59 +9,97 @@ In this document will be discovered utils for transactions.
 
 <br/>
 
-Returnes transcation message for swap execution based on provided input and output tokens.
+Returns transcation message for swap execution based on provided input and output tokens.
 
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 
 ### 📄 utils/transactions.ts
 
 ```typescript
-159    export const generateSwapTrx = ({
-160      contractAddress,
-161      senderAddress,
-162      inputTokenSelect,
-163      inputTokenAmount,
-164      outputTokenAmount,
-165      funds,
-166    }: {
-167      contractAddress: string;
-168      senderAddress: string;
-169      inputTokenSelect: TokenSelect;
-170      inputTokenAmount: TokenAmount;
-171      outputTokenAmount: TokenAmount;
-172      funds: Map<string, string>;
-173    }): TRX_MSG => ({
-174      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
-175      value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
-176        contract: contractAddress,
-177        msg: strToArray(
-178          JSON.stringify({
-179            swap: {
-180              input_token: inputTokenSelect,
-181              input_amount: inputTokenAmount,
-182              min_output: outputTokenAmount,
-183            },
-184          }),
-185        ),
-186        sender: senderAddress,
-187        funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
-188      }),
-189    });
+182    export const generateSwapTrx = ({
+183      contract,
+184      sender,
+185      inputTokenSelect,
+186      inputTokenAmount,
+187      outputTokenAmount,
+188      funds,
+189    }: {
+190      contract: string;
+191      sender: string;
+192      inputTokenSelect: TokenSelect;
+193      inputTokenAmount: TokenAmount;
+194      outputTokenAmount: TokenAmount;
+195      funds: Map<string, string>;
+196    }): TRX_MSG => ({
+197      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+198      value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
+199        contract,
+200        msg: strToArray(
+201          JSON.stringify({
+202            swap: {
+203              input_token: inputTokenSelect,
+204              input_amount: inputTokenAmount,
+205              min_output: outputTokenAmount,
+206            },
+207          }),
+208        ),
+209        sender,
+210        funds: generateCoins(Array.from(funds.keys()), Array.from(funds.values())),
+211      }),
+212    });
 ```
 
 <br/>
 
-Returnes needed attribute from event based on successful transaction response.
+Returns transaction message for approval to manage `Cw1155`<swm-token data-swm-token=":types/swap.ts:31:1:1:`  Cw1155,`"/> contract tokens.
 
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 
 ### 📄 utils/transactions.ts
 
 ```typescript
-191    export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string, messageIndex = 0) =>
-192      JSON.parse(trxRes?.rawLog!)
-193        [messageIndex]['events'].find((e: any) => e.type === event)
-194        ['attributes'].find((e: any) => e.key === attribute)['value'];
+159    export const generateApproveTrx = ({
+160      contract,
+161      sender,
+162      operator,
+163    }: {
+164      contract: string;
+165      sender: string;
+166      operator: string;
+167    }): TRX_MSG => ({
+168      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+169      value: cosmwasm.wasm.v1.MsgExecuteContract.fromPartial({
+170        contract,
+171        msg: strToArray(
+172          JSON.stringify({
+173            approve_all: {
+174              operator,
+175            },
+176          }),
+177        ),
+178        sender,
+179      }),
+180    });
+```
+
+<br/>
+
+Returns needed attribute from event based on transaction response.
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/transactions.ts
+
+```typescript
+214    export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribute: string) => {
+215      const log = JSON.parse(trxRes?.rawLog!);
+216
+217      for (let i = 0; i < log.length; i++) {
+218        const msgEvent = log[i]['events'].find((e: any) => e.type === event);
+219
+220        if (!msgEvent) continue;
+221
+222        const eventAttribute = msgEvent['attributes'].find((e: any) => e.key === attribute);
 ```
 
 <br/>

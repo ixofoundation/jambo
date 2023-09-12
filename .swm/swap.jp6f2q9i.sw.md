@@ -18,37 +18,38 @@ Returns the possible output token amount based on provided input token amount an
 <!-- collapsed -->
 
 ```typescript
-26     export const queryOutputAmountByInputAmount = async (
-27       queryClient: QUERY_CLIENT,
-28       inputToken: TokenSelect,
-29       inputAmount: TokenAmount,
-30       address: string,
-31     ): Promise<string> => {
-32       try {
-33         const queryAmount = async (address: string, query: string) =>
-34           queryClient.cosmwasm.wasm.v1.smartContractState({
-35             address,
-36             queryData: strToArray(query),
-37           });
-38         switch (inputToken) {
-39           case TokenSelect.Token1155: {
-40             const query = { token1155_for_token2_price: { token1155_amount: inputAmount } };
-41             const response = await queryAmount(address, JSON.stringify(query));
-42
-43             return JSON.parse(uint8ArrayToStr(response.data)).token2_amount;
-44           }
-45           case TokenSelect.Token2: {
-46             const query = { token2_for_token1155_price: { token2_amount: inputAmount } };
-47             const response = await queryAmount(address, JSON.stringify(query));
-48
-49             return JSON.parse(uint8ArrayToStr(response.data)).token1155_amount;
-50           }
-51         }
-52       } catch (error) {
-53         console.error('queryOutputAmountByInputAmount::', error);
-54         return '0';
-55       }
-56     };
+47     export const queryOutputAmountByInputAmount = async (
+48       queryClient: QUERY_CLIENT,
+49       inputToken: TokenSelect,
+50       inputAmount: TokenAmount,
+51       address: string,
+52     ): Promise<string> => {
+53       try {
+54         const queryAmount = async (address: string, query: string) =>
+55           queryClient.cosmwasm.wasm.v1.smartContractState({
+56             address,
+57             queryData: strToArray(query),
+58           });
+59
+60         switch (inputToken) {
+61           case TokenSelect.Token1155: {
+62             const query = { token1155_for_token2_price: { token1155_amount: inputAmount } };
+63             const response = await queryAmount(address, JSON.stringify(query));
+64
+65             return JSON.parse(uint8ArrayToStr(response.data)).token2_amount;
+66           }
+67           case TokenSelect.Token2: {
+68             const query = { token2_for_token1155_price: { token2_amount: inputAmount } };
+69             const response = await queryAmount(address, JSON.stringify(query));
+70
+71             return JSON.parse(uint8ArrayToStr(response.data)).token1155_amount;
+72           }
+73         }
+74       } catch (error) {
+75         console.error('queryOutputAmountByInputAmount::', error);
+76         return '0';
+77       }
+78     };
 ```
 
 <br/>
@@ -143,6 +144,37 @@ Returns balances of all available for swap tokens. In case of
 121        return [];
 122      }
 123    };
+```
+
+<br/>
+
+Return an approval to manage `Cw1155`<swm-token data-swm-token=":types/swap.ts:31:1:1:`  Cw1155,`"/> contract tokens
+
+<!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
+
+### 📄 utils/query.ts
+
+```typescript
+26     export const queryApprovalVerification = async (
+27       queryClient: QUERY_CLIENT,
+28       owner: string,
+29       operator: string,
+30       address: string,
+31     ): Promise<boolean> => {
+32       const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+33         address,
+34         queryData: strToArray(
+35           JSON.stringify({
+36             is_approved_for_all: {
+37               owner,
+38               operator,
+39             },
+40           }),
+41         ),
+42       });
+43
+44       return JSON.parse(uint8ArrayToStr(response.data)).approved;
+45     };
 ```
 
 <br/>

@@ -20,7 +20,7 @@ Returns formatted token amount based on type. In case of
 
 ```typescript
 31     export const formatTokenAmountByDenom = (denom: string, amount: number) =>
-32       formatTokenAmount(Number(amount), isCw1155Token(denom) ? 0 : 6, false);
+32       formatTokenAmount(amount, isCw1155Token(denom) ? 0 : 6, false);
 ```
 
 <br/>

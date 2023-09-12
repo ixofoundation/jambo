@@ -117,14 +117,14 @@ Returns funds for swap transaction based on input denom and amount. Not empty on
 <!-- collapsed -->
 
 ```typescript
-53     export const getSwapFunds = (inputTokenDenom: string, inputAmount: string): Map<string, string> => {
-54       const funds = new Map<string, string>();
-55       if (getTokenTypeByDenom(inputTokenDenom) === TokenType.Native) {
-56         funds.set(inputTokenDenom, getMicroAmount(inputAmount));
-57       }
-58
-59       return funds;
-60     };
+52     export const getSwapFunds = (inputTokenDenom: string, inputAmount: string): Map<string, string> => {
+53       const funds = new Map<string, string>();
+54       if (getTokenInfoByDenom(inputTokenDenom).type === TokenType.Native) {
+55         funds.set(inputTokenDenom, getMicroAmount(inputAmount));
+56       }
+57
+58       return funds;
+59     };
 ```
 
 <br/>
@@ -138,13 +138,13 @@ Returns token selection based on provided token denom.
 <!-- collapsed -->
 
 ```typescript
-62     export const getTokenSelectByDenom = (denom: string): TokenSelect =>
-63       getTokenTypeByDenom(denom) === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
+61     export const getTokenSelectByDenom = (denom: string): TokenSelect =>
+62       getTokenInfoByDenom(denom).type === TokenType.Cw1155 ? TokenSelect.Token1155 : TokenSelect.Token2;
 ```
 
 <br/>
 
-Returns token type based on provided token denom.
+Returns pool token information based on provided token denom.
 
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 
@@ -153,7 +153,7 @@ Returns token type based on provided token denom.
 <!-- collapsed -->
 
 ```typescript
-64     export const getTokenTypeByDenom = (denom: string): TokenType => tokens.get(denom)?.type!;
+63     export const getTokenInfoByDenom = (denom: string): Token => tokens.get(denom)!;
 ```
 
 <br/>
@@ -167,7 +167,7 @@ Checks if token has `Cw1155`<swm-token data-swm-token=":types/swap.ts:31:1:1:`  
 <!-- collapsed -->
 
 ```typescript
-65     export const isCw1155Token = (denom: string) => getTokenTypeByDenom(denom) === TokenType.Cw1155;
+64     export const isCw1155Token = (denom: string) => getTokenInfoByDenom(denom)?.type === TokenType.Cw1155;
 ```
 
 <br/>

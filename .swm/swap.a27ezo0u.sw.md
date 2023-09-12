@@ -7,7 +7,7 @@ app_version: 1.15.3
 
 In this document will be discovered components for swap.
 
-# `Swap`<swm-token data-swm-token=":components/Swap/Swap.tsx:30:4:4:`export const Swap = (props: SwapProps) =&gt; {`"/>
+# `Swap`<swm-token data-swm-token=":components/Swap/Swap.tsx:36:4:4:`export const Swap = (props: SwapProps) =&gt; {`"/>
 
 Component is used in order to allow user choose tokens and amounts for swap.
 
@@ -139,7 +139,7 @@ Sets updated balances when transaction hash after swap is provided.
 
 <br/>
 
-# `SwapTokens`<swm-token data-swm-token=":steps/SwapTokens.tsx:43:2:2:`const SwapTokens: FC&lt;SwapTokensProps&gt; = ({ onBack, data, header, loading = false, signedIn = true }) =&gt; {`"/>
+# `SwapTokens`<swm-token data-swm-token=":steps/SwapTokens.tsx:46:2:2:`const SwapTokens: FC&lt;SwapTokensProps&gt; = ({ onBack, data, header, loading = false, signedIn = true }) =&gt; {`"/>
 
 Component combines all components and logic for full swap flow.
 
@@ -159,20 +159,19 @@ Verifies that provided input and output tokens are valid for swap execution. Sho
 <!-- collapsed -->
 
 ```tsx
-65       const formIsValid = () => {
-66         const inputValid =
-67           !!inputToken &&
-68           Number.parseFloat(inputAmount) > 0 &&
-69           validateAmountAgainstBalance(
-70             Number.parseFloat(inputAmount),
-71             Number(inputToken.amount),
-72             isCw1155Token(inputToken.denom) ? false : true,
-73           );
-74         const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
-75
-76         return inputToken !== outputToken && inputValid && outputValid;
-77       };
+68       const formIsValid = () => {
+69         const inputValid =
+70           !!inputToken &&
+71           Number.parseFloat(inputAmount) > 0 &&
+72           validateAmountAgainstBalance(
+73             Number.parseFloat(inputAmount),
+74             Number(inputToken.amount),
+75             !isCw1155Token(inputToken.denom),
+76           );
+77         const outputValid = !!outputToken && Number.parseFloat(outputAmount) > 0;
 78
+79         return inputToken !== outputToken && inputValid && outputValid;
+80       };
 ```
 
 <br/>
@@ -186,39 +185,62 @@ Creates and executes swap transaction when provided input and output tokens are 
 <!-- collapsed -->
 
 ```tsx
-79       const signTX = async (): Promise<void> => {
-80         if (!inputToken || !outputToken) return;
-81         setTrxLoading(true);
-82
-83         const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
-84         const inputTokenAmount = getInputTokenAmount(inputToken, inputTokenSelect, inputAmount);
+82       const signTX = async (): Promise<void> => {
+83         if (!inputToken || !outputToken || !queryClient) return;
+84         setTrxLoading(true);
 85
-86         const outputTokenSelect = getTokenSelectByDenom(outputToken.denom);
-87         const outputTokenAmount = getOutputTokenAmount(outputTokenSelect, outputAmount, slippage);
+86         const inputTokenSelect = getTokenSelectByDenom(inputToken.denom);
+87         const inputTokenAmount = getInputTokenAmount(inputToken, inputTokenSelect, inputAmount);
 88
-89         const funds = getSwapFunds(inputToken.denom, inputAmount);
-90         const contractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
+89         const outputTokenSelect = getTokenSelectByDenom(outputToken.denom);
+90         const outputTokenAmount = getOutputTokenAmount(outputTokenSelect, outputAmount, slippage);
 91
-92         const trx = generateSwapTrx({
-93           contractAddress,
-94           inputTokenSelect,
-95           inputTokenAmount,
-96           outputTokenAmount,
-97           senderAddress: wallet.user?.address!,
-98           funds,
-99         });
-100        const hash = await broadCastMessages(
-101          wallet,
-102          [trx],
-103          undefined,
-104          defaultTrxFeeOption,
-105          '',
-106          chainInfo as KEPLR_CHAIN_INFO_TYPE,
-107        );
-108
-109        if (hash) setSuccessHash(hash);
-110        setTrxLoading(false);
-111      };
+92         const funds = getSwapFunds(inputToken.denom, inputAmount);
+93         const swapContractAddress = getSwapContractAddress(inputToken.denom, outputToken.denom);
+94
+95         const trxs = [];
+96         const tokenInfo = getTokenInfoByDenom(inputToken.denom);
+97         if (tokenInfo.type == TokenType.Cw1155) {
+98           const isSwapContractApproved = await queryApprovalVerification(
+99             queryClient,
+100            wallet.user?.address!,
+101            swapContractAddress,
+102            tokenInfo.address!,
+103          );
+104          console.log(isSwapContractApproved);
+105
+106          if (!isSwapContractApproved)
+107            trxs.push(
+108              generateApproveTrx({
+109                contract: tokenInfo.address!,
+110                operator: swapContractAddress,
+111                sender: wallet.user?.address!,
+112              }),
+113            );
+114        }
+115
+116        trxs.push(
+117          generateSwapTrx({
+118            contract: swapContractAddress,
+119            inputTokenSelect,
+120            inputTokenAmount,
+121            outputTokenAmount,
+122            sender: wallet.user?.address!,
+123            funds,
+124          }),
+125        );
+126        const hash = await broadCastMessages(
+127          wallet,
+128          trxs,
+129          undefined,
+130          defaultTrxFeeOption,
+131          '',
+132          chainInfo as KEPLR_CHAIN_INFO_TYPE,
+133        );
+134
+135        if (hash) setSuccessHash(hash);
+136        setTrxLoading(false);
+137      };
 ```
 
 <br/>
