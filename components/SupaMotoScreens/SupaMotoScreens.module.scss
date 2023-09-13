@@ -1,0 +1,102 @@
+$flex-layout: (
+    flex,
+    center,
+    center
+);
+
+$grey_light: #F0F0F0;
+
+.language_button {
+    width: 150px;
+    height: 44px;
+    border-radius: 23px;
+    font-size: 18px;
+    font-weight: 400;
+    border-style: none;
+    background-color: #F0F0F0;
+}
+
+.label {
+    display: nth($flex-layout, 1);
+    justify-content: nth($flex-layout, 2);
+    align-items: nth($flex-layout, 3);
+}
+
+.inputs {
+    padding: 8px;
+    background-color: $grey_light;
+    height: 46px;
+    width: 311px;
+    border-radius: 23px;
+    border-style: none;
+    gap: 8px;
+}
+
+.dobInput {
+    width: 97.33px;
+    height: 44px;
+    border-radius: 23px;
+    padding: 8px;
+    background-color: #F0F0F0;
+}
+
+.houseHoldContainer {
+    display: nth($flex-layout, 1);
+    justify-content: nth($flex-layout, 2);
+    align-items: nth($flex-layout, 3);
+}
+
+.houseHoldStats {
+    width: 200px;
+    height: 46px;
+    border-radius: 23px;
+    padding: 8px;
+    background-color: #F0F0F0;
+}
+
+.statusBtn {
+    width: 150px;
+    height: 46px;
+    border-radius: 23px;
+    padding: 8px 24px 8px 24px;
+    border-style: none;
+    background-color: #F0F0F0;
+}
+
+.monthlyIncome {
+    width: 311px;
+    height: 46px;
+    border-radius: 23px;
+    padding: 8px;
+    background-color: $grey_light;
+}
+
+.captureBtn {
+    width: 300px;
+    height: 46px;
+    border-radius: 23px;
+    padding: 8px 24px 8px 24px;
+}
+
+.toggleBox {
+    display: nth($flex-layout, 1);
+    justify-content: nth($flex-layout, 2);
+    align-items: nth($flex-layout, 3);
+    border-radius: 20px 20px 0px 0px;
+    height: 300px;
+    width: 300px;
+    background-color: $grey_light;
+    position:relative;
+    z-index: 1;
+}
+
+.dayz {
+    display: nth($flex-layout, 1);
+    justify-content: nth($flex-layout, 2);
+    align-items: nth($flex-layout, 3);
+    width: 44px;
+    height: 44px;
+    border-radius: 23px;
+    padding: 8px;
+    background-color: $grey_light;
+}

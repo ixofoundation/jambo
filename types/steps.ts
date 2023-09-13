@@ -22,6 +22,8 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
+  onboarding = 'onboarding',
+  get_camera_image = 'get_camera_image',
 }
 
 export type STEP = {
@@ -64,6 +66,8 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
+  [STEPS.onboarding]: { id: STEPS.onboarding, name: 'Onboarding' },
+  [STEPS.get_camera_image]: { id: STEPS.get_camera_image, name: 'Get consent' },
 };
 
 export type ReviewStepsTypes =
@@ -72,6 +76,7 @@ export type ReviewStepsTypes =
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
+  | STEPS.onboarding
   | STEPS.distribution_MsgWithdrawDelegatorReward;
 
 export type AllStepConfigTypes = never;
@@ -105,6 +110,14 @@ interface Define_amount {
 interface Send_token_to_receiver {
   done: boolean;
 }
+interface Onboarding {
+  data: Onboarding[];
+}
+interface Get_camera_image {
+  image: string;
+  width: number;
+  height: number;
+}
 interface Review_and_sign {
   done: boolean;
 }
@@ -118,6 +131,8 @@ export type AllStepDataTypes =
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
+  | Onboarding
+  | Get_camera_image
   | Review_and_sign;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
@@ -144,6 +159,10 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Define_amount
   : T extends STEPS.send_token_to_receiver
   ? Send_token_to_receiver
+  : T extends STEPS.review_and_sign
+  ? Onboarding
+  : T extends STEPS.onboarding
+  ? Get_camera_image
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward

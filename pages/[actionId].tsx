@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
 import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
+import { StepDataType, STEP, STEPS, StepConfigType } from 'types/steps';
 import EmptySteps from '@steps/EmptySteps';
+import SupamotoOnboarding from '@steps/SupamotoOnboarding';
 import ReceiverAddress from '@steps/ReceiverAddress';
 import DefineAmountToken from '@steps/DefineAmountToken';
 import DefineAmountDelegate from '@steps/DefineAmountDelegate';
@@ -118,9 +119,9 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             excludeValidators={
               step.id === STEPS.get_validator_redelegate
                 ? (
-                    action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
-                      ?.data as StepDataType<STEPS.get_validator_delegate>
-                  )?.validator?.address || []
+                  action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+                    ?.data as StepDataType<STEPS.get_validator_delegate>
+                )?.validator?.address || []
                 : []
             }
           />
@@ -169,6 +170,16 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             data={step.data as StepDataType<STEPS.get_validator_delegate>}
             header={action?.name}
             message={step.id}
+          />
+        );
+      case STEPS.onboarding:
+        return (
+          <SupamotoOnboarding
+            onSuccess={handleOnNext<STEPS.onboarding>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.onboarding>}
+            header={action?.name}
+            config={step.config as StepConfigType<STEPS.onboarding>}
           />
         );
       case STEPS.bank_MsgSend:

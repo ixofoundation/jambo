@@ -1,0 +1,21 @@
+.wrapper {
+  overflow: hidden;
+  position: relative;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.frame {
+  z-index: 1;
+  border: 3px solid var(--primary-color);
+  position: absolute;
+}
