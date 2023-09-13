@@ -29,19 +29,24 @@ export const queryApprovalVerification = async (
   operator: string,
   address: string,
 ): Promise<boolean> => {
-  const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
-    address,
-    queryData: strToArray(
-      JSON.stringify({
-        is_approved_for_all: {
-          owner,
-          operator,
-        },
-      }),
-    ),
-  });
+  try {
+    const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+      address,
+      queryData: strToArray(
+        JSON.stringify({
+          is_approved_for_all: {
+            owner,
+            operator,
+          },
+        }),
+      ),
+    });
 
-  return JSON.parse(uint8ArrayToStr(response.data)).approved;
+    return JSON.parse(uint8ArrayToStr(response.data)).approved;
+  } catch (error) {
+    console.error('queryApprovalVerification::', error);
+    return false;
+  }
 };
 
 export const queryOutputAmountByInputAmount = async (
