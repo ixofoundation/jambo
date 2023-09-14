@@ -161,20 +161,24 @@ Return an approval to manage `Cw1155`<swm-token data-swm-token=":types/swap.ts:3
 29       operator: string,
 30       address: string,
 31     ): Promise<boolean> => {
-32       const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
-33         address,
-34         queryData: strToArray(
-35           JSON.stringify({
-36             is_approved_for_all: {
-37               owner,
-38               operator,
-39             },
-40           }),
-41         ),
-42       });
-43
-44       return JSON.parse(uint8ArrayToStr(response.data)).approved;
-45     };
+32       try {
+33         const response = await queryClient.cosmwasm.wasm.v1.smartContractState({
+34           address,
+35           queryData: strToArray(
+36             JSON.stringify({
+37               is_approved_for_all: {
+38                 owner,
+39                 operator,
+40               },
+41             }),
+42           ),
+43         });
+44
+45         return JSON.parse(uint8ArrayToStr(response.data)).approved;
+46       } catch (error) {
+47         console.error('queryApprovalVerification::', error);
+48         return false;
+49       }
 ```
 
 <br/>
