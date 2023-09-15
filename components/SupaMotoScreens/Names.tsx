@@ -5,9 +5,9 @@ import Profile from '@icons/profile.svg';
 
 const Names = () => {
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <form>
-                <IconText title='' Img={Profile} imgSize={30} />
+                <IconText title='' Img={Profile} imgSize={50} />
                 <div>
                     <label
                         className={styles.label}

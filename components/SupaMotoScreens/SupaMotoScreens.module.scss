@@ -11,6 +11,23 @@ $grey_light: #F0F0F0;
     top: -50px;
 }
 
+.progressBarContainer {
+    position: relative;
+    top: -60px;
+    width: 100%; 
+    height: 10px;
+    background-color: #ccc; 
+    border-radius: 5px;
+}
+  
+.progressBar {
+    height: 100%;
+    background-color: #E0A714;
+    border-radius: 5px; 
+    transition: width 0.3s ease;
+}
+  
+
 .language_button {
     margin: 5px;
     width: 150px;
@@ -20,6 +37,7 @@ $grey_light: #F0F0F0;
     font-weight: 400;
     border-style: none;
     background-color: #F0F0F0;
+    transition: background-color 0.3s ease;
 }
 
 .selected {

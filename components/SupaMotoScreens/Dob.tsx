@@ -5,10 +5,9 @@ import Calendar from '@icons/calendar.svg';
 
 const Dob = () => {
     const [toggleBox, setToggleBox] = useState(true);
-    // const Days = Array.from({ length: 31 }, (_, index) => index + 1);
     const Days: number[] = Array.from({ length: 31 }, (_, index) => index + 1);
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <form>
                 <IconText title='Birth Date' Img={Calendar} imgSize={30} />
                 <div>
