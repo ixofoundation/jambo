@@ -3,18 +3,18 @@ import Income from '@icons/income.svg';
 import styles from './SupaMotoScreens.module.scss';
 import IconText from '@components/IconText/IconText';
 
-const MonthlyIncome = () => {
+const MonthlyIncome = () => { 
     const [amount, setAmount] = useState(0);
-
     const handleAmountChange = (event: { target: { value: React.SetStateAction<number>; }; }) => {
         setAmount(event.target.value);
     };
-
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <IconText title='Monthly Income' Img={Income} imgSize={30} />
-            <label>{amount}</label>
-            <div>
+            <div className={styles.incomeOutput} >
+                <label className={styles.incomeInput} >{amount}</label>
+            </div>
+            <div className={styles.table} >
                 <input
                     className={styles.monthlyIncome}
                     type="range"

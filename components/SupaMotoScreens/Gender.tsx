@@ -7,10 +7,10 @@ import IconText from '@components/IconText/IconText';
 
 const Gender = () => {
     return (
-        <div>
-            <IconText title='Stove Usage' Img={GenderSvg} imgSize={30} />
+        <div className={styles.onboardingComponent} >
+            <IconText title='Gender' Img={GenderSvg} imgSize={120} />
             <div></div>
-            <div>
+            <div className={styles.statusContainer} >
                 <button className={styles.statusBtn} >
                     <IconText title='' Img={Home} imgSize={30} />
                 </button>

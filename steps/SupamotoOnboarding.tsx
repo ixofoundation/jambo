@@ -54,13 +54,11 @@ const SupaMotoScreens = [
     <PhoneNumber />,
     <Contract />,
     <PrivacyPolicy />,
-
 ]
 
 const progressBarColor = '#E0A714';
 const SupaMotoOnboarding: FC<SupaMotoOnboardingProps> = ({ loading = false }) => {
     const [currentStep, setCurrentStep] = useState(0);
-
     const handleForward = () => {
         if (currentStep < SupaMotoScreens.length - 1) {
             setCurrentStep(currentStep + 1);
@@ -73,6 +71,18 @@ const SupaMotoOnboarding: FC<SupaMotoOnboardingProps> = ({ loading = false }) =>
             window.location.href = '/';
         }
     };
+    // const renderFooter = () => {
+    //     if (currentStep === 2) {
+    //         return null;
+    //     }
+    //     return (
+    //         <Footer
+    //             onForward={handleForward}
+    //             onBack={handleBack}
+    //             backLabel='Back'
+    //         />
+    //     );
+    // };
     const progressPercentage = ((currentStep + 1) / SupaMotoScreens.length) * 100;
     return (
         <>
@@ -93,9 +103,10 @@ const SupaMotoOnboarding: FC<SupaMotoOnboardingProps> = ({ loading = false }) =>
             </main>
             <Footer
                 onForward={handleForward}
-                // onBackUrl='/'
                 onBack={handleBack}
-                backLabel='Home' />
+                backLabel='Back'
+            />
+            {/* {renderFooter()} */}
         </>
     );
 };

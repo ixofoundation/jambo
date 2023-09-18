@@ -1,11 +1,12 @@
 import React from 'react';
+import styles from './SupaMotoScreens.module.scss';
 import Customer_Back from '@icons/customerback.svg';
 import Customer from '@icons/customer.svg';
 import IconText from '@components/IconText/IconText';
 
 const CustomerId = () => {
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <IconText
                 title=''
                 Img={Customer}
@@ -18,7 +19,6 @@ const CustomerId = () => {
                     imgSize={150}
                 />
             </div>
-            <div>Is the back side photo ok?</div>
         </div>
     )
 }
