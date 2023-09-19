@@ -5,9 +5,9 @@ import IconText from '@components/IconText/IconText';
 
 const PhoneNumber = () => {
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <IconText title='Phone Number' Img={Phone} imgSize={30} />
-            <div>
+            <div className={styles.table} >
                 <input className={styles.inputs} type='text' />
             </div>
         </div>

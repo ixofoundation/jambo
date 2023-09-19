@@ -5,9 +5,9 @@ import IconText from '@components/IconText/IconText';
 
 const Village = () => {
     return (
-        <div>
+        <div className={styles.onboardingComponent} >
             <IconText title='Village' Img={VillageSvg} imgSize={70} />
-            <div>
+            <div className={styles.table} >
                 <input className={styles.inputs} type='text' />
             </div>
         </div>

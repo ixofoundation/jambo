@@ -8,15 +8,18 @@ import StoreWhite from '@icons/store_white.svg';
 import IconText from '@components/IconText/IconText';
 
 const StoveUsage = () => {
-    const [usage, setUsage] = useState("");
+    const [usage, setUsage] = useState("Commercial");
     const [status, setStatus] = useState('single');
     const handleStatusChange = (newStatus: React.SetStateAction<string>) => {
         setStatus(newStatus);
+        setUsage(usage === 'Home' ? 'Commercial' : 'Home');
     };
     return (
         <div className={styles.onboardingComponent} >
             <IconText title='Stove Usage' Img={Charcoal} imgSize={30} />
-            <div>{usage}</div>
+            <div className={styles.table} >
+                <p style={{ color: '#E0A714' }} >{usage}</p>
+            </div>
             <div className={styles.statusContainer} >
                 <button
                     className={styles.statusBtn}

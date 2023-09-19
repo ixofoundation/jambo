@@ -2,7 +2,7 @@ import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
-import styles from '@styles/stepsPages.module.scss';
+import styles from './SupaMotoScreens.module.scss';
 import CustomCamera from '@components/CustomCamera/CustomCamera';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
@@ -53,14 +53,16 @@ const GetCameraImage: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Hei
     <>
       <Header header={header} />
 
-      <main>
-        <CustomCamera
-          width={width ?? 250}
-          height={(height ?? 300) - footerHeight - headerHeight}
-          frameWidth={frame.width}
-          frameHeight={frame.height}
-          ref={cameraRef}
-        />
+      <main className={styles.onboardingComponent} >
+        <div className={styles.table}>
+          <CustomCamera
+            width={width ?? 250}
+            height={(height ?? 300) - footerHeight - headerHeight}
+            frameWidth={frame.width}
+            frameHeight={frame.height}
+            ref={cameraRef}
+          />
+        </div>
       </main>
 
       <Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onForward={null} />

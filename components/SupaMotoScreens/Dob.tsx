@@ -25,7 +25,7 @@ const Dob = () => {
     };
     return (
         <div className={styles.onboardingComponent} >
-            <IconText title='Birth Date' Img={Calendar} imgSize={24} />
+            <IconText title='Birth Date' Img={Calendar} imgSize={50} />
             <form>
                 <div className={styles.dobForm} >
                     <div

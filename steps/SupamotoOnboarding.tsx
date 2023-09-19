@@ -6,6 +6,7 @@ import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
 import SupaStyles from '@components/SupaMotoScreens/SupaMotoScreens.module.scss';
+import GetCameraImage from '@components/SupaMotoScreens/GetCameraImage';
 import OnboardingLanguage from '@components/SupaMotoScreens/OnboardingLanguage';
 import Names from '@components/SupaMotoScreens/Names';
 import Dob from '@components/SupaMotoScreens/Dob';
@@ -44,7 +45,13 @@ const SupaMotoScreens = [
     <MonthlyCharcoalEx />,
     <StoveUsage />,
     <CustomerId />,
+    <GetCameraImage onSuccess={function (data: never): void {
+        throw new Error('Function not implemented.');
+    } } />,
     <CustomerIdBack />,
+    <GetCameraImage onSuccess={function (data: never): void {
+        throw new Error('Function not implemented.');
+    } } />,
     <Gender />,
     <Village />,
     <ProfilePicture />,
@@ -71,18 +78,18 @@ const SupaMotoOnboarding: FC<SupaMotoOnboardingProps> = ({ loading = false }) =>
             window.location.href = '/';
         }
     };
-    // const renderFooter = () => {
-    //     if (currentStep === 2) {
-    //         return null;
-    //     }
-    //     return (
-    //         <Footer
-    //             onForward={handleForward}
-    //             onBack={handleBack}
-    //             backLabel='Back'
-    //         />
-    //     );
-    // };
+    const renderFooter = () => {
+        if (currentStep === 2) {
+            return null;
+        }
+        return (
+            <Footer
+                onForward={handleForward}
+                onBack={handleBack}
+                backLabel='Back'
+            />
+        );
+    };
     const progressPercentage = ((currentStep + 1) / SupaMotoScreens.length) * 100;
     return (
         <>

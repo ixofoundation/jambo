@@ -19,6 +19,11 @@ $grey_light: #F0F0F0;
     align-items: center;
 }
 
+.spaceAround {
+    top: 12px;
+    position: relative;
+}
+
 .namesForm {
     display: block;
     justify-content: center;
@@ -56,11 +61,12 @@ $grey_light: #F0F0F0;
     border-style: none;
     border-radius: 23px;
     background-color: #F0F0F0;
-    transition: background-color 0.3s ease;    
+    transition: background-color 0.3s ease;
+
 }
 
 .selected {
-    // color: #F0F0F0;
+    color: #F0F0F0;
     background-color: #E0A714;
 }
 
@@ -156,10 +162,16 @@ $grey_light: #F0F0F0;
 }
 
 .captureBtn {
+    display: nth($flex-layout, 1);
+    align-items: nth($flex-layout, 3);
+    justify-content: nth($flex-layout, 2);
     width: 300px;
     height: 46px;
     border-radius: 23px;
-    padding: 8px 24px 8px 24px;
+    color: #FFFFFF;
+    font-weight: bold;
+    border-style: none;
+    background-color: #E0A714;
 }
 
 .toggleBox {    
