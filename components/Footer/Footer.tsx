@@ -9,16 +9,20 @@ import ArrowLeft from '@icons/arrow_left.svg';
 import Correct from '@icons/correct.svg';
 import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
+import ThumbUp from '@icons/thumbup.svg';
+import Cancel from '@icons/cancel.svg';
 // import useWindowDimensions from '@hooks/windowDimensions';
 import { backRoute, replaceRoute } from '@utils/router';
 
 type FooterProps = {
   onBackUrl?: string;
   onBack?: (() => void) | null;
+  onBackCancel?: (() => void) | null;
   backLabel?: string;
   onCorrect?: (() => void) | null;
   correctLabel?: string;
   onForward?: (() => void) | null;
+  onForwardThumb?: (() => void) | null;
   forwardLabel?: string;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
@@ -29,11 +33,13 @@ type FooterProps = {
  */
 const Footer = ({
   onBack,
+  onBackCancel,
   // backLabel,
   onBackUrl,
   onCorrect,
   // correctLabel,
   onForward,
+  onForwardThumb,
   // forwardLabel,
   showAccountButton,
   showActionsButton,
@@ -78,6 +84,16 @@ const Footer = ({
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
         </ButtonRound>
       )}
+      {(onBackCancel || onBackUrl || onBackUrl === '') && (
+        <ButtonRound
+          onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
+          color={BUTTON_ROUND_COLOR.lightGrey}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          <ColoredIcon icon={Cancel} size={24} color={ICON_COLOR.primary} />
+          {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
+        </ButtonRound>
+      )}
       {onCorrect !== undefined && (
         <ButtonRound
           color={onCorrect ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
@@ -95,6 +111,16 @@ const Footer = ({
           size={BUTTON_ROUND_SIZE.large}
         >
           <ArrowRight width='24px' height='24px' />
+          {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
+        </ButtonRound>
+      )}
+      {onForwardThumb !== undefined && (
+        <ButtonRound
+          color={onForward ? undefined : BUTTON_ROUND_COLOR.lightGrey}
+          onClick={onForward ?? undefined}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          <ThumbUp width='24px' height='24px' />
           {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
         </ButtonRound>
       )}

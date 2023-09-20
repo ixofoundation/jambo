@@ -1,0 +1,32 @@
+.wallets {
+  flex: 1;
+  width: 100%;
+
+  p {
+    text-align: center;
+    font-weight: 300;
+    margin-left: 30px;
+    margin-right: 30px;
+  }
+
+  h3 {
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+}
+
+.centerTxt {
+  text-align: center;
+  color: #FFFFFF;
+}
+
+.qrCode {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  height: 200px;
+  width: 200px;
+  background-color: #FFFFFF;
+}

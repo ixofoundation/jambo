@@ -22,6 +22,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
+  user_wallet = 'user_wallet',
 }
 
 export type STEP = {
@@ -64,6 +65,7 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
+  [STEPS.user_wallet]: { id: STEPS.user_wallet, name: 'User Wallet' },
 };
 
 export type ReviewStepsTypes =
@@ -108,6 +110,9 @@ interface Send_token_to_receiver {
 interface Review_and_sign {
   done: boolean;
 }
+interface User_Wallet {
+  data: User_Wallet;
+}
 
 export type AllStepDataTypes =
   | Get_receiver_address
@@ -147,6 +152,8 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
+  ? User_Wallet
+  : T extends STEPS.user_wallet
   ? Review_and_sign
   : T extends STEPS.claim
   ? Review_and_sign

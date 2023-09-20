@@ -1,6 +1,5 @@
 import { HTMLAttributes } from 'react';
 import cls from 'classnames';
-
 import styles from './Card.module.scss';
 
 export enum CARD_SIZE {

@@ -2,12 +2,13 @@ import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
 import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
+import { StepDataType, STEP, STEPS, StepConfigType } from 'types/steps';
 import EmptySteps from '@steps/EmptySteps';
 import ReceiverAddress from '@steps/ReceiverAddress';
 import DefineAmountToken from '@steps/DefineAmountToken';
 import DefineAmountDelegate from '@steps/DefineAmountDelegate';
 import ReviewAndSign from '@steps/ReviewAndSign';
+import UserWallet from '@steps/UserWallet';
 import { backRoute, replaceRoute } from '@utils/router';
 import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/ValidatorAddress';
@@ -118,13 +119,23 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             excludeValidators={
               step.id === STEPS.get_validator_redelegate
                 ? (
-                    action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
-                      ?.data as StepDataType<STEPS.get_validator_delegate>
-                  )?.validator?.address || []
+                  action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+                    ?.data as StepDataType<STEPS.get_validator_delegate>
+                )?.validator?.address || []
                 : []
             }
           />
         );
+      case STEPS.user_wallet:
+        return (
+          <UserWallet
+            onSuccess={handleOnNext<STEPS.user_wallet>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.user_wallet>}
+            header={action?.name}
+            config={step.config as StepConfigType<STEPS.user_wallet>}
+          />
+        )
       case STEPS.select_token_and_amount:
         return (
           <DefineAmountToken
