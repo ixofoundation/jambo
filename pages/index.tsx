@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import type { NextPage } from 'next';
 import cls from 'classnames';
 
@@ -20,7 +21,9 @@ const Home: NextPage = () => {
         <CustomSwiper actions={config.actions as ACTION[]} swiper />
       </main>
 
-      <Footer showActionsButton showAccountButton />
+      <Footer
+        join={null}
+      />
     </>
   );
 };

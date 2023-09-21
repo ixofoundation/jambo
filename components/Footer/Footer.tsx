@@ -22,6 +22,7 @@ type FooterProps = {
   onCorrect?: (() => void) | null;
   correctLabel?: string;
   onForward?: (() => void) | null;
+  join?: (() => void) | null;
   onForwardThumb?: (() => void) | null;
   forwardLabel?: string;
   showAccountButton?: boolean;
@@ -39,6 +40,7 @@ const Footer = ({
   onCorrect,
   // correctLabel,
   onForward,
+  join,
   onForwardThumb,
   // forwardLabel,
   showAccountButton,
@@ -113,6 +115,11 @@ const Footer = ({
           <ArrowRight width='24px' height='24px' />
           {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
         </ButtonRound>
+      )}
+      {join !== undefined && (
+        <button className={styles.joinBtn} >
+          <ThumbUp className={styles.iconSize}/>Join
+        </button>
       )}
       {onForwardThumb !== undefined && (
         <ButtonRound

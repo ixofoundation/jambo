@@ -208,9 +208,11 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
       <Head title={actionData.name} description={actionData.description} />
 
       {!signedIn ? (
-        <EmptySteps signedIn={false} />
+        // <EmptySteps signedIn={false} />
+        <UserWallet/>
       ) : (action?.steps?.length ?? 0) < 1 ? (
-        <EmptySteps />
+        // <EmptySteps />
+        <div>Solved</div>
       ) : (
         getStepComponent(action!.steps[count])
       )}

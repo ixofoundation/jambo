@@ -7,9 +7,8 @@ import Footer from '@components/Footer/Footer';
 
 const WalletQR = () => {
     const { wallet } = useContext(WalletContext);
-    const didPrefix = 'did:x:zQ3sh';
     const pubKey = wallet.user?.pubKey;
-    const did = `${didPrefix}:${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
+    const did = `${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
     return (
         <div>
             <header className={styles.centerTxt} >Successfully Joined!</header>
