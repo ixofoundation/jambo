@@ -5,6 +5,8 @@
     "bech",
     "codegen",
     "cosmjs",
+    "cosmwasm",
+    "denoms",
     "devnet",
     "impactxclient",
     "jambo",

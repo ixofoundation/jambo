@@ -1,8 +1,10 @@
-import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/currency.types';
 import { customQueries } from '@ixo/impactxclient-sdk';
+import { TokenAsset } from '@ixo/impactxclient-sdk/types/custom_queries/currency.types';
 
 import { ArrayElement } from 'types/general';
 import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
+
+import { isCw1155Token } from './swap';
 
 export const formatUSDAmount = (amount: number) => formatterUSD.format(amount);
 
@@ -26,14 +28,26 @@ export const calculateTokenAmount = (amount: number, microUnits: number = 6, flo
   return tokenAmount;
 };
 
+export const formatTokenAmountByDenom = (denom: string, amount: number) =>
+  formatTokenAmount(amount, isCw1155Token(denom) ? 0 : 6, false);
+
 export const formatTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
   const tokenAmount = calculateTokenAmount(amount, microUnits, floorAmount);
   return formatterTokenAmount.format(tokenAmount);
 };
 
-export const calculateMaxTokenAmount = (amount: number, microUnits: number = 6, floorAmount: boolean = false) => {
+export const calculateMaxTokenAmount = (
+  amount: number,
+  microUnits: number = 6,
+  floorAmount: boolean = false,
+  decimalAmount: boolean = true,
+) => {
   // assist user: subtract 0.3 for gas fees
-  const maxTokenAmount = calculateTokenAmount(amount >= 0.3 ? amount - 0.3 : 0, microUnits, floorAmount);
+  const maxTokenAmount = calculateTokenAmount(
+    decimalAmount ? (amount >= 0.3 ? amount - 0.3 : 0) : amount,
+    microUnits,
+    floorAmount,
+  );
   return formatterTokenAmount.format(maxTokenAmount);
 };
 

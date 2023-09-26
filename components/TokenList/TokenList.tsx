@@ -1,34 +1,34 @@
 import { useContext, useEffect, useState } from 'react';
 
-import { WalletContext } from '@contexts/wallet';
+import Card, { CARD_SIZE } from '@components/Card/Card';
 import Loader from '@components/Loader/Loader';
 import TokenCard from '@components/TokenCard/TokenCard';
-import { groupWalletAssets } from '@utils/wallets';
-import Card, { CARD_SIZE } from '@components/Card/Card';
-import { TOKEN_BALANCE } from 'types/wallet';
+import { WalletContext } from '@contexts/wallet';
 import {
   getCoinImageUrlFromCurrencyToken,
   getDenomFromCurrencyToken,
   getDisplayDenomFromCurrencyToken,
   getTokenTypeFromCurrencyToken,
 } from '@utils/currency';
+import { groupWalletAssets, groupWalletSwapAssets } from '@utils/wallets';
+import { TOKEN_BALANCE } from 'types/wallet';
 
 type TokenListProps = {
   displayGradient?: boolean;
+  displaySwapOptions?: boolean;
   onTokenClick: (denom: string) => void;
   filter?: (asset: TOKEN_BALANCE) => boolean;
 };
 
-const TokenList = ({ displayGradient, filter = () => true, onTokenClick }: TokenListProps) => {
+const TokenList = ({ displayGradient, displaySwapOptions, filter = () => true, onTokenClick }: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
 
   useEffect(() => {
-    const assets = groupWalletAssets(
-      wallet.balances?.data ?? [],
-      wallet.delegations?.data ?? [],
-      wallet.unbondingDelegations?.data ?? [],
-    );
+    const balances = wallet.balances?.data ?? [];
+    const assets = displaySwapOptions
+      ? groupWalletSwapAssets(balances, wallet.tokenBalances?.data ?? [])
+      : groupWalletAssets(balances, wallet.delegations?.data ?? [], wallet.unbondingDelegations?.data ?? []);
     setTokens(assets);
   }, [wallet.loading]);
 

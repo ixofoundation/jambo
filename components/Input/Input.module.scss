@@ -11,7 +11,8 @@
     outline: solid 1px var(--primary-color);
   }
 
-  &::placeholder {
+  &::placeholder,
+  &:disabled {
     color: var(--grey-color);
     opacity: 1;
   }
@@ -39,6 +40,14 @@
   color: var(--primary-color);
   text-transform: uppercase;
   margin: 4px 0;
+}
+
+.exceededMax {
+  outline: solid 1px var(--red-color);
+
+  &:focus {
+    outline: solid 1px var(--red-color);
+  }
 }
 
 .inputWithMax {

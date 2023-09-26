@@ -1,29 +1,25 @@
 // A file to combine all wallet types methods into one callback function
 import { ChainInfo } from '@keplr-wallet/types';
 
-import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { TOKEN_BALANCE, WALLET, WALLET_TYPE, CURRENCY_TOKEN } from 'types/wallet';
+import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
-import { initializeWC, WCBroadCastMessage } from './walletConnect';
-import { initializeKeplr, keplrBroadCastMessage } from './keplr';
-import { initializeOpera, operaBroadCastMessage } from './opera';
-import { getFeeDenom, TOKEN_ASSET } from './currency';
 import { DELEGATION, UNBONDING_DELEGATION } from 'types/validators';
+import { CURRENCY_TOKEN, TOKEN_BALANCE, WALLET, WALLET_TYPE } from 'types/wallet';
+
+import { getFeeDenom, TOKEN_ASSET } from './currency';
+import { initializeKeplr, keplrBroadCastMessage } from './keplr';
 import { sumArray } from './misc';
+import { initializeOpera, operaBroadCastMessage } from './opera';
+import { getSwapTokens } from './swap';
+import { initializeWC, WCBroadCastMessage } from './walletConnect';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
   (address?.length && address.length > 19 ? address.slice(0, 12).concat('...').concat(address.slice(-7)) : address) ??
   '';
 
-// TODO: provide denom as 5th param to only group for the denom
-export const groupWalletAssets = (
-  balances: CURRENCY_TOKEN[],
-  delegations: DELEGATION[],
-  unbondingDelegations: UNBONDING_DELEGATION[],
-): TOKEN_BALANCE[] => {
-  const assets = new Map<string, TOKEN_BALANCE>();
+const setAssetsByBalances = (assets: Map<string, TOKEN_BALANCE>, balances: CURRENCY_TOKEN[]) => {
   for (const balance of balances) {
     assets.set(balance.denom, {
       denom: balance.denom,
@@ -33,6 +29,26 @@ export const groupWalletAssets = (
       token: balance,
     });
   }
+};
+
+export const groupWalletSwapAssets = (balances: CURRENCY_TOKEN[], tokenBalances: CURRENCY_TOKEN[]): TOKEN_BALANCE[] => {
+  const assets = new Map<string, TOKEN_BALANCE>();
+
+  setAssetsByBalances(assets, getSwapTokens(balances));
+  setAssetsByBalances(assets, tokenBalances);
+
+  return Array.from(assets.values());
+};
+
+// TODO: provide denom as 5th param to only group for the denom
+export const groupWalletAssets = (
+  balances: CURRENCY_TOKEN[],
+  delegations: DELEGATION[],
+  unbondingDelegations: UNBONDING_DELEGATION[],
+): TOKEN_BALANCE[] => {
+  const assets = new Map<string, TOKEN_BALANCE>();
+  setAssetsByBalances(assets, balances);
+
   for (const delegation of delegations) {
     const asset = assets.get(delegation.balance.denom);
     assets.set(
@@ -75,6 +91,7 @@ export const groupWalletAssets = (
           },
     );
   }
+
   return Array.from(assets.values());
 };
 
