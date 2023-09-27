@@ -57,7 +57,8 @@ export const keplrBroadCastMessage = async (
       feeDenom,
       memo,
     };
-    const result = await sendTransaction(client, address, payload);
+    const granter = 'ixo1vafr2dqhgz8frc7gf22njz8y2u0fue4kuetey6'
+    const result = await sendTransaction(client, address, payload, granter);
 
     if (!result) throw new Error('Transaction Failed');
 

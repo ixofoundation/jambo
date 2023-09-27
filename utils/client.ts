@@ -36,6 +36,7 @@ export const sendTransaction = async (
     fee: TRX_FEE_OPTION;
     feeDenom: string;
   },
+  granter: string,
 ): Promise<any> => {
   try {
     const gasUsed =
@@ -52,6 +53,7 @@ export const sendTransaction = async (
         },
       ],
       gas: String(Math.round(gas)),
+      granter: granter,
     };
     const result = await client.signAndBroadcast(delegatorAddress, payload.msgs as any, fee, payload.memo);
     console.log('sendTransaction::result', result);

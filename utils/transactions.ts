@@ -1,5 +1,7 @@
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { customMessages, ixo } from '@ixo/impactxclient-sdk';
+import { KeyTypes } from '@ixo/impactxclient-sdk/types/messages/iid';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
@@ -148,5 +150,31 @@ export const generateWithdrawRewardTrx = ({
   value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
     delegatorAddress,
     validatorAddress,
+  }),
+});
+
+export const generateCreateIidTrx = ({
+  did,
+  pubkey,
+  address,
+  keyType = 'secp',
+}: {
+  did: string;
+  pubkey: Uint8Array;
+  address: string;
+  keyType?: KeyTypes;
+}) => ({
+  typeUrl: '/ixo.iid.v1beta1.MsgCreateIidDocument',
+  value: ixo.iid.v1beta1.MsgCreateIidDocument.fromPartial({
+    id: did,
+    verifications: customMessages.iid.createIidVerificationMethods({
+      did,
+      pubkey,
+      address,
+      controller: did,
+      type: keyType,
+    }),
+    signer: address,
+    controllers: [did],
   }),
 });

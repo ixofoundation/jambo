@@ -23,7 +23,7 @@ const UserWallets = ({ onSelected, className, ...other }: WalletsProps) => {
     const walletConnect = getWalletConnect();
 
     return (
-        <div className={styles.adjustTop} >
+        <div className={cls(styles.wallets, className)} {...other} >
             {operaWallet || keplrWallet || walletConnect ? (
                 <>
                     <div className={utilsStyles.spacer3} />
@@ -61,7 +61,7 @@ const UserWallets = ({ onSelected, className, ...other }: WalletsProps) => {
                     <div className={utilsStyles.spacer1} />
                     <h3 className={styles.centerTxt} >No Wallet Detected</h3>
                     <div className={utilsStyles.spacer2} />
-                    <p className={styles.centerTxt} >This app works best in an Opera mobile browser on Android</p>
+                    <p className={styles.centerTxt} >This app works best<br /> in an Opera mobile browser on Android</p>
                 </>
             )}
             <Footer onBackUrl='/' backLabel='Home' />

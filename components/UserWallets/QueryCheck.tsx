@@ -41,13 +41,15 @@ const QueryCheck: FC<QueryCheckProps> = ({ loading = false, signedIn = true }) =
         }
     }, [did, queryClient])
 
+    const noWalletsDetectedOrConnected = !pubKey;
+
     return (
         <>
             <Header />
-            <main >
+            <main>
                 {loading ? (
                     <Loader />
-                ) : !signedIn ? (
+                ) : noWalletsDetectedOrConnected ? (
                     <UserWallets onSelected={updateWalletType} />
                 ) : (
                     <Join />

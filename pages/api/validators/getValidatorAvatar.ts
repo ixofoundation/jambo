@@ -15,7 +15,7 @@ const keybaseRequest = async (path: string) => {
     return Promise.reject(error);
   }
 };
-
+ 
 const getValidatorAvatar = async (req: NextApiRequest, res: NextApiResponse<GetValidatorAvatarResponse>) => {
   try {
     const { identity } = req.body;

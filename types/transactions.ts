@@ -11,6 +11,7 @@ export type TRX_MSG =
 export type TRX_FEE = {
   amount: { amount: string; denom: string }[];
   gas: string;
+  granter: string;
 };
 
 export type TRX_FEE_OPTION = 'low' | 'average' | 'high';

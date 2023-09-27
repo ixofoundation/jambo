@@ -66,7 +66,7 @@ const Account: NextPage = () => {
         ) : wallet.walletType && !wallet.user ? (
           <>
             <div className={utilsStyles.spacer3} />
-            <Loader size={50} />
+            <Wallets onSelected={updateWalletType} />
           </>
         ) : (
           <Wallets onSelected={updateWalletType} />
