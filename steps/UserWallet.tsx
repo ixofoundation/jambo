@@ -11,6 +11,8 @@ import { utils } from '@ixo/impactxclient-sdk';
 import WalletQR from '@components/UserWallets/WalletQR';
 import ReceivedNFT from '@components/UserWallets/ReceivedNFT/ReceivedNFT';
 import OrderPallets from '@components/UserWallets/BuyPallets/OrderPallets';
+import BuySuccess from '@components/UserWallets/BuyPallets/BuySuccess';
+import BuyPallets from '@components/UserWallets/BuyPallets/BuyPallets';
 
 const UserWallet = () => {
   const [hasLedgeredDid, setHasLedgeredDid] = useState(false);
@@ -24,16 +26,14 @@ const UserWallet = () => {
       try {
         const res = await queryClient?.ixo.iid.v1beta1.iidDocument({ id: did });
         if (res) {
-          // If an IID document is found, set hasLedgeredDid to true
           setHasLedgeredDid(true);
         }
       } catch (error) {
         console.error('queryIidDocument::', error);
       }
     };
-
     if (did) {
-      queryIidDocument(); // Call the query function
+      queryIidDocument();
     }
   }, [did, queryClient]);
 
@@ -43,11 +43,13 @@ const UserWallet = () => {
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         {hasLedgeredDid ? (
           <WalletQR />
+          // <OrderPallets />
+          // <BuySuccess />
+          // <BuyPallets />
+          //  <ReceivedNFT />
         ) : (
           <QueryCheck />
         )}
-        {/* <OrderPallets /> */}
-        {/* <ReceivedNFT /> */}
       </main>
     </>
   );

@@ -6,6 +6,7 @@ import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import Anchor from '@components/Anchor/Anchor';
 import ArrowRight from '@icons/arrow_right.svg';
 import ArrowLeft from '@icons/arrow_left.svg';
+import Home from '@icons/home.svg';
 import Correct from '@icons/correct.svg';
 import Wallet from '@icons/wallet.svg';
 import Touch from '@icons/touch.svg';
@@ -17,6 +18,7 @@ import { backRoute, replaceRoute } from '@utils/router';
 type FooterProps = {
   onBackUrl?: string;
   onBack?: (() => void) | null;
+  onBackHome?: (() => void) | null;
   onBackCancel?: (() => void) | null;
   backLabel?: string;
   onCorrect?: (() => void) | null;
@@ -34,6 +36,7 @@ type FooterProps = {
  */
 const Footer = ({
   onBack,
+  onBackHome,
   onBackCancel,
   // backLabel,
   onBackUrl,
@@ -86,6 +89,16 @@ const Footer = ({
           {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
         </ButtonRound>
       )}
+      {(onBackHome || onBackUrl || onBackUrl === '') && (
+        <ButtonRound
+          onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
+          color={BUTTON_ROUND_COLOR.lightGrey}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          <ColoredIcon icon={Home} size={27} color={ICON_COLOR.primary} />
+          {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
+        </ButtonRound>
+      )}
       {(onBackCancel || onBackUrl || onBackUrl === '') && (
         <ButtonRound
           onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
@@ -117,8 +130,10 @@ const Footer = ({
         </ButtonRound>
       )}
       {join !== undefined && (
-        <button className={styles.joinBtn} >
-          <ThumbUp className={styles.iconSize}/>Join
+        <button
+          onClick={join ?? undefined}
+          className={styles.joinBtn} >
+          <ThumbUp className={styles.iconSize} />Join
         </button>
       )}
       {onForwardThumb !== undefined && (

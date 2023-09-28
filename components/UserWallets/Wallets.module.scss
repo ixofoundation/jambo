@@ -32,7 +32,7 @@
 }
 
 .adjustTop {
-  top: -200px;
+  top: -50px;
   position: relative;
 }
 
@@ -40,4 +40,110 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: auto auto;
+  height: 30px;
+}
+
+.gridItem {
+  margin: 17px;
+  font-size: 12px;
+  text-align: center;
+  color: white;
+}
+
+.balance {
+  display: flex;
+  justify-content: center;
+  background-color: #4F3535;
+  border-radius: 16px;
+  align-items: center;
+  height: 139px;
+  width: 320px;
+}
+
+.spaceArd {
+  margin: 15px;
+}
+
+.frame {
+  height: 120px;
+  width: 120px;
+  border-radius: 16px;
+  background-image: linear-gradient(to top left,#E0A714,#E0A714,#e2bf67,#dec073);
+}
+
+.card{
+  height: 240px;
+  width: 300px;
+  border-radius: 24px;
+  background-image: linear-gradient(to bottom,#E0A714,#dec073);
+  position: relative;
+  top: 12px;
+}
+
+.emptyTab {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #E0A714;
+  height: 46px;
+  width: 176px;
+  border-radius: 23px;
+  background-color: #4F3535;
+}
+
+.carbonTkn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #E0A714;
+  width: 300px;
+  height: 60px;
+  border-radius: 40px;
+  background-color: #4F3535;
+}
+
+.pelletsImg {
+  height: 20px;
+}
+
+.dropImg {
+  position: relative;
+  top: 25px;
+}
+
+.carbonTknCnt {
+  top: 90px;
+  position: relative;
+}
+
+.orderPalletsBtn {
+  height: 46px;
+  width: 46px;
+  border-radius: 23px;
+  border-style: none;
+  background-color: #E0A714;
+}
+
+.orderPalletsCnt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  top: 15px;
+}
+
+.frameFont {
+  font-size: 18px;
+  font-weight: 500;
+  color: black;
+}
+
+.cntrMain {
+  top: -250px;
+  position: relative;
 }

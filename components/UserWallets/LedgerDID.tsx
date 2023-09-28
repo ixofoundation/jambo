@@ -62,16 +62,16 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
             }),
         ];
 
-        const feeGrantResponse = await axios.post('/api/feegrant/grantFeegrantBasic', {
-            address: userAddress,
-            chainNetwork: network,
-        });
-        if (feeGrantResponse.status === 200) {
-            console.log('Fee grant granted successfully.');
-            console.log('Fee grant response:', feeGrantResponse.data);
-        } else {
-            console.error('Fee grant message unsuccessful');
-        }
+        // const feeGrantResponse = await axios.post('/api/feegrant/grantFeegrantBasic', {
+        //     address: userAddress,
+        //     chainNetwork: network,
+        // });
+        // if (feeGrantResponse.status === 200) {
+        //     console.log('Fee grant granted successfully.');
+        //     console.log('Fee grant response:', feeGrantResponse.data); 
+        // } else {
+        //     console.error('Fee grant message unsuccessful');
+        // }
 
         try {
             const hash = await broadCastMessages(
