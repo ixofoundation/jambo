@@ -45,7 +45,6 @@ const Join: FC<Props> = ({ join = false }) => {
                 .then((result) => {
                     console.log('Result:', result);
                     if (result) {
-                        // If the query is successful, set didLedgered to true
                         handleDIDLedgeringSuccess();
                     }
                 })
@@ -54,39 +53,42 @@ const Join: FC<Props> = ({ join = false }) => {
                 });
         }
     }, [did, queryClient, userAddress]);
+    // Define the switch statement for rendering
+    let renderComponent;
+    switch (true) {
+        case join && didLedgered:
+            renderComponent = <WalletQR />;
+            break;
+        case join && !didLedgered:
+            renderComponent = (
+                <>
+                    <Loader />
+                    <p className={styles.centerTxt}>Connecting...</p>
+                </>
+            );
+            break;
+        case !join && !connectionEstablished:
+            renderComponent = (
+                <>
+                    <IconText Img={Profile} title={''} imgSize={100} />
+                    <p className={styles.centerTxt}>Connect?</p>
+                </>
+            );
+            break;
+        default:
+            renderComponent = null;
+    }
+
     return (
         <div
             className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, stepPagesStyles.stepContainer)}
             style={{ top: '-150px', position: 'relative' }}
         >
-            {join ? (
-                <>
-                    {didLedgered ? (
-                        <WalletQR /> // Render WalletQR when DID ledgering is successful
-                    ) : (
-                        <>
-                            <Loader />
-                            <p className={styles.centerTxt}>Connecting...</p>
-                            <LedgerDID onConnectionEstablished={() => setConnectionEstablished(true)} onDIDLedgered={handleDIDLedgeringSuccess} />
-                        </>
-                    )}
-                </>
-            ) : (
-                <>
-                    {!connectionEstablished ? (
-                        <>
-                            <IconText Img={Profile} title={''} imgSize={100} />
-                            <p className={styles.centerTxt}>Connect?</p>
-                        </>
-                    ) : (
-                        // Render something when the connection is established
-                        <p className={styles.centerTxt}></p>
-                    )}
-                </>
-            )}
+            {renderComponent}
             <LedgerDID
                 onDIDLedgered={handleDIDLedgeringSuccess}
-                onConnectionEstablished={handleConnectionEstablished} />
+                onConnectionEstablished={handleConnectionEstablished}
+            />
         </div>
     )
 }

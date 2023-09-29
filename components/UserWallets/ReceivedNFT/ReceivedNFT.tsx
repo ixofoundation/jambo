@@ -5,21 +5,21 @@ import EarnCarbon from '@icons/earn_carbon.svg';
 import IconText from '@components/IconText/IconText';
 import styles from '../Wallets.module.scss';
 import Footer from '@components/Footer/Footer';
-import BuyPallets from '../BuyPallets/BuyPallets';
+import BuyPellets from '../BuyPellets/BuyPellets';
 
 const ReceivedNFT = () => {
   const [earnCarbon, setEarnCarbon] = useState(true);
-  const [showBuyPallets, setShowBuyPallets] = useState(false);
+  const [showBuyPellets, setShowBuyPellets] = useState(false);
   const handleEarnings = () => {
     setEarnCarbon(!earnCarbon)
   }
   const handleForward = () => {
-    setShowBuyPallets(!showBuyPallets);
+    setShowBuyPellets(!showBuyPellets);
   };
   return (
     <div>
-      {showBuyPallets ? (
-        <BuyPallets />
+      {showBuyPellets ? (
+        <BuyPellets />
       ) : (
         <div>
           {earnCarbon ? (

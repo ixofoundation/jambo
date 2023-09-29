@@ -12,19 +12,20 @@ import { ChainContext } from '@contexts/chain';
 import Join from './Join';
 import useQueryClient from '@hooks/useQueryClient';
 import { QueryAllowancesRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/feegrant/v1beta1/query';
-
+// import { useRouter } from 'next/router';
 
 type Props = {
     onConnectionEstablished: () => void;
     onDIDLedgered: () => void;
 }
 
-const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
+const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
     const [successHash, setSuccessHash] = useState<string | undefined>();
     const [loading, setLoading] = useState(true);
     const [connectionScreenVisible, setConnectionScreenVisible] = useState(false);
     const [feeGrantSuccess, setFeeGrantSuccess] = useState(false);
     const [ifFeegrantExist, setExistingFeegrant] = useState(true);
+    const [runFeegrant, setRunFeegrant] = useState(false);
     const { wallet } = useContext(WalletContext);
     const pubKey = wallet.user?.pubKey ?? new Uint8Array();
     const did = `${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
@@ -32,9 +33,6 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
     const network: ChainNetwork = ChainNetwork.MAINNET;
     const { chainInfo } = useContext(ChainContext);
     const { queryClient } = useQueryClient();
-
-
-
     useEffect(() => {
         const grantAllowance = async () => {
             const feegrantResquest: QueryAllowancesRequest = {
@@ -50,7 +48,6 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
         };
         grantAllowance();
     }, [userAddress, network, queryClient]);
-
     const signTX = async (): Promise<void> => {
         setLoading(true);
         const trxMsg: TRX_MSG[] = [
@@ -61,7 +58,6 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
                 keyType: 'secp',
             }),
         ];
-
         // const feeGrantResponse = await axios.post('/api/feegrant/grantFeegrantBasic', {
         //     address: userAddress,
         //     chainNetwork: network,
@@ -72,7 +68,6 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
         // } else {
         //     console.error('Fee grant message unsuccessful');
         // }
-
         try {
             const hash = await broadCastMessages(
                 wallet,
@@ -93,7 +88,6 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
         }
         setLoading(false);
     };
-
     return (
         <div>
             {feeGrantSuccess ? (
@@ -103,6 +97,7 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
                     onBackCancel={() => null}
                     onCorrect={async () => {
                         signTX();
+                        onConnectionEstablished();
                     }}
                 />
             )}
