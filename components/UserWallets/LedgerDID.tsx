@@ -82,7 +82,7 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
                 console.log('Transaction hash: ', hash);
             }
             setFeeGrantSuccess(true);
-            onConnectionEstablished();
+            // onConnectionEstablished();
         } catch (error) {
             console.error('Error broadcasting transaction:', error);
         }

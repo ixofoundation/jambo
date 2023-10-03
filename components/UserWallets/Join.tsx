@@ -22,12 +22,13 @@ const Join: FC<Props> = ({ join = false }) => {
     const pubKey = wallet.user?.pubKey;
     const userAddress = wallet.user?.address ?? 'defaultAddress';
     const did = `${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
+    const [connectingScreenRenderCount, setConnectingScreenRenderCount] = useState(0);
     const [connectionEstablished, setConnectionEstablished] = useState(false);
     const [didLedgered, setDidLedgered] = useState(false);
     const handleConnectionEstablished = () => {
         setConnectionEstablished(true);
     };
-    const handleDIDLedgeringSuccess = () => {
+    const handleDIDLedgering = () => {
         setDidLedgered(true);
     };
     useEffect(() => {
@@ -45,7 +46,7 @@ const Join: FC<Props> = ({ join = false }) => {
                 .then((result) => {
                     console.log('Result:', result);
                     if (result) {
-                        handleDIDLedgeringSuccess();
+                        handleDIDLedgering();
                     }
                 })
                 .catch((error) => {
@@ -53,8 +54,13 @@ const Join: FC<Props> = ({ join = false }) => {
                 });
         }
     }, [did, queryClient, userAddress]);
-    // Define the switch statement for rendering
     let renderComponent;
+    useEffect(() => {
+        if (join && !didLedgered) {
+            setConnectingScreenRenderCount((prevCount) => prevCount + 1);
+            
+        }
+    }, [join, didLedgered]);
     switch (true) {
         case join && didLedgered:
             renderComponent = <WalletQR />;
@@ -84,12 +90,16 @@ const Join: FC<Props> = ({ join = false }) => {
             className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, stepPagesStyles.stepContainer)}
             style={{ top: '-150px', position: 'relative' }}
         >
+            <p className={styles.centerTxt} >
+                {connectingScreenRenderCount}: times
+            </p>
             {renderComponent}
             <LedgerDID
-                onDIDLedgered={handleDIDLedgeringSuccess}
+                onDIDLedgered={handleDIDLedgering}
                 onConnectionEstablished={handleConnectionEstablished}
             />
         </div>
+
     )
 }
 
