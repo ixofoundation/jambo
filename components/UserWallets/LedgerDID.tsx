@@ -1,4 +1,6 @@
 import React, { FC, useContext, useEffect, useState } from 'react'
+
+import { useRouter } from 'next/router';
 import { utils } from '@ixo/impactxclient-sdk';
 import { TRX_MSG } from 'types/transactions';
 import { defaultTrxFeeOption, generateCreateIidTrx } from '@utils/transactions';
@@ -33,6 +35,10 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
     const network: ChainNetwork = ChainNetwork.MAINNET;
     const { chainInfo } = useContext(ChainContext);
     const { queryClient } = useQueryClient();
+    const router = useRouter();
+    const navigateConnect = () => {
+        router.push('/connecting');
+      };
     useEffect(() => {
         const grantAllowance = async () => {
             const feegrantResquest: QueryAllowancesRequest = {
@@ -97,7 +103,8 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
                     onBackCancel={() => null}
                     onCorrect={async () => {
                         signTX();
-                        onConnectionEstablished();
+                        navigateConnect();
+                        // onConnectionEstablished();
                     }}
                 />
             )}

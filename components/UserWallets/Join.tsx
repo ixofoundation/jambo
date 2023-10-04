@@ -65,14 +65,14 @@ const Join: FC<Props> = ({ join = false }) => {
         case join && didLedgered:
             renderComponent = <WalletQR />;
             break;
-        case join && !didLedgered:
-            renderComponent = (
-                <>
-                    <Loader />
-                    <p className={styles.centerTxt}>Connecting...</p>
-                </>
-            );
-            break;
+        // case join && !didLedgered:
+        //     renderComponent = (
+        //         <>
+        //             <Loader />
+        //             <p className={styles.centerTxt}>Connecting...</p>
+        //         </>
+        //     );
+        //     break;
         case !join && !connectionEstablished:
             renderComponent = (
                 <>
@@ -90,9 +90,9 @@ const Join: FC<Props> = ({ join = false }) => {
             className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, stepPagesStyles.stepContainer)}
             style={{ top: '-150px', position: 'relative' }}
         >
-            <p className={styles.centerTxt} >
+            {/* <p className={styles.centerTxt} >
                 {connectingScreenRenderCount}: times
-            </p>
+            </p> */}
             {renderComponent}
             <LedgerDID
                 onDIDLedgered={handleDIDLedgering}
