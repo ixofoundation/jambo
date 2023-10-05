@@ -48,9 +48,9 @@ export const keplrBroadCastMessage = async (
 ): Promise<string | null> => {
   try {
     const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);
-    const { queryClient } = useQueryClient();
-    const { wallet } = useContext(WalletContext);
-    const userAddress = wallet.user?.address ?? 'defaultAddress';
+    // const { queryClient } = useQueryClient();
+    // const { wallet } = useContext(WalletContext);
+    // const userAddress = wallet.user?.address ?? 'defaultAddress';
 
     if (!accounts) throw new Error('No accounts found to broadcast transaction');
     if (!offlineSigner) throw new Error('No offlineSigner found to broadcast transaction');
@@ -65,12 +65,13 @@ export const keplrBroadCastMessage = async (
       memo,
     };
 
-    const feegrantResquest: QueryAllowancesRequest = {
-      grantee: userAddress
-    };
-    const response = await queryClient?.cosmos.feegrant.v1beta1.allowances(feegrantResquest);
-    const granter = response?.allowances.map((allowance) => allowance.granter) || [];
-    const result = await sendTransaction(client, address, payload, granter[0]);
+    // const feegrantResquest: QueryAllowancesRequest = {
+    //   grantee: userAddress
+    // };
+    // const response = await queryClient?.cosmos.feegrant.v1beta1.allowances(feegrantResquest);
+    // const granter = response?.allowances.map((allowance) => allowance.granter) || [];
+    const granter = 'ixo1vafr2dqhgz8frc7gf22njz8y2u0fue4kuetey6';
+    const result = await sendTransaction(client, address, payload, granter);
 
     if (!result) throw new Error('Transaction Failed');
 

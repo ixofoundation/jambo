@@ -36,9 +36,9 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
     const { chainInfo } = useContext(ChainContext);
     const { queryClient } = useQueryClient();
     const router = useRouter();
-    const navigateConnect = () => {
-        router.push('/connecting');
-      };
+    // const navigateConnect = () => {
+    //     router.push('/connecting');
+    //   };
     useEffect(() => {
         const grantAllowance = async () => {
             const feegrantResquest: QueryAllowancesRequest = {
@@ -88,7 +88,7 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
                 console.log('Transaction hash: ', hash);
             }
             setFeeGrantSuccess(true);
-            // onConnectionEstablished();
+            onConnectionEstablished();
         } catch (error) {
             console.error('Error broadcasting transaction:', error);
         }
@@ -103,8 +103,8 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
                     onBackCancel={() => null}
                     onCorrect={async () => {
                         signTX();
-                        navigateConnect();
-                        // onConnectionEstablished();
+                        // navigateConnect();
+                        onConnectionEstablished();
                     }}
                 />
             )}

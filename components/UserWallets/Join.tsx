@@ -11,6 +11,7 @@ import WalletQR from './WalletQR';
 import useQueryClient from '@hooks/useQueryClient';
 import { WalletContext } from '@contexts/wallet';
 import { utils } from '@ixo/impactxclient-sdk';
+import { useRouter } from 'next/router';
 
 type Props = {
     join?: boolean;
@@ -22,14 +23,17 @@ const Join: FC<Props> = ({ join = false }) => {
     const pubKey = wallet.user?.pubKey;
     const userAddress = wallet.user?.address ?? 'defaultAddress';
     const did = `${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
-    const [connectingScreenRenderCount, setConnectingScreenRenderCount] = useState(0);
     const [connectionEstablished, setConnectionEstablished] = useState(false);
     const [didLedgered, setDidLedgered] = useState(false);
+    const router = useRouter();
     const handleConnectionEstablished = () => {
         setConnectionEstablished(true);
     };
     const handleDIDLedgering = () => {
         setDidLedgered(true);
+    };
+    const navigateConnect = () => {
+        router.push('/connecting');
     };
     useEffect(() => {
         const queryIidDocument = async (did: string) => {
@@ -53,25 +57,14 @@ const Join: FC<Props> = ({ join = false }) => {
                     console.error('Error:', error);
                 });
         }
+        if (join && !didLedgered) {
+            navigateConnect();
+        }
     }, [did, queryClient, userAddress]);
     let renderComponent;
-    useEffect(() => {
-        if (join && !didLedgered) {
-            setConnectingScreenRenderCount((prevCount) => prevCount + 1);
-            
-        }
-    }, [join, didLedgered]);
     switch (true) {
-        case join && didLedgered:
-            renderComponent = <WalletQR />;
-            break;
-        // case join && !didLedgered:
-        //     renderComponent = (
-        //         <>
-        //             <Loader />
-        //             <p className={styles.centerTxt}>Connecting...</p>
-        //         </>
-        //     );
+        // case join && didLedgered:
+        //     renderComponent = <WalletQR />;
         //     break;
         case !join && !connectionEstablished:
             renderComponent = (
@@ -84,22 +77,17 @@ const Join: FC<Props> = ({ join = false }) => {
         default:
             renderComponent = null;
     }
-
     return (
         <div
             className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, stepPagesStyles.stepContainer)}
             style={{ top: '-150px', position: 'relative' }}
         >
-            {/* <p className={styles.centerTxt} >
-                {connectingScreenRenderCount}: times
-            </p> */}
             {renderComponent}
             <LedgerDID
                 onDIDLedgered={handleDIDLedgering}
                 onConnectionEstablished={handleConnectionEstablished}
             />
         </div>
-
     )
 }
 
