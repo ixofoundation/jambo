@@ -10,14 +10,8 @@ import useQueryClient from '@hooks/useQueryClient';
 import WalletQR from '@components/UserWallets/WalletQR';
 import { WalletContext } from '@contexts/wallet';
 import { utils } from '@ixo/impactxclient-sdk';
-import { pushNewRoute } from '@utils/router';
 
-type Props = {
-  loading?: boolean;
-  signedIn?: boolean;
-};
-
-const Connecting: FC<Props> = ({ loading = false, signedIn = true }) => {
+const Connecting = () => {
   const { queryClient } = useQueryClient();
   const { wallet, updateWalletType } = useContext(WalletContext);
   const pubKey = wallet.user?.pubKey;
@@ -55,7 +49,6 @@ const Connecting: FC<Props> = ({ loading = false, signedIn = true }) => {
   return (
     <>
       <Header />
-
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <div className={utilsStyles.spacer3} />
         {didLedgered ? (
@@ -68,11 +61,7 @@ const Connecting: FC<Props> = ({ loading = false, signedIn = true }) => {
             <p style={{ color: '#FFFFFF' }} >Connecting...</p>
           </>
         )}
-        {/* <Loader />
-        <p style={{ color: '#FFFFFF' }} >Connecting...</p> */}
       </main>
-
-      {/* <Footer onBackUrl='/' backLabel='Home' /> */}
     </>
   );
 };
