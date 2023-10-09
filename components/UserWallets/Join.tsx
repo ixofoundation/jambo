@@ -12,6 +12,9 @@ import useQueryClient from '@hooks/useQueryClient';
 import { WalletContext } from '@contexts/wallet';
 import { utils } from '@ixo/impactxclient-sdk';
 import { useRouter } from 'next/router';
+import axios from 'axios';
+import { ChainNetwork } from 'pages/api/feegrant/grantFeegrantBasic';
+import { QueryAllowancesRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/feegrant/v1beta1/query';
 
 type Props = {
     join?: boolean;
@@ -25,6 +28,9 @@ const Join: FC<Props> = ({ join = false }) => {
     const did = `${pubKey ? utils.did.generateSecpDid(pubKey) : ''}`;
     const [connectionEstablished, setConnectionEstablished] = useState(false);
     const [didLedgered, setDidLedgered] = useState(false);
+    const [allowanceCheck, setAllowanceCheck] = useState(false);
+    const [granterAddress, setGranterAddress] = useState('');
+    const network: ChainNetwork = ChainNetwork.MAINNET || ChainNetwork.TESTNET || ChainNetwork.DEVNET;
     const router = useRouter();
     const handleConnectionEstablished = () => {
         setConnectionEstablished(true);
@@ -35,6 +41,42 @@ const Join: FC<Props> = ({ join = false }) => {
     const navigateConnect = () => {
         router.push('/connecting');
     };
+
+    useEffect(() => {
+        const checkAllowance = async () => {
+            const feegrantResquest: QueryAllowancesRequest = {
+                grantee: userAddress
+            };
+            const response = await queryClient?.cosmos.feegrant.v1beta1.allowances(feegrantResquest);
+            if (response && response.allowances.length > 0) {
+                const granter = response.allowances[0]?.granter;
+                console.log('Granter Address:', granter);
+                setGranterAddress(granter)
+                setAllowanceCheck(false);
+            } else {
+                setAllowanceCheck(!allowanceCheck);
+            }
+        };
+        if (allowanceCheck) {
+            const grantAllowance = async () => {
+                const feeGrantResponse = await axios.post('/api/feegrant/grantFeegrantBasic', {
+                    address: userAddress,
+                    chainNetwork: network,
+                });
+                if (feeGrantResponse.status === 200) {
+                    console.log('Fee grant granted successfully.');
+                    console.log('Fee grant response:', feeGrantResponse.data);
+                } else {
+                    console.error('Fee grant message unsuccessful');
+                }
+            }
+            grantAllowance();
+        } else {
+            console.log('allowance already exists! : - )')
+        }
+        checkAllowance()
+    }, []);
+
     useEffect(() => {
         const queryIidDocument = async (did: string) => {
             try {
@@ -63,9 +105,6 @@ const Join: FC<Props> = ({ join = false }) => {
     }, [did, queryClient, userAddress]);
     let renderComponent;
     switch (true) {
-        // case join && didLedgered:
-        //     renderComponent = <WalletQR />;
-        //     break;
         case !join && !connectionEstablished:
             renderComponent = (
                 <>

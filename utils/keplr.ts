@@ -4,6 +4,7 @@ import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
+import GranterAddress from '@components/UserWallets/GranterAddress';
 
 export const getKeplr = (): Keplr | undefined => {
   if (typeof window !== 'undefined' && window.keplr) return window.keplr;
@@ -43,6 +44,9 @@ export const keplrBroadCastMessage = async (
   chainInfo: ChainInfo,
 ): Promise<string | null> => {
   try {
+    const granter = await GranterAddress();
+    if (!granter) throw new Error('Granter address not available');
+
     const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);
 
     if (!accounts) throw new Error('No accounts found to broadcast transaction');
@@ -58,7 +62,13 @@ export const keplrBroadCastMessage = async (
       memo,
     };
 
-    const granter = 'ixo1vafr2dqhgz8frc7gf22njz8y2u0fue4kuetey6';
+
+    // const granter = `${granterAddress}`;
+    // const granter = granterAddress;
+    // const granter = grant?.toString()
+    // const granter = await GranterAddress();
+    // const granterAddress = 'ixo1vafr2dqhgz8frc7gf22njz8y2u0fue4kuetey6'
+    // const granter = granterAddress;
     const result = await sendTransaction(client, address, payload, granter);
 
     if (!result) throw new Error('Transaction Failed');

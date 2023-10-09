@@ -1,7 +1,7 @@
 import React, { FC, useContext, useEffect, useState } from 'react'
 
 import { useRouter } from 'next/router';
-import { utils } from '@ixo/impactxclient-sdk';
+import { cosmos, utils } from '@ixo/impactxclient-sdk';
 import { TRX_MSG } from 'types/transactions';
 import { defaultTrxFeeOption, generateCreateIidTrx } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
@@ -13,15 +13,15 @@ import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 import { ChainContext } from '@contexts/chain';
 import Join from './Join';
 import useQueryClient from '@hooks/useQueryClient';
-import { QueryAllowancesRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/feegrant/v1beta1/query';
-// import { useRouter } from 'next/router';
+import { QueryAllowancesByGranterRequest, QueryAllowancesRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/feegrant/v1beta1/query';
+import { BasicAllowance } from '@ixo/impactxclient-sdk/types/codegen/cosmos/feegrant/v1beta1/feegrant';
 
 type Props = {
     onConnectionEstablished: () => void;
     onDIDLedgered: () => void;
 }
 
-const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
+const LedgerDID: FC<Props> = ({ onConnectionEstablished, onDIDLedgered }) => {
     const [successHash, setSuccessHash] = useState<string | undefined>();
     const [loading, setLoading] = useState(true);
     const [connectionScreenVisible, setConnectionScreenVisible] = useState(false);
@@ -35,25 +35,26 @@ const LedgerDID: FC<Props> = ({ onConnectionEstablished ,onDIDLedgered }) => {
     const network: ChainNetwork = ChainNetwork.MAINNET;
     const { chainInfo } = useContext(ChainContext);
     const { queryClient } = useQueryClient();
-    const router = useRouter();
-    // const navigateConnect = () => {
-    //     router.push('/connecting');
-    //   };
-    useEffect(() => {
-        const grantAllowance = async () => {
-            const feegrantResquest: QueryAllowancesRequest = {
-                grantee: userAddress
-            };
-            const response = await queryClient?.cosmos.feegrant.v1beta1.allowances(feegrantResquest);
-            if (response && response.allowances && response.allowances.length > 0) {
-                console.log('Fee grant already exists:', response.allowances);
-                setExistingFeegrant(false);
-            } else {
-                setExistingFeegrant(true);
-            }
-        };
-        grantAllowance();
-    }, [userAddress, network, queryClient]);
+    // const router = useRouter();
+
+    // useEffect(() => {
+    //     const grantAllowance = async () => {
+    //         const feegrantResquest: QueryAllowancesRequest = {
+    //             grantee: userAddress
+    //         };
+    //         const response = await queryClient?.cosmos.feegrant.v1beta1.allowances(feegrantResquest);
+    //         if (response && response.allowances.length > 0) {
+    //             console.log('Fee grant already exists:', response.allowances);
+    //             // const granter = response.allowances[0]?.granter;
+    //             // console.log('Granter Address:', granter);
+    //             setExistingFeegrant(false);
+    //         } else {
+    //             setExistingFeegrant(true);
+    //         }
+    //     };
+    //     grantAllowance();
+    // }, [userAddress, network, queryClient]);
+
     const signTX = async (): Promise<void> => {
         setLoading(true);
         const trxMsg: TRX_MSG[] = [
