@@ -3,6 +3,7 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './SupaMotoScreens.module.scss';
+import styles1 from '@styles/stepsPages.module.scss';
 import CustomCamera from '@components/CustomCamera/CustomCamera';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
@@ -14,7 +15,7 @@ type GetCameraImageProps = {
   onSuccess: (data: StepDataType<STEPS.get_camera_image>) => void;
   onBack?: () => void;
   data?: StepDataType<STEPS.get_camera_image>;
-  // config: StepConfigType<STEPS.get_camera_image>;
+  config: StepConfigType<STEPS.get_camera_image>;
   Width?: number;
   Height?: number;
   header?: string;
@@ -53,19 +54,19 @@ const GetCameraImage: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Hei
     <>
       <Header header={header} />
 
-      <main className={styles.onboardingComponent} >
+      <main style={{ top: '-60px', position: 'relative' }} >
         <div className={styles.table}>
           <CustomCamera
             width={width ?? 250}
             height={(height ?? 300) - footerHeight - headerHeight}
-            frameWidth={frame.width}
-            frameHeight={frame.height}
+            frameWidth={300}
+            frameHeight={200}
             ref={cameraRef}
           />
         </div>
       </main>
 
-      <Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onForward={null} />
+      {/* <Footer onBack={onBack} onBackUrl={onBack ? undefined : ''} onForward={null} /> */}
     </>
   );
 };
