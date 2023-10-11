@@ -20,6 +20,7 @@ type FooterProps = {
   correctLabel?: string;
   onForward?: (() => void) | null;
   forwardLabel?: string;
+  forwardIcon?: React.ElementType;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
 };
@@ -35,6 +36,7 @@ const Footer = ({
   // correctLabel,
   onForward,
   // forwardLabel,
+  forwardIcon: ForwardIcon = ArrowRight,
   showAccountButton,
   showActionsButton,
 }: FooterProps) => {
@@ -94,7 +96,7 @@ const Footer = ({
           onClick={onForward ?? undefined}
           size={BUTTON_ROUND_SIZE.large}
         >
-          <ArrowRight width='24px' height='24px' />
+          <ColoredIcon icon={ForwardIcon} size={24} color={ICON_COLOR.white} />
           {/* {!!width && width > 425 && <p className={styles.label}>{forwardLabel ?? 'Done'}</p>} */}
         </ButtonRound>
       )}
