@@ -49,7 +49,10 @@ const VoteButton = ({ backgroundColor, children, onClick }: VoteBtnProps) => {
     const VoteBtnsStyle = {
         backgroundColor: backgroundColor,
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
     return (
         <button
             className={styles.voteBtnStyles}
@@ -275,7 +278,11 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
                                     height: selected && selected.proposalId === proposal.proposalId ? '400px' : '300px',
                                     borderStyle: selected && selected.proposalId === proposal.proposalId ? 'solid' : '',
                                 }}>
+<<<<<<< HEAD
 
+=======
+                                    
+>>>>>>> main
                                 <div>
                                     <p className={styles.proposalId} >{proposalId}</p>
                                     <div className={styles.proposalContent} >
@@ -416,4 +423,8 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
     )
 }
 
+<<<<<<< HEAD
 export default GovProposals
+=======
+export default GovProposals
+>>>>>>> main

@@ -15,9 +15,9 @@ Before proceeding, ensure that you have the following:
 
 Create a descriptive ID for the new step, and add it to the [/types/steps.ts](/types/steps.ts) file as an enum. For this example, the step is called "request_donation," the ID would look like this:
 
-```ts
+```ts 
 export enum STEPS {
-  // ... existing step IDs
+  // ... existing step IDs 
   request_donation = 'request_donation',
 }
 ```

@@ -31,6 +31,7 @@ import {
   generateDelegateTrx,
   generateRedelegateTrx,
   generateUndelegateTrx,
+  generateVoteTrx,
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
@@ -219,7 +220,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           </IconText>
         </main>
 
-        <Footer showAccountButton={!!successHash} showActionsButton={!!successHash} />
+        <Footer showAccountButton={!!successHash} showActionsButton={!!successHash} selectedVoteOption={''} setSelectedVoteOption={null} />
       </>
     );
 
@@ -285,7 +286,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgUndelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -298,7 +299,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgRedelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -310,9 +311,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             />
             <br />
             <p>from</p>
-            <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={srcValidator!} onClick={() => () => { }} />
             <p>to</p>
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
+          </form>
+        ) : message === STEPS.gov_MsgVote ? (
+          <form className={styles.stepsForm} autoComplete='none' >
+
           </form>
         ) : (
           <p>Unsupported review type</p>
@@ -324,7 +329,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         onBackUrl={onBack ? undefined : ''}
         onCorrect={loading || !!successHash ? null : signTX}
         correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
-      />
+        selectedVoteOption={''}
+        setSelectedVoteOption={null} />
     </>
   );
 };

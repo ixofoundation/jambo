@@ -1,3 +1,4 @@
+import { PROPOSAL_DATA } from './proposals';
 import { VALIDATOR } from './validators';
 import { CURRENCY_TOKEN } from './wallet';
 
@@ -22,7 +23,11 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
+<<<<<<< HEAD
   gov_MsgVote = 'gov_MsgVote',
+=======
+  gov_MsgVote = 'gov_MsgVote'
+>>>>>>> main
 }
 
 export type STEP = {
@@ -65,7 +70,11 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
+<<<<<<< HEAD
   [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Vote' },
+=======
+  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Select and vote on proposals' },
+>>>>>>> main
 };
 
 export type ReviewStepsTypes =
@@ -74,7 +83,8 @@ export type ReviewStepsTypes =
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
-  | STEPS.distribution_MsgWithdrawDelegatorReward;
+  | STEPS.distribution_MsgWithdrawDelegatorReward
+  | STEPS.gov_MsgVote;
 
 export type AllStepConfigTypes = never;
 
@@ -111,8 +121,14 @@ interface Review_and_sign {
   done: boolean;
 }
 interface Gov_MsgVote {
+<<<<<<< HEAD
   data: Gov_MsgVote;
 }
+=======
+  data: Gov_MsgVote[];
+  proposal: PROPOSAL_DATA;
+};
+>>>>>>> main
 
 export type AllStepDataTypes =
   | Get_receiver_address
@@ -124,7 +140,8 @@ export type AllStepDataTypes =
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
-  | Review_and_sign;
+  | Review_and_sign
+  | Gov_MsgVote;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Check_user_balance
@@ -157,5 +174,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.claim
+  ? Gov_MsgVote
+  : T extends STEPS.gov_MsgVote
   ? Review_and_sign
   : never;
