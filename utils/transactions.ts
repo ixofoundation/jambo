@@ -150,3 +150,20 @@ export const generateWithdrawRewardTrx = ({
     validatorAddress,
   }),
 });
+
+export const generateVoteTrx = ({
+  proposalId,
+  voterAddress,
+  option: selectedOption,
+}: {
+  proposalId: number;
+  voterAddress: string;
+  option: '1' | '2' | '3' | '4';
+}): TRX_MSG => ({
+  typeUrl: '/cosmos.gov.v1beta1.MsgVote',
+  value: cosmos.gov.v1beta1.MsgVote.fromPartial({
+    proposalId: proposalId.toString(),
+    voter: voterAddress.toString(),
+    option: selectedOption,
+  }),
+});

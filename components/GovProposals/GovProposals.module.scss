@@ -1,0 +1,155 @@
+.swiperSlide {
+    background-color: #EBEBEB;
+    width: 290px;
+    height: 300px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    border-color: lightblue;
+    transition: 0.2s;
+}
+
+.selectSlide {
+    background-color: #EBEBEB;
+    width: 290px;
+    height: 400px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    border-color: lightblue;
+    transition: 0.2s;
+}
+
+.slideHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.voteBtnContainer {
+    top: 310px;
+    z-index: 1;
+    position: fixed;
+    background-color: #F0F0F0;
+    width: 100%;
+    height: 20rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tableRow {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.proposalId {
+    font-size: 7px;
+    margin: -5px;
+    width: 100%;
+    text-align: center;
+}
+
+.proposalTime {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #4B5563;
+    font-size: 14px;
+}
+
+.proposalDescription {
+    display: flex;
+    justify-content: space-evenly;
+    text-align: left;
+    font-size: 14px;
+    font-weight:500;
+    overflow: auto;
+    height: 230px;
+}
+
+.proposalTitle {
+    display: flex;
+    // justify-content: center;
+    // align-items: center;
+    text-align: left;
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.voteTable {
+    width: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+}
+
+.voteTableBody {
+    width: 100%;
+    display: block;
+    justify-content: center;
+    align-items: center;
+}
+
+.tableData {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.colorIconContainer {
+    margin-left: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: 'center'
+}
+
+.voteSpan {
+    margin-right: 15px;
+}
+
+.filterBtnContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.filterBtn {
+    background-color: #E5E7EB;
+    border-radius: 20px;
+    margin: 1px;
+    border-style: none;
+    height: 2rem;
+    width: 5rem;
+    color: white;
+}
+
+.voteBtnStyles {
+    height: 50px;
+    width: 70%;
+    border-radius: 30px;
+    margin: 5px;
+    border-style: none;
+    color: white;
+    font-size: 15px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+.statusBar {
+    background-color: #f2f2f2; 
+    border-radius: 50px;
+    height: 10px;
+}
+
+
+

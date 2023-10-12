@@ -16,6 +16,7 @@ import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
+import Proposals from '@steps/Proposals';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -118,9 +119,9 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             excludeValidators={
               step.id === STEPS.get_validator_redelegate
                 ? (
-                    action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
-                      ?.data as StepDataType<STEPS.get_validator_delegate>
-                  )?.validator?.address || []
+                  action?.steps.find((step) => step.id === STEPS.get_delegated_validator_redelegate)
+                    ?.data as StepDataType<STEPS.get_validator_delegate>
+                )?.validator?.address || []
                 : []
             }
           />
@@ -169,6 +170,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             data={step.data as StepDataType<STEPS.get_validator_delegate>}
             header={action?.name}
             message={step.id}
+          />
+        );
+      case STEPS.gov_MsgVote:
+        return (
+          <Proposals
+            onSuccess={handleOnNext<STEPS.gov_MsgVote>}
+            onBack={handleBack}
+            data={step.data as StepDataType<STEPS.gov_MsgVote>}
+            header={action?.name}
           />
         );
       case STEPS.bank_MsgSend:

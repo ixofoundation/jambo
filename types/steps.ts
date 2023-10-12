@@ -22,6 +22,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
+  gov_MsgVote = 'gov_MsgVote',
 }
 
 export type STEP = {
@@ -64,6 +65,7 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
+  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Vote' },
 };
 
 export type ReviewStepsTypes =
@@ -108,9 +110,13 @@ interface Send_token_to_receiver {
 interface Review_and_sign {
   done: boolean;
 }
+interface Gov_MsgVote {
+  data: Gov_MsgVote;
+}
 
 export type AllStepDataTypes =
   | Get_receiver_address
+  | Gov_MsgVote
   | Get_receiver_addresses
   | Get_validator_address
   | Select_token_and_amount
@@ -125,6 +131,8 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.get_receiver_address
   ? Get_receiver_addresses
   : T extends STEPS.get_validator_delegate
+  ? Gov_MsgVote
+  : T extends STEPS.gov_MsgVote
   ? Get_validator_address
   : T extends STEPS.get_delegated_validator_undelegate
   ? Get_validator_address
