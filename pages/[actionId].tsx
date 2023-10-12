@@ -2,7 +2,6 @@ import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
 import config from '@constants/config.json';
-import GetCameraImage from '@components/SupaMotoScreens/GetCameraImage';
 import { StepDataType, STEP, STEPS, StepConfigType } from 'types/steps';
 import EmptySteps from '@steps/EmptySteps';
 import SupamotoOnboarding from '@steps/SupamotoOnboarding';
@@ -171,16 +170,6 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             data={step.data as StepDataType<STEPS.get_validator_delegate>}
             header={action?.name}
             message={step.id}
-          />
-        );
-      case STEPS.get_camera_image:
-        return (
-          <GetCameraImage
-            onSuccess={handleOnNext<STEPS.get_camera_image>}
-            onBack={handleBack}
-            data={step.data as StepDataType<STEPS.get_camera_image>}
-            config={step.config as StepConfigType<STEPS.get_camera_image>}
-            header={action?.name}
           />
         );
       case STEPS.onboarding:

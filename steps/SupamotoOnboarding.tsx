@@ -3,10 +3,10 @@ import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
 import Header from '@components/Header/Header';
-import Footer from '@components/Footer/Footer';
+// import Footer from '@components/Footer/Footer';
 import Loader from '@components/Loader/Loader';
-import SupaStyles from '@components/SupaMotoScreens/SupaMotoScreens.module.scss';
-import GetCameraImage from '@components/SupaMotoScreens/GetCameraImage';
+// import SupaStyles from '@components/SupaMotoScreens/SupaMotoScreens.module.scss';
+// import GetCameraImage from '@components/SupaMotoScreens/GetCameraImage';
 import OnboardingLanguage from '@components/SupaMotoScreens/OnboardingLanguage';
 
 type SupaMotoOnboardingProps = {
