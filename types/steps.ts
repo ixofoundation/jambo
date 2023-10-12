@@ -23,11 +23,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
-<<<<<<< HEAD
   gov_MsgVote = 'gov_MsgVote',
-=======
-  gov_MsgVote = 'gov_MsgVote'
->>>>>>> main
 }
 
 export type STEP = {
@@ -70,11 +66,7 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
-<<<<<<< HEAD
   [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Vote' },
-=======
-  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Select and vote on proposals' },
->>>>>>> main
 };
 
 export type ReviewStepsTypes =
@@ -121,14 +113,8 @@ interface Review_and_sign {
   done: boolean;
 }
 interface Gov_MsgVote {
-<<<<<<< HEAD
   data: Gov_MsgVote;
 }
-=======
-  data: Gov_MsgVote[];
-  proposal: PROPOSAL_DATA;
-};
->>>>>>> main
 
 export type AllStepDataTypes =
   | Get_receiver_address

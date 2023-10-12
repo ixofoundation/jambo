@@ -6,9 +6,4 @@ const useQueryClient = () => {
     return { queryClient };
 };
 
-<<<<<<< HEAD
 export default useQueryClient;
-=======
-export default useQueryClient;
-
->>>>>>> main

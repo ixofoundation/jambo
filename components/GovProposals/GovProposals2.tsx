@@ -1,24 +1,16 @@
-<<<<<<< HEAD
 import { FC, useEffect, useState } from 'react';
-=======
-import { FC, useState } from 'react';
->>>>>>> main
 import cls from 'classnames';
 
 import useQueryClient from '@hooks/useQueryClient';
 import HourGlass from '@assets/icons/hourglass.svg';
 import Depositor from '@assets/icons/depositor.svg';
-<<<<<<< HEAD
 import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
 import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
-=======
->>>>>>> main
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './GovProposals.module.scss';
 import { queryProposals } from './query_data';
-import VoteStats from '@components/VoteStats/VoteStats';
 
 type Props = {
     loading?: boolean;
@@ -29,29 +21,6 @@ type Props = {
 const GovProposals2: FC<Props> = () => {
     const [slide, selectSlide] = useState(styles.swiperSlide);
     const proposals = queryProposals();
-<<<<<<< HEAD
-    // const { queryClient } = useQueryClient();
-    // const [proposals, renderProposals] = useState<Proposal[]>([]);
-    // const proposalStatus = cosmos.gov.v1beta1.ProposalStatus.UNRECOGNIZED;
-
-    // useEffect(() => {
-    //     const fetchProposals = async () => {
-    //         const proposalsRequest: QueryProposalsRequest = {
-    //             proposalStatus: proposalStatus,
-    //             voter: "",
-    //             depositor: "",
-    //         }
-    //         const response = await queryClient?.cosmos.gov.v1beta1.proposals(proposalsRequest);
-    //         if (response?.proposals) {
-    //             renderProposals(response.proposals);
-    //         }
-    //         console.log(response?.proposals);
-    //     }
-    //     fetchProposals()
-    // }, [])
-
-=======
->>>>>>> main
     const useSelectSlide = () => {
         if (slide === styles.swiperSlide) {
             selectSlide(styles.selectSlide)
