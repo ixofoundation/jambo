@@ -1,13 +1,33 @@
 .swiperSlide {
     background-color: #EBEBEB;
     width: 290px;
+    height: 300px;
     padding: 20px;
     display: flex;
     justify-content: center;
-    border-radius: 15px;
+    border-radius: 8px;
     overflow: hidden;
     border-color: lightblue;
     transition: 0.2s;
+}
+
+.selectSlide {
+    background-color: #EBEBEB;
+    width: 290px;
+    height: 400px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+    border-color: lightblue;
+    transition: 0.2s;
+}
+
+.slideHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .voteBtnContainer {
@@ -36,10 +56,32 @@
     text-align: center;
 }
 
-.proposalContent {
+.proposalTime {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #4B5563;
+    font-size: 14px;
+}
+
+.proposalDescription {
     display: flex;
     justify-content: space-evenly;
     text-align: left;
+    font-size: 14px;
+    font-weight:500;
+    overflow: auto;
+    height: 230px;
+}
+
+.proposalTitle {
+    display: flex;
+    // justify-content: center;
+    // align-items: center;
+    text-align: left;
+    font-size: 15px;
+    font-weight: bold;
 }
 
 .voteTable {
@@ -102,3 +144,12 @@
     display: flex;
     align-items: center;
 }
+
+.statusBar {
+    background-color: #f2f2f2; 
+    border-radius: 50px;
+    height: 10px;
+}
+
+
+

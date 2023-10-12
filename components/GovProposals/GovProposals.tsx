@@ -49,7 +49,6 @@ const VoteButton = ({ backgroundColor, children, onClick }: VoteBtnProps) => {
     const VoteBtnsStyle = {
         backgroundColor: backgroundColor,
     }
-
     return (
         <button
             className={styles.voteBtnStyles}
