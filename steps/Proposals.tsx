@@ -12,6 +12,9 @@ import 'swiper/swiper.min.css';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 // import GovProposals from '@components/GovProposals/GovProposals';
 import GovProposals2 from '@components/GovProposals/GovProposals2';
+import GovProposals from '@components/GovProposals/GovProposals';
+import VoteBtn from '@components/GovProposals/VoteBtn';
+import { VoteActions } from '@components/GovProposals/query_data';
 import { pushNewRoute } from '@utils/router';
 
 // Remove unwanted code.

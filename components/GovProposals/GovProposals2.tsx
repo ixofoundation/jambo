@@ -1,33 +1,76 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useContext, useState } from 'react';
 import cls from 'classnames';
 
-import useQueryClient from '@hooks/useQueryClient';
 import HourGlass from '@assets/icons/hourglass.svg';
 import Depositor from '@assets/icons/depositor.svg';
-import { QueryProposalsRequest } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/query';
-import { Proposal } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from './GovProposals.module.scss';
-import { queryProposals } from './query_data';
+
+import {
+    queryProposals,
+    VoteActions,
+    handleProposal,
+    selectedSlide,
+    voteOptions
+} from './query_data';
+import { TRX_MSG } from 'types/transactions';
+import { defaultTrxFeeOption, generateVoteTrx } from '@utils/transactions';
+import { WalletContext } from '@contexts/wallet';
+import { broadCastMessages } from '@utils/wallets';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
+import { ChainContext } from '@contexts/chain';
+import Footer from '@components/Footer/Footer';
+import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 
 type Props = {
     loading?: boolean;
     signedIn?: boolean;
+    onSuccess: (data: StepDataType<STEPS.gov_MsgVote>) => void;
+    onBack?: () => void;
+    data?: StepDataType<STEPS.gov_MsgVote>;
+    config?: StepConfigType<STEPS.gov_MsgVote>;
+    header?: string;
 };
 
-
-const GovProposals2: FC<Props> = () => {
-    const [slide, selectSlide] = useState(styles.swiperSlide);
+const GovProposals2: FC<Props> = ({ onSuccess, onBack, config, data, header }) => {
     const proposals = queryProposals();
-    const useSelectSlide = () => {
-        if (slide === styles.swiperSlide) {
-            selectSlide(styles.selectSlide)
-        } else {
-            selectSlide(styles.swiperSlide)
+    const handleSelect = handleProposal();
+    const [selected, setSelected] = useState<{ proposalId: number } | null>(null);
+    const { wallet } = useContext(WalletContext);
+    const { chainInfo } = useContext(ChainContext);
+    const { selectedOption, setSelectedOption } = voteOptions();
+    const { slide, selectSlide } = selectedSlide();
+    const [loading, setLoading] = useState(true);
+    const [successHash, setSuccessHash] = useState<string | undefined>();
+
+    const signTX = async (): Promise<void> => {
+        setLoading(true);
+        if (selectedOption && selected) {
+            const trxMsg: TRX_MSG[] = [
+                generateVoteTrx({
+                    proposalId: selected.proposalId,
+                    voterAddress: wallet.user!.address,
+                    option: selectedOption,
+                }),
+            ];
+            const hash = await broadCastMessages(
+                wallet,
+                trxMsg,
+                undefined,
+                defaultTrxFeeOption,
+                '',
+                chainInfo as KEPLR_CHAIN_INFO_TYPE
+            );
+            if (hash) {
+                setSuccessHash(hash);
+                console.log('Transaction hash: ', hash);
+            }
         }
-    }
+        setLoading(false);
+    };
+
     return (
         <ul>
             <Swiper
@@ -54,7 +97,7 @@ const GovProposals2: FC<Props> = () => {
                         return (
                             <SwiperSlide
                                 className={slide}
-                                onClick={useSelectSlide}
+                                onClick={() => handleSelect(proposal.proposalId.toNumber())}
                                 key={proposal.proposalId.toString()}
                             >
                                 <div>
@@ -108,9 +151,16 @@ const GovProposals2: FC<Props> = () => {
                             </SwiperSlide>
                         );
                     }
-
                 })}
+                <VoteActions />
             </Swiper>
+            <Footer
+                onBack={successHash ? null : onBack}
+                // selectVoteAction={toggelVotes}
+                onCorrect={!selectedOption ? null : signTX}
+                selectedVoteOption={''}
+                setSelectedVoteOption={null}
+            />
         </ul>
     );
 };
