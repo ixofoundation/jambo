@@ -37,19 +37,17 @@ const Proposals: FC<RequestProposalsProps> = ({ loading = false, signedIn = true
         // </div >
         <>
             <Header />
-
-            <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter)}>
+            <main className={cls(utilsStyles.columnJustifyCenter)}>
                 {/* <div className={utilsStyles.spacer3} /> */}
                 {loading ? (
                     <Loader />
                 ) : !signedIn ? (
                     <WalletCard name='Connect your Wallet' Img={WalletImg} onClick={navigateToAccount} />
                 ) : (
-                    <GovProposals2 />
+                    <GovProposals2 onSuccess={() => null} />
                 )}
                 {/* <div className={utilsStyles.spacer3} /> */}
             </main>
-
             {/* <Footer onBackUrl='/' backLabel='Home' selectedVoteOption={''} setSelectedVoteOption={null} /> */}
         </>
 
