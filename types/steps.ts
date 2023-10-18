@@ -1,4 +1,3 @@
-import { PROPOSAL_DATA } from './proposals';
 import { VALIDATOR } from './validators';
 import { CURRENCY_TOKEN } from './wallet';
 
@@ -23,6 +22,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   claim = 'claim',
+  select_proposal_and_vote_option = 'select_proposal_and_vote_option',
   gov_MsgVote = 'gov_MsgVote',
 }
 
@@ -66,17 +66,20 @@ export const steps: { [key in STEPS]: STEP } = {
     name: 'Review and sign',
   },
   [STEPS.claim]: { id: STEPS.claim, name: 'Claim' },
-  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Vote' },
+  [STEPS.select_proposal_and_vote_option]: {
+    id: STEPS.select_proposal_and_vote_option, name: 'Select proposal and Option'
+  },
+  [STEPS.gov_MsgVote]: { id: STEPS.gov_MsgVote, name: 'Review and sign' },
 };
 
 export type ReviewStepsTypes =
+  | STEPS.gov_MsgVote
   | STEPS.bank_MsgSend
   | STEPS.bank_MsgMultiSend
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate
-  | STEPS.distribution_MsgWithdrawDelegatorReward
-  | STEPS.gov_MsgVote;
+  | STEPS.distribution_MsgWithdrawDelegatorReward;
 
 export type AllStepConfigTypes = never;
 
@@ -112,13 +115,14 @@ interface Send_token_to_receiver {
 interface Review_and_sign {
   done: boolean;
 }
-interface Gov_MsgVote {
-  data: Gov_MsgVote;
+interface Select_proposal_and_option {
+  proposalId: any;
+  option: any;
 }
 
 export type AllStepDataTypes =
+  | Select_proposal_and_option
   | Get_receiver_address
-  | Gov_MsgVote
   | Get_receiver_addresses
   | Get_validator_address
   | Select_token_and_amount
@@ -127,15 +131,12 @@ export type AllStepDataTypes =
   | Define_amount
   | Send_token_to_receiver
   | Review_and_sign
-  | Gov_MsgVote;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Check_user_balance
   : T extends STEPS.get_receiver_address
   ? Get_receiver_addresses
   : T extends STEPS.get_validator_delegate
-  ? Gov_MsgVote
-  : T extends STEPS.gov_MsgVote
   ? Get_validator_address
   : T extends STEPS.get_delegated_validator_undelegate
   ? Get_validator_address
@@ -155,12 +156,14 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Define_amount
   : T extends STEPS.send_token_to_receiver
   ? Send_token_to_receiver
+  : T extends STEPS.select_proposal_and_vote_option
+  ? Select_proposal_and_option
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.claim
-  ? Gov_MsgVote
+  ? Review_and_sign
   : T extends STEPS.gov_MsgVote
   ? Review_and_sign
   : never;

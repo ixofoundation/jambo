@@ -9,7 +9,7 @@ import WalletCard from '@components/CardWallet/CardWallet';
 import Loader from '@components/Loader/Loader';
 import WalletImg from '@icons/wallet.svg';
 import 'swiper/swiper.min.css';
-import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import { ReviewStepsTypes, StepConfigType, StepDataType, STEPS } from 'types/steps';
 // import GovProposals from '@components/GovProposals/GovProposals';
 import GovProposals2 from '@components/GovProposals/GovProposals2';
 import GovProposals from '@components/GovProposals/GovProposals';
@@ -26,9 +26,10 @@ type RequestProposalsProps = {
     header?: string;
     loading?: boolean;
     signedIn?: boolean;
+    message: ReviewStepsTypes;
 };
 
-const Proposals: FC<RequestProposalsProps> = ({ loading = false, signedIn = true }) => {
+const Proposals: FC<RequestProposalsProps> = ({ loading = false, signedIn = true, message }) => {
     const navigateToAccount = () => pushNewRoute('/account');
     return (
         // <div style={{ position: 'relative', top: '90px' }} >

@@ -36,6 +36,13 @@ import {
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import {
+  voteOptions,
+  SelectedOption,
+  ToggelVotesOptions,
+  VoteActions,
+  renderProposals
+} from '@components/GovProposals/query_data';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -67,6 +74,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
+  const { selected, setSelected } = SelectedOption();
+  const { selectedOption, setSelectedOption } = voteOptions();
+  const [toggleVoteActions, setToggleVoteActions] = useState(false);
+
+  const toggelVotes = () => {
+    setToggleVoteActions(!toggleVoteActions)
+  }
 
   const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
@@ -183,6 +197,17 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             amount: getMicroAmount(amount.toString()),
           }),
         );
+        break;
+      case STEPS.gov_MsgVote:
+        trxMsgs.push(
+          generateVoteTrx({
+            proposalId: selected.proposalId,
+            voterAddress: wallet.user!.address,
+            option: selectedOption,
+          })
+        )
+        // if (selectedOption && selected) {
+        // }
         break;
       default:
         throw new Error('Unsupported review type');
@@ -317,7 +342,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           </form>
         ) : message === STEPS.gov_MsgVote ? (
           <form className={styles.stepsForm} autoComplete='none' >
-
+            {renderProposals()}
+            {!toggleVoteActions ? (
+              <>
+              </>
+            ) : (
+              <>
+                <VoteActions />
+              </>
+            )}
           </form>
         ) : (
           <p>Unsupported review type</p>
@@ -329,6 +362,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         onBackUrl={onBack ? undefined : ''}
         onCorrect={loading || !!successHash ? null : signTX}
         correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
+        selectVoteAction={message === STEPS.gov_MsgVote ? toggelVotes : null}
         selectedVoteOption={''}
         setSelectedVoteOption={null} />
     </>

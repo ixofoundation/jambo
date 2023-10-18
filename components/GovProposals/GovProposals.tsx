@@ -77,6 +77,7 @@ const GovProposals: FC<GovProposalsProps> = ({ onSuccess, onBack, config, data, 
     const toggelVotes = () => {
         setToggleVoteActions(!toggleVoteActions)
     }
+    
     const toggelVotesClose = () => {
         setToggleVoteActions(false)
     }

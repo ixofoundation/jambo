@@ -127,11 +127,15 @@
       "image": "eKXPPhewkJDLbE1bq1ibod.png"
     },
     {
-      "id": "Proposals",
+      "id": "eKXPPhewkJDLbE1bq1iboe",
       "steps": [
         {
+          "id": "select_proposal_and_vote_option",
+          "name": "Select proposal and option"
+        },
+        {
           "id": "gov_MsgVote",
-          "name": "Proposals"
+          "name": "Review and sign"
         }
       ],
       "name": "Vote",

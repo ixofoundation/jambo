@@ -7,7 +7,6 @@ import InputWithSuffixIcon from '@components/InputWithSuffixIcon/InputWithSuffix
 import IconText from '@components/IconText/IconText';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-// import QRScan from '@icons/qr_scan.svg';
 import SadFace from '@icons/sad_face.svg';
 import Paste from '@icons/paste.svg';
 import { StepDataType, STEPS } from 'types/steps';
@@ -28,6 +27,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
   const [address, setAddress] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.address ?? '' : '',
   );
+  
   const { wallet } = useContext(WalletContext);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +70,7 @@ const ReceiverAddress: FC<ReceiverAddressProps> = ({ onSuccess, onBack, data, he
             {!wallet?.balances?.data?.length ? (
               <IconText title="You don't have any tokens to send." Img={SadFace} imgSize={50} />
             ) : (
-              <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
+              <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'> 
                 <p className={styles.label}>Paste address here</p>
                 <InputWithSuffixIcon name='address' required onChange={handleChange} value={address} icon={Paste} />
               </form>

@@ -1,4 +1,4 @@
-import { FC, FormEvent, useContext, useEffect, useState } from 'react';
+import React, { FC, FormEvent, useContext, useEffect, useState } from 'react';
 import cls from 'classnames';
 
 import HourGlass from '@assets/icons/hourglass.svg';
@@ -6,7 +6,7 @@ import Depositor from '@assets/icons/depositor.svg';
 import { cosmos } from '@ixo/impactxclient-sdk';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import utilsStyles from '@styles/utils.module.scss';
-import styles from './GovProposals.module.scss';
+import styles from '@components/GovProposals/GovProposals.module.scss';
 import { useRenderScreen } from '@hooks/useRenderScreen';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 
@@ -19,19 +19,21 @@ import {
     ToggelVotesOptions,
     ToggleVoteBoxContainer,
     SelectedOption
-} from './query_data';
+} from '@components/GovProposals/query_data';
+import Footer from '@components/Footer/Footer';
+import Header from '@components/Header/Header';
 
-type Props = {
+type SelectProposalsProps = {
     loading?: boolean;
     signedIn?: boolean;
-    onSuccess: (data: StepDataType<STEPS.gov_MsgVote>) => void;
+    onSuccess: (data: StepDataType<STEPS.select_proposal_and_vote_option>) => void;
     onBack?: () => void;
-    data?: StepDataType<STEPS.gov_MsgVote>;
-    config?: StepConfigType<STEPS.gov_MsgVote>;
+    data?: StepDataType<STEPS.select_proposal_and_vote_option>;
+    config?: StepConfigType<STEPS.select_proposal_and_vote_option>;
     header?: string;
 };
 
-const GovProposals2: FC<Props> = ({ onSuccess, onBack, config, data, header }) => {
+const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, data, header }) => {
     const proposals = queryProposals();
     const handleSelect = handleProposal();
     const { renderScreen, toggelVotesClose } = ToggelVotesOptions();
@@ -40,8 +42,6 @@ const GovProposals2: FC<Props> = ({ onSuccess, onBack, config, data, header }) =
     const { selected, setSelected } = SelectedOption();
     const { selectedOption, setSelectedOption } = voteOptions();
     const { slide, selectSlide } = selectedSlide();
-
-    
 
     const renderProposals = () => {
         return (
@@ -70,7 +70,11 @@ const GovProposals2: FC<Props> = ({ onSuccess, onBack, config, data, header }) =
                             return (
                                 <SwiperSlide
                                     className={slide}
-                                    onClick={() => handleSelect(proposal.proposalId.toNumber())}
+                                    onClick={() => {
+                                        const proposalId = proposal.proposalId.toNumber();
+                                        handleSelect(proposalId);
+                                        onSuccess(data?.proposalId);
+                                    }}
                                     key={proposal.proposalId.toString()}
                                 >
                                     <div>
@@ -132,11 +136,17 @@ const GovProposals2: FC<Props> = ({ onSuccess, onBack, config, data, header }) =
 
     return (
         <>
+            <Header />
             <>{renderProposals()}</>
-            <>{renderScreen()}</>
+            <Footer
+                onBack={onBack}
+                onBackUrl={onBack ? undefined : ''}
+                selectedVoteOption={''}
+                setSelectedVoteOption={null}
+            />
+            {/* <>{renderScreen()}</> */}
         </>
-    );
-};
+    )
+}
 
-export default GovProposals2;
-
+export default SelectProposal

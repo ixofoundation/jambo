@@ -16,7 +16,7 @@ import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
-import Proposals from '@steps/Proposals';
+import SelectProposal from '@steps/SelectProposal';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -172,15 +172,16 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
-      case STEPS.gov_MsgVote:
+      case STEPS.select_proposal_and_vote_option:
         return (
-          <Proposals
-            onSuccess={handleOnNext<STEPS.gov_MsgVote>}
+          <SelectProposal
+            onSuccess={handleOnNext<STEPS.select_proposal_and_vote_option>}
             onBack={handleBack}
-            data={step.data as StepDataType<STEPS.gov_MsgVote>}
+            data={step.data as StepDataType<STEPS.select_proposal_and_vote_option>}
             header={action?.name}
           />
         );
+      case STEPS.gov_MsgVote:
       case STEPS.bank_MsgSend:
       case STEPS.bank_MsgMultiSend:
       case STEPS.staking_MsgDelegate:

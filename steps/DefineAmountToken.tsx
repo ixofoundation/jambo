@@ -66,7 +66,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
       token: selectedOption!,
     };
     const isEditing = !!data?.data[data?.currentIndex];
-    onSuccess(
+    onSuccess( 
       !isEditing
         ? { ...data, currentIndex: 0, data: [...(data?.data ?? []), newData] }
         : {
