@@ -53,7 +53,6 @@ export const renderProposals = () => {
     const { selected, setSelected } = SelectedOption();
     const { selectedOption, setSelectedOption } = voteOptions();
     const { slide, selectSlide } = selectedSlide();
-
     return (
         <ul onClick={toggelVotesClose} >
             <Swiper
@@ -158,7 +157,6 @@ export const selectedSlide = () => {
 export const handleProposal = () => {
     const proposals = queryProposals();
     const { selectedOption, setSelectedOption } = voteOptions();
-    const { slide, selectSlide } = selectedSlide();
     const [toggleVoteActions, setToggleVoteActions] = useState(false);
     const [selected, setSelected] = useState<{ proposalId: number } | null>(null);
     const { wallet } = useContext(WalletContext);
@@ -166,11 +164,9 @@ export const handleProposal = () => {
         if (!toggleVoteActions) {
             const selectedProposal = proposals.find((proposal) => proposal.proposalId.toNumber() === proposalId);
             if (selectedProposal) {
-                if (selected && selected.proposalId === proposalId && slide === styles.swiperSlide) {
-                    selectSlide(styles.selectSlide)
+                if (selected && selected.proposalId === proposalId) {
                     setSelected(null);
                 } else {
-                    selectSlide(styles.swiperSlide)
                     setSelected(selectedProposal);
                     const voteTrx = generateVoteTrx({
                         proposalId: selectedProposal.proposalId,
@@ -195,7 +191,7 @@ type GovProposalsProps = {
 };
 
 export const VoteActions = () => {
-    const selectedOption = voteOptions();
+    const { selectedOption, setSelectedOption } = voteOptions();
     const modalRef = useRef<HTMLDivElement>(null);
     const [option, setOption] = useState(selectedOption);
     const [selectedVoteOption, setSelectedVoteOption] = useState('');

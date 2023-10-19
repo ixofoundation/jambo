@@ -1,8 +1,9 @@
-import { FC, useContext, useEffect, useState } from 'react';
+import { FC, useContext, useEffect, useRef, useState } from 'react';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
+import proposalstyles from '@components/GovProposals/GovProposals.module.scss';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import MultiSendBottomSheet from '../components/MultiSendBottomSheet/MultiSendBottomSheet';
 import ButtonRound, { BUTTON_ROUND_SIZE } from '@components/ButtonRound/ButtonRound';
@@ -36,13 +37,23 @@ import {
 import { WalletContext } from '@contexts/wallet';
 import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import { useExtractState } from '@contexts/extract';
 import {
   voteOptions,
   SelectedOption,
   ToggelVotesOptions,
   VoteActions,
-  renderProposals
+  renderProposals,
+  queryProposals,
+  ToggleVoteBoxContainer
 } from '@components/GovProposals/query_data';
+import SelectProposal from '@steps/SelectProposal';
+import VoteBtn from '@components/GovProposals/VoteBtn';
+import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
+import Thumbsup from '@icons/thumbs-up.svg';
+import Thumbsdown from '@icons/thumbs-down.svg';
+import NoWithVeto from '@icons/no-with-veto.svg';
+import Abstain from '@icons/abstain.svg';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -74,13 +85,50 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const { chainInfo } = useContext(ChainContext);
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
+
+  const proposals = queryProposals();
+  const { toggleVoteActions, setToggleVoteActions } = ToggleVoteBoxContainer();
   const { selected, setSelected } = SelectedOption();
   const { selectedOption, setSelectedOption } = voteOptions();
-  const [toggleVoteActions, setToggleVoteActions] = useState(false);
+  const { extract, setExtract } = useExtractState();
+  const [selectedVoteOption, setSelectedVoteOption] = useState('');
+  const selectedProposal = proposals.find((proposal) => proposal.proposalId.toNumber());
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const handleSelect = (proposalId: number) => {
+    if (!toggleVoteActions) {
+      const selectedProposal = proposals.find((proposal) => proposal);
+      if (selectedProposal) {
+        if (selected && selected.proposalId === proposalId) {
+          setSelected(null);
+        } else {
+          setSelected(selectedProposal);
+          const voteTrx = generateVoteTrx({
+            proposalId: selectedProposal.proposalId,
+            voterAddress: wallet.user!.address,
+            option: selectedOption,
+          });
+          console.log(voteTrx);
+        }
+      }
+      console.log(proposalId.toString());
+    }
+  }
 
   const toggelVotes = () => {
     setToggleVoteActions(!toggleVoteActions)
   }
+
+  const toggelVotesClose = () => {
+    setToggleVoteActions(false)
+  }
+
+  const handleVoteOption = (option: any) => {
+    setSelectedOption(option);
+    // setToggleIcon(!toggleIcon);
+    setSelectedVoteOption(option);
+    console.log(`Selected option: ${option}`);
+  };
 
   const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
@@ -199,15 +247,14 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         );
         break;
       case STEPS.gov_MsgVote:
-        trxMsgs.push(
-          generateVoteTrx({
-            proposalId: selected.proposalId,
-            voterAddress: wallet.user!.address,
-            option: selectedOption,
-          })
-        )
-        // if (selectedOption && selected) {
-        // }
+        if (selectedOption && selected)
+          trxMsgs.push(
+            generateVoteTrx({
+              proposalId: selected.proposalId,
+              voterAddress: wallet.user!.address,
+              option: selectedOption,
+            })
+          )
         break;
       default:
         throw new Error('Unsupported review type');
@@ -341,14 +388,87 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.gov_MsgVote ? (
-          <form className={styles.stepsForm} autoComplete='none' >
-            {renderProposals()}
-            {!toggleVoteActions ? (
+          <form autoComplete='none'>
+            <div className={proposalstyles.slideSelect} onClick={toggelVotesClose}  >
+              <div
+                className={proposalstyles.selectSlide}
+                onClick={() => handleSelect(proposals[2].proposalId.toNumber())} >{extract}</div>
+            </div>
+            {toggleVoteActions ? (
               <>
+                <div
+                  ref={modalRef}
+                  className={proposalstyles.voteBtnContainer}
+                >
+                  <table className={proposalstyles.voteTable} >
+                    <tbody className={proposalstyles.voteTableBody}>
+                      <tr className={proposalstyles.tableRow} >
+                        <td className={proposalstyles.tableData} >
+                          <VoteBtn backgroundColor='#1DB3D3' onClick={() => handleVoteOption('1')} >
+                            <div className={proposalstyles.colorIconContainer}>
+                              <ColoredIcon
+                                icon={Thumbsup}
+                                size={17}
+                                color={ICON_COLOR.white} />
+                              <span className={proposalstyles.voteSpan} >Yes</span>
+                            </div>
+                          </VoteBtn>
+                        </td>
+                      </tr>
+                      <tr className={proposalstyles.tableRow} >
+                        <td className={proposalstyles.tableData} >
+                          <VoteBtn backgroundColor='#F59E0B' onClick={() => handleVoteOption('3')} >
+                            <div className={proposalstyles.colorIconContainer} >
+                              <ColoredIcon
+                                icon={Thumbsdown}
+                                size={17}
+                                color={ICON_COLOR.white} />
+                              <span className={proposalstyles.voteSpan} >No</span>
+                            </div>
+                          </VoteBtn>
+                        </td>
+                      </tr>
+                      <tr className={proposalstyles.tableRow}  >
+                        <td className={proposalstyles.tableData} >
+                          <VoteBtn backgroundColor='#D97706' onClick={() => handleVoteOption('4')} >
+                            <div className={proposalstyles.colorIconContainer} >
+                              <ColoredIcon
+                                icon={NoWithVeto}
+                                size={17}
+                                color={ICON_COLOR.white} />
+                              <span className={proposalstyles.voteSpan} >No with veto</span>
+                            </div>
+                          </VoteBtn>
+                        </td>
+                      </tr>
+                      <tr className={proposalstyles.tableRow} >
+                        <td className={proposalstyles.tableData} >
+                          <VoteBtn backgroundColor='#9CA3AF' onClick={() => handleVoteOption('2')} >
+                            <div className={proposalstyles.colorIconContainer}>
+                              <ColoredIcon
+                                icon={Abstain}
+                                size={17}
+                                color={ICON_COLOR.white} />
+                              <span className={proposalstyles.voteSpan} >Abstain</span>
+                            </div>
+                          </VoteBtn>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div >
               </>
             ) : (
               <>
-                <VoteActions />
+                <Footer
+                  onBack={loading || successHash ? null : onBack}
+                  onBackUrl={onBack ? undefined : ''}
+                  onCorrect={loading || !!successHash ? null : signTX}
+                  correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
+                  selectVoteAction={toggelVotes}
+                  selectedVoteOption={''}
+                  setSelectedVoteOption={null}
+                />
               </>
             )}
           </form>
@@ -357,14 +477,16 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         )}
       </main>
 
-      <Footer
-        onBack={loading || successHash ? null : onBack}
-        onBackUrl={onBack ? undefined : ''}
-        onCorrect={loading || !!successHash ? null : signTX}
-        correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
-        selectVoteAction={message === STEPS.gov_MsgVote ? toggelVotes : null}
-        selectedVoteOption={''}
-        setSelectedVoteOption={null} />
+      {message !== STEPS.gov_MsgVote && (
+        <Footer
+          onBack={loading || successHash ? null : onBack}
+          onBackUrl={onBack ? undefined : ''}
+          onCorrect={loading || !!successHash ? null : signTX}
+          correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
+          selectedVoteOption={''}
+          setSelectedVoteOption={null}
+        />
+      )}
     </>
   );
 };

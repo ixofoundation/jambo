@@ -7,14 +7,17 @@ import { ToastContainer } from '@components/Toast/Toast';
 import { WalletProvider } from '@contexts/wallet';
 import { ChainProvider } from '@contexts/chain';
 import { ThemeProvider } from '@contexts/theme';
+import { ExtractProvider } from '@contexts/extract';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <ThemeProvider>
       <ChainProvider>
         <WalletProvider>
-          <ToastContainer />
-          <Component {...pageProps} />
+          <ExtractProvider>
+            <ToastContainer />
+            <Component {...pageProps} />
+          </ExtractProvider>
         </WalletProvider>
       </ChainProvider>
     </ThemeProvider>

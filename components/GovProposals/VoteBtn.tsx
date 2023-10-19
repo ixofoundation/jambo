@@ -12,12 +12,12 @@ const VoteBtn = ({ backgroundColor, children, onClick }: VoteBtnProps) => {
         backgroundColor: backgroundColor,
     }
     return (
-        <button
+        <div
             className={styles.voteBtnStyles}
             style={VoteBtnsStyle}
             onClick={onClick} >
             {children}
-        </button>
+        </div>
     )
 }
 

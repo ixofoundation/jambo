@@ -13,6 +13,13 @@
     top: 80px;
 }
 
+.swiper {
+    width: 100%;
+    height: 100%;
+    left: 1px;
+    position: fixed;
+}
+
 .selectSlide {
     background-color: #EBEBEB;
     width: 290px;
@@ -32,10 +39,17 @@
     align-items: center;
 }
 
+.slideSelect {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .voteBtnContainer {
     top: 310px;
     z-index: 1;
-    position: fixed;
+    left: 1px;
+    position:fixed;
     background-color: #F0F0F0;
     width: 100%;
     height: 20rem;
@@ -75,6 +89,16 @@
     font-weight:500;
     overflow: auto;
     height: 230px;
+}
+
+.selectedProposalDescription {
+    display: flex;
+    justify-content: space-evenly;
+    text-align: left;
+    font-size: 14px;
+    font-weight:500;
+    overflow: auto;
+    height: 240px;
 }
 
 .proposalTitle {
