@@ -1,5 +1,7 @@
 import { cosmos } from '@ixo/impactxclient-sdk';
+import { longify } from '@cosmjs/stargate/build/queryclient';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { VoteOption } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
@@ -148,5 +150,22 @@ export const generateWithdrawRewardTrx = ({
   value: cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward.fromPartial({
     delegatorAddress,
     validatorAddress,
+  }),
+});
+
+export const generateVoteTrx = ({
+  proposalId,
+  voterAddress,
+  option,
+}: {
+  proposalId: number;
+  voterAddress: string;
+  option: VoteOption;
+}): TRX_MSG => ({
+  typeUrl: '/cosmos.gov.v1beta1.MsgVote',
+  value: cosmos.gov.v1beta1.MsgVote.fromPartial({
+    proposalId: longify(proposalId),
+    voter: voterAddress,
+    option,
   }),
 });

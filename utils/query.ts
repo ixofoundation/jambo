@@ -1,5 +1,6 @@
 import { DelegationResponse, Validator } from '@ixo/impactxclient-sdk/types/codegen/cosmos/staking/v1beta1/staking';
 import { createQueryClient, customQueries } from '@ixo/impactxclient-sdk';
+import { longify } from '@cosmjs/stargate/build/queryclient';
 
 import { VALIDATOR_FILTER_KEYS as FILTERS } from '@constants/filters';
 import {
@@ -206,5 +207,15 @@ export const queryValidators = async (queryClient: QUERY_CLIENT) => {
   } catch (error) {
     console.error('queryValidators::', error);
     return [];
+  }
+};
+
+export const queryVote = async (queryClient: QUERY_CLIENT, address: string, proposalId: number) => {
+  try {
+    const { vote } = await queryClient.cosmos.gov.v1beta1.vote({ voter: address, proposalId: longify(proposalId) });
+    return vote;
+  } catch (error) {
+    console.error('queryVote::', error);
+    return;
   }
 };

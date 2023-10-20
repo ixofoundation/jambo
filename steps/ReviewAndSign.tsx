@@ -31,10 +31,15 @@ import {
   generateDelegateTrx,
   generateRedelegateTrx,
   generateUndelegateTrx,
+  generateVoteTrx,
 } from '@utils/transactions';
 import { WalletContext } from '@contexts/wallet';
-import { ChainContext } from '@contexts/chain';
 import { CURRENCY_TOKEN } from 'types/wallet';
+import Proposal from '@components/Proposal/Proposal';
+import useChainContext from '@hooks/useChainContext';
+import useGovContext from '@hooks/useGovContext';
+import { PROPOSAL_DATA, VoteOptions } from 'types/proposals';
+import VoteButton from '@components/VoteButton/VoteButton';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -64,8 +69,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcAddress, setSrcAddress] = useState<string>(''); // source address
   const [dstValidator, setDstValidator] = useState<VALIDATOR | undefined>(); // destination validator
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
-  const { chainInfo } = useContext(ChainContext);
+  const [proposal, setProposal] = useState<PROPOSAL_DATA | undefined>();
+  const [voteOption, setVoteOption] = useState<VoteOptions | undefined>();
+
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
+  const { chainInfo } = useChainContext();
+  const { getProposal } = useGovContext();
 
   const showCancelTransactionModal = (index: number) => () => {
     setTrxCancelId(index);
@@ -124,78 +133,98 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         setSrcAddress((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator?.address ?? '');
         setSrcValidator((s.data as StepDataType<STEPS.get_validator_delegate>)?.validator);
       }
+      if (s.id === STEPS.select_proposal) {
+        const proposal = getProposal((s.data as StepDataType<STEPS.select_proposal>)?.proposalId);
+        setProposal(proposal);
+      }
     });
   }, [steps]);
 
   const signTX = async (): Promise<void> => {
-    setLoading(true);
-    const trxMsgs: TRX_MSG[] = [];
-    let memo: string | undefined;
-    switch (message) {
-      case STEPS.bank_MsgSend:
-        trxMsgs.push(
-          generateBankSendTrx({
-            fromAddress: wallet.user!.address,
-            toAddress: dstAddress[0] as string,
-            denom: getDenomFromCurrencyToken(Array.isArray(token) ? token[0] : token),
-            amount: getMicroAmount(amount.toString()),
-          }),
-        );
-        break;
-      case STEPS.bank_MsgMultiSend:
-        trxMsgs.push(
-          generateBankMultiSendTrx({
-            fromAddress: wallet.user!.address,
-            toAddresses: dstAddress as string[],
-            denoms: (token as CURRENCY_TOKEN[]).map((token) => token.denom),
-            amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
-          }),
-        );
-        break;
-      case STEPS.staking_MsgDelegate:
-        trxMsgs.push(
-          generateDelegateTrx({
-            delegatorAddress: wallet.user!.address,
-            validatorAddress: dstAddress as string,
-            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-            amount: getMicroAmount(amount.toString()),
-          }),
-        );
-        break;
-      case STEPS.staking_MsgUndelegate:
-        trxMsgs.push(
-          generateUndelegateTrx({
-            delegatorAddress: wallet.user!.address,
-            validatorAddress: dstAddress as string,
-            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-            amount: getMicroAmount(amount.toString()),
-          }),
-        );
-        break;
-      case STEPS.staking_MsgRedelegate:
-        trxMsgs.push(
-          generateRedelegateTrx({
-            delegatorAddress: wallet.user!.address,
-            validatorSrcAddress: srcAddress,
-            validatorDstAddress: dstAddress as string,
-            denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
-            amount: getMicroAmount(amount.toString()),
-          }),
-        );
-        break;
-      default:
-        throw new Error('Unsupported review type');
+    try {
+      setLoading(true);
+      const trxMsgs: TRX_MSG[] = [];
+      let memo: string | undefined;
+      switch (message) {
+        case STEPS.bank_MsgSend:
+          trxMsgs.push(
+            generateBankSendTrx({
+              fromAddress: wallet.user!.address,
+              toAddress: dstAddress[0] as string,
+              denom: getDenomFromCurrencyToken(Array.isArray(token) ? token[0] : token),
+              amount: getMicroAmount(amount.toString()),
+            }),
+          );
+          break;
+        case STEPS.bank_MsgMultiSend:
+          trxMsgs.push(
+            generateBankMultiSendTrx({
+              fromAddress: wallet.user!.address,
+              toAddresses: dstAddress as string[],
+              denoms: (token as CURRENCY_TOKEN[]).map((token) => token.denom),
+              amounts: (amount as number[]).map((a) => getMicroAmount(a.toString())),
+            }),
+          );
+          break;
+        case STEPS.staking_MsgDelegate:
+          trxMsgs.push(
+            generateDelegateTrx({
+              delegatorAddress: wallet.user!.address,
+              validatorAddress: dstAddress as string,
+              denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+              amount: getMicroAmount(amount.toString()),
+            }),
+          );
+          break;
+        case STEPS.staking_MsgUndelegate:
+          trxMsgs.push(
+            generateUndelegateTrx({
+              delegatorAddress: wallet.user!.address,
+              validatorAddress: dstAddress as string,
+              denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+              amount: getMicroAmount(amount.toString()),
+            }),
+          );
+          break;
+        case STEPS.staking_MsgRedelegate:
+          trxMsgs.push(
+            generateRedelegateTrx({
+              delegatorAddress: wallet.user!.address,
+              validatorSrcAddress: srcAddress,
+              validatorDstAddress: dstAddress as string,
+              denom: getDenomFromCurrencyToken(token as CURRENCY_TOKEN),
+              amount: getMicroAmount(amount.toString()),
+            }),
+          );
+          break;
+        case STEPS.gov_MsgVote:
+          if (voteOption && proposal)
+            trxMsgs.push(
+              generateVoteTrx({
+                proposalId: proposal?.proposalId!,
+                voterAddress: wallet.user!.address,
+                option: voteOption as any,
+              }),
+            );
+          break;
+        default:
+          throw new Error('Unsupported review type');
+      }
+
+      const hash = await broadCastMessages(
+        wallet,
+        trxMsgs,
+        memo,
+        defaultTrxFeeOption,
+        (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
+        chainInfo as KEPLR_CHAIN_INFO_TYPE,
+      );
+      if (hash) setSuccessHash(hash);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-    const hash = await broadCastMessages(
-      wallet,
-      trxMsgs,
-      memo,
-      defaultTrxFeeOption,
-      (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
-      chainInfo as KEPLR_CHAIN_INFO_TYPE,
-    );
-    if (hash) setSuccessHash(hash);
-    setLoading(false);
   };
 
   if (successHash)
@@ -314,6 +343,24 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <p>to</p>
             <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
           </form>
+        ) : message === STEPS.gov_MsgVote ? (
+          <form className={cls(styles.stepsForm, utilsStyles.center)} autoComplete='none'>
+            {proposal ? (
+              <Proposal
+                key={proposal.proposalId}
+                votingEndTime={proposal.votingEndTime}
+                title={proposal.title}
+                description={proposal.description}
+                yesVotes={proposal.yesVotes}
+                noVotes={proposal.noVotes}
+                abstainVotes={proposal.abstainVotes}
+                vetoVotes={proposal.vetoVotes}
+                totalVotes={proposal.totalVotes}
+              />
+            ) : (
+              <Loader />
+            )}
+          </form>
         ) : (
           <p>Unsupported review type</p>
         )}
@@ -322,9 +369,19 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       <Footer
         onBack={loading || successHash ? null : onBack}
         onBackUrl={onBack ? undefined : ''}
-        onCorrect={loading || !!successHash ? null : signTX}
+        onCorrect={
+          loading || !!successHash || (message === STEPS.gov_MsgVote && (!voteOption || !proposal)) ? null : signTX
+        }
         correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
-      />
+      >
+        {message === STEPS.gov_MsgVote && (
+          <VoteButton
+            voteOption={voteOption}
+            onVoteClick={setVoteOption}
+            disabled={(proposal?.votingEndTime ?? 0) < Date.now()}
+          />
+        )}
+      </Footer>
     </>
   );
 };

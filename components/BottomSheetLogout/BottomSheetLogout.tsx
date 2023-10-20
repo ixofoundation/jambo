@@ -48,7 +48,7 @@ const BottomSheetLogout = ({ show, onClose = () => undefined }: BottomSheetLogou
         </p>
         <div className={utilsStyles.spacer2} />
       </div>
-      <div className={utilsStyles.rowAlignSpaceAround}>
+      <div className={utilsStyles.rowJustifySpaceAround}>
         <ButtonRound color={BUTTON_ROUND_COLOR.lightGrey} size={BUTTON_ROUND_SIZE.large} onClick={onClose}>
           <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
         </ButtonRound>

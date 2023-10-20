@@ -66,22 +66,16 @@
   justify-content: center;
 }
 
-.rowAlignSpaceBetween {
+.rowJustifySpaceBetween {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
 }
 
-.rowAlignSpaceAround {
+.rowJustifySpaceAround {
   display: flex;
   flex-direction: row;
   justify-content: space-around;
-}
-
-.rowAlignSpaceBetween {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
 }
 
 .spacer1 {

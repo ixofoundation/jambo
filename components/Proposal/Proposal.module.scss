@@ -1,0 +1,90 @@
+.proposal {
+  border-radius: var(--card-border-radius);
+  background-color: var(--light-grey-color);
+  padding: 1rem;
+  margin: 10px auto;
+  max-width: 300px;
+  width: 100%;
+  min-width: 280px;
+  text-align: left;
+
+  &.fullProposal {
+    height: 100%;
+  }
+
+  &.minifiedProposal {
+    height: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+
+    .description {
+      text-overflow: ellipsis;
+      // max-height: 190px;
+      height: 100%;
+      overflow: hidden;
+      display: inline-block;
+      white-space: wrap;
+    }
+  }
+}
+
+.proposer {
+  font-size: 0.8rem;
+  color: var(--lighter-font-color);
+  margin: 0;
+  padding: 0 5px;
+}
+
+.timer {
+  font-size: 0.8rem;
+  color: var(--lighter-font-color);
+  margin: 0;
+  padding: 0 0 0 5px;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+  padding: 0;
+}
+
+.description {
+  font-size: 0.9rem;
+  color: var(--lighter-font-color);
+  margin: 0;
+  padding: 0 0 1rem 0;
+  // height: 100%;
+}
+
+.votesBar {
+  height: 8px;
+  border-radius: 10px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--grey-color);
+
+  .voteBar {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+
+    &.yesBar {
+      background-color: var(--primary-color);
+    }
+
+    &.noBar {
+      background-color: var(--warning-color);
+    }
+
+    &.abstainBar {
+      background-color: var(--grey-color);
+    }
+
+    &.vetoBar {
+      background-color: var(--error-color);
+    }
+  }
+}
