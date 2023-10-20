@@ -40,14 +40,9 @@ import { CURRENCY_TOKEN } from 'types/wallet';
 import { useExtractState } from '@contexts/extract';
 import {
   voteOptions,
-  SelectedOption,
-  ToggelVotesOptions,
-  VoteActions,
-  renderProposals,
   queryProposals,
   ToggleVoteBoxContainer
 } from '@components/GovProposals/query_data';
-import SelectProposal from '@steps/SelectProposal';
 import VoteBtn from '@components/GovProposals/VoteBtn';
 import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
 import Thumbsup from '@icons/thumbs-up.svg';
@@ -88,32 +83,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
 
   const proposals = queryProposals();
   const { toggleVoteActions, setToggleVoteActions } = ToggleVoteBoxContainer();
-  const { selected, setSelected } = SelectedOption();
   const { selectedOption, setSelectedOption } = voteOptions();
-  const { extract, setExtract } = useExtractState();
+  const { extract, setExtract, extractProposalId } = useExtractState();
   const [selectedVoteOption, setSelectedVoteOption] = useState('');
+  const [toggleIcon, setToggleIcon] = useState(false);
   const selectedProposal = proposals.find((proposal) => proposal.proposalId.toNumber());
   const modalRef = useRef<HTMLDivElement>(null);
-
-  const handleSelect = (proposalId: number) => {
-    if (!toggleVoteActions) {
-      const selectedProposal = proposals.find((proposal) => proposal);
-      if (selectedProposal) {
-        if (selected && selected.proposalId === proposalId) {
-          setSelected(null);
-        } else {
-          setSelected(selectedProposal);
-          const voteTrx = generateVoteTrx({
-            proposalId: selectedProposal.proposalId,
-            voterAddress: wallet.user!.address,
-            option: selectedOption,
-          });
-          console.log(voteTrx);
-        }
-      }
-      console.log(proposalId.toString());
-    }
-  }
 
   const toggelVotes = () => {
     setToggleVoteActions(!toggleVoteActions)
@@ -125,7 +100,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
 
   const handleVoteOption = (option: any) => {
     setSelectedOption(option);
-    // setToggleIcon(!toggleIcon);
+    setToggleIcon(!toggleIcon);
     setSelectedVoteOption(option);
     console.log(`Selected option: ${option}`);
   };
@@ -247,10 +222,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         );
         break;
       case STEPS.gov_MsgVote:
-        if (selectedOption && selected)
+        if (selectedOption)
           trxMsgs.push(
             generateVoteTrx({
-              proposalId: selected.proposalId,
+              proposalId: extractProposalId,
               voterAddress: wallet.user!.address,
               option: selectedOption,
             })
@@ -388,11 +363,11 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.gov_MsgVote ? (
-          <form autoComplete='none'>
+          <form className={styles.stepsForm} autoComplete='none'>
             <div className={proposalstyles.slideSelect} onClick={toggelVotesClose}  >
               <div
                 className={proposalstyles.selectSlide}
-                onClick={() => handleSelect(proposals[2].proposalId.toNumber())} >{extract}</div>
+              >{extract}</div>
             </div>
             {toggleVoteActions ? (
               <>
@@ -463,7 +438,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                 <Footer
                   onBack={loading || successHash ? null : onBack}
                   onBackUrl={onBack ? undefined : ''}
-                  onCorrect={loading || !!successHash ? null : signTX}
+                  onCorrect={loading || !!successHash || !selectedOption ? null : signTX}
                   correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
                   selectVoteAction={toggelVotes}
                   selectedVoteOption={''}

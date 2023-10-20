@@ -7,24 +7,20 @@ import { cosmos } from '@ixo/impactxclient-sdk';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@components/GovProposals/GovProposals.module.scss';
-import { useRenderScreen } from '@hooks/useRenderScreen';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
-
+import Footer from '@components/Footer/Footer';
+import Header from '@components/Header/Header';
+import { generateVoteTrx } from '@utils/transactions';
+import { WalletContext } from '@contexts/wallet';
+import { useExtractState } from '@contexts/extract';
 import {
     queryProposals,
-    VoteActions,
-    handleProposal,
     selectedSlide,
     voteOptions,
     ToggelVotesOptions,
     ToggleVoteBoxContainer,
     SelectedOption
 } from '@components/GovProposals/query_data';
-import Footer from '@components/Footer/Footer';
-import Header from '@components/Header/Header';
-import { generateVoteTrx } from '@utils/transactions';
-import { WalletContext } from '@contexts/wallet';
-import { useExtractState } from '@contexts/extract';
 
 type SelectProposalsProps = {
     loading?: boolean;
@@ -43,7 +39,7 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
     const { selected, setSelected } = SelectedOption();
     const { selectedOption, setSelectedOption } = voteOptions();
     const { slide, selectSlide } = selectedSlide();
-    const { extract, setExtract } = useExtractState();
+    const { extract, setExtract, extractProposalId, setExtractProposalId } = useExtractState();
     const { wallet } = useContext(WalletContext);
 
     const handleSelect = (proposalId: any) => {
@@ -51,6 +47,16 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
             const selectedProposal = proposals.find((proposal) => proposal.proposalId.toNumber() === proposalId);
             if (selectedProposal && selectedProposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
                 const decodeContent = cosmos.gov.v1beta1.TextProposal.decode(selectedProposal.content.value);
+
+                let proposer = '';
+                if (!proposer) {
+                    proposer = 'Error:not found';
+                }
+                if (selectedProposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.Deposit') {
+                    const decodeDeposit = cosmos.gov.v1beta1.Deposit.decode(selectedProposal.content.value);
+                    proposer = decodeDeposit.depositor;
+                }
+
                 const proposalId = selectedProposal.proposalId.toNumber();
                 const submitTime = selectedProposal.submitTime;
                 const finalTallyYes = Number(selectedProposal.finalTallyResult?.yes);
@@ -122,13 +128,14 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
                     setSelected(selectedProposal);
                     onSuccess(data?.proposalId);
                     const voteTrx = generateVoteTrx({
-                        proposalId: selectedProposal.proposalId,
+                        proposalId: selectedProposal.proposalId.toNumber(),
                         voterAddress: wallet.user!.address,
-                        option: selectedOption,
+                        option: selectedOption as "1" | "2" | "3" | "4",
                     });
                     console.log(voteTrx);
                 }
             }
+            setExtractProposalId(proposalId);
             console.log(proposalId.toString());
         }
     }
@@ -146,6 +153,16 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
                     {proposals.map(proposal => {
                         if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.TextProposal') {
                             const decodeContent = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
+
+                            let proposer = '';
+                            if (!proposer) {
+                                proposer = 'Error:not found';
+                            }
+                            if (proposal.content?.typeUrl.split('/')[1] === 'cosmos.gov.v1beta1.Deposit') {
+                                const decodeDeposit = cosmos.gov.v1beta1.Deposit.decode(proposal.content.value);
+                                proposer = decodeDeposit.depositor;
+                            }
+
                             const proposalId = proposal.proposalId.toNumber();
                             const submitTime = proposal.submitTime;
                             const finalTallyYes = Number(proposal.finalTallyResult?.yes);
@@ -161,18 +178,12 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
                                 <SwiperSlide
                                     className={slide}
                                     onClick={() => handleSelect(proposal.proposalId.toNumber())}
-                                    // onClick={() => {
-                                    //     const proposalId = proposal.proposalId.toNumber();
-                                    //     handleSelect(proposalId);
-                                    //     onSuccess(data?.proposalId);
-                                    // }}
-                                    // onClick={handleSelect}
                                     key={proposal.proposalId.toString()}
                                 >
                                     <div>
                                         <div className={styles.slideHead}>
                                             <p className={styles.proposalTime} >
-                                                <Depositor />Despositor?...
+                                                <Depositor />{proposer}
                                             </p>
                                             <p className={styles.proposalTime} >
                                                 <HourGlass />
@@ -229,8 +240,7 @@ const SelectProposal: FC<SelectProposalsProps> = ({ onSuccess, onBack, config, d
     return (
         <>
             <Header />
-            <>{renderProposals()}</>
-            {/* <>{renderExtract()}</> */}
+            <div>{renderProposals()}</div>
             <Footer
                 onBack={onBack}
                 onBackUrl={onBack ? undefined : ''}
