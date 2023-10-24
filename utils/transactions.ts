@@ -169,3 +169,59 @@ export const generateVoteTrx = ({
     option,
   }),
 });
+
+export const generateTextProposalTrx = (
+  {
+    title,
+    description,
+  }: {
+    title: string;
+    description: string;
+  },
+  encode = false,
+) => {
+  const value = cosmos.gov.v1beta1.TextProposal.fromPartial({
+    title,
+    description,
+  });
+
+  return {
+    typeUrl: '/cosmos.gov.v1beta1.TextProposal',
+    value: encode ? cosmos.gov.v1beta1.TextProposal.encode(value).finish() : value,
+  };
+};
+
+export const generateSubmitProposalTrx = ({
+  title,
+  description,
+  proposer,
+  depositDenom,
+  depositAmount,
+}: {
+  title: string;
+  description: string;
+  proposer: string;
+  depositDenom?: string;
+  depositAmount?: string;
+}): TRX_MSG => {
+  const initialDeposit = depositDenom
+    ? [cosmos.base.v1beta1.Coin.fromPartial({ amount: depositAmount, denom: depositDenom })]
+    : [];
+
+  console.log({ initialDeposit, depositAmount, depositDenom });
+
+  return {
+    typeUrl: '/cosmos.gov.v1beta1.MsgSubmitProposal',
+    value: cosmos.gov.v1beta1.MsgSubmitProposal.fromPartial({
+      proposer,
+      initialDeposit,
+      content: generateTextProposalTrx(
+        {
+          title,
+          description,
+        },
+        true,
+      ) as any,
+    }),
+  };
+};

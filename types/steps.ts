@@ -15,6 +15,8 @@ export enum STEPS {
   define_amount = 'define_amount',
   send_token_to_receiver = 'send_token_to_receiver',
   select_proposal = 'select_proposal',
+  define_proposal_title = 'define_proposal_title',
+  define_proposal_description = 'define_proposal_description',
   review_and_sign = 'review_and_sign',
   bank_MsgSend = 'bank_MsgSend',
   bank_MsgMultiSend = 'bank_MsgMultiSend',
@@ -23,6 +25,7 @@ export enum STEPS {
   staking_MsgRedelegate = 'staking_MsgRedelegate',
   distribution_MsgWithdrawDelegatorReward = 'distribution_MsgWithdrawDelegatorReward',
   gov_MsgVote = 'gov_MsgVote',
+  gov_MsgSubmitProposal = 'gov_MsgSubmitProposal',
 }
 
 export type STEP = {
@@ -85,6 +88,14 @@ export const steps: { [key in STEPS]: STEP } = {
     id: STEPS.select_proposal,
     name: 'Select proposal',
   },
+  [STEPS.define_proposal_title]: {
+    id: STEPS.define_proposal_title,
+    name: 'Proposal title',
+  },
+  [STEPS.define_proposal_description]: {
+    id: STEPS.define_proposal_description,
+    name: 'Proposal description',
+  },
   [STEPS.review_and_sign]: {
     id: STEPS.review_and_sign,
     name: 'Review and sign',
@@ -117,6 +128,10 @@ export const steps: { [key in STEPS]: STEP } = {
     id: STEPS.gov_MsgVote,
     name: 'Review and sign',
   },
+  [STEPS.gov_MsgSubmitProposal]: {
+    id: STEPS.gov_MsgSubmitProposal,
+    name: 'Review and sign',
+  },
 };
 
 export type ReviewStepsTypes =
@@ -124,13 +139,20 @@ export type ReviewStepsTypes =
   | STEPS.bank_MsgMultiSend
   | STEPS.distribution_MsgWithdrawDelegatorReward
   | STEPS.gov_MsgVote
+  | STEPS.gov_MsgSubmitProposal
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
   | STEPS.staking_MsgRedelegate;
 
-export type AllStepConfigTypes = never;
+interface Select_token_and_amount_config {
+  optional?: boolean;
+  amountLabel?: string;
+  denomLabel?: string;
+}
 
-export type StepConfigType<T> = never;
+export type AllStepConfigTypes = Select_token_and_amount_config;
+
+export type StepConfigType<T> = T extends STEPS.select_token_and_amount ? Select_token_and_amount_config : never;
 
 interface Check_user_balance {
   balance: number;
@@ -162,6 +184,12 @@ interface Send_token_to_receiver {
 interface Select_proposal {
   proposalId: number;
 }
+interface Define_proposal_title {
+  title?: string;
+}
+interface Define_proposal_description {
+  description?: string;
+}
 interface Review_and_sign {
   done: boolean;
 }
@@ -176,6 +204,8 @@ export type AllStepDataTypes =
   | Define_amount
   | Send_token_to_receiver
   | Select_proposal
+  | Define_proposal_title
+  | Define_proposal_description
   | Review_and_sign;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
@@ -204,10 +234,16 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Send_token_to_receiver
   : T extends STEPS.select_proposal
   ? Select_proposal
+  : T extends STEPS.define_proposal_title
+  ? Define_proposal_title
+  : T extends STEPS.define_proposal_description
+  ? Define_proposal_description
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.gov_MsgVote
+  ? Review_and_sign
+  : T extends STEPS.gov_MsgSubmitProposal
   ? Review_and_sign
   : never;

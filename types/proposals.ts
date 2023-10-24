@@ -1,4 +1,4 @@
-import { Proposal, WeightedVoteOption, ProposalStatus } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1/gov';
+import { Proposal, Vote } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 export type PROPOSAL = Proposal;
 
@@ -6,14 +6,15 @@ export type PROPOSAL_DATA = {
   proposalId: number;
   title: string;
   description: string;
-  status: ProposalStatus;
+  status: string;
   votingEndTime: number;
+  depositEndTime: number;
   yesVotes: number;
   noVotes: number;
   abstainVotes: number;
   vetoVotes: number;
   totalVotes: number;
-  vote?: WeightedVoteOption;
+  vote?: Vote;
 };
 
 export type PROPOSAL_STATE = {

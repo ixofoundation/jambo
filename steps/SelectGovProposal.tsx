@@ -46,7 +46,10 @@ const SelectGovProposal: FC<SelectGovProposalProps> = ({ onSuccess, onBack, head
                 minify
                 key={proposal.proposalId}
                 onClick={handleClick(proposal.proposalId)}
+                proposalId={proposal.proposalId}
+                status={proposal.status}
                 votingEndTime={proposal.votingEndTime}
+                depositEndTime={proposal.depositEndTime}
                 title={proposal.title}
                 description={proposal.description}
                 yesVotes={proposal.yesVotes}
@@ -54,6 +57,7 @@ const SelectGovProposal: FC<SelectGovProposalProps> = ({ onSuccess, onBack, head
                 abstainVotes={proposal.abstainVotes}
                 vetoVotes={proposal.vetoVotes}
                 totalVotes={proposal.totalVotes}
+                vote={proposal.vote}
               />
             ))}
           </div>

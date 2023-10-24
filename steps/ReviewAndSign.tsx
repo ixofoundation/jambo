@@ -30,6 +30,7 @@ import {
   generateBankSendTrx,
   generateDelegateTrx,
   generateRedelegateTrx,
+  generateSubmitProposalTrx,
   generateUndelegateTrx,
   generateVoteTrx,
 } from '@utils/transactions';
@@ -40,6 +41,7 @@ import useChainContext from '@hooks/useChainContext';
 import useGovContext from '@hooks/useGovContext';
 import { PROPOSAL_DATA, VoteOptions } from 'types/proposals';
 import VoteButton from '@components/VoteButton/VoteButton';
+import TextArea from '@components/TextArea/TextArea';
 
 type ReviewAndSignProps = {
   onSuccess: (data: StepDataType<STEPS.review_and_sign>) => void;
@@ -71,6 +73,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const [srcValidator, setSrcValidator] = useState<VALIDATOR | undefined>(); // source validator
   const [proposal, setProposal] = useState<PROPOSAL_DATA | undefined>();
   const [voteOption, setVoteOption] = useState<VoteOptions | undefined>();
+  const [title, setTitle] = useState<string | undefined>();
+  const [description, setDescription] = useState<string | undefined>();
 
   const [trxCancelId, setTrxCancelId] = useState<number | undefined>();
   const { chainInfo } = useChainContext();
@@ -136,6 +140,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       if (s.id === STEPS.select_proposal) {
         const proposal = getProposal((s.data as StepDataType<STEPS.select_proposal>)?.proposalId);
         setProposal(proposal);
+      }
+      if (s.id === STEPS.define_proposal_title) {
+        setTitle((s.data as StepDataType<STEPS.define_proposal_title>)?.title);
+      }
+      if (s.id === STEPS.define_proposal_description) {
+        setDescription((s.data as StepDataType<STEPS.define_proposal_description>)?.description);
       }
     });
   }, [steps]);
@@ -207,6 +217,20 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
               }),
             );
           break;
+        case STEPS.gov_MsgSubmitProposal:
+          console.log({ amount, token });
+          trxMsgs.push(
+            generateSubmitProposalTrx({
+              proposer: wallet.user!.address,
+              title: title!,
+              description: description!,
+              depositAmount: getMicroAmount((amount ?? '').toString()),
+              depositDenom: token
+                ? getDenomFromCurrencyToken(((Array.isArray(token) ? token[0] : token) ?? '') as CURRENCY_TOKEN)
+                : undefined,
+            }),
+          );
+          break;
         default:
           throw new Error('Unsupported review type');
       }
@@ -236,13 +260,15 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
           <IconText title='Your transaction was successful!' Img={Success} imgSize={50}>
             {chainInfo?.txExplorer && (
               <Anchor active openInNewTab href={`${chainInfo.txExplorer.txUrl.replace(/\${txHash}/i, successHash)}`}>
-                <Button
-                  label={`View on ${chainInfo.txExplorer.name}`}
-                  size={BUTTON_SIZE.mediumLarge}
-                  rounded
-                  bgColor={BUTTON_BG_COLOR.lightGrey}
-                  borderColor={BUTTON_BORDER_COLOR.lightGrey}
-                />
+                <div className={utilsStyles.columnCenter}>
+                  <Button
+                    label={`View on ${chainInfo.txExplorer.name}`}
+                    size={BUTTON_SIZE.mediumLarge}
+                    rounded
+                    bgColor={BUTTON_BG_COLOR.lightGrey}
+                    borderColor={BUTTON_BORDER_COLOR.lightGrey}
+                  />
+                </div>
               </Anchor>
             )}
           </IconText>
@@ -348,7 +374,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             {proposal ? (
               <Proposal
                 key={proposal.proposalId}
+                proposalId={proposal.proposalId}
+                status={proposal.status}
                 votingEndTime={proposal.votingEndTime}
+                depositEndTime={proposal.depositEndTime}
                 title={proposal.title}
                 description={proposal.description}
                 yesVotes={proposal.yesVotes}
@@ -356,10 +385,34 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
                 abstainVotes={proposal.abstainVotes}
                 vetoVotes={proposal.vetoVotes}
                 totalVotes={proposal.totalVotes}
+                vote={proposal.vote}
               />
             ) : (
               <Loader />
             )}
+          </form>
+        ) : message === STEPS.gov_MsgSubmitProposal ? (
+          <form className={styles.stepsForm} autoComplete='none'>
+            <p className={utilsStyles.label}>I am submitting a text proposal:</p>
+            <Input name='title' required value={title} className={styles.stepInput} align='center' disabled />
+            <br />
+            <TextArea
+              name='description'
+              required
+              value={description}
+              className={styles.stepInput}
+              align='center'
+              disabled
+            />
+            <br />
+            <p className={utilsStyles.label}>with an initial deposit of</p>
+            <AmountAndDenom
+              amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
+              denom={getDisplayDenomFromCurrencyToken(
+                Array.isArray(token) ? (token[0] as CURRENCY_TOKEN) : (token as CURRENCY_TOKEN),
+              )}
+              microUnits={0}
+            />
           </form>
         ) : (
           <p>Unsupported review type</p>
@@ -374,12 +427,8 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         }
         correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
       >
-        {message === STEPS.gov_MsgVote && (
-          <VoteButton
-            voteOption={voteOption}
-            onVoteClick={setVoteOption}
-            disabled={(proposal?.votingEndTime ?? 0) < Date.now()}
-          />
+        {message === STEPS.gov_MsgVote && !loading && (
+          <VoteButton voteOption={voteOption} onVoteClick={setVoteOption} disabled={proposal?.status !== 'VOTING'} />
         )}
       </Footer>
     </>

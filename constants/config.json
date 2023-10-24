@@ -25,6 +25,35 @@
       "name": "Vote",
       "description": "Vote on proposals on the IXO Network",
       "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ibof",
+      "steps": [
+        {
+          "id": "define_proposal_title",
+          "name": "Proposal Title"
+        },
+        {
+          "id": "define_proposal_description",
+          "name": "Proposal Description"
+        },
+        {
+          "id": "select_token_and_amount",
+          "name": "Proposal Initial Deposit",
+          "config": {
+            "optional": true,
+            "denomLabel": "Select the token for the initial deposit (optional)",
+            "amountLabel": "Enter an amount for the initial deposit (optional)"
+          }
+        },
+        {
+          "id": "gov_MsgSubmitProposal",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Text Proposal",
+      "description": "Create a text proposals on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
     }
   ]
 }

@@ -11,6 +11,7 @@ type GovContextType = {
   proposals: PROPOSAL_STATE;
   getProposal: (proposalId: number) => PROPOSAL_DATA | undefined;
   fetchProposals: () => Promise<void>;
+  fetchProposalVote: (proposalId: number) => Promise<void>;
   clearProposals: () => void;
 };
 
@@ -51,12 +52,26 @@ const GovProvider = ({ children }: GovProviderProps) => {
         try {
           if (!proposal.content) throw new Error('No content');
           const content = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
+          const existingProposal = proposals.data.find((p) => p.proposalId === proposal.proposalId.toNumber());
           return {
+            ...(existingProposal ?? {}),
             proposalId: proposal.proposalId.toNumber(),
             title: content.title,
             description: content.description,
-            status: proposal.status,
+            status:
+              proposal.status === 1
+                ? 'DEPOSIT'
+                : proposal.status === 2
+                ? 'VOTING'
+                : proposal.status === 3
+                ? 'PASSED'
+                : proposal.status === 4
+                ? 'REJECTED'
+                : proposal.status === 5
+                ? 'FAILED'
+                : 'UNKNOWN',
             votingEndTime: timestampToDate(proposal.votingEndTime!)?.getTime() ?? 0,
+            depositEndTime: timestampToDate(proposal.depositEndTime!)?.getTime() ?? 0,
             yesVotes: Number(proposal.finalTallyResult?.yes ?? 0),
             noVotes: Number(proposal.finalTallyResult?.no ?? 0),
             abstainVotes: Number(proposal.finalTallyResult?.abstain ?? 0),
@@ -74,7 +89,7 @@ const GovProvider = ({ children }: GovProviderProps) => {
       });
       const data = proposalData
         .filter((proposal) => !!proposal)
-        .sort((a, b) => ((a?.votingEndTime ?? 0) > (b?.votingEndTime ?? 0) ? -1 : 1));
+        .sort((a, b) => ((a?.proposalId ?? 0) > (b?.proposalId ?? 0) ? -1 : 1));
       proposalsLoading.current = false;
       setProposals((prevState) => ({
         ...prevState,
@@ -82,17 +97,6 @@ const GovProvider = ({ children }: GovProviderProps) => {
         data: data as PROPOSAL_DATA[],
         error: '',
       }));
-      // const proposalVotes = await Promise.all(
-      //   (data ?? []).map((proposal) => queryVote(queryClient, wallet.user!?.address ?? '', proposal?.proposalId ?? -1)),
-      // );
-      // const proposalsWithVotes = proposalVotes.map((vote, index) => {
-      //   const proposal = data[index];
-      //   return {
-      //     ...proposal,
-      //     vote: vote?.options ?? 0,
-      //   };
-      // });
-      // TODO: add voted vote to proposal
     } catch (error) {
       console.error('fetchProposals::error', error);
       proposalsLoading.current = false;
@@ -101,6 +105,22 @@ const GovProvider = ({ children }: GovProviderProps) => {
         loading: proposalsLoading.current,
         error: (error as { message: string }).message,
       }));
+    }
+  };
+
+  const fetchProposalVote = async (proposalId: number) => {
+    try {
+      if (!queryClient) throw new Error('Query client is not defined');
+      const proposalVote = await queryVote(queryClient, wallet.user!?.address ?? '', proposalId);
+      if (proposalVote)
+        setProposals((prevState) => ({
+          ...prevState,
+          data: prevState.data.map((proposal) =>
+            proposal.proposalId === proposalId ? { ...proposal, vote: proposalVote } : proposal,
+          ),
+        }));
+    } catch (error) {
+      console.error('fetchProposalVote::error', error);
     }
   };
 
@@ -117,6 +137,7 @@ const GovProvider = ({ children }: GovProviderProps) => {
     proposals,
     getProposal,
     fetchProposals,
+    fetchProposalVote,
     clearProposals,
   };
 
