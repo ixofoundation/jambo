@@ -115,6 +115,7 @@ const CustomerId: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Height,
         const imageSrc = cameraRef.current.captureImage();
         if (imageSrc) {
             const result = { image: imageSrc, height: frame.height, width: frame.width };
+            localStorage.setItem('capturedIdFront', result.image);
             setCapturedData(result);
         }
         switchToScreen('id_front_verification');

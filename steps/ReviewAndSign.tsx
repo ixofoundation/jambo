@@ -285,7 +285,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgDelegate && <p>to the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgUndelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -298,7 +298,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             <br />
             {message === STEPS.staking_MsgUndelegate && <p>from the validator</p>}
 
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
         ) : message === STEPS.staking_MsgRedelegate ? (
           <form className={styles.stepsForm} autoComplete='none'>
@@ -310,12 +310,16 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             />
             <br />
             <p>from</p>
-            <ValidatorListItem validator={srcValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={srcValidator!} onClick={() => () => { }} />
             <p>to</p>
-            <ValidatorListItem validator={dstValidator!} onClick={() => () => {}} />
+            <ValidatorListItem validator={dstValidator!} onClick={() => () => { }} />
           </form>
+        ) : message === STEPS.request_onboarding ? (
+          <>
+            Review and Sign
+          </>
         ) : (
-          <p>Unsupported review type</p>
+        <p>Unsupported review type</p>
         )}
       </main>
 

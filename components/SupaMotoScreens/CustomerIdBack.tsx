@@ -123,6 +123,7 @@ const CustomerIdBack: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Hei
         const imageSrc = cameraRef.current.captureImage();
         if (imageSrc) {
             const result = { image: imageSrc, height: frame.height, width: frame.width };
+            localStorage.setItem('capturedIdBack', result.image);
             setCapturedData(result);
         }
         switchToScreen('id_back_verification');

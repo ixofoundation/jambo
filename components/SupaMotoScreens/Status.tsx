@@ -14,9 +14,20 @@ import Footer from '@components/Footer/Footer';
 const Status = () => {
     const [status, setStatus] = useState('single');
     const { currentScreen, switchToScreen } = useRenderScreen('status');
+
     const handleStatusChange = (newStatus: React.SetStateAction<string>) => {
-        setStatus(newStatus);
+        if (typeof newStatus === 'string') {
+            setStatus(newStatus);
+            localStorage.setItem('selectedStatus', newStatus);
+        } else if (typeof newStatus === 'function') {
+            setStatus((prevStatus) => {
+                const newStatusValue = newStatus(prevStatus);
+                localStorage.setItem('selectedStatus', newStatusValue);
+                return newStatusValue;
+            });
+        }
     };
+
 
     const renderScreen = () => {
         switch (currentScreen) {

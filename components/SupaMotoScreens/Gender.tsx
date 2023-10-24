@@ -15,7 +15,9 @@ const Gender = () => {
     const [status, setStatus] = useState('female');
     const { currentScreen, switchToScreen } = useRenderScreen('gender');
     const handleStatusChange = (newStatus: React.SetStateAction<string>) => {
+        const selectedGender = newStatus.toString();
         setStatus(newStatus);
+        localStorage.setItem('selectedGender', selectedGender);
     };
 
     const renderScreen = () => {
@@ -55,7 +57,7 @@ const Gender = () => {
             case 'village':
                 return <Village />
             case 'previous_route':
-                return <CustomerIdBack />
+                return <CustomerIdBack />    
             default:
                 return <>Empty</>;
         }

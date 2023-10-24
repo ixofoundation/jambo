@@ -24,6 +24,7 @@ export enum STEPS {
   claim = 'claim',
   onboarding = 'onboarding',
   get_camera_image = 'get_camera_image',
+  request_onboarding = 'request_onboarding',
 }
 
 export type STEP = {
@@ -61,6 +62,7 @@ export const steps: { [key in STEPS]: STEP } = {
   [STEPS.staking_MsgDelegate]: { id: STEPS.staking_MsgDelegate, name: 'Review and sign' },
   [STEPS.staking_MsgUndelegate]: { id: STEPS.staking_MsgUndelegate, name: 'Review and sign' },
   [STEPS.staking_MsgRedelegate]: { id: STEPS.staking_MsgRedelegate, name: 'Review and sign' },
+  [STEPS.request_onboarding]: { id: STEPS.request_onboarding, name: 'Review and sign' },
   [STEPS.distribution_MsgWithdrawDelegatorReward]: {
     id: STEPS.distribution_MsgWithdrawDelegatorReward,
     name: 'Review and sign',
@@ -72,6 +74,7 @@ export const steps: { [key in STEPS]: STEP } = {
 
 export type ReviewStepsTypes =
   | STEPS.bank_MsgSend
+  | STEPS.request_onboarding
   | STEPS.bank_MsgMultiSend
   | STEPS.staking_MsgDelegate
   | STEPS.staking_MsgUndelegate
@@ -110,9 +113,6 @@ interface Define_amount {
 interface Send_token_to_receiver {
   done: boolean;
 }
-interface Onboarding {
-  data: Onboarding[];
-}
 interface Get_camera_image {
   image: string;
   width: number;
@@ -121,8 +121,12 @@ interface Get_camera_image {
 interface Review_and_sign {
   done: boolean;
 }
+interface Onboarding {
+  data: any;
+}
 
 export type AllStepDataTypes =
+  | Onboarding
   | Get_receiver_address
   | Get_receiver_addresses
   | Get_validator_address
@@ -131,7 +135,6 @@ export type AllStepDataTypes =
   | Check_user_balance
   | Define_amount
   | Send_token_to_receiver
-  | Onboarding
   | Get_camera_image
   | Review_and_sign;
 
@@ -159,7 +162,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Define_amount
   : T extends STEPS.send_token_to_receiver
   ? Send_token_to_receiver
-  : T extends STEPS.review_and_sign
+  : T extends STEPS.onboarding
   ? Onboarding
   : T extends STEPS.onboarding
   ? Get_camera_image
@@ -168,5 +171,7 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward
   ? Review_and_sign
   : T extends STEPS.claim
+  ? Review_and_sign
+  : T extends STEPS.request_onboarding
   ? Review_and_sign
   : never;

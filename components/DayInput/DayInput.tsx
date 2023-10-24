@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { FC, useState } from 'react';
 import styles from '../SupaMotoScreens/SupaMotoScreens.module.scss';
 
-const DayInput = ({ day }) => {
-  const [background, setBackground] = useState('#FFFFFF');
+type Props = {
+  day: any,
+  selected: boolean;
+  onClick: () => void,
+}
 
-  const handleClick = () => {
-    setBackground(background === '#E0A714' ? '#FFFFFF' : '#E0A714');
-  };
+const DayInput: FC<Props> = ({ day, selected ,onClick }) => {
+  const background = selected ? '#E0A714' : '#FFFFFF';
 
   return (
     <div
       className={styles.dayz}
-      onClick={handleClick}
+      onClick={onClick}
       style={{ backgroundColor: background }}
     >
       {day}

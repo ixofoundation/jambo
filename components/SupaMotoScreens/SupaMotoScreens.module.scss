@@ -86,6 +86,12 @@ $grey_light: #F0F0F0;
     background-color: $grey_light;
 }
 
+.inputs::placeholder {
+    text-align: center;
+    font-weight: bold;
+    color: black;
+}
+
 .dobForm {
     display: flex;
     align-items: center;
@@ -104,6 +110,21 @@ $grey_light: #F0F0F0;
     display: nth($flex-layout, 1);
     align-items: nth($flex-layout, 3);
     justify-content: nth($flex-layout, 2);
+}
+
+.custom-input {
+    top: -40px;
+    width: 90px;
+    height: 40px;
+    position: relative;
+    border-radius: 23px;
+    border-style: none;
+    background-color: #F0F0F0;
+}
+
+.custom-input::placeholder {
+    text-align: center;
+    color: black;
 }
 
 .houseHoldContainer {
@@ -181,12 +202,11 @@ $grey_light: #F0F0F0;
     display: grid;
     grid-template-columns: auto auto auto auto auto auto;
     border-radius: 20px 20px 0px 0px;
-    height: 375px;
+    height: 300px;
     width: 400px;
     background-color: $grey_light;
     position: relative;
-    // bottom: 10px;
-    z-index: 1;
+    bottom: -37px;
 }
 
 .toggleBoxMonths {    
@@ -200,9 +220,7 @@ $grey_light: #F0F0F0;
     width: 400px;
     background-color: $grey_light;
     position: relative;
-    bottom: -175px;
-    // float: bottom;
-    z-index: 1;
+    bottom: -136px;
 }
 
 .toggleBoxContainer {

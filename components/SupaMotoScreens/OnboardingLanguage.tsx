@@ -9,16 +9,20 @@ import Names from './Names';
 const OnboardingLanguage = () => {
     const [selected, setSelected] = useState<string | null>(null);
     const { currentScreen, switchToScreen } = useRenderScreen('onboarding_language');
+
     const handleButtonClick = (label: string) => {
         if (selected === label) {
             setSelected(null);
+            localStorage.removeItem('selectedLanguage')
         } else {
             setSelected(label);
+            localStorage.setItem('selectedLanguage', label)
         }
     };
+
     const isButtonSelected = (label: string) => {
         return selected === label;
-    };
+    }; 
 
     const renderScreen = () => {
         switch (currentScreen) {

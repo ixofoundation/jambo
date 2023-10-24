@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './SupaMotoScreens.module.scss';
 import IconText from '@components/IconText/IconText';
 import Profile from '@icons/profile.svg';
@@ -9,6 +9,22 @@ import OnboardingLanguage from './OnboardingLanguage';
 
 const Names = () => {
     const { currentScreen, switchToScreen } = useRenderScreen('names');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+
+    const handleFirstNameChange = (event: any) => {
+        setFirstName(event.target.value);
+    };
+
+    const handleLastNameChange = (event: any) => {
+        setLastName(event.target.value);
+    };
+
+    const saveNamesToLocalStorage = () => {
+        const fullNamesToSave = `${firstName} ${lastName}`;
+        localStorage.setItem('storedNames', fullNamesToSave);
+    };
+
     const renderScreen = () => {
         switch (currentScreen) {
             case 'names':
@@ -21,13 +37,21 @@ const Names = () => {
                                     <label
                                         className={styles.label}
                                     >First Name</label><br />
-                                    <input className={styles.inputs} type='text' placeholder='Name' />
+                                    <input
+                                        className={styles.inputs}
+                                        type='text'
+                                        placeholder='Name'
+                                        onChange={handleFirstNameChange} />
                                 </div><br />
                                 <div>
                                     <label
                                         className={styles.label}
                                     >Last Name</label><br />
-                                    <input className={styles.inputs} type='text' placeholder='Surname' />
+                                    <input
+                                        className={styles.inputs}
+                                        type='text'
+                                        placeholder='Surname'
+                                        onChange={handleLastNameChange} />
                                 </div>
                             </div>
                         </form>
@@ -44,6 +68,7 @@ const Names = () => {
     }
 
     const switchRoute = () => {
+        saveNamesToLocalStorage();
         switchToScreen('date_of_birth');
     };
     const routeBack = () => {

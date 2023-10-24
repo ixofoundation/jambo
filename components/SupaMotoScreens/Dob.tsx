@@ -3,31 +3,42 @@ import Calendar from '@icons/calendar.svg';
 import styles from './SupaMotoScreens.module.scss';
 import IconText from '@components/IconText/IconText';
 import DayInput from '../DayInput/DayInput';
+import MonthInput from '../MonthInput/MonthInput';
 import { useRenderScreen } from '@hooks/useRenderScreen';
 import HouseHold from './HouseHold';
 import Footer from '@components/Footer/Footer';
 import Names from './Names';
 
-const Months: JSX.Element[] = Array.from({ length: 12 }, (_, index) => (
-    <input
-        className={styles.months}
-        key={index}
-        type='text'
-        placeholder={new Date(0, index).toLocaleString('default', { month: 'long' })}
-    />
+const Months: string[] = Array.from({ length: 12 }, (_, index) => (
+    new Date(0, index).toLocaleString('default', { month: 'long' })
 ));
+
+
+
 const Dob = () => {
     const [days, setDays] = useState(false);
     const [months, setMonths] = useState(false);
     const { currentScreen, switchToScreen } = useRenderScreen('date_of_birth');
+    const [selectedDay, setSelectedDay] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [selectedYear, setSelectedYear] = useState('');
+
     const handleDays = () => {
         setDays(!days);
         setMonths(false);
     };
+
     const handleMonths = () => {
         setMonths(!months);
         setDays(false);
     };
+
+    const saveSelectedValuesToLocal = () => {
+        localStorage.setItem('selectedDay', selectedDay);
+        localStorage.setItem('selectedYear', selectedYear);
+        localStorage.setItem('selectedMonth', selectedMonth || '');
+    };
+
     const renderScreen = () => {
         switch (currentScreen) {
             case 'date_of_birth':
@@ -44,7 +55,11 @@ const Dob = () => {
                                     onClick={handleMonths}
                                     className={styles.dobInput}
                                 >month</div>
-                                <div className={styles.dobInput}>year</div>
+                                <input
+                                    className={styles['custom-input']}
+                                    type='text' placeholder='year'
+                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                />
                             </div>
                             <div className={styles.toggleBoxContainer}>
                                 {
@@ -55,6 +70,8 @@ const Dob = () => {
                                                     <DayInput
                                                         key={index}
                                                         day={index + 1}
+                                                        selected={selectedDay === (index + 1).toString()}
+                                                        onClick={() => setSelectedDay((index + 1).toString())}
                                                     />
                                                 ))}
                                             </div>
@@ -71,11 +88,12 @@ const Dob = () => {
                                         <div>
                                             <div className={styles.toggleBoxMonths} >
                                                 {Months.map((month, index) => (
-                                                    <div key={index}>
-                                                        <div>
-                                                            {month}
-                                                        </div>
-                                                    </div>
+                                                    <MonthInput
+                                                        key={index}
+                                                        month={month}
+                                                        selected={selectedMonth === month}
+                                                        onClick={() => setSelectedMonth(month)}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -86,9 +104,10 @@ const Dob = () => {
                                 }
                             </div>
                         </form>
-                        <Footer onBack={routeBack} onBackUrl='/' onForward={switchRoute} />
+                        {(!days && !months) && <Footer onBack={routeBack} onBackUrl='/' onForward={switchRoute} />}
                     </div >
                 )
+
             case 'household':
                 return <HouseHold />;
             case 'previous_route':
@@ -99,6 +118,7 @@ const Dob = () => {
     }
 
     const switchRoute = () => {
+        saveSelectedValuesToLocal();
         switchToScreen('household');
     };
     const routeBack = () => {

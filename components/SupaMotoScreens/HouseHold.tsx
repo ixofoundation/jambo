@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
-import styles from './SupaMotoScreens.module.scss';
+import Dob from './Dob';
+import Status from './Status';
+import Footer from '@components/Footer/Footer';
 import HouseHoldSvg from '@icons/household.svg';
 import Increment from '@icons/increment.svg';
 import Decrement from '@icons/decrement.svg';
 import IconText from '@components/IconText/IconText';
+import styles from './SupaMotoScreens.module.scss';
 import { useRenderScreen } from '@hooks/useRenderScreen';
-import Status from './Status';
-import Dob from './Dob';
-import Footer from '@components/Footer/Footer';
 
 const HouseHold = () => {
-    const [count, setCount] = useState(0);
     const { currentScreen, switchToScreen } = useRenderScreen('household');
+    const [count, setCount] = useState(0);
+
     const incrementCount = () => {
         setCount(count + 1);
     };
+
     const decrementCount = () => {
         if (count > 0) {
             setCount(count - 1);
         }
     };
+
+    const saveHouseholdToLocalStorage = () => {
+        const members = count;
+        localStorage.setItem('storedHousehold', JSON.stringify(members));
+    };
+
     const renderScreen = () => {
         switch (currentScreen) {
             case 'household':
@@ -48,8 +56,10 @@ const HouseHold = () => {
     }
 
     const switchRoute = () => {
+        saveHouseholdToLocalStorage();
         switchToScreen('status');
     };
+
     const routeBack = () => {
         switchToScreen('previous_route');
     };

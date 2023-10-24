@@ -10,9 +10,13 @@ import Footer from '@components/Footer/Footer';
 const MonthlyIncome = () => {
     const [amount, setAmount] = useState(0);
     const { currentScreen, switchToScreen } = useRenderScreen('monthly_income');
-    const handleAmountChange = (event: { target: { value: React.SetStateAction<number>; }; }) => {
-        setAmount(event.target.value);
+
+    const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newAmount = parseInt(event.target.value, 10);
+        setAmount(newAmount);
+        localStorage.setItem('monthlyIncome', newAmount.toString());
     };
+
     const renderScreen = () => {
         switch (currentScreen) {
             case 'monthly_income':

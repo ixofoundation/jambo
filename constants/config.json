@@ -16,6 +16,10 @@
         {
           "id": "onboarding",
           "name": "Onboarding"
+        },
+        {
+          "id": "onboarding",
+          "name": "Review and sign"
         }
       ],
       "name": "Onboarding",
