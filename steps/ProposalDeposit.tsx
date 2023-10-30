@@ -47,6 +47,7 @@ const ProposalDeposit: FC<ProposalDepositProps> = ({ onSuccess, onBack, header }
   const fetchDepositParams = async () => {
     try {
       if (loadingRef.current) return;
+      setLoading(true);
       loadingRef.current = true;
       const params = await queryGovParams(queryClient!, 'deposit');
       const { depositParams } = params ?? {};
@@ -89,6 +90,7 @@ const ProposalDeposit: FC<ProposalDepositProps> = ({ onSuccess, onBack, header }
     validateAmountAgainstBalance(
       Number(token?.amount ?? 0),
       Number(wallet?.balances?.data?.find((b) => b?.denom === token?.denom)?.amount ?? 0),
+      false,
     );
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
@@ -102,10 +104,12 @@ const ProposalDeposit: FC<ProposalDepositProps> = ({ onSuccess, onBack, header }
       <Header header={header} />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
-        {loading ? (
+        {loading || !token ? (
           <div className={utilsStyles.center}>
             <Loader />
           </div>
+        ) : !wallet.balances?.data ? (
+          <IconText title="You don't have any tokens to deposit." Img={SadFace} imgSize={50} />
         ) : (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
             {error ? (
@@ -124,20 +128,20 @@ const ProposalDeposit: FC<ProposalDepositProps> = ({ onSuccess, onBack, header }
                   .
                 </p>
                 <div className={utilsStyles.spacer1} />
-                <p className={styles.label}>The deposit will be refunded if the proposal passes.</p>
-                <div className={utilsStyles.spacer8} />
-                {!wallet.balances?.data ? (
-                  <IconText title="You don't have any tokens to deposit." Img={SadFace} imgSize={50} />
-                ) : !formIsValid() ? (
+                {!formIsValid() ? (
                   <IconText title="You don't have enough tokens to deposit." Img={SadFace} imgSize={50} />
                 ) : (
-                  <p className={styles.label}>
-                    Deposit{' '}
-                    <span className={styles.highlighted}>
-                      {getDisplayAmountFromCurrencyToken(token)} {getDisplayDenomFromCurrencyToken(token)}
-                    </span>
-                    ?
-                  </p>
+                  <>
+                    <p className={styles.label}>The deposit will be refunded if the proposal passes.</p>
+                    <div className={utilsStyles.spacer7} />
+                    <p className={styles.label}>
+                      Deposit{' '}
+                      <span className={styles.highlighted}>
+                        {getDisplayAmountFromCurrencyToken(token)} {getDisplayDenomFromCurrencyToken(token)}
+                      </span>
+                      ?
+                    </p>
+                  </>
                 )}
               </>
             )}

@@ -148,7 +148,6 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         setDescription((s.data as StepDataType<STEPS.define_proposal_description>)?.description);
       }
       if (s.id === STEPS.define_proposal_deposit) {
-        console.log(s);
         setToken((s.data as StepDataType<STEPS.define_proposal_deposit>)?.token);
       }
     });
@@ -395,12 +394,12 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         ) : message === STEPS.gov_MsgSubmitProposal ? (
           <form className={styles.stepsForm} autoComplete='none'>
             <p className={utilsStyles.label}>I am submitting a text proposal:</p>
-            <Input name='title' required value={title} className={styles.stepInput} align='center' disabled />
+            <Input name='title' required value={title ?? ''} className={styles.stepInput} align='center' disabled />
             <br />
             <TextArea
               name='description'
               required
-              value={description}
+              value={description ?? ''}
               className={styles.stepInput}
               align='center'
               disabled

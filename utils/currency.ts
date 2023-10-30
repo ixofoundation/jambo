@@ -66,7 +66,7 @@ export const generateUserTokensDropdown = (balances: CURRENCY[]) => {
 };
 
 export const validateAmountAgainstBalance = (amount: number, balance: number, balanceMicroUnits: boolean = true) => {
-  const realBalance = balanceMicroUnits ? balance / 10 ** 6 : balance;
+  const realBalance = balanceMicroUnits ? balance / Math.pow(10, 6) : balance;
   return amount <= realBalance;
 };
 
