@@ -10,16 +10,41 @@ import {
   getDecimalsFromCurrencyToken,
   getDisplayDenomFromCurrencyToken,
 } from '@utils/currency';
+import Card, { CARD_BG_COLOR, CARD_SIZE } from '@components/Card/Card';
 
 type TextAreaProps = {
   label?: string;
   align?: 'start' | 'left' | 'center' | 'right' | 'end';
+  bgColor?: CARD_BG_COLOR;
 } & TextareaHTMLAttributes<HTMLTextAreaElement>;
 
-const TextArea: FC<TextAreaProps> = ({ label, align = 'start', className, ...other }) => {
+const TextArea: FC<TextAreaProps> = ({
+  label,
+  align = 'start',
+  bgColor = CARD_BG_COLOR.lightGrey,
+  className,
+  ...other
+}) => {
   return label ? (
     <label className={styles.label}>
       {label}
+      <Card className={styles.inputContainer} bgColor={bgColor} size={CARD_SIZE.xxsmall}>
+        <textarea
+          className={cls(
+            styles.textarea,
+            align === 'end' || align === 'right'
+              ? styles.endAlign
+              : align === 'center'
+              ? styles.centerAlign
+              : styles.startAlign,
+            className,
+          )}
+          {...other}
+        />
+      </Card>
+    </label>
+  ) : (
+    <Card className={styles.inputContainer} bgColor={bgColor} size={CARD_SIZE.xxsmall}>
       <textarea
         className={cls(
           styles.textarea,
@@ -32,20 +57,7 @@ const TextArea: FC<TextAreaProps> = ({ label, align = 'start', className, ...oth
         )}
         {...other}
       />
-    </label>
-  ) : (
-    <textarea
-      className={cls(
-        styles.textarea,
-        align === 'end' || align === 'right'
-          ? styles.endAlign
-          : align === 'center'
-          ? styles.centerAlign
-          : styles.startAlign,
-        className,
-      )}
-      {...other}
-    />
+    </Card>
   );
 };
 

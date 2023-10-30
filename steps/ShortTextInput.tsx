@@ -3,11 +3,10 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
-import InputWithSuffixIcon from '@components/InputWithSuffixIcon/InputWithSuffixIcon';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-import Paste from '@icons/paste.svg';
-import { StepConfigType, StepDataType, STEPS } from 'types/steps';
+import { StepDataType, STEPS } from 'types/steps';
+import Input from '@components/Input/Input';
 
 type ShortTextInputProps = {
   onSuccess: (data: StepDataType<STEPS.define_proposal_title>) => void;
@@ -18,13 +17,13 @@ type ShortTextInputProps = {
 };
 
 const ShortTextInput: FC<ShortTextInputProps> = ({ onSuccess, onBack, data, header }) => {
-  const [text, setText] = useState(data?.title);
+  const [text, setText] = useState(data?.title ?? '');
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setText(event.target.value);
   };
 
-  const formIsValid = () => (text ?? '').length > 0;
+  const formIsValid = () => (text ?? '').length > 2;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
@@ -38,8 +37,9 @@ const ShortTextInput: FC<ShortTextInputProps> = ({ onSuccess, onBack, data, head
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
-          <p className={styles.label}>The title of your proposal:</p>
-          <InputWithSuffixIcon name='address' required onChange={handleChange} value={text} icon={Paste} />
+          <p className={styles.label}>Proposal Title</p>
+          <Input name='address' required onChange={handleChange} value={text} className={styles.stepInput} />
+          <div className={utilsStyles.spacer10} />
         </form>
       </main>
 

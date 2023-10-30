@@ -99,12 +99,18 @@ export const getMicroUnitsFromDenom = (denom: string, tokenAsset?: TokenAsset): 
 
 export const validateIbcDenom = (denom: string) => /^ibc\//i.test(denom);
 
+export const getMicroUnitsFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) =>
+  Number(currencyToken?.token?.coinDecimals ?? 0);
+
 export const getDisplayDenomFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) =>
   currencyToken?.token?.coinDenom ?? currencyToken?.denom ?? '';
 
 export const getDenomFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) => currencyToken?.denom ?? '';
 
 export const getAmountFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) => Number(currencyToken?.amount ?? 0);
+
+export const getDisplayAmountFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) =>
+  formatTokenAmount(getAmountFromCurrencyToken(currencyToken), getMicroUnitsFromCurrencyToken(currencyToken));
 
 export const getDecimalsFromCurrencyToken = (currencyToken?: CURRENCY_TOKEN) =>
   Number(currencyToken?.token?.coinDecimals ?? 0);

@@ -2,10 +2,11 @@
   width: auto;
   background-color: var(--light-grey-color);
   border: none;
-  border-radius: 50px;
+  border-radius: inherit;
   padding: 0.8rem;
   display: block;
   color: var(--main-font-color);
+  min-height: 150px;
 
   &:focus {
     outline: solid 1px var(--primary-color);

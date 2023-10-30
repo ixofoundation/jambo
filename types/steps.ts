@@ -17,6 +17,7 @@ export enum STEPS {
   select_proposal = 'select_proposal',
   define_proposal_title = 'define_proposal_title',
   define_proposal_description = 'define_proposal_description',
+  define_proposal_deposit = 'define_proposal_deposit',
   review_and_sign = 'review_and_sign',
   bank_MsgSend = 'bank_MsgSend',
   bank_MsgMultiSend = 'bank_MsgMultiSend',
@@ -95,6 +96,10 @@ export const steps: { [key in STEPS]: STEP } = {
   [STEPS.define_proposal_description]: {
     id: STEPS.define_proposal_description,
     name: 'Proposal description',
+  },
+  [STEPS.define_proposal_deposit]: {
+    id: STEPS.define_proposal_deposit,
+    name: 'Accept proposal deposit',
   },
   [STEPS.review_and_sign]: {
     id: STEPS.review_and_sign,
@@ -190,6 +195,9 @@ interface Define_proposal_title {
 interface Define_proposal_description {
   description?: string;
 }
+interface Define_proposal_deposit {
+  token: CURRENCY_TOKEN;
+}
 interface Review_and_sign {
   done: boolean;
 }
@@ -206,6 +214,7 @@ export type AllStepDataTypes =
   | Select_proposal
   | Define_proposal_title
   | Define_proposal_description
+  | Define_proposal_deposit
   | Review_and_sign;
 
 export type StepDataType<T> = T extends STEPS.check_user_balance
@@ -238,6 +247,8 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Define_proposal_title
   : T extends STEPS.define_proposal_description
   ? Define_proposal_description
+  : T extends STEPS.define_proposal_deposit
+  ? Define_proposal_deposit
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward

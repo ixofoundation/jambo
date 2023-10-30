@@ -147,6 +147,10 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
       if (s.id === STEPS.define_proposal_description) {
         setDescription((s.data as StepDataType<STEPS.define_proposal_description>)?.description);
       }
+      if (s.id === STEPS.define_proposal_deposit) {
+        console.log(s);
+        setToken((s.data as StepDataType<STEPS.define_proposal_deposit>)?.token);
+      }
     });
   }, [steps]);
 
@@ -218,16 +222,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
             );
           break;
         case STEPS.gov_MsgSubmitProposal:
-          console.log({ amount, token });
           trxMsgs.push(
             generateSubmitProposalTrx({
               proposer: wallet.user!.address,
               title: title!,
               description: description!,
-              depositAmount: getMicroAmount((amount ?? '').toString()),
-              depositDenom: token
-                ? getDenomFromCurrencyToken(((Array.isArray(token) ? token[0] : token) ?? '') as CURRENCY_TOKEN)
-                : undefined,
+              depositAmount: ((token as CURRENCY_TOKEN).amount ?? '').toString() ?? undefined,
+              depositDenom: token ? getDenomFromCurrencyToken((token ?? '') as CURRENCY_TOKEN) : undefined,
             }),
           );
           break;
@@ -404,15 +405,13 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
               align='center'
               disabled
             />
-            <br />
-            <p className={utilsStyles.label}>with an initial deposit of</p>
-            <AmountAndDenom
-              amount={(Array.isArray(amount) ? amount[0] ?? '' : amount) ?? ''}
-              denom={getDisplayDenomFromCurrencyToken(
-                Array.isArray(token) ? (token[0] as CURRENCY_TOKEN) : (token as CURRENCY_TOKEN),
-              )}
-              microUnits={0}
-            />
+            {!!(token as CURRENCY_TOKEN)?.denom && (
+              <>
+                <br />
+                <p className={utilsStyles.label}>with an initial deposit of</p>
+                <AmountAndDenom token={token as CURRENCY_TOKEN} />
+              </>
+            )}
           </form>
         ) : (
           <p>Unsupported review type</p>

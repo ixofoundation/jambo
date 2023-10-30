@@ -3,11 +3,10 @@ import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
 import styles from '@styles/stepsPages.module.scss';
+import TextArea from '@components/TextArea/TextArea';
 import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
-import Paste from '@icons/paste.svg';
 import { StepDataType, STEPS } from 'types/steps';
-import TextAreaWithSuffixIcon from '@components/TextAreaWithSuffixIcon/TextAreaWithSuffixIcon';
 
 type LongTextInputProps = {
   onSuccess: (data: StepDataType<STEPS.define_proposal_description>) => void;
@@ -24,7 +23,7 @@ const LongTextInput: FC<LongTextInputProps> = ({ onSuccess, onBack, data, header
     setText(event.target.value);
   };
 
-  const formIsValid = () => (text ?? '').length > 0;
+  const formIsValid = () => (text ?? '').length > 10;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
@@ -38,16 +37,16 @@ const LongTextInput: FC<LongTextInputProps> = ({ onSuccess, onBack, data, header
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
-          <p className={styles.label}>The description of your proposal:</p>
-          <TextAreaWithSuffixIcon
+          <p className={styles.label}>Proposal Description</p>
+          <TextArea
             name='address'
             required
             onChange={handleChange}
             value={text}
-            icon={Paste}
-            // minLength={4}
-            // maxLength={7}
+            cols={5}
+            className={styles.stepInput}
           />
+          <div className={utilsStyles.spacer10} />
         </form>
       </main>
 

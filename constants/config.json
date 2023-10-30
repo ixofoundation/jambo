@@ -38,13 +38,8 @@
           "name": "Proposal Description"
         },
         {
-          "id": "select_token_and_amount",
-          "name": "Proposal Initial Deposit",
-          "config": {
-            "optional": true,
-            "denomLabel": "Select the token for the initial deposit (optional)",
-            "amountLabel": "Enter an amount for the initial deposit (optional)"
-          }
+          "id": "define_proposal_deposit",
+          "name": "Proposal Initial Deposit"
         },
         {
           "id": "gov_MsgSubmitProposal",

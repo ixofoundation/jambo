@@ -10,7 +10,7 @@ import {
   VALIDATOR,
   VALIDATOR_FILTER_TYPE,
 } from 'types/validators';
-import { CURRENCY, CURRENCY_TOKEN } from 'types/wallet';
+import { CURRENCY_TOKEN } from 'types/wallet';
 import { QUERY_CLIENT } from 'types/query';
 import { filterValidators } from './filters';
 import { TOKEN_ASSET } from './currency';
@@ -216,6 +216,16 @@ export const queryVote = async (queryClient: QUERY_CLIENT, address: string, prop
     return vote;
   } catch (error) {
     console.error('queryVote::', error);
+    return;
+  }
+};
+
+export const queryGovParams = async (queryClient: QUERY_CLIENT, paramsType: 'voting' | 'tallying' | 'deposit') => {
+  try {
+    const params = await queryClient.cosmos.gov.v1beta1.params({ paramsType });
+    return params;
+  } catch (error) {
+    console.error('queryGovParams::', error);
     return;
   }
 };

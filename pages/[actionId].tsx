@@ -19,6 +19,7 @@ import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
 import SelectGovProposal from '@steps/SelectGovProposal';
 import ShortTextInput from '@steps/ShortTextInput';
 import LongTextInput from '@steps/LongTextInput';
+import ProposalDeposit from '@steps/ProposalDeposit';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -199,6 +200,15 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             onBack={handleBack}
             header={action?.name}
             data={step.data as StepDataType<STEPS.define_proposal_description>}
+          />
+        );
+      case STEPS.define_proposal_deposit:
+        return (
+          <ProposalDeposit
+            onSuccess={handleOnNext<STEPS.define_proposal_deposit>}
+            onBack={handleBack}
+            header={action?.name}
+            data={step.data as StepDataType<STEPS.define_proposal_deposit>}
           />
         );
       case STEPS.gov_MsgVote:
