@@ -426,7 +426,11 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         correctLabel={loading ? 'Signing' : !successHash ? 'Sign' : undefined}
       >
         {message === STEPS.gov_MsgVote && !loading && (
-          <VoteButton voteOption={voteOption} onVoteClick={setVoteOption} disabled={proposal?.status !== 'VOTING'} />
+          <VoteButton
+            voteOption={voteOption}
+            onVoteClick={setVoteOption}
+            disabled={proposal?.status !== 'VOTING' || (proposal?.votingEndTime ?? 0) <= Date.now()}
+          />
         )}
       </Footer>
     </>
