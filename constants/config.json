@@ -11,6 +11,122 @@
   "termsAndConditions": "https://my.jambo.earth/legal/termsOfUse",
   "actions": [
     {
+      "id": "eKXPPhewkJDLbE1bq1iboz",
+      "steps": [
+        {
+          "id": "select_token_and_amount",
+          "name": "Select token and amount"
+        },
+        {
+          "id": "get_receiver_address",
+          "name": "Get receiver address"
+        },
+        {
+          "id": "bank_MsgSend",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Send",
+      "description": "Crypto Send",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ib78",
+      "steps": [
+        {
+          "id": "select_token_and_amount",
+          "name": "Select token and amount"
+        },
+        {
+          "id": "get_receiver_address",
+          "name": "Get receiver address"
+        },
+        {
+          "id": "bank_MsgMultiSend",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Multi Send",
+      "description": "Crypto Send",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1iboa",
+      "steps": [
+        {
+          "id": "get_validator_delegate",
+          "name": "Get validator address"
+        },
+        {
+          "id": "select_amount_delegate",
+          "name": "Define amount to delegate"
+        },
+        {
+          "id": "staking_MsgDelegate",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Delegate",
+      "description": "Delegate tokens on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ibob",
+      "steps": [
+        {
+          "id": "get_delegated_validator_undelegate",
+          "name": "Get delegation validator address"
+        },
+        {
+          "id": "select_amount_undelegate",
+          "name": "Define amount to undelegate"
+        },
+        {
+          "id": "staking_MsgUndelegate",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Undelegate",
+      "description": "Undelegate tokens on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1ibob.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1iboc",
+      "steps": [
+        {
+          "id": "get_delegated_validator_redelegate",
+          "name": "Get delegation validator address"
+        },
+        {
+          "id": "select_amount_redelegate",
+          "name": "Define amount to redelegate"
+        },
+        {
+          "id": "get_validator_redelegate",
+          "name": "Get validator address"
+        },
+        {
+          "id": "staking_MsgRedelegate",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Redelegate",
+      "description": "Redelegate tokens on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboc.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ibod",
+      "steps": [
+        {
+          "id": "distribution_MsgWithdrawDelegatorReward",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Claim Rewards",
+      "description": "Claim rewards on your delegations.",
+      "image": "eKXPPhewkJDLbE1bq1ibod.png"
+    },
+    {
       "id": "eKXPPhewkJDLbE1bq1iboe",
       "steps": [
         {
