@@ -1,7 +1,13 @@
 import { getKeplrChainInfo } from '@ixo/cosmos-chain-resolver';
 
 import { CHAIN_INFO_REQUEST, CHAIN_NETWORK_TYPE, KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
-import { ChainNames, DefaultChainName, EnableDeveloperMode } from '@constants/chains';
+import {
+  ChainNames,
+  DefaultChainName,
+  EnableDeveloperMode,
+  EnableLocalChainMode,
+  getLocalChainInfo,
+} from '@constants/chains';
 import { isFulfilled } from './misc';
 
 async function fetchChainInfo(chainName: string, chainNetwork: CHAIN_NETWORK_TYPE): Promise<CHAIN_INFO_REQUEST> {
@@ -13,7 +19,7 @@ async function fetchChainInfo(chainName: string, chainNetwork: CHAIN_NETWORK_TYP
     if (chainNetwork === 'devnet') console.warn(`${chainName} ${chainNetwork} chain::${error}`);
     if (chainNetwork !== 'devnet') throw error;
   }
-  return { chainName, chainNetwork, chainInfo };
+  return { chainName, chainNetwork, chainInfo: chainInfo ? { ...chainInfo, chainNetwork } : chainInfo };
 }
 
 export const getChainOptions = async () => {
@@ -31,7 +37,7 @@ export const getChainOptions = async () => {
   const responses = await Promise.allSettled(requests);
   const fulfilledResponses = responses.filter(isFulfilled).map(({ value }): CHAIN_INFO_REQUEST => value);
   // const rejectedResponses = responses.filter(isRejected).map(({ reason }) => reason);
-  return fulfilledResponses.filter((x) => x.chainInfo);
+  return EnableLocalChainMode ? getLocalChainInfo() : fulfilledResponses.filter((x) => x.chainInfo);
 };
 
 export const getChainsByNetwork = (chains: CHAIN_INFO_REQUEST[], chainNetwork: CHAIN_NETWORK_TYPE) =>

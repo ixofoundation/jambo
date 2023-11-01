@@ -1,4 +1,4 @@
-import { FC, InputHTMLAttributes, ReactNode } from 'react';
+import { FC, InputHTMLAttributes } from 'react';
 import cls from 'classnames';
 
 import styles from './InputWithSuffixIcon.module.scss';

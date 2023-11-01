@@ -66,22 +66,16 @@
   justify-content: center;
 }
 
-.rowAlignSpaceBetween {
+.rowJustifySpaceBetween {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
 }
 
-.rowAlignSpaceAround {
+.rowJustifySpaceAround {
   display: flex;
   flex-direction: row;
   justify-content: space-around;
-}
-
-.rowAlignSpaceBetween {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
 }
 
 .spacer1 {
@@ -94,6 +88,34 @@
 
 .spacer3 {
   height: 30px;
+}
+
+.spacer4 {
+  height: 40px;
+}
+
+.spacer5 {
+  height: 50px;
+}
+
+.spacer6 {
+  height: 60px;
+}
+
+.spacer7 {
+  height: 70px;
+}
+
+.spacer8 {
+  height: 80px;
+}
+
+.spacer9 {
+  height: 90px;
+}
+
+.spacer10 {
+  height: 100px;
 }
 
 .spacerFlex {

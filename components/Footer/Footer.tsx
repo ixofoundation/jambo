@@ -22,6 +22,7 @@ type FooterProps = {
   forwardLabel?: string;
   showAccountButton?: boolean;
   showActionsButton?: boolean;
+  children?: React.ReactNode;
 };
 
 /**
@@ -37,12 +38,23 @@ const Footer = ({
   // forwardLabel,
   showAccountButton,
   showActionsButton,
+  children,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const { asPath } = useRouter();
 
   return (
     <footer className={styles.footer}>
+      {(onBack || onBackUrl || onBackUrl === '') && (
+        <ButtonRound
+          onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
+          color={BUTTON_ROUND_COLOR.lightGrey}
+          size={BUTTON_ROUND_SIZE.large}
+        >
+          <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
+          {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
+        </ButtonRound>
+      )}
       {showAccountButton && (
         <Anchor href='/account' active={asPath !== '/account'}>
           <ButtonRound
@@ -58,6 +70,7 @@ const Footer = ({
           </ButtonRound>
         </Anchor>
       )}
+      {children}
       {showActionsButton && (
         <Anchor href='/' active={asPath !== '/'}>
           <ButtonRound
@@ -67,16 +80,6 @@ const Footer = ({
             <ColoredIcon icon={Touch} size={24} color={asPath === '/' ? ICON_COLOR.white : ICON_COLOR.primary} />
           </ButtonRound>
         </Anchor>
-      )}
-      {(onBack || onBackUrl || onBackUrl === '') && (
-        <ButtonRound
-          onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
-          color={BUTTON_ROUND_COLOR.lightGrey}
-          size={BUTTON_ROUND_SIZE.large}
-        >
-          <ColoredIcon icon={ArrowLeft} size={24} color={ICON_COLOR.primary} />
-          {/* {!!width && width > 425 && <p className={styles.label}>{backLabel ?? 'Back'}</p>} */}
-        </ButtonRound>
       )}
       {onCorrect !== undefined && (
         <ButtonRound

@@ -9,6 +9,8 @@ export enum BUTTON_ROUND_COLOR {
   secondary = 'withSecondaryBgColor',
   tertiary = 'withTertiaryBgColor',
   success = 'withSuccessBgColor',
+  warning = 'withWarningBgColor',
+  error = 'withErrorBgColor',
   disabled = 'withDisabledBgColor',
   grey = 'withGreyBgColor',
   lightGrey = 'withLightGreyBgColor',

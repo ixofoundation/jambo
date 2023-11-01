@@ -8,9 +8,12 @@ export enum BUTTON_COLOR {
   secondary = 'withSecondaryColor',
   tertiary = 'withTertiaryColor',
   success = 'withSuccessColor',
+  warning = 'withWarningColor',
+  error = 'withErrorColor',
   disabled = 'withDisabledColor',
   grey = 'withGreyColor',
   lightGrey = 'withLightGreyColor',
+  white = 'withWhiteColor',
 }
 
 export enum BUTTON_BG_COLOR {
@@ -18,9 +21,12 @@ export enum BUTTON_BG_COLOR {
   secondary = 'withSecondaryBgColor',
   tertiary = 'withTertiaryBgColor',
   success = 'withSuccessBgColor',
+  warning = 'withWarningBgColor',
+  error = 'withErrorBgColor',
   disabled = 'withDisabledBgColor',
   grey = 'withGreyBgColor',
   lightGrey = 'withLightGreyBgColor',
+  white = 'withWhiteBgColor',
 }
 
 export enum BUTTON_BORDER_COLOR {
@@ -28,9 +34,12 @@ export enum BUTTON_BORDER_COLOR {
   secondary = 'withSecondaryBorderColor',
   tertiary = 'withTertiaryBorderColor',
   success = 'withSuccessBorderColor',
+  warning = 'withWarningBorderColor',
+  error = 'withErrorBorderColor',
   disabled = 'withDisabledBorderColor',
   grey = 'withGreyBorderColor',
   lightGrey = 'withLightGreyBorderColor',
+  white = 'withWhiteBorderColor',
 }
 
 export enum BUTTON_SIZE {
@@ -50,9 +59,22 @@ type ButtonProps = {
   color?: BUTTON_COLOR;
   bgColor?: BUTTON_BG_COLOR;
   borderColor?: BUTTON_BORDER_COLOR;
+  textCentered?: boolean;
+  prefixIcon?: React.ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
-const Button = ({ label, rounded, size, color, bgColor, borderColor, ...other }: ButtonProps) => {
+const Button = ({
+  label,
+  rounded,
+  size,
+  color,
+  bgColor,
+  borderColor,
+  textCentered = true,
+  prefixIcon,
+  className,
+  ...other
+}: ButtonProps) => {
   return (
     <button
       className={cls(
@@ -62,9 +84,12 @@ const Button = ({ label, rounded, size, color, bgColor, borderColor, ...other }:
         styles[bgColor as typeof BUTTON_BG_COLOR.primary],
         styles[borderColor as typeof BUTTON_BORDER_COLOR.primary],
         rounded ? styles.rounded : styles.squared,
+        !textCentered ? styles.textLeft : styles.textCentered,
+        className,
       )}
       {...other}
     >
+      {!!prefixIcon && prefixIcon}
       {label}
     </button>
   );

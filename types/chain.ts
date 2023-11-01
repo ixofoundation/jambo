@@ -1,11 +1,10 @@
-import {
-  ChainNetwork,
-  KeplrChainInfo,
-  RegistryChainInfo,
-} from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
+import { ChainNetwork } from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
+import { KeplrChainInfo, RegistryChainInfo } from '@ixo/cosmos-chain-resolver/types/types/chain';
 
 export type REGISTRY_CHAIN_INFO_TYPE = RegistryChainInfo;
-export type KEPLR_CHAIN_INFO_TYPE = KeplrChainInfo;
+export type KEPLR_CHAIN_INFO_TYPE = KeplrChainInfo & {
+  chainNetwork?: CHAIN_NETWORK_TYPE;
+};
 
 export type CHAIN_NETWORK_TYPE = ChainNetwork;
 

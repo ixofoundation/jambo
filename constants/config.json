@@ -3,7 +3,6 @@
   "siteUrl": "config.siteUrl",
   "siteTitleMeta": "config.siteTitleMeta",
   "siteDescriptionMeta": "config.siteDescriptionMeta",
-  "wcNamespace": "ixo",
   "fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
   "fontName": "Roboto",
   "headerShowName": true,
@@ -126,6 +125,46 @@
       "name": "Claim Rewards",
       "description": "Claim rewards on your delegations.",
       "image": "eKXPPhewkJDLbE1bq1ibod.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1iboe",
+      "steps": [
+        {
+          "id": "select_proposal",
+          "name": "Select proposal"
+        },
+        {
+          "id": "gov_MsgVote",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Vote",
+      "description": "Vote on proposals on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
+    },
+    {
+      "id": "eKXPPhewkJDLbE1bq1ibof",
+      "steps": [
+        {
+          "id": "define_proposal_title",
+          "name": "Proposal Title"
+        },
+        {
+          "id": "define_proposal_description",
+          "name": "Proposal Description"
+        },
+        {
+          "id": "define_proposal_deposit",
+          "name": "Proposal Initial Deposit"
+        },
+        {
+          "id": "gov_MsgSubmitProposal",
+          "name": "Review and sign"
+        }
+      ],
+      "name": "Text Proposal",
+      "description": "Create a text proposals on the IXO Network",
+      "image": "eKXPPhewkJDLbE1bq1iboa.png"
     }
   ]
 }
