@@ -60,7 +60,9 @@ export const ChainProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     try {
       const chainInfo = getChainInfoByChainId(chains, currentChain.chainId);
       if (!chainInfo) throw new Error('Unable to create query client - no chain info');
-      const queryClient = await createQueryClient(chainInfo.rpc);
+      const queryClient = await createQueryClient(
+        currentChain.chainId === 'ixo-5' ? 'https://impacthub.ixo.world/rpc/' : chainInfo.rpc,
+      );
       queryClientRef.current = queryClient;
     } catch (error) {
       if (queryClientRef.current) queryClientRef.current = undefined;

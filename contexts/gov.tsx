@@ -5,7 +5,7 @@ import { PROPOSAL_DATA, PROPOSAL_STATE } from 'types/proposals';
 import useWalletContext from '@hooks/useWalletContext';
 import useChainContext from '@hooks/useChainContext';
 import { timestampToDate } from '@utils/timestamp';
-import { queryVote } from '@utils/query';
+import { queryProposals, queryVote } from '@utils/query';
 
 type GovContextType = {
   proposals: PROPOSAL_STATE;
@@ -43,12 +43,15 @@ const GovProvider = ({ children }: GovProviderProps) => {
       proposalsLoading.current = true;
       setProposals((prevState) => ({ ...prevState, loading: proposalsLoading.current }));
       if (!queryClient) throw new Error('QueryClient is not defined');
-      const proposalsResponse = await queryClient.cosmos.gov.v1beta1.proposals({
-        proposalStatus: cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_UNSPECIFIED,
-        voter: '',
-        depositor: '',
-      });
-      const proposalData = (proposalsResponse?.proposals ?? []).map((proposal) => {
+      const proposalsResponse = await queryProposals(
+        queryClient,
+        cosmos.gov.v1beta1.ProposalStatus.PROPOSAL_STATUS_UNSPECIFIED,
+        '',
+        '',
+        0,
+        50,
+      );
+      const proposalData = proposalsResponse.map((proposal) => {
         try {
           if (!proposal.content) throw new Error('No content');
           const content = cosmos.gov.v1beta1.TextProposal.decode(proposal.content.value);
