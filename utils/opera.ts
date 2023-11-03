@@ -5,10 +5,11 @@ import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 
 export const getOpera = getJamboOpera;
 
-export const initializeOpera = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
+export const initializeOpera = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<USER | undefined> => {
   const opera = getOpera();
   if (!opera) return;
   try {
@@ -23,7 +24,7 @@ export const initializeOpera = async (chainInfo: ChainInfo): Promise<USER | unde
   }
 };
 
-export const connectOperaAccount = async (chainInfo: ChainInfo): Promise<any> => {
+export const connectOperaAccount = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<any> => {
   const opera = getOpera();
   if (!opera) return [null, null];
   const offlineSigner = await opera.getOfflineSigner(chainInfo.chainId);
@@ -37,7 +38,7 @@ export const operaBroadCastMessage = async (
   memo = '',
   fee: TRX_FEE_OPTION,
   feeDenom: string,
-  chainInfo: ChainInfo,
+  chainInfo: KEPLR_CHAIN_INFO_TYPE,
 ): Promise<string | null> => {
   try {
     const [accounts, offlineSigner] = await connectOperaAccount(chainInfo);

@@ -16,6 +16,7 @@ export enum WALLET_TYPE {
   opera = 'opera',
   keplr = 'keplr',
   walletConnect = 'walletConnect',
+  signX = 'signX',
 }
 
 export type WALLET = {

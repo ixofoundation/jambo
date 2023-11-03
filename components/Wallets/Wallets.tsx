@@ -49,6 +49,7 @@ const Wallets = ({ onSelected, className, ...other }: WalletsProps) => {
               onClick={() => onSelected(WALLET_TYPE.walletConnect)}
             />
           )}
+          <WalletCard name={WALLETS.signX.name} img={WALLETS.signX.img} onClick={() => onSelected(WALLET_TYPE.signX)} />
         </>
       ) : (
         <>

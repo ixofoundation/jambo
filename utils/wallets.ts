@@ -11,6 +11,7 @@ import { initializeOpera, operaBroadCastMessage } from './opera';
 import { getFeeDenom, TOKEN_ASSET } from './currency';
 import { DELEGATION, UNBONDING_DELEGATION } from 'types/validators';
 import { sumArray } from './misc';
+import { initializeSignX, signXBroadCastMessage } from './signX';
 
 // TODO: add address regex validations
 export const shortenAddress = (address: string) =>
@@ -81,15 +82,18 @@ export const groupWalletAssets = (
 export const initializeWallet = async (
   walletType: WALLET_TYPE | undefined,
   chain: KEPLR_CHAIN_INFO_TYPE,
+  walletUser?: USER,
 ): Promise<USER | undefined> => {
   if (!chain) return;
   switch (walletType) {
     case WALLET_TYPE.keplr:
-      return await initializeKeplr(chain as ChainInfo);
+      return await initializeKeplr(chain);
     case WALLET_TYPE.opera:
-      return await initializeOpera(chain as ChainInfo);
+      return await initializeOpera(chain);
     case WALLET_TYPE.walletConnect:
-      return await initializeWC(chain as ChainInfo);
+      return await initializeWC(chain);
+    case WALLET_TYPE.signX:
+      return await initializeSignX(chain, walletUser);
     default:
       return;
   }
@@ -107,11 +111,13 @@ export const broadCastMessages = async (
   const feeDenom = getFeeDenom(suggestedFeeDenom, chain.feeCurrencies as TOKEN_ASSET[]);
   switch (wallet.walletType) {
     case WALLET_TYPE.keplr:
-      return await keplrBroadCastMessage(msgs, memo, fee, feeDenom, chain as ChainInfo);
+      return await keplrBroadCastMessage(msgs, memo, fee, feeDenom, chain);
     case WALLET_TYPE.opera:
-      return await operaBroadCastMessage(msgs, memo, fee, feeDenom, chain as ChainInfo);
+      return await operaBroadCastMessage(msgs, memo, fee, feeDenom, chain);
     case WALLET_TYPE.walletConnect:
-      return await WCBroadCastMessage(msgs, memo, fee, feeDenom, chain as ChainInfo);
+      return await WCBroadCastMessage(msgs, memo, fee, feeDenom, chain);
+    case WALLET_TYPE.signX:
+      return await signXBroadCastMessage(msgs, memo, fee, feeDenom, chain, wallet);
     default:
       return null;
   }

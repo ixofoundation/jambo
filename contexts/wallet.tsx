@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, HTMLAttributes, useContext } from 'react';
+import { createContext, useState, useEffect, HTMLAttributes, useContext, useRef } from 'react';
 import { ChainNetwork } from '@ixo/impactxclient-sdk/types/custom_queries/chain.types';
 import cls from 'classnames';
 
@@ -41,6 +41,7 @@ const DEFAULT_WALLET: WALLET = {
 };
 
 export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
+  const firstLoad = useRef(false);
   const [wallet, setWallet] = useState<WALLET>(DEFAULT_WALLET);
   const [loaded, setLoaded] = useState<boolean>(false);
   const [validators, setValidators] = useState<VALIDATOR[]>();
@@ -68,7 +69,7 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
 
   const initializeWallets = async () => {
     try {
-      const user = await initializeWallet(wallet.walletType, chainInfo as KEPLR_CHAIN_INFO_TYPE);
+      const user = await initializeWallet(wallet.walletType, chainInfo as KEPLR_CHAIN_INFO_TYPE, wallet.user);
       updateWallet({ user });
     } catch (error) {
       console.error('Initializing wallets error:', error);
@@ -173,11 +174,17 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
   }, [chain.chainLoading]);
 
   useEffect(() => {
+    if (firstLoad.current) return;
+    firstLoad.current = true;
+
     // Comment out below to reset config
     // setLocalStorage('wallet', {});
     const persistedWallet = getLocalStorage<WALLET>('wallet');
-    setLoaded(true);
-    if (persistedWallet) setWallet(persistedWallet);
+    const pubKey = persistedWallet?.user?.pubKey && new Uint8Array(Object.values(persistedWallet.user.pubKey));
+    if (persistedWallet)
+      setWallet({ ...persistedWallet, user: pubKey ? ({ ...persistedWallet.user, pubKey } as any) : undefined });
+    setTimeout(() => setLoaded(true), 500);
+    window.addEventListener(EVENT_LISTENER_TYPE.wallet_logout, logoutWallet);
   }, []);
 
   const value = {

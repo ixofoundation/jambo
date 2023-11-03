@@ -4,13 +4,14 @@ import * as Toast from '@components/Toast/Toast';
 import { sendTransaction, initStargateClient } from './client';
 import { TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 import { USER } from 'types/user';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 
 export const getKeplr = (): Keplr | undefined => {
   if (typeof window !== 'undefined' && window.keplr) return window.keplr;
   return undefined;
 };
 
-export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
+export const initializeKeplr = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<USER | undefined> => {
   try {
     const keplr = getKeplr();
     await keplr?.experimentalSuggestChain(chainInfo as ChainInfo);
@@ -25,7 +26,7 @@ export const initializeKeplr = async (chainInfo: ChainInfo): Promise<USER | unde
   }
 };
 
-export const connectKeplrAccount = async (chainInfo: ChainInfo): Promise<any> => {
+export const connectKeplrAccount = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<any> => {
   const keplr = getKeplr();
   if (!keplr) return [null, null];
   await keplr.experimentalSuggestChain(chainInfo as ChainInfo);
@@ -40,7 +41,7 @@ export const keplrBroadCastMessage = async (
   memo = '',
   fee: TRX_FEE_OPTION,
   feeDenom: string,
-  chainInfo: ChainInfo,
+  chainInfo: KEPLR_CHAIN_INFO_TYPE,
 ): Promise<string | null> => {
   try {
     const [accounts, offlineSigner] = await connectKeplrAccount(chainInfo);

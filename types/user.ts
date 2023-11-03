@@ -5,4 +5,5 @@ export type USER = {
   algo?: string;
   ledgered?: boolean;
   did?: string;
+  chainId?: string;
 };

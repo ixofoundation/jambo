@@ -15,6 +15,7 @@ import { WalletConnectProjectId } from '@constants/wallet';
 import { EVENT_LISTENER_TYPE } from '@constants/events';
 import config from '@constants/config.json';
 import { stringifySignDoc } from './encoding';
+import { KEPLR_CHAIN_INFO_TYPE } from 'types/chain';
 
 let signClient: SignClient;
 export let address: string;
@@ -51,7 +52,7 @@ const deleteSession = () => {
   if (web3ModalSubscription) web3ModalSubscription();
 };
 
-export const initializeWC = async (chainInfo: ChainInfo): Promise<USER | undefined> => {
+export const initializeWC = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<USER | undefined> => {
   console.log('initializeWC');
   try {
     if (!getWalletConnect()) throw new Error('WalletConnect cannot initialize without a project id');
@@ -236,7 +237,7 @@ export const getOfflineSigner = (): OfflineDirectSigner => {
   return offlineSigner;
 };
 
-export const connectWalletConnectAccount = async (chainInfo: ChainInfo): Promise<any> => {
+export const connectWalletConnectAccount = async (chainInfo: KEPLR_CHAIN_INFO_TYPE): Promise<any> => {
   const walletConnect = getWalletConnect();
   if (!walletConnect) return [null, null];
   const offlineSigner = getOfflineSigner();
@@ -249,7 +250,7 @@ export const WCBroadCastMessage = async (
   memo = '',
   fee: TRX_FEE_OPTION,
   feeDenom: string,
-  chainInfo: ChainInfo,
+  chainInfo: KEPLR_CHAIN_INFO_TYPE,
 ): Promise<string | null> => {
   try {
     const [accounts, offlineSigner] = await connectWalletConnectAccount(chainInfo);

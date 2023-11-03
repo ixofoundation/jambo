@@ -36,6 +36,7 @@ export const ThemeProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         {children}
 
         <div id='modal-root'></div>
+        <div id='custom-root'></div>
       </div>
     </ThemeContext.Provider>
   );
