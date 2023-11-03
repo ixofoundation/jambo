@@ -11,7 +11,8 @@ import Header from '@components/Header/Header';
 import CustomCamera from '@components/CustomCamera/CustomCamera';
 import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import useWindowDimensions from '@hooks/useWindowDimensions';
-import Gender from './Gender';
+// import Gender from './Gender';
+import ProfilePicture from './ProfilePicture';
 
 type GetCameraImageProps = {
     onSuccess: (data: StepDataType<STEPS.get_camera_image>) => void;
@@ -110,8 +111,8 @@ const CustomerIdBack: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Hei
                         <Footer onBack={routeBack} onBackUrl='/' onForward={switchRoute1} />
                     </div>
                 )
-            case 'gender':
-                return <Gender />
+            case 'profile':
+                return <ProfilePicture />
             case 'previous_route':
                 return <CustomerId />
             default:
@@ -133,7 +134,7 @@ const CustomerIdBack: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Hei
         switchToScreen('camera');
     };
     const switchRoute1 = () => {
-        switchToScreen('gender');
+        switchToScreen('profile');
     };
     const routeBack = () => {
         switchToScreen('previous_route');

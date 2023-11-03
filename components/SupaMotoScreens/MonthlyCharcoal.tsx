@@ -11,7 +11,7 @@ const MonthlyCharcoal = () => {
     const [amount, setAmount] = useState(0);
     const { currentScreen, switchToScreen } = useRenderScreen('monthly_charcoal');
     const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newAmount = parseInt(event.target.value, 10);
+        const newAmount = parseInt(event.target.value, 10) + 5;
         setAmount(newAmount);
         localStorage.setItem('monthlyCharcoal', newAmount.toString());
     };
@@ -23,7 +23,7 @@ const MonthlyCharcoal = () => {
                     <div className={styles.onboardingComponent} >
                         <IconText title='Monthly Charcoal Usage' Img={Charcoal} imgSize={30} />
                         <div className={styles.incomeOutput} >
-                            <label className={styles.incomeInput} >{amount}</label>
+                            <label className={styles.incomeInput} >{amount} kg Charcoal</label>
                         </div>
                         <div className={styles.table} >
                             <input
@@ -33,7 +33,7 @@ const MonthlyCharcoal = () => {
                                 name="amount"
                                 min="0"
                                 max="10000"
-                                step="1"
+                                step="5"
                                 value={amount}
                                 onChange={handleAmountChange}
                             />

@@ -14,6 +14,7 @@ import { ACTION } from 'types/actions';
 import ValidatorAddress from '@steps/ValidatorAddress';
 import { WalletContext } from '@contexts/wallet';
 import Head from '@components/Head/Head';
+import PrivacyPolicy from '@components/SupaMotoScreens/PrivacyPolicy';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';

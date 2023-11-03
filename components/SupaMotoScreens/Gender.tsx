@@ -6,10 +6,10 @@ import MaleWhite from '@icons/male_white.svg';
 import Female from '@icons/female.svg';
 import FemaleWhite from '@icons/female_white.svg';
 import IconText from '@components/IconText/IconText';
-import Village from './Village';
 import { useRenderScreen } from '@hooks/useRenderScreen';
 import Footer from '@components/Footer/Footer';
 import CustomerIdBack from './CustomerIdBack';
+import Status from './Status';
 
 const Gender = () => {
     const [status, setStatus] = useState('female');
@@ -55,7 +55,7 @@ const Gender = () => {
                     </div>
                 )
             case 'village':
-                return <Village />
+                return <Status />
             case 'previous_route':
                 return <CustomerIdBack />    
             default:

@@ -15,16 +15,16 @@ import Contract from './Contract';
 import VerifyData from './VerifyData'
 
 type GetCameraImageProps = {
-    onSuccess: (data: StepDataType<STEPS.onboarding>) => void;
+    onSuccess?: (data?: StepDataType<STEPS.request_onboarding>) => void;
     onBack?: () => void;
-    data?: StepDataType<STEPS.onboarding>;
-    config: StepConfigType<STEPS.onboarding>;
+    data?: StepDataType<STEPS.request_onboarding>;
+    config: StepConfigType<STEPS.request_onboarding>;
     Width?: number;
     Height?: number;
     header?: string;
 };
 
-const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Height, header }) => {
+const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Height, header, data }) => {
     const { currentScreen, switchToScreen } = useRenderScreen('privacy_policy');
     const [frame, setFrame] = useState({ width: 0, height: 0 });
     const [capturedData, setCapturedData] = useState<{
@@ -107,10 +107,9 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
                                     <img src={capturedData.image} alt="Captured Image" width="225" height="310" style={{ borderRadius: '5px' }} />
                                 </div>
                             </div>
-                            <p style={{ textAlign: 'center' }} >Is the Contract Photo ok?</p>
+                            <p style={{ textAlign: 'center' }} >Is the Waiver Photo ok?</p>
                         </div>
-                        <Footer onBack={routeBack} onBackUrl='/' onForward={() => switchRoute1()} />
-
+                        <Footer onBack={routeBack} onBackUrl='/' onForward={switchRoute1} />
                     </div>
                 )
             case 'data_verification':
@@ -128,6 +127,8 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
                 )
             case 'previous_route':
                 return <Contract />
+            default:
+                return null;
         }
     }
 
@@ -135,7 +136,7 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
         const imageSrc = cameraRef.current.captureImage();
         if (imageSrc) {
             const result = { image: imageSrc, height: frame.height, width: frame.width };
-            localStorage.setItem('capturedPolicy', result.image);
+            localStorage.setItem('capturedContract', result.image);
             setCapturedData(result);
         }
         switchToScreen('policy_verification');
@@ -146,7 +147,7 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
     };
 
     const switchRoute1 = () => {
-        switchToScreen('data_verification')
+        switchToScreen('data_verification');
     }
 
     const switchRoute2 = () => {
@@ -161,7 +162,4 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
 }
 
 export default PrivacyPolicy
-function data(data: any) {
-    throw new Error('Function not implemented.');
-}
 

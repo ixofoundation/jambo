@@ -23,7 +23,7 @@ const MonthlyCharcoalEx = () => {
                     <div className={styles.onboardingComponent} >
                         <IconText title='Monthly Charcoal Expenses' Img={Charcoal} imgSize={30} />
                         <div className={styles.incomeOutput} >
-                            <label className={styles.incomeInput} >{amount}</label>
+                            <label className={styles.incomeInput} >{amount} KES</label>
                         </div>
                         <div className={styles.table} >
                             <input
@@ -33,7 +33,7 @@ const MonthlyCharcoalEx = () => {
                                 name="amount"
                                 min="0"
                                 max="10000"
-                                step="1"
+                                step="100"
                                 value={amount}
                                 onChange={handleAmountChange}
                             />

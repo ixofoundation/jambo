@@ -13,12 +13,14 @@ import Footer from '@components/Footer/Footer';
 
 const Status = () => {
     const [status, setStatus] = useState('single');
+    const [usage, setUsage] = useState("Single");
     const { currentScreen, switchToScreen } = useRenderScreen('status');
 
     const handleStatusChange = (newStatus: React.SetStateAction<string>) => {
         if (typeof newStatus === 'string') {
             setStatus(newStatus);
             localStorage.setItem('selectedStatus', newStatus);
+            setUsage(usage === 'Single' ? 'Married' : 'Single');
         } else if (typeof newStatus === 'function') {
             setStatus((prevStatus) => {
                 const newStatusValue = newStatus(prevStatus);
@@ -35,6 +37,9 @@ const Status = () => {
                 return (
                     <div className={styles.onboardingComponent} >
                         <IconText title='Status' Img={HouseHoldSvg} imgSize={30} />
+                        <div className={styles.table} >
+                            <p style={{ color: '#E0A714' }} >{usage}</p>
+                        </div>
                         <div className={styles.statusContainer} >
                             <button
                                 className={styles.statusBtn}

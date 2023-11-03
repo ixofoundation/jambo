@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Dob from './Dob';
-import Status from './Status';
+import Gender from './Gender';
 import Footer from '@components/Footer/Footer';
 import HouseHoldSvg from '@icons/household.svg';
 import Increment from '@icons/increment.svg';
@@ -47,7 +47,7 @@ const HouseHold = () => {
                     </div>
                 )
             case 'status':
-                return <Status />;
+                return <Gender />;
             case 'previous_route':
                 return <Dob />
             default:

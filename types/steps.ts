@@ -122,7 +122,7 @@ interface Review_and_sign {
   done: boolean;
 }
 interface Onboarding {
-  data: any;
+  data?: Onboarding[];
 }
 
 export type AllStepDataTypes =
@@ -164,8 +164,6 @@ export type StepDataType<T> = T extends STEPS.check_user_balance
   ? Send_token_to_receiver
   : T extends STEPS.onboarding
   ? Onboarding
-  : T extends STEPS.onboarding
-  ? Get_camera_image
   : T extends STEPS.review_and_sign
   ? Review_and_sign
   : T extends STEPS.distribution_MsgWithdrawDelegatorReward

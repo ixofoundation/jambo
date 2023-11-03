@@ -12,7 +12,7 @@ const MonthlyIncome = () => {
     const { currentScreen, switchToScreen } = useRenderScreen('monthly_income');
 
     const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const newAmount = parseInt(event.target.value, 10);
+        const newAmount = parseInt(event.target.value) + 100;
         setAmount(newAmount);
         localStorage.setItem('monthlyIncome', newAmount.toString());
     };
@@ -24,7 +24,7 @@ const MonthlyIncome = () => {
                     <div className={styles.onboardingComponent} >
                         <IconText title='Monthly Income' Img={Income} imgSize={30} />
                         <div className={styles.incomeOutput} >
-                            <label className={styles.incomeInput} >{amount}</label>
+                            <label className={styles.incomeInput} >{amount} KES</label>
                         </div>
                         <div className={styles.table} >
                             <input
@@ -34,7 +34,7 @@ const MonthlyIncome = () => {
                                 name="amount"
                                 min="0"
                                 max="10000"
-                                step="1"
+                                step="100"
                                 value={amount}
                                 onChange={handleAmountChange}
                             />
