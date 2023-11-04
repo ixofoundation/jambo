@@ -136,7 +136,7 @@ const PrivacyPolicy: FC<GetCameraImageProps> = ({ onSuccess, onBack, Width, Heig
         const imageSrc = cameraRef.current.captureImage();
         if (imageSrc) {
             const result = { image: imageSrc, height: frame.height, width: frame.width };
-            localStorage.setItem('capturedContract', result.image);
+            localStorage.setItem('capturedPolicy', result.image);
             setCapturedData(result);
         }
         switchToScreen('policy_verification');

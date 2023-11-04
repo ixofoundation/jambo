@@ -69,7 +69,7 @@ const VerifyData: FC<Props> = ({ header }) => {
     const storedLongToJSON = localStorage.getItem('longitude');
     const storedCellToJSON = localStorage.getItem('phoneNumber');
     const storedVerbalToJSON = localStorage.getItem('selectedVerbalLanguage');
-    const storedContractToJSON = localStorage.getItem('capturedContract');
+    const storedPolicyToJSON = localStorage.getItem('capturedPolicy');
 
     const EmptyTab = ({ children }: any) => {
         return (
