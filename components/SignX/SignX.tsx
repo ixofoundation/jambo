@@ -45,7 +45,7 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
       ) : (
         <p>
           Scan QR with your{' '}
-          <a href={downloadLink} rel='noopener,noreferrer' target='_blank'>
+          <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
             Impacts X App
           </a>
         </p>
