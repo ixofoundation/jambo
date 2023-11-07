@@ -70,11 +70,11 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
       <QRCode value={data} size={250} />
       <p className={styles.deeplink}>
         If you are on a mobile device please install the{' '}
-        <a href={downloadLink} rel='noopener,noreferrer' target='_blank'>
+        <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
           Impacts X App
         </a>{' '}
         and then click{' '}
-        <a href={deeplink} rel='noopener,noreferrer' target='_blank'>
+        <a href={deeplink} rel='noopener noreferrer' target='_blank'>
           here
         </a>
         .
