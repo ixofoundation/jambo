@@ -55,12 +55,7 @@ export const initializeSignX = async (
     };
 
     handleClose = renderModal(
-      <SignXModal
-        title='SignX Login'
-        subtitle='Scan QR with your ImpactsX wallet'
-        data={JSON.stringify(data)}
-        timeout={signXClient.timeout}
-      />,
+      <SignXModal title='SignX Login' data={JSON.stringify(data)} timeout={signXClient.timeout} />,
       closeModal,
     );
 
@@ -140,12 +135,7 @@ export const signXBroadCastMessage = async (
     };
 
     handleClose = renderModal(
-      <SignXModal
-        title='SignX Transaction'
-        subtitle='Scan QR with your ImpactsX wallet'
-        data={JSON.stringify(data)}
-        timeout={signXClient.timeout}
-      />,
+      <SignXModal title='SignX Transaction' data={JSON.stringify(data)} timeout={signXClient.timeout} />,
       closeModal,
     );
 

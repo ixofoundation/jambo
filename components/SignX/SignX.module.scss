@@ -9,6 +9,11 @@
   p {
     margin-top: 10px;
   }
+
+  a {
+    color: var(--primary-color);
+    text-decoration: none;
+  }
 }
 
 .time {
@@ -31,4 +36,9 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
+}
+
+.deeplink {
+  padding-top: 0px;
+  font-size: 12px;
 }
