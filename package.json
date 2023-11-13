@@ -24,7 +24,7 @@
     "@ixo/cosmos-chain-resolver": "0.0.2",
     "@ixo/impactxclient-sdk": "1.1.14",
     "@ixo/jambo-wallet-sdk": "0.0.3",
-    "@ixo/signx-sdk": "0.0.1",
+    "@ixo/signx-sdk": "0.0.2",
     "@keplr-wallet/cosmos": "0.11.11",
     "@keplr-wallet/types": "0.11.10",
     "@keplr-wallet/wc-client": "0.11.11",

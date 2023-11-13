@@ -2,6 +2,7 @@ import { HTMLAttributes, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { isMobile, isIOS, isMacOs } from 'react-device-detect';
+import { convertDataToDeeplink } from '@ixo/signx-sdk';
 
 import styles from './SignX.module.scss';
 import { getCSSVariable } from '@utils/styles';
@@ -17,7 +18,7 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
   const firstLoad = useRef(false);
   const timeoutFull = (timeout - 1000) / 1000;
   const timeoutThird = timeoutFull / 3;
-  const deeplink = `impactsx://signx?data=${data}`;
+  const deeplink = convertDataToDeeplink(JSON.parse(data), 'com.ixo.mobile');
   const downloadLink =
     isIOS || isMacOs
       ? `https://apps.apple.com/app/impacts-x/id6444948058`
