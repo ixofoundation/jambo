@@ -19,6 +19,7 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
   const timeoutFull = (timeout - 1000) / 1000;
   const timeoutThird = timeoutFull / 3;
   const deeplink = convertDataToDeeplink(JSON.parse(data), 'com.ixo.mobile');
+  // const deeplink = convertDataToDeeplink(JSON.parse(data), 'impactsx');
   const downloadLink =
     isIOS || isMacOs
       ? `https://apps.apple.com/app/impacts-x/id6444948058`
@@ -68,7 +69,7 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
           )}
         </CountdownCircleTimer>
       </div>
-      <QRCode value={data} size={250} />
+      <QRCode value={deeplink} size={250} />
       <p className={styles.deeplink}>
         If you are on a mobile device please install the{' '}
         <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
