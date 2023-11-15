@@ -18,8 +18,7 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
   const firstLoad = useRef(false);
   const timeoutFull = (timeout - 1000) / 1000;
   const timeoutThird = timeoutFull / 3;
-  const deeplink = convertDataToDeeplink(JSON.parse(data), 'com.ixo.mobile');
-  // const deeplink = convertDataToDeeplink(JSON.parse(data), 'impactsx');
+  const deeplink = convertDataToDeeplink(JSON.parse(data));
   const downloadLink =
     isIOS || isMacOs
       ? `https://apps.apple.com/app/impacts-x/id6444948058`
