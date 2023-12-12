@@ -96,6 +96,7 @@
         {
           "id": "get_delegated_validator_redelegate",
           "name": "Get delegation validator address"
+          
         },
         {
           "id": "select_amount_redelegate",
