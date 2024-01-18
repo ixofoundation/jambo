@@ -1,3 +1,5 @@
+
+
 import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
 import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
@@ -60,9 +62,23 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
       Number.parseFloat(amount) > 0 &&
       validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount)));
 
+
+    // const formIsValid = () => {
+    //   // Check if a token is selected and if the amount is greater than 0
+    //   if (!selectedOption || Number.parseFloat(amount) <= 0) return false;
+  
+    //   // Get the balance of the selected token in the user's wallet
+    //   const balance = (wallet.balances?.data?.find(token => token.denom === selectedOption.denom)?.amount) ?? 0;
+  
+  
+      // Validate the amount against the balance
+    //   return validateAmountAgainstBalance(Number.parseFloat(amount), Number(balance), true);
+    //  };
+
+
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
-    if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
+    if (!formIsValid()) return alert('A valid token is required and amount must be bigger than 0 and less than balance.');
     const newData = {
       amount: Number(amount),
       token: selectedOption!,
@@ -104,7 +120,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               required
               onChange={handleChange}
               value={amount}
-              className={cls(styles.stepInput, styles.alignRight)}
+              className={cls(styles.stepInput, styles.alignLeft)}
             />
           </form>
         ) : (
@@ -122,3 +138,4 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
 };
 
 export default DefineAmountToken;
+

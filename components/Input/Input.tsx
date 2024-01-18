@@ -40,11 +40,11 @@ const Input: FC<InputProps> = ({ label, align = 'start', className, ...other }) 
         align === 'end' || align === 'right'
           ? styles.endAlign
           : align === 'center'
-          ? styles.centerAlign
+          ? styles.endAlign
           : styles.startAlign,
         className,
       )}
-      {...other}
+      {... other}
     />
   );
 };
