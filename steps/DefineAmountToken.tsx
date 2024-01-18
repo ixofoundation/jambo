@@ -47,12 +47,37 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
   );
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
+  const [displayAmount, setDisplayAmount] = useState<number>(999999999);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [inputValue1, setInputValue1] = useState('');
+
+  const handleAmountChange = (newAmount: number) => {
+    console.log(`handleAmountChange called with: ${newAmount}`);
+    setDisplayAmount(newAmount);
+  };
 
   useEffect(() => {
     fetchAssets();
   }, []);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value);
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const newValue = Number(event.target.value);
+    let aamount = Number(displayAmount);
+    if (newValue > aamount) {
+      setErrorMessage('The input value cannot exceed the maximum amount.');
+      setInputValue1(aamount.toString());
+    } else {
+      setErrorMessage('');
+      //  setInputValue(event.target.value);
+    }
+
+    if (newValue < 0) {
+      setErrorMessage('The amount cannot be negative.');
+      //  setInputValue('0');
+      return;
+    }
+    setInputValue1(event.target.value);
+  };
 
   const formIsValid = () =>
     config?.optional ||
@@ -64,7 +89,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
     event?.preventDefault();
     if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
     const newData = {
-      amount: Number(amount),
+      amount: Number(inputValue1),
       token: selectedOption!,
     };
     const isEditing = !!data?.data[data?.currentIndex];
@@ -96,6 +121,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               {config?.amountLabel ?? 'Enter an amount to send'}
             </p>
             <InputWithMax
+              onAmountChange={handleAmountChange}
               maxAmount={calculateRemainingMax(selectedOption!, data!)}
               maxToken={selectedOption}
               onMaxClick={(maxAmount) => setAmount(maxAmount.toString())}
@@ -106,6 +132,8 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               value={amount}
               className={cls(styles.stepInput, styles.alignRight)}
             />
+            {/* <p> the amount is {displayAmount}</p> */}
+            {errorMessage && <p className={styles.error}>{errorMessage}</p>}
           </form>
         ) : (
           <IconText title="You don't have any tokens to send." Img={SadFace} imgSize={50} />
