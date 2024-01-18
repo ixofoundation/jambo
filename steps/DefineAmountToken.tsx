@@ -270,7 +270,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               required
               onChange={handleChange}
               value={amount}
-              className={cls(styles.stepInput, styles.alignRight)}
+              className={cls(styles.stepInput, styles.alignLeft)}
             />
             {/* <p> the amount is {displayAmount}</p> */}
             {errorMessage && <p className={styles.error}>{errorMessage}</p>}
