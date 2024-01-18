@@ -259,7 +259,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
             />
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>
-              {config?.amountLabel ?? 'Enter an amount to send'}
+              {config?.amountLabel ??'Enter an amount to send'}
             </p>
             <InputWithMax
               onAmountChange={handleAmountChange}
