@@ -187,7 +187,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
   );
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
-  const [displayAmount, setDisplayAmount] = useState<number>(999999999);
+  const [displayAmount, setDisplayAmount] = useState<number>(amount);
   const [errorMessage, setErrorMessage] = useState('');
   const [inputValue1, setInputValue1] = useState('');
 
@@ -204,18 +204,19 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
     const newValue = Number(event.target.value);
     let aamount = Number(displayAmount);
     if (newValue > aamount) {
-      setErrorMessage('The input value cannot exceed the maximum amount.');
+      setErrorMessage('The amount cannot exceed the maximum amount !!!');
       setInputValue1(aamount.toString());
     } else {
       setErrorMessage('');
       //  setInputValue(event.target.value);
     }
 
-    if (newValue < 0) {
-      setErrorMessage('The amount cannot be negative.');
+    if (newValue <= 0) {
+      setErrorMessage('The amount should be more than 0.');
       //  setInputValue('0');
       return;
     }
+
     setInputValue1(event.target.value);
   };
 

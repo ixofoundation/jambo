@@ -159,8 +159,14 @@ export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, onAmountChange, 
       setInputValue(event.currentTarget.value);
     }
     if (newValue < 0) {
-      setInputValue('0');
+      setInputValue('');
     }
+
+    // if (newValue == 0) {
+    //   setInputValue('');
+    // }
+
+
     //  setInputValue(event.currentTarget.value);
     console.log(`handleMaxClick called with: ${formattedAmountToNumber(amount)}`);
     onMaxClick(formattedAmountToNumber(amount));
