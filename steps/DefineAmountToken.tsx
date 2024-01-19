@@ -189,6 +189,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
   const { wallet, fetchAssets } = useContext(WalletContext);
   const [displayAmount, setDisplayAmount] = useState<number>(amount);
   const [errorMessage, setErrorMessage] = useState('');
+  const [okayMessage, setOkayMessage] = useState('');
   const [inputValue1, setInputValue1] = useState('');
 
   const handleAmountChange = (newAmount: number) => {
@@ -203,8 +204,9 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newValue = Number(event.target.value);
     let aamount = Number(displayAmount);
-    if (newValue > aamount) {
+    if (newValue >= aamount) {
       setErrorMessage('The amount cannot exceed the maximum amount !!!');
+      setOkayMessage('');
       setInputValue1(aamount.toString());
     } else {
       setErrorMessage('');
@@ -213,7 +215,13 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
 
     if (newValue <= 0) {
       setErrorMessage('The amount should be more than 0.');
-      //  setInputValue('0');
+      setOkayMessage('');
+       setInputValue1('');
+      return;
+    }
+    if (newValue > 0 && newValue<aamount) {
+      setOkayMessage('You want to send ' + newValue.toString());
+      // setInputValue1(event.target.value);
       return;
     }
 
@@ -273,7 +281,8 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               value={amount}
               className={cls(styles.stepInput, styles.alignLeft)}
             />
-            {/* <p> the amount is {displayAmount}</p> */}
+            {/* <p></p> */}
+            {okayMessage && <p className={styles.okay}>{okayMessage}</p>}
             {errorMessage && <p className={styles.error}>{errorMessage}</p>}
           </form>
         ) : (

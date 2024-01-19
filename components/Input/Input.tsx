@@ -162,9 +162,9 @@ export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, onAmountChange, 
       setInputValue('');
     }
 
-    // if (newValue == 0) {
-    //   setInputValue('');
-    // }
+    if (newValue >= aamount) {
+      setInputValue('');
+    }
 
 
     //  setInputValue(event.currentTarget.value);
