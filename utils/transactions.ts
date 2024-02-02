@@ -80,15 +80,13 @@ export const generateBankMultiSendTrx = ({
 });
 
 export const generateDelegateTrx = ({
-  delegatorAddress,
-  validatorAddress,
-  denom,
-  amount,
+  delegatorAddress, validatorAddress, denom, amount,
 }: {
   delegatorAddress: string;
   validatorAddress: string;
   denom: string;
   amount: string;
+  
 }): TRX_MSG => ({
   typeUrl: '/cosmos.staking.v1beta1.MsgDelegate',
   value: cosmos.staking.v1beta1.MsgDelegate.fromPartial({

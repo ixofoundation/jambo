@@ -1,4 +1,5 @@
-import { FC, InputHTMLAttributes } from 'react';
+
+import { FC, InputHTMLAttributes, useState } from 'react';
 import cls from 'classnames';
 
 import styles from './Input.module.scss';
@@ -55,24 +56,52 @@ type InputWithMaxProps = {
   maxAmount?: number;
   maxToken?: CURRENCY_TOKEN;
   onMaxClick: (amount: number) => void;
+  onAmountChange: (amount: number) => void;
 } & InputProps;
 
-export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, ...other }: InputWithMaxProps) => {
+export const InputWithMax = ({ maxAmount, maxToken, onMaxClick, onAmountChange, ...other }: InputWithMaxProps) => {
   const amount = calculateMaxTokenAmount(
     maxAmount ?? getAmountFromCurrencyToken(maxToken),
     getDecimalsFromCurrencyToken(maxToken),
     true,
   );
+  const [inputValue, setInputValue] = useState('');
   const denom = getDisplayDenomFromCurrencyToken(maxToken);
+  const handleMaxClick = () => {
+    setInputValue(amount);
+    onMaxClick(formattedAmountToNumber(amount));
+  };
 
-  const handleMaxClick = () => onMaxClick(formattedAmountToNumber(amount));
+  const change = (event: React.FormEvent<HTMLInputElement>) => {
+    const newValue = Number(event.currentTarget.value);
+    let updatedMaxAmount = Number(amount);
+    if (newValue <= updatedMaxAmount) {
+      setInputValue(event.currentTarget.value);
+    
+    }
+    if (newValue < 0) {
+      setInputValue('');
+    }
+
+    if (newValue >= updatedMaxAmount) {
+      setInputValue('');
+    }
+
+
+    console.log(`handleMaxClick called with: ${formattedAmountToNumber(amount)}`);
+    onMaxClick(formattedAmountToNumber(amount));
+    if (onAmountChange) {
+      console.log('Calling onAmountChange with: ', formattedAmountToNumber(amount));
+      onAmountChange(Number(amount));
+    }
+  };
 
   return (
     <>
       <p className={cls(styles.max, styles.endAlign)} onClick={handleMaxClick}>
         {amount} {denom} MAX
       </p>
-      <Input {...other} />
+      <Input {...other} value={inputValue} onInput={change}></Input>
     </>
   );
 };

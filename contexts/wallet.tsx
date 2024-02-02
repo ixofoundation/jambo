@@ -11,6 +11,7 @@ import { VALIDATOR } from 'types/validators';
 import { getLocalStorage, setLocalStorage } from '@utils/persistence';
 import { generateValidators } from '@utils/validators';
 import { initializeWallet } from '@utils/wallets';
+
 import {
   queryAllBalances,
   queryDelegationTotalRewards,

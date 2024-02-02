@@ -1,3 +1,4 @@
+
 import { ChangeEvent, FormEvent, useContext, useEffect, useState, FC } from 'react';
 import cls from 'classnames';
 import utilsStyles from '@styles/utils.module.scss';
@@ -42,29 +43,75 @@ const calculateRemainingMax = (currentToken: CURRENCY_TOKEN, prevData: StepDataT
 };
 
 const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, config, data, header }) => {
+  
   const [amount, setAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
   const [selectedOption, setSelectedOption] = useState<CURRENCY_TOKEN | undefined>();
   const { wallet, fetchAssets } = useContext(WalletContext);
+  const [displayAmount, setDisplayAmount] = useState<number>(amount);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [acceptableMessage, setacceptableMessage] = useState('');
+  const [inputValue1, setInputValue1] = useState('');
+
+  const handleAmountChange = (newAmount: number) => {
+    console.log(`handleAmountChange called with: ${newAmount}`);
+    setDisplayAmount(newAmount);
+  };
 
   useEffect(() => {
     fetchAssets();
   }, []);
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value);
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const newValue = Number(event.target.value);
+    let updatedMaxAmount = Number(displayAmount);
+
+     if(newValue == updatedMaxAmount) 
+    {   setErrorMessage('Cannot send MAX amount ('+ updatedMaxAmount.toString() +" "+ "IXO)");
+      setacceptableMessage('');
+      setInputValue1('');}
+
+    else if (newValue >= updatedMaxAmount) {
+      setErrorMessage('The amount '+ newValue.toString()  +' exceeds the MAX amount \n('+ updatedMaxAmount.toString() +" "+ "IXO)");
+      setacceptableMessage('');
+      setInputValue1('');
+    }
+   
+
+       else {
+      setErrorMessage('');
+      //  setInputValue(event.target.value);
+    }
+
+    if (newValue <= 0) {
+      setErrorMessage('The amount should be more than 0.');
+      setacceptableMessage('');
+       setInputValue1('');
+      return;
+    }
+    if (newValue > 0 && newValue< updatedMaxAmount) {
+      setacceptableMessage('You want to send ' + newValue.toString()  +" "+ "IXO");
+      setInputValue1(event.target.value);
+      return;
+    }
+
+    setInputValue1(event.target.value);
+  };
 
   const formIsValid = () =>
     config?.optional ||
-    (!!selectedOption &&
-      Number.parseFloat(amount) > 0 &&
+    (!!selectedOption &&inputValue1.trim() !== '' &&
+      Number.parseFloat(amount) > 0 && Number.parseFloat(inputValue1) < Number(displayAmount) &&
       validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount)));
+
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
     if (!formIsValid()) return alert('A token is required and amount must be bigger than 0 and less than balance.');
     const newData = {
-      amount: Number(amount),
+      amount: Number(inputValue1),
+      updatedMaxAmount:Number(displayAmount),
       token: selectedOption!,
     };
     const isEditing = !!data?.data[data?.currentIndex];
@@ -85,7 +132,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         {wallet.balances?.data ? (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
-            <p className={styles.label}>{config?.denomLabel ?? 'Select token to sent'}</p>
+            <p className={styles.label}>{config?.denomLabel ?? 'Select token to send'}</p>
             <TokenSelector
               value={selectedOption as CURRENCY_TOKEN}
               onChange={setSelectedOption}
@@ -93,9 +140,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
             />
             <br />
             <p className={cls(styles.label, styles.titleWithSubtext)}>
-              {config?.amountLabel ?? 'Enter an amount to send'}
+              {config?.amountLabel ??'Enter an amount to send'}
             </p>
             <InputWithMax
+              onAmountChange={handleAmountChange}
               maxAmount={calculateRemainingMax(selectedOption!, data!)}
               maxToken={selectedOption}
               onMaxClick={(maxAmount) => setAmount(maxAmount.toString())}
@@ -104,8 +152,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
               required
               onChange={handleChange}
               value={amount}
-              className={cls(styles.stepInput, styles.alignRight)}
+              className={cls(styles.stepInput, styles.alignLeft)}
             />
+            {acceptableMessage && <p className={styles.okay}>{acceptableMessage}</p>}
+            {errorMessage && <p className={styles.error}>{errorMessage}</p>}
           </form>
         ) : (
           <IconText title="You don't have any tokens to send." Img={SadFace} imgSize={50} />
@@ -115,7 +165,7 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, conf
       <Footer
         onBack={onBack}
         onBackUrl={onBack ? undefined : ''}
-        onForward={formIsValid() ? () => handleSubmit(null) : null}
+        onForward={formIsValid() ? () => handleSubmit(null) : undefined}
       />
     </>
   );
