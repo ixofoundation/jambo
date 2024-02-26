@@ -169,7 +169,7 @@ const RequestDonation: FC<RequestDonationProps> = ({ onSuccess, onBack, config, 
               {config.addressName ?? config.address}
             </Card>
             <div className={utilsStyles.spacer3} />
-            <div className={utilsStyles.rowAlignSpaceAround}>
+            <div className={utilsStyles.rowJustifySpaceAround}>
               <Button
                 label='NO'
                 rounded

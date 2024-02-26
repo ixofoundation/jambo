@@ -80,7 +80,10 @@ const ChainSelector = ({}: ChainSelectorProps) => {
                     width={32}
                   />
                 )}
-                <p className={styles.chainName}>{chainOption.chainName}</p>
+                <p className={styles.chainName}>
+                  {chainOption.chainName}
+                  {chain.chainNetwork !== 'mainnet' ? ` (${chainOption.chainId})` : ''}
+                </p>
               </div>
               {chainInfo?.chainId === chainOption.chainId && chain.chainLoading && <Loader size={30} />}
             </Card>

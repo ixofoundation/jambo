@@ -66,6 +66,14 @@
   background-color: var(--success-color);
 }
 
+.withWarningBgColor {
+  background-color: var(--warning-color);
+}
+
+.withErrorBgColor {
+  background-color: var(--error-color);
+}
+
 .withDisabledBgColor {
   background-color: var(--disabled-color);
 }
