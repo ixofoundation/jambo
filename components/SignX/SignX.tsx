@@ -2,7 +2,7 @@ import { HTMLAttributes, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { isMobile, isIOS, isMacOs } from 'react-device-detect';
-import { convertDataToDeeplink } from '@ixo/signx-sdk';
+import { SIGN_X_CLEAN_DEEPLINK, convertDataToDeeplink } from '@ixo/signx-sdk';
 
 import styles from './SignX.module.scss';
 import { getCSSVariable } from '@utils/styles';
@@ -12,13 +12,14 @@ type SignXProps = {
   subtitle?: string;
   data: string;
   timeout: number;
+  isNewSession?: boolean;
 } & HTMLAttributes<HTMLDivElement>;
 
-const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
+const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXProps) => {
   const firstLoad = useRef(false);
   const timeoutFull = (timeout - 1000) / 1000;
   const timeoutThird = timeoutFull / 3;
-  const deeplink = convertDataToDeeplink(JSON.parse(data));
+  const deeplink = convertDataToDeeplink(isNewSession ? JSON.parse(data) : { type: SIGN_X_CLEAN_DEEPLINK });
   const downloadLink =
     isIOS || isMacOs
       ? `https://apps.apple.com/app/impacts-x/id6444948058`
@@ -41,7 +42,15 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
   return (
     <div className={styles.signx}>
       <h2>{title}</h2>
-      {subtitle ? (
+      {!isNewSession ? (
+        <p>
+          Please open your{' '}
+          <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
+            Impacts X App
+          </a>{' '}
+          and sign the transaction
+        </p>
+      ) : subtitle ? (
         <p>{subtitle}</p>
       ) : (
         <p>
@@ -68,18 +77,22 @@ const SignX = ({ title, subtitle, data, timeout }: SignXProps) => {
           )}
         </CountdownCircleTimer>
       </div>
-      <QRCode value={deeplink} size={250} />
-      <p className={styles.deeplink}>
-        If you are on a mobile device please install the{' '}
-        <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
-          Impacts X App
-        </a>{' '}
-        and then click{' '}
-        <a href={deeplink} rel='noopener noreferrer' target='_blank'>
-          here
-        </a>
-        .
-      </p>
+      {isNewSession && (
+        <>
+          <QRCode value={deeplink} size={250} />
+          <p className={styles.deeplink}>
+            If you are on a mobile device please install the{' '}
+            <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
+              Impacts X App
+            </a>{' '}
+            and then click{' '}
+            <a href={deeplink} rel='noopener noreferrer' target='_blank'>
+              here
+            </a>
+            .
+          </p>
+        </>
+      )}
     </div>
   );
 };

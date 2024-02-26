@@ -1761,10 +1761,9 @@
     bech32 "2.0.0"
     bs58 "5.0.0"
 
-"@ixo/signx-sdk@0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@ixo/signx-sdk/-/signx-sdk-0.0.3.tgz#bc35668688e8768f9451a445e0e153ac9e89205b"
-  integrity sha512-DRrwWYS/cZYmePr01EJf5ZOIMn8NOa4sTROm3iIx5Oyq92o7UGDiZECKUlhX7PMR6SOH2ud+8n8tVYMRtaiQBg==
+"@ixo/signx-sdk@./ixo-signx-sdk-1.0.0.tgz":
+  version "1.0.0"
+  resolved "./ixo-signx-sdk-1.0.0.tgz#64c1a198540d2c0b4ee99a3dffeb727dfa95603f"
   dependencies:
     "@babel/runtime" "7.19.4"
     axios "1.3.4"

@@ -38,6 +38,7 @@ export const initializeSignX = async (
 
     signXClient = new SignX({
       endpoint: SIGN_X_RELAYERS[chainInfo.chainNetwork || 'mainnet'],
+      // endpoint: 'http://localhost:3000',
       network: chainInfo.chainNetwork || 'mainnet',
       sitename: config.siteName ?? 'JAMBO dApp',
     });
@@ -115,27 +116,32 @@ export const signXBroadCastMessage = async (
 
     const registry = createRegistry();
 
-    console.log({ msgs });
     const txBody = toHex(registry.encodeTxBody({ messages: msgs as any, memo }));
-    console.log(registry.decodeTxBody(fromHex(txBody)));
 
-    // get login data from client to display QR code and start polling
+    // get transact data from client to start polling, display QR code if new session
     const data = await signXClient.transact({
       address: wallet.user.address,
       did: wallet.user.did!,
       pubkey: toHex(wallet.user.pubKey),
       timestamp: new Date().toISOString(),
-      txBodyHex: toHex(registry.encodeTxBody({ messages: msgs as any, memo })),
+      transactions: [{ sequence: 1, txBodyHex: txBody }],
     });
+    const isNewSession = !!data?.hash;
+    console.log({ isNewSession });
 
     const closeModal = () => {
       signXClient.off(SIGN_X_TRANSACT_ERROR, () => {});
       signXClient.off(SIGN_X_TRANSACT_SUCCESS, () => {});
-      signXClient.stopPolling('Transaction cancelled', SIGN_X_TRANSACT_ERROR);
+      signXClient.stopPolling('Transaction cancelled', SIGN_X_TRANSACT_ERROR, false);
     };
 
     handleClose = renderModal(
-      <SignXModal title='SignX Transaction' data={JSON.stringify(data)} timeout={signXClient.timeout} />,
+      <SignXModal
+        title='SignX Transaction'
+        data={JSON.stringify(data)}
+        timeout={signXClient.timeout}
+        isNewSession={isNewSession}
+      />,
       closeModal,
     );
 
