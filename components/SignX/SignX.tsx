@@ -79,7 +79,7 @@ const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXPro
       </div>
       {isNewSession && (
         <>
-          <QRCode value={deeplink} size={250} />
+          <QRCode value={data} size={250} />
           <p className={styles.deeplink}>
             If you are on a mobile device please install the{' '}
             <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
