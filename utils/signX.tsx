@@ -126,8 +126,7 @@ export const signXBroadCastMessage = async (
       timestamp: new Date().toISOString(),
       transactions: [{ sequence: 1, txBodyHex: txBody }],
     });
-    const isNewSession = !!data?.hash;
-    console.log({ isNewSession });
+    const isNewSession = !!data?.sessionHash;
 
     const closeModal = () => {
       signXClient.off(SIGN_X_TRANSACT_ERROR, () => {});
