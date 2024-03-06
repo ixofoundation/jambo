@@ -1,4 +1,4 @@
-import { HTMLAttributes, useEffect, useRef } from 'react';
+import { FC, HTMLAttributes, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { isMobile, isIOS, isMacOs } from 'react-device-detect';
@@ -10,16 +10,18 @@ import { getCSSVariable } from '@utils/styles';
 type SignXProps = {
   title: string;
   subtitle?: string;
-  data: string;
+  data: any;
   timeout: number;
+  transactSequence?: number;
   isNewSession?: boolean;
 } & HTMLAttributes<HTMLDivElement>;
 
-const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXProps) => {
+const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequence }) => {
+  const isNewSession = transactSequence === 1;
   const firstLoad = useRef(false);
   const timeoutFull = (timeout - 1000) / 1000;
   const timeoutThird = timeoutFull / 3;
-  const deeplink = convertDataToDeeplink(isNewSession ? JSON.parse(data) : { type: SIGN_X_CLEAN_DEEPLINK });
+  const deeplink = convertDataToDeeplink(isNewSession ? data : { type: SIGN_X_CLEAN_DEEPLINK });
   const downloadLink =
     isIOS || isMacOs
       ? `https://apps.apple.com/app/impacts-x/id6444948058`
@@ -29,7 +31,6 @@ const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXPro
     if (firstLoad.current) return;
     firstLoad.current = true;
 
-    console.log({ deeplink });
     if (isMobile) {
       console.log('isMobile');
       setTimeout(() => {
@@ -48,7 +49,7 @@ const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXPro
           <a href={downloadLink} rel='noopener noreferrer' target='_blank'>
             Impacts X App
           </a>{' '}
-          and sign the transaction
+          and sign transaction #{transactSequence}
         </p>
       ) : subtitle ? (
         <p>{subtitle}</p>
@@ -79,7 +80,7 @@ const SignX = ({ title, subtitle, data, timeout, isNewSession = true }: SignXPro
       </div>
       {isNewSession && (
         <>
-          <QRCode value={data} size={250} />
+          <QRCode value={JSON.stringify(data)} size={250} />
           <p className={styles.deeplink}>
             If you are on a mobile device please install the{' '}
             <a href={downloadLink} rel='noopener noreferrer' target='_blank'>

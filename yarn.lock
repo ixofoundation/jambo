@@ -1827,9 +1827,9 @@
     bech32 "2.0.0"
     bs58 "5.0.0"
 
-"@ixo/signx-sdk@./ixo-signx-sdk-1.0.1.tgz":
-  version "1.0.1"
-  resolved "./ixo-signx-sdk-1.0.1.tgz#14307dba481cbd9798e9d4a32b37af5c74ce0a0e"
+"@ixo/signx-sdk@./ixo-signx-sdk-1.0.17.tgz":
+  version "1.0.17"
+  resolved "./ixo-signx-sdk-1.0.17.tgz#1cf31cc15f0799988788a86362a40c7d669f78b9"
   dependencies:
     "@babel/runtime" "7.19.4"
     axios "1.3.4"

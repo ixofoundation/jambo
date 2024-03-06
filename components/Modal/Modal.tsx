@@ -58,18 +58,28 @@ function Modal({ onClose, children, title, className, ...other }: ModalProps) {
 
 export default Modal;
 
-// Function to render modal
+/**
+ * Render a modal with the given content
+ * @param content The content to render in the modal
+ * @param onClose Function to execute when manually close the modal through clicking the close button or backdrop
+ * @returns Function to close the modal, only removing the React component, not executing the onClose function
+ */
 export const renderModal = (content: ReactNode, onClose: () => void) => {
   const modalDiv = document.getElementById('custom-root') as HTMLElement;
   const root = createRoot(modalDiv);
 
-  const handleClose = () => {
-    root.unmount(); // Unmount the React component
+  // Function to execute when manually close the modal
+  const handleManualClose = () => {
+    handleClose();
     onClose();
   };
 
+  const handleClose = () => {
+    root.unmount(); // Unmount the React component
+  };
+
   // Render your Modal component into the div
-  root.render(<Modal onClose={handleClose}>{content}</Modal>);
+  root.render(<Modal onClose={handleManualClose}>{content}</Modal>);
 
   return handleClose;
 };

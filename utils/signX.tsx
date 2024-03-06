@@ -29,7 +29,7 @@ export const initializeSignX = async (
   if (signXInitializing) return;
   signXInitializing = true;
 
-  let handleClose: () => void;
+  let removeModal: () => void;
   try {
     if (walletUser?.chainId && walletUser?.chainId !== chainInfo.chainId)
       throw new Error('Chains changed, please logout and login again');
@@ -38,7 +38,7 @@ export const initializeSignX = async (
 
     signXClient = new SignX({
       endpoint: SIGN_X_RELAYERS[chainInfo.chainNetwork || 'mainnet'],
-      // endpoint: 'http://localhost:3000',
+      // endpoint: 'http://localhost:8000',
       network: chainInfo.chainNetwork || 'mainnet',
       sitename: config.siteName ?? 'JAMBO dApp',
     });
@@ -47,33 +47,25 @@ export const initializeSignX = async (
     if (walletUser?.address || walletUser?.pubKey) return walletUser;
 
     // get login data from client to display QR code and start polling
-    const data = await signXClient.login({ pollingInterval: 2000 });
+    const data = await signXClient.login({ pollingInterval: 1000 });
 
-    const closeModal = () => {
-      signXClient.off(SIGN_X_LOGIN_ERROR, () => {});
-      signXClient.off(SIGN_X_LOGIN_SUCCESS, () => {});
+    // callback for when modal is closed manually
+    const onManualCloseModal = () => {
       signXClient.stopPolling('Login cancelled', SIGN_X_LOGIN_ERROR);
     };
 
-    handleClose = renderModal(
-      <SignXModal title='SignX Login' data={JSON.stringify(data)} timeout={signXClient.timeout} />,
-      closeModal,
+    removeModal = renderModal(
+      <SignXModal title='SignX Login' data={data} timeout={signXClient.timeout} transactSequence={1} />,
+      onManualCloseModal,
     );
 
     const eventData: any = await new Promise((resolve, reject) => {
-      const handleSuccess = (data: any) => {
-        signXClient.off(SIGN_X_LOGIN_ERROR, handleError); // Remove error listener once successful
-        resolve(data);
-      };
-      const handleError = (error: any) => {
-        signXClient.off(SIGN_X_LOGIN_SUCCESS, handleSuccess); // Remove success listener on error
-        reject(error);
-      };
-
+      const handleSuccess = (data: any) => resolve(data);
+      const handleError = (error: any) => reject(error);
       signXClient.on(SIGN_X_LOGIN_SUCCESS, handleSuccess);
       signXClient.on(SIGN_X_LOGIN_ERROR, handleError);
     });
-    handleClose();
+    // removeModal();
 
     return {
       name: eventData.data.name,
@@ -90,7 +82,10 @@ export const initializeSignX = async (
   } finally {
     signXInitializing = false;
     // @ts-ignore
-    if (handleClose) handleClose();
+    if (removeModal) removeModal();
+    // remove event listeners
+    signXClient.removeAllListeners(SIGN_X_LOGIN_ERROR);
+    signXClient.removeAllListeners(SIGN_X_LOGIN_SUCCESS);
   }
 };
 
@@ -106,7 +101,12 @@ export const signXBroadCastMessage = async (
   if (signXBroadCastMessageBusy) return null;
   signXBroadCastMessageBusy = true;
 
-  let handleClose: () => void;
+  let removeModal: () => void;
+  // callback for when modal is closed manually
+  let onManualCloseModal = (clearSession = true) => {
+    signXClient.stopPolling('Transaction cancelled', SIGN_X_TRANSACT_ERROR, clearSession);
+  };
+
   try {
     if (!chainInfo || !chainInfo.chainId) throw new Error('No chain info found');
     if (chainInfo.chainName !== 'ixo') throw new Error('SignX only works on ixo chain');
@@ -115,7 +115,6 @@ export const signXBroadCastMessage = async (
     if (!signXClient) throw new Error('No signXClient found to broadcast transaction');
 
     const registry = createRegistry();
-
     const txBody = toHex(registry.encodeTxBody({ messages: msgs as any, memo }));
 
     // get transact data from client to start polling, display QR code if new session
@@ -126,40 +125,29 @@ export const signXBroadCastMessage = async (
       timestamp: new Date().toISOString(),
       transactions: [{ sequence: 1, txBodyHex: txBody }],
     });
-    const isNewSession = !!data?.sessionHash;
 
-    const closeModal = () => {
-      signXClient.off(SIGN_X_TRANSACT_ERROR, () => {});
-      signXClient.off(SIGN_X_TRANSACT_SUCCESS, () => {});
-      signXClient.stopPolling('Transaction cancelled', SIGN_X_TRANSACT_ERROR, false);
-    };
+    // if already active session(aka no sessionHash), start polling for next transaction that was just added
+    if (!data?.sessionHash) {
+      signXClient.pollNextTransaction();
+    }
 
-    handleClose = renderModal(
+    removeModal = renderModal(
       <SignXModal
         title='SignX Transaction'
-        data={JSON.stringify(data)}
+        data={data}
         timeout={signXClient.timeout}
-        isNewSession={isNewSession}
+        transactSequence={signXClient.transactSequence}
       />,
-      closeModal,
+      onManualCloseModal,
     );
 
+    // wait for transaction to be broadcasted and SignX to emit success or fail event
     const eventData: any = await new Promise((resolve, reject) => {
-      const handleSuccess = (data: any) => {
-        signXClient.off(SIGN_X_TRANSACT_ERROR, handleError); // Remove error listener once successful
-        resolve(data);
-      };
-      const handleError = (error: any) => {
-        signXClient.off(SIGN_X_TRANSACT_SUCCESS, handleSuccess); // Remove success listener on error
-        reject(error);
-      };
-
+      const handleSuccess = (data: any) => resolve(data);
+      const handleError = (error: any) => reject(error);
       signXClient.on(SIGN_X_TRANSACT_SUCCESS, handleSuccess);
       signXClient.on(SIGN_X_TRANSACT_ERROR, handleError);
     });
-    handleClose();
-
-    console.log({ eventData });
 
     return eventData.data?.transactionHash;
   } catch (e) {
@@ -169,6 +157,11 @@ export const signXBroadCastMessage = async (
   } finally {
     signXBroadCastMessageBusy = false;
     // @ts-ignore
-    if (handleClose) handleClose();
+    if (removeModal) removeModal();
+    // @ts-ignore
+    if (onManualCloseModal) onManualCloseModal(false);
+    // remove event listeners
+    signXClient.removeAllListeners(SIGN_X_TRANSACT_ERROR);
+    signXClient.removeAllListeners(SIGN_X_TRANSACT_SUCCESS);
   }
 };
