@@ -27,6 +27,7 @@ type FooterProps = {
   showAccountButton?: boolean;
   showActionsButton?: boolean;
   sliderActionButton?: (() => void) | null;
+  children?: React.ReactNode;
 };
 
 /**
@@ -43,6 +44,7 @@ const Footer = ({
   showAccountButton,
   showActionsButton,
   sliderActionButton,
+  children,
 }: FooterProps) => {
   // const { width } = useWindowDimensions();
   const [isSliderActive, setIsSliderActive] = useState<boolean>(false);
@@ -50,31 +52,6 @@ const Footer = ({
 
   return (
     <footer className={styles.footer}>
-      {showAccountButton && (
-        <Anchor href='/account' active={asPath !== '/account'}>
-          <ButtonRound
-            size={BUTTON_ROUND_SIZE.large}
-            color={/^\/account/i.test(asPath) ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-          >
-            <ColoredIcon
-              icon={Wallet}
-              size={24}
-              color={/^\/account/i.test(asPath) ? ICON_COLOR.white : ICON_COLOR.primary}
-            />
-            {/* {!!width && width > 425 && <p className={styles.label}>Account</p>} */}
-          </ButtonRound>
-        </Anchor>
-      )}
-      {showActionsButton && (
-        <Anchor href='/' active={asPath !== '/'}>
-          <ButtonRound
-            size={BUTTON_ROUND_SIZE.large}
-            color={asPath === '/' ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
-          >
-            <ColoredIcon icon={Touch} size={24} color={asPath === '/' ? ICON_COLOR.white : ICON_COLOR.primary} />
-          </ButtonRound>
-        </Anchor>
-      )}
       {(onBack || onBackUrl || onBackUrl === '') && (
         <ButtonRound
           onClick={() => (onBack ? onBack() : onBackUrl === '' ? backRoute() : replaceRoute(onBackUrl!))}
@@ -100,6 +77,32 @@ const Footer = ({
         >
           <ColoredIcon icon={Slider} size={24} color={isSliderActive ? ICON_COLOR.white : ICON_COLOR.primary} />
         </ButtonRound>
+      )}
+      {showAccountButton && (
+        <Anchor href='/account' active={asPath !== '/account'}>
+          <ButtonRound
+            size={BUTTON_ROUND_SIZE.large}
+            color={/^\/account/i.test(asPath) ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
+          >
+            <ColoredIcon
+              icon={Wallet}
+              size={24}
+              color={/^\/account/i.test(asPath) ? ICON_COLOR.white : ICON_COLOR.primary}
+            />
+            {/* {!!width && width > 425 && <p className={styles.label}>Account</p>} */}
+          </ButtonRound>
+        </Anchor>
+      )}
+      {children}
+      {showActionsButton && (
+        <Anchor href='/' active={asPath !== '/'}>
+          <ButtonRound
+            size={BUTTON_ROUND_SIZE.large}
+            color={asPath === '/' ? BUTTON_ROUND_COLOR.primary : BUTTON_ROUND_COLOR.lightGrey}
+          >
+            <ColoredIcon icon={Touch} size={24} color={asPath === '/' ? ICON_COLOR.white : ICON_COLOR.primary} />
+          </ButtonRound>
+        </Anchor>
       )}
       {onCorrect !== undefined && (
         <ButtonRound

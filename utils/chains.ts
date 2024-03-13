@@ -19,7 +19,7 @@ async function fetchChainInfo(chainName: string, chainNetwork: CHAIN_NETWORK_TYP
     if (chainNetwork === 'devnet') console.warn(`${chainName} ${chainNetwork} chain::${error}`);
     if (chainNetwork !== 'devnet') throw error;
   }
-  return { chainName, chainNetwork, chainInfo };
+  return { chainName, chainNetwork, chainInfo: chainInfo ? { ...chainInfo, chainNetwork } : chainInfo };
 }
 
 export const getChainOptions = async () => {

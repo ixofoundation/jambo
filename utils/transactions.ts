@@ -1,6 +1,8 @@
 import { cosmos, cosmwasm } from '@ixo/impactxclient-sdk';
 import { TxResponse } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/abci/v1beta1/abci';
+import { longify } from '@cosmjs/stargate/build/queryclient';
 import { Coin } from '@ixo/impactxclient-sdk/types/codegen/cosmos/base/v1beta1/coin';
+import { VoteOption } from '@ixo/impactxclient-sdk/types/codegen/cosmos/gov/v1beta1/gov';
 
 import { TRX_FEE, TRX_FEE_OPTION, TRX_MSG } from 'types/transactions';
 
@@ -51,6 +53,7 @@ export const generateBankSendTrx = ({
     amount: [cosmos.base.v1beta1.Coin.fromPartial({ amount, denom })],
   }),
 });
+
 export const generateBankMultiSendTrx = ({
   fromAddress,
   toAddresses,
@@ -223,4 +226,77 @@ export const getValueFromTrxEvents = (trxRes: TxResponse, event: string, attribu
 
     if (eventAttribute) return eventAttribute['value'];
   }
+};
+
+export const generateVoteTrx = ({
+  proposalId,
+  voterAddress,
+  option,
+}: {
+  proposalId: number;
+  voterAddress: string;
+  option: VoteOption;
+}): TRX_MSG => ({
+  typeUrl: '/cosmos.gov.v1beta1.MsgVote',
+  value: cosmos.gov.v1beta1.MsgVote.fromPartial({
+    proposalId: longify(proposalId),
+    voter: voterAddress,
+    option,
+  }),
+});
+
+export const generateTextProposalTrx = (
+  {
+    title,
+    description,
+  }: {
+    title: string;
+    description: string;
+  },
+  encode = false,
+) => {
+  const value = cosmos.gov.v1beta1.TextProposal.fromPartial({
+    title,
+    description,
+  });
+
+  return {
+    typeUrl: '/cosmos.gov.v1beta1.TextProposal',
+    value: encode ? cosmos.gov.v1beta1.TextProposal.encode(value).finish() : value,
+  };
+};
+
+export const generateSubmitProposalTrx = ({
+  title,
+  description,
+  proposer,
+  depositDenom,
+  depositAmount,
+}: {
+  title: string;
+  description: string;
+  proposer: string;
+  depositDenom?: string;
+  depositAmount?: string;
+}): TRX_MSG => {
+  const initialDeposit = depositDenom
+    ? [cosmos.base.v1beta1.Coin.fromPartial({ amount: depositAmount, denom: depositDenom })]
+    : [];
+
+  console.log({ initialDeposit, depositAmount, depositDenom });
+
+  return {
+    typeUrl: '/cosmos.gov.v1beta1.MsgSubmitProposal',
+    value: cosmos.gov.v1beta1.MsgSubmitProposal.fromPartial({
+      proposer,
+      initialDeposit,
+      content: generateTextProposalTrx(
+        {
+          title,
+          description,
+        },
+        true,
+      ) as any,
+    }),
+  };
 };

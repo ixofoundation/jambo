@@ -59,7 +59,7 @@ const Settings: NextPage = () => {
         <>
           <div className={utilsStyles.spacer2} />
           <p className={styles.label}>theme</p>
-          <Card className={utilsStyles.rowAlignSpaceBetween} size={CARD_SIZE.large}>
+          <Card className={utilsStyles.rowJustifySpaceBetween} size={CARD_SIZE.large}>
             <p className={styles.settingLabel}>light</p>
             <ToggleSwitch name='theme' toggled={theme === 'dark'} onToggle={handleThemeClick} />
             <p className={styles.settingLabel}>dark</p>
@@ -70,7 +70,7 @@ const Settings: NextPage = () => {
           <>
             <div className={utilsStyles.spacer2} />
             <p className={styles.label}>developer tools</p>
-            <Card className={utilsStyles.rowAlignSpaceBetween} size={CARD_SIZE.large}>
+            <Card className={utilsStyles.rowJustifySpaceBetween} size={CARD_SIZE.large}>
               <p className={styles.settingLabel}>mainnet</p>
               <ToggleSwitch name='network' toggled={chain.chainNetwork === 'testnet'} onToggle={handleChainClick} />
               <p className={styles.settingLabel}>testnet</p>

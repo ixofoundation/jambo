@@ -15,13 +15,14 @@ import {
   getDecimalsFromCurrencyToken,
   getAmountFromCurrencyToken,
 } from '@utils/currency';
-import { StepDataType, STEPS } from 'types/steps';
+import { StepConfigType, StepDataType, STEPS } from 'types/steps';
 import { WalletContext } from '@contexts/wallet';
 import { CURRENCY_TOKEN } from 'types/wallet';
 
 type DefineAmountTokenProps = {
   onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
   onBack?: () => void;
+  config?: StepConfigType<STEPS.select_token_and_amount>;
   data?: StepDataType<STEPS.select_token_and_amount>;
   header?: string;
 };
@@ -40,7 +41,7 @@ const calculateRemainingMax = (currentToken: CURRENCY_TOKEN, prevData: StepDataT
   return amountToMicroAmount(result, getDecimalsFromCurrencyToken(currentToken));
 };
 
-const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data, header }) => {
+const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, config, data, header }) => {
   const [amount, setAmount] = useState(
     data?.data ? data.data[data.currentIndex ?? data.data.length - 1]?.amount?.toString() ?? '' : '',
   );
@@ -54,9 +55,10 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => setAmount(event.target.value);
 
   const formIsValid = () =>
-    !!selectedOption &&
-    Number.parseFloat(amount) > 0 &&
-    validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount));
+    config?.optional ||
+    (!!selectedOption &&
+      Number.parseFloat(amount) > 0 &&
+      validateAmountAgainstBalance(Number.parseFloat(amount), Number(selectedOption.amount)));
 
   const handleSubmit = (event: FormEvent<HTMLFormElement> | null) => {
     event?.preventDefault();
@@ -83,14 +85,16 @@ const DefineAmountToken: FC<DefineAmountTokenProps> = ({ onSuccess, onBack, data
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
         {wallet.balances?.data ? (
           <form className={styles.stepsForm} onSubmit={handleSubmit} autoComplete='none'>
-            <p className={styles.label}>Select token to sent</p>
+            <p className={styles.label}>{config?.denomLabel ?? 'Select token to sent'}</p>
             <TokenSelector
               value={selectedOption as CURRENCY_TOKEN}
               onChange={setSelectedOption}
               options={wallet.balances?.data ?? []}
             />
             <br />
-            <p className={cls(styles.label, styles.titleWithSubtext)}>Enter an amount to send</p>
+            <p className={cls(styles.label, styles.titleWithSubtext)}>
+              {config?.amountLabel ?? 'Enter an amount to send'}
+            </p>
             <InputWithMax
               maxAmount={calculateRemainingMax(selectedOption!, data!)}
               maxToken={selectedOption}

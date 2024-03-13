@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import type { GetStaticPaths, NextPage, GetStaticPropsResult, GetStaticPropsContext } from 'next';
 
 import config from '@constants/config.json';
-import { StepDataType, STEP, STEPS } from 'types/steps';
+import { StepDataType, STEP, STEPS, StepConfigType } from 'types/steps';
 import EmptySteps from '@steps/EmptySteps';
 import ReceiverAddress from '@steps/ReceiverAddress';
 import DefineAmountToken from '@steps/DefineAmountToken';
@@ -17,6 +17,10 @@ import Head from '@components/Head/Head';
 import { VALIDATOR_AMOUNT_CONFIGS, VALIDATOR_CONFIGS } from '@constants/validatorConfigs';
 import ValidatorRewards from '@steps/ClaimRewards';
 import { VALIDATOR_AMOUNT_CONFIG } from 'types/validators';
+import SelectGovProposal from '@steps/SelectGovProposal';
+import ShortTextInput from '@steps/ShortTextInput';
+import LongTextInput from '@steps/LongTextInput';
+import ProposalDeposit from '@steps/ProposalDeposit';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -131,13 +135,14 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
           <DefineAmountToken
             onSuccess={handleOnNext<STEPS.select_token_and_amount>}
             onBack={handleBack}
+            header={action?.name}
+            config={step.config as StepConfigType<STEPS.select_token_and_amount>}
             data={
               (step.data as StepDataType<STEPS.select_token_and_amount>) ?? {
                 data: [],
                 currentIndex: 0,
               }
             }
-            header={action?.name}
           />
         );
       case STEPS.select_amount_delegate:
@@ -172,6 +177,43 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
             message={step.id}
           />
         );
+      case STEPS.select_proposal:
+        return (
+          <SelectGovProposal
+            onSuccess={handleOnNext<STEPS.select_proposal>}
+            onBack={handleBack}
+            header={action?.name}
+          />
+        );
+      case STEPS.define_proposal_title:
+        return (
+          <ShortTextInput
+            onSuccess={handleOnNext<STEPS.define_proposal_title>}
+            onBack={handleBack}
+            header={action?.name}
+            data={step.data as StepDataType<STEPS.define_proposal_title>}
+          />
+        );
+      case STEPS.define_proposal_description:
+        return (
+          <LongTextInput
+            onSuccess={handleOnNext<STEPS.define_proposal_description>}
+            onBack={handleBack}
+            header={action?.name}
+            data={step.data as StepDataType<STEPS.define_proposal_description>}
+          />
+        );
+      case STEPS.define_proposal_deposit:
+        return (
+          <ProposalDeposit
+            onSuccess={handleOnNext<STEPS.define_proposal_deposit>}
+            onBack={handleBack}
+            header={action?.name}
+            data={step.data as StepDataType<STEPS.define_proposal_deposit>}
+          />
+        );
+      case STEPS.gov_MsgVote:
+      case STEPS.gov_MsgSubmitProposal:
       case STEPS.bank_MsgSend:
       case STEPS.bank_MsgMultiSend:
       case STEPS.staking_MsgDelegate:
