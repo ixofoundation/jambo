@@ -16,6 +16,7 @@ import { CURRENCY_TOKEN, TOKEN_BALANCE } from 'types/wallet';
 type TokenListProps = {
   displayGradient?: boolean;
   displaySwapOptions?: boolean;
+  includeNonNativeTokens?: boolean;
   onTokenClick: (denom: string) => void;
   filter?: (asset: TOKEN_BALANCE) => boolean;
   options?: CURRENCY_TOKEN[];
@@ -27,6 +28,7 @@ const TokenList = ({
   filter = () => true,
   onTokenClick,
   options,
+  includeNonNativeTokens = false,
 }: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
@@ -35,7 +37,12 @@ const TokenList = ({
     const balances = wallet.balances?.data ?? [];
     const assets = displaySwapOptions
       ? groupWalletSwapAssets(balances, wallet.tokenBalances?.data ?? [])
-      : groupWalletAssets(balances, wallet.delegations?.data ?? [], wallet.unbondingDelegations?.data ?? []);
+      : groupWalletAssets(
+          balances,
+          wallet.delegations?.data ?? [],
+          wallet.unbondingDelegations?.data ?? [],
+          includeNonNativeTokens ? wallet.tokenBalances?.data : [],
+        );
     const optionDenoms = options?.map((option) => option.denom);
     setTokens(optionDenoms && optionDenoms.length ? assets.filter((a) => optionDenoms?.includes(a.denom)) : assets);
   }, [wallet.loading]);

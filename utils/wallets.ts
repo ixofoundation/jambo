@@ -45,9 +45,11 @@ export const groupWalletAssets = (
   balances: CURRENCY_TOKEN[],
   delegations: DELEGATION[],
   unbondingDelegations: UNBONDING_DELEGATION[],
+  nonNativeTokens: CURRENCY_TOKEN[] = [],
 ): TOKEN_BALANCE[] => {
   const assets = new Map<string, TOKEN_BALANCE>();
   setAssetsByBalances(assets, balances);
+  setAssetsByBalances(assets, nonNativeTokens);
 
   for (const delegation of delegations) {
     const asset = assets.get(delegation.balance.denom);

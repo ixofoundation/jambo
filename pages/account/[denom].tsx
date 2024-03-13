@@ -28,6 +28,7 @@ const Denom: NextPage = () => {
     wallet.balances?.data ?? [],
     wallet.delegations?.data ?? [],
     wallet.unbondingDelegations?.data ?? [],
+    wallet.tokenBalances?.data,
   );
   const asset = assets.find((asset) => asset.token.denom === urlDecodeIbcDenom(query.denom as string));
 

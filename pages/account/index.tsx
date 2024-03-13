@@ -59,7 +59,7 @@ const Account: NextPage = () => {
               walletType={wallet.walletType}
             />
             <div className={utilsStyles.spacer3} />
-            <TokenList onTokenClick={handleTokenClick} displayGradient />
+            <TokenList onTokenClick={handleTokenClick} displayGradient includeNonNativeTokens />
             {QRVisible && <BottomSheetAddress show={QRVisible} onClose={hideQR} />}
             {logoutVisible && <BottomSheetLogout show={logoutVisible} onClose={hideLogout} />}
           </>
