@@ -11,16 +11,23 @@ import {
   getTokenTypeFromCurrencyToken,
 } from '@utils/currency';
 import { groupWalletAssets, groupWalletSwapAssets } from '@utils/wallets';
-import { TOKEN_BALANCE } from 'types/wallet';
+import { CURRENCY_TOKEN, TOKEN_BALANCE } from 'types/wallet';
 
 type TokenListProps = {
   displayGradient?: boolean;
   displaySwapOptions?: boolean;
   onTokenClick: (denom: string) => void;
   filter?: (asset: TOKEN_BALANCE) => boolean;
+  options?: CURRENCY_TOKEN[];
 };
 
-const TokenList = ({ displayGradient, displaySwapOptions, filter = () => true, onTokenClick }: TokenListProps) => {
+const TokenList = ({
+  displayGradient,
+  displaySwapOptions,
+  filter = () => true,
+  onTokenClick,
+  options,
+}: TokenListProps) => {
   const [tokens, setTokens] = useState<TOKEN_BALANCE[] | undefined>();
   const { wallet } = useContext(WalletContext);
 
@@ -29,7 +36,8 @@ const TokenList = ({ displayGradient, displaySwapOptions, filter = () => true, o
     const assets = displaySwapOptions
       ? groupWalletSwapAssets(balances, wallet.tokenBalances?.data ?? [])
       : groupWalletAssets(balances, wallet.delegations?.data ?? [], wallet.unbondingDelegations?.data ?? []);
-    setTokens(assets);
+    const optionDenoms = options?.map((option) => option.denom);
+    setTokens(optionDenoms && optionDenoms.length ? assets.filter((a) => optionDenoms?.includes(a.denom)) : assets);
   }, [wallet.loading]);
 
   return (

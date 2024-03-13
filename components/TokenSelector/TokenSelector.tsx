@@ -68,6 +68,7 @@ const TokenSelector = ({ value, options, displaySwapOptions, onChange }: TokenSe
             filter={(asset) => asset.denom.includes(search)}
             onTokenClick={handleTokenSelect}
             displaySwapOptions={displaySwapOptions}
+            options={options}
           />
         </BottomSheet>
       )}

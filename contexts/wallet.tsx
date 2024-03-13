@@ -29,6 +29,8 @@ export const WalletContext = createContext({
   wallet: {} as WALLET,
   updateWalletType: (newWalletType: WALLET_TYPE) => {},
   fetchAssets: () => {},
+  fetchBalances: () => {},
+  fetchTokenBalances: () => {},
   clearAssets: () => {},
   updateChainId: (chainId: string) => {},
   updateChainNetwork: (chainNetwork: ChainNetwork) => {},
@@ -61,7 +63,10 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     queryDelegatorUnbondingDelegations,
     wallet?.user?.address,
   );
-  const [tokenBalances] = useWalletData(queryTokenBalances, wallet?.user?.address);
+  const [tokenBalances, fetchTokenBalances, clearTokenBalances] = useWalletData(
+    queryTokenBalances,
+    wallet?.user?.address,
+  );
 
   const updateWallet = (newWallet: WALLET, override: boolean = false) => {
     if (override) setWallet({ ...DEFAULT_WALLET, ...newWallet });
@@ -86,12 +91,14 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
     fetchDelegations();
     fetchDelegationRewards();
     fetchUnbondingDelegations();
+    fetchTokenBalances();
   };
   const clearAssets = () => {
     clearBalances();
     clearDelegations();
     clearDelegationRewards();
     clearUnbondingDelegations();
+    clearTokenBalances();
   };
 
   const updateValidators = async () => {
@@ -197,11 +204,14 @@ export const WalletProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => 
         delegations.loading ||
         delegationRewards.loading ||
         unbondingDelegations.loading ||
+        tokenBalances.loading ||
         chain.chainLoading,
     } as WALLET,
     updateWalletType,
     fetchAssets,
     clearAssets,
+    fetchBalances,
+    fetchTokenBalances,
     updateChainId: updateChainId(clearAssets),
     updateChainNetwork: updateChainNetwork(clearAssets),
     logoutWallet,

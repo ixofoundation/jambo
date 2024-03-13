@@ -14,6 +14,7 @@ import { queryOutputAmountByInputAmount } from '@utils/query';
 import {
   getInputTokenAmount,
   getSwapContractAddress,
+  getSwapContractsOutputsForInputDenoms,
   getSwapTokens,
   getTokenSelectByDenom,
   isCw1155Token,
@@ -74,14 +75,18 @@ export const Swap = (props: SwapProps) => {
     getOutputAmount();
   }, [inputAmount]);
 
-  const getTokenOptions = (): CURRENCY_TOKEN[] => {
+  const getInputTokenOptions = (): CURRENCY_TOKEN[] => {
     const walletBalancesOptions = wallet.balances?.data ?? [];
     const walletTokensOptions = wallet.tokenBalances?.data ?? [];
 
     return [...getSwapTokens(walletBalancesOptions), ...walletTokensOptions];
   };
+  const getOutputTokenOptions = (): CURRENCY_TOKEN[] => {
+    const test = getSwapContractsOutputsForInputDenoms(inputToken?.denom ?? '');
+    return test;
+  };
   const handleInputTokenChange = (token: CURRENCY_TOKEN) => {
-    if (token == outputToken) {
+    if (token.denom == outputToken?.denom) {
       setOutputToken(inputToken);
       setOutputAmount(inputAmount);
       setInputAmount(outputAmount);
@@ -90,7 +95,7 @@ export const Swap = (props: SwapProps) => {
     setInputToken(token);
   };
   const handleOutputTokenChange = (token: CURRENCY_TOKEN) => {
-    if (token == inputToken) {
+    if (token.denom == inputToken?.denom) {
       setInputToken(outputToken);
       setInputAmount(outputAmount);
       setOutputAmount(inputAmount);
@@ -121,7 +126,7 @@ export const Swap = (props: SwapProps) => {
             <TokenSelector
               value={inputToken}
               onChange={handleInputTokenChange}
-              options={getTokenOptions()}
+              options={getInputTokenOptions()}
               displaySwapOptions
             />
           </div>
@@ -145,7 +150,7 @@ export const Swap = (props: SwapProps) => {
             <TokenSelector
               value={outputToken}
               onChange={handleOutputTokenChange}
-              options={getTokenOptions()}
+              options={getOutputTokenOptions()}
               displaySwapOptions
             />
           </div>
@@ -153,7 +158,7 @@ export const Swap = (props: SwapProps) => {
       </div>
       {amountLoading ? (
         <div className={cls(swapStyles.amountLoading)}>
-          <Loader size={20} /> Fetching output amount
+          <Loader size={20} /> Fetching output amount...
         </div>
       ) : null}
     </form>

@@ -57,7 +57,7 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
   const [trxLoading, setTrxLoading] = useState(false);
   const [successHash, setSuccessHash] = useState<string | undefined>();
 
-  const { wallet } = useContext(WalletContext);
+  const { wallet, fetchBalances, fetchTokenBalances } = useContext(WalletContext);
   const { chainInfo, queryClient } = useContext(ChainContext);
 
   const navigateToAccount = () => pushNewRoute('/account');
@@ -132,7 +132,11 @@ const SwapTokens: FC<SwapTokensProps> = ({ onBack, data, header, loading = false
       chainInfo as KEPLR_CHAIN_INFO_TYPE,
     );
 
-    if (hash) setSuccessHash(hash);
+    if (hash) {
+      setSuccessHash(hash);
+      fetchBalances();
+      fetchTokenBalances();
+    }
     setTrxLoading(false);
   };
 

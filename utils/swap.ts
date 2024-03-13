@@ -45,6 +45,25 @@ export const getOutputTokenAmount = (tokenSelect: TokenSelect, tokenAmount: stri
 
 export const getSwapTokens = (walletTokens: CURRENCY_TOKEN[]): CURRENCY_TOKEN[] =>
   walletTokens.filter((token) => tokens.has(token.denom));
+export const getSwapContractsOutputsForInputDenoms = (inputDenom: string): CURRENCY_TOKEN[] => {
+  let tokensForSwap: { denom: string; type: TokenType }[] = [];
+  tokens.forEach((token, key) => {
+    if (key == inputDenom) {
+      return;
+    } else {
+      if (token.type === TokenType.Cw1155) {
+        if (pools.get({ token1155: key, token2: inputDenom })) {
+          tokensForSwap.push({ denom: key, type: token.type });
+        }
+      } else {
+        if (pools.get({ token1155: inputDenom, token2: key })) {
+          tokensForSwap.push({ denom: key, type: token.type });
+        }
+      }
+    }
+  });
+  return tokensForSwap.map((token) => ({ denom: token.denom, amount: '0', ibc: false }));
+};
 export const getSwapContractAddress = (inputDenom: string, outputDenom: string): string =>
   getTokenSelectByDenom(inputDenom) === TokenSelect.Token1155
     ? pools.get({ token1155: inputDenom, token2: outputDenom })
