@@ -103,7 +103,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
   const [collectionId, setCollectionId] = useState('1');
   const [did, setDid] = useState('did:ixo:ixo1234567890');
   const [address, setAddress] = useState('ixo1234567890');
-  const [bidValue, setBidValue] = useState('{"greet":"hi"}');
+  const [bidValue, setBidValue] = useState('{"greet":"hi","did":"<did>"}');
   const [role, setRole] = useState('SA');
   const [result, setResult] = useState<any>(null);
   const [isBlocked, setIsBlocked] = useState<boolean | null>(null);
@@ -117,6 +117,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
   const [claim, setClaim] = useState<string>('{"greet":"hi","did":"<did>"}');
   const [cid, setCid] = useState<string>('bafkreiftnm5opugphgnta77ksoosp5kv62khmlootxksv7llkfb76rd7vq');
   const [claimByCid, setClaimByCid] = useState<any>();
+  const [selectedUser, setSelectedUser] = useState<User>(USERS[1]); // Default to 'tester'
 
   // useEffect(() => {
   //   handleSourceRoomAndJoin(USERS.find((u) => u.name === 'tester'));
@@ -152,7 +153,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleQueryBids = async (user: User) => {
+  const handleQueryBids = async () => {
     console.log('handleQueryBids', collectionId, did);
     try {
       const response = await fetch('/api/bids/query', {
@@ -162,10 +163,9 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
         },
         body: JSON.stringify({
           collectionId,
-          did: user.did,
           pagination: {},
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -185,13 +185,10 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleQueryBidByDid = async (user: User) => {
+  const handleQueryBidByDid = async () => {
+    const target = USERS.find((u) => u.name === targetUser) ?? selectedUser;
     console.log('handleQueryBidByDid', collectionId, did);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/queryDid', {
         method: 'POST',
         headers: {
@@ -200,9 +197,8 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
         body: JSON.stringify({
           collectionId,
           did: target.did,
-          pagination: {},
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -222,8 +218,8 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleSubmitBid = async (user: User) => {
-    let bid = bidValue.replace('<did>', user.did);
+  const handleSubmitBid = async () => {
+    let bid = bidValue.replace('<did>', selectedUser.did);
     console.log('handleSubmitBid', collectionId, did, address, bid, role);
     try {
       const response = await fetch('/api/bids/submit', {
@@ -233,12 +229,12 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
         },
         body: JSON.stringify({
           collectionId,
-          did: user.did,
-          address: user.address,
+          did: selectedUser.did,
+          address: selectedUser.address,
           bid: bid,
           role,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -256,7 +252,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleApproveBid = async (user: User, bidId: string) => {
+  const handleApproveBid = async (bidId: string) => {
     console.log('handleApproveBid', collectionId, bidId);
     try {
       const bid = bids?.find((b) => b?.id === bidId);
@@ -273,7 +269,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           did: bid.did,
           bidId: bid.id,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -293,7 +289,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleRejectBid = async (user: User, bidId: string) => {
+  const handleRejectBid = async (bidId: string) => {
     console.log('handleRejectBid', collectionId, bidId);
     try {
       const bid = bids?.find((b) => b?.id === bidId);
@@ -310,7 +306,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           did: bid.did,
           bidId: bid.id,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -330,13 +326,10 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleIsBlocked = async (user: User) => {
+  const handleIsBlocked = async () => {
+    const target = USERS.find((u) => u.name === targetUser) ?? selectedUser;
     console.log('handleIsBlocked', collectionId, did);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/isBlocked', {
         method: 'POST',
         headers: {
@@ -346,7 +339,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           collectionId,
           did: target.did,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -361,18 +354,15 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
       setResult(data);
     } catch (error) {
       console.log('error', error);
-      setResult((error as Error).message);
       setIsBlocked(null);
+      setResult((error as Error).message);
     }
   };
 
-  const handleBlock = async (user: User) => {
+  const handleBlock = async () => {
+    const target = USERS.find((u) => u.name === targetUser) ?? selectedUser;
     console.log('handleBlock', collectionId, did);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/block', {
         method: 'POST',
         headers: {
@@ -382,7 +372,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           collectionId,
           did: target.did,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -400,13 +390,10 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleUnblock = async (user: User) => {
+  const handleUnblock = async () => {
+    const target = USERS.find((u) => u.name === targetUser) ?? selectedUser;
     console.log('handleUnblock', collectionId, did);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/unblock', {
         method: 'POST',
         headers: {
@@ -416,7 +403,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           collectionId,
           did: target.did,
           botUrl: BID_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -434,14 +421,10 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleSaveClaim = async (user: User) => {
-    const claimData = claim.replace('<did>', user.did);
+  const handleSaveClaim = async () => {
+    const claimData = claim.replace('<did>', selectedUser.did);
     console.log('handleSaveClaim', collectionId, did, address, claimData);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/saveClaim', {
         method: 'POST',
         headers: {
@@ -449,11 +432,11 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
         },
         body: JSON.stringify({
           collectionId,
-          did: target.did,
-          address: target.address,
+          did: selectedUser.did,
+          address: selectedUser.address,
           claim: claimData,
           botUrl: CLAIM_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -471,13 +454,9 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
     }
   };
 
-  const handleGetClaim = async (user: User) => {
+  const handleGetClaim = async () => {
     console.log('handleGetClaim', collectionId, cid);
     try {
-      const target = !targetUser ? user : USERS.find((u) => u.name === targetUser);
-      if (!target) {
-        throw new Error('Target user not found');
-      }
       const response = await fetch('/api/bids/getClaim', {
         method: 'POST',
         headers: {
@@ -487,7 +466,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           collectionId,
           cid,
           botUrl: CLAIM_BOT_URL,
-          accessToken: user.accessToken,
+          accessToken: selectedUser.accessToken,
         }),
       });
 
@@ -501,59 +480,18 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
       setClaimByCid(data.data);
       setResult(data);
     } catch (error) {
+      setClaimByCid(undefined);
       setResult((error as Error).message);
       console.error('error', error);
     }
   };
 
-  const handleActionClick = (action: ActionType, params?: any) => {
-    setCurrentAction(action);
-    setActionParams(params);
-    setShowUserModal(true);
-  };
-
-  const handleUserSelect = async (user: (typeof USERS)[0]) => {
-    if (!currentAction) return;
-
+  const handleUserSelect = (user: User) => {
+    setTargetUser(user.name);
+    setSelectedUser(user);
     setDid(user.did);
     setAddress(user.address);
-
-    switch (currentAction) {
-      case 'queryBids':
-        await handleQueryBids(user);
-        break;
-      case 'queryBidsByDid':
-        await handleQueryBidByDid(user);
-        break;
-      case 'submitBid':
-        await handleSubmitBid(user);
-        break;
-      case 'approveBid':
-        await handleApproveBid(user, actionParams.bidId);
-        break;
-      case 'rejectBid':
-        await handleRejectBid(user, actionParams.bidId);
-        break;
-      case 'checkStatus':
-        await handleIsBlocked(user);
-        break;
-      case 'blockDid':
-        await handleBlock(user);
-        break;
-      case 'unblockDid':
-        await handleUnblock(user);
-        break;
-      case 'getClaim':
-        await handleGetClaim(user);
-        break;
-      case 'saveClaim':
-        await handleSaveClaim(user);
-        break;
-    }
-
     setShowUserModal(false);
-    setCurrentAction(null);
-    setActionParams(null);
   };
 
   const BidCard = ({ bid }: { bid: Bid }) => {
@@ -571,7 +509,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleActionClick('approveBid', { bidId: bid.id });
+                handleApproveBid(bid.id);
               }}
             >
               Approve
@@ -579,7 +517,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleActionClick('rejectBid', { bidId: bid.id });
+                handleRejectBid(bid.id);
               }}
             >
               Reject
@@ -660,12 +598,14 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
             />
           </div>
           <div className='input-field'>
-            <label htmlFor='did'>DID</label>
-            <input id='did' type='text' value={did} onChange={(e) => setDid(e.target.value)} />
-          </div>
-          <div className='input-field'>
-            <label htmlFor='address'>Address</label>
-            <input id='address' type='text' value={address} onChange={(e) => setAddress(e.target.value)} />
+            <label>Selected User</label>
+            <div className='user-selector' onClick={() => setShowUserModal(true)}>
+              <div className='user-info'>
+                <span className='user-name'>{selectedUser.name}</span>
+                <span className='user-tag'>{selectedUser.tag}</span>
+              </div>
+              <button className='change-user-btn'>👤</button>
+            </div>
           </div>
         </div>
       </div>
@@ -716,12 +656,17 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
               <div className='bids-section'>
                 <h3>Bids List</h3>
                 <div className='query-actions'>
-                  <button onClick={() => handleActionClick('queryBids', true)}>Query Bids</button>
-                  <br />
-                  <button onClick={() => handleActionClick('queryBidsByDid', true)}>Query Bids By DID</button>
-                  <div className='input-field'>
-                    <label htmlFor='role'>User</label>
-                    <input type='text' id='role' value={targetUser} onChange={(e) => setTargetUser(e.target.value)} />
+                  <button onClick={handleQueryBids}>Query Bids</button>
+                  <div className='user-query-group'>
+                    <select value={targetUser} onChange={(e) => setTargetUser(e.target.value)} className='user-select'>
+                      <option value=''>Select user to query</option>
+                      {USERS.map((user) => (
+                        <option key={user.name} value={user.name}>
+                          {user.name} ({user.tag || ''})
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={handleQueryBidByDid}>Query Bids By DID</button>
                   </div>
                 </div>
 
@@ -746,7 +691,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
                     <input type='text' id='role' value={role} onChange={(e) => setRole(e.target.value)} />
                   </div>
                   <div className='button-field'>
-                    <button onClick={() => handleActionClick('submitBid', true)}>Submit Bid</button>
+                    <button onClick={handleSubmitBid}>Submit Bid</button>
                   </div>
                 </div>
               </div>
@@ -756,16 +701,28 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           {activeTab === 'status' && (
             <div className='block-status'>
               <div className='status-indicator'>
-                DID Status: {isBlocked === null ? 'Unknown' : isBlocked ? 'Blocked 🚫' : 'Not Blocked ✅'}
+                {USERS.find((u) => u.name === targetUser)?.name ?? selectedUser.name ?? 'Unknown User'}'s Status:{' '}
+                {isBlocked === null ? 'Unknown' : isBlocked ? 'Blocked 🚫' : 'Not Blocked ✅'}
               </div>
               <div className='block-actions'>
                 <div className='input-field'>
-                  <label htmlFor='role'>User</label>
-                  <input type='text' id='role' value={targetUser} onChange={(e) => setTargetUser(e.target.value)} />
+                  <label htmlFor='targetUser'>Target User</label>
+                  <select
+                    id='targetUser'
+                    value={targetUser}
+                    onChange={(e) => setTargetUser(e.target.value)}
+                    className='user-select'
+                  >
+                    {USERS.map((user) => (
+                      <option key={user.name} value={user.name}>
+                        {user.name} ({user.tag || 'no tag'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <button onClick={() => handleActionClick('checkStatus', true)}>Check Status</button>
-                <button onClick={() => handleActionClick('blockDid', true)}>Block DID</button>
-                <button onClick={() => handleActionClick('unblockDid', true)}>Unblock DID</button>
+                <button onClick={handleIsBlocked}>Check Status</button>
+                <button onClick={handleBlock}>Block DID</button>
+                <button onClick={handleUnblock}>Unblock DID</button>
               </div>
             </div>
           )}
@@ -786,7 +743,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
                     />
                   </div>
                   <div className='button-field'>
-                    <button onClick={() => handleActionClick('getClaim')}>Get Claim</button>
+                    <button onClick={handleGetClaim}>Get Claim</button>
                   </div>
                 </div>
                 {claimByCid && (
@@ -811,7 +768,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
                     />
                   </div>
                   <div className='button-field'>
-                    <button onClick={() => handleActionClick('saveClaim')}>Save Claim</button>
+                    <button onClick={handleSaveClaim}>Save Claim</button>
                   </div>
                 </div>
               </div>
@@ -948,7 +905,7 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
           display: flex;
           gap: 10px;
           margin-bottom: 15px;
-          flex-wrap: wrap;
+          align-items: center;
         }
         .no-bids {
           text-align: center;
@@ -1035,6 +992,78 @@ const BidTester = ({ homeServerUrl }: BidTesterProps) => {
         }
         .button-field button {
           margin-top: 23px;
+        }
+        .user-selector {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          cursor: pointer;
+          background: white;
+          transition: all 0.2s;
+        }
+        .user-selector:hover {
+          border-color: #0070f3;
+          background: #f8f9fa;
+        }
+        .user-info {
+          display: flex;
+          flex-direction: column;
+        }
+        .user-name {
+          font-weight: 500;
+          text-transform: capitalize;
+        }
+        .user-tag {
+          font-size: 0.8em;
+          color: #666;
+        }
+        .change-user-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 1.2em;
+          cursor: pointer;
+          color: #0070f3;
+        }
+        .change-user-btn:hover {
+          transform: scale(1.1);
+        }
+        .user-select {
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 0.9em;
+          width: 100%;
+          background: white;
+          cursor: pointer;
+        }
+        .user-select:focus {
+          outline: none;
+          border-color: #0070f3;
+          box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.1);
+        }
+        .user-select option {
+          padding: 8px;
+        }
+        .user-query-group {
+          display: flex;
+          gap: 10px;
+          flex: 1;
+        }
+
+        .user-query-group .user-select {
+          flex: 1;
+          min-width: 200px;
+        }
+
+        .query-actions {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 15px;
+          align-items: center;
         }
       `}</style>
     </div>

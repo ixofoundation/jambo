@@ -1949,9 +1949,10 @@
     bech32 "2.0.0"
     bs58 "5.0.0"
 
-"@ixo/matrixclient-sdk@file:./ixo-matrixclient-sdk-0.3.0.tgz":
+"@ixo/matrixclient-sdk@0.3.0":
   version "0.3.0"
-  resolved "file:./ixo-matrixclient-sdk-0.3.0.tgz#a91948bd9e6593d2b41dc738d12aa2db6237ccb5"
+  resolved "https://registry.yarnpkg.com/@ixo/matrixclient-sdk/-/matrixclient-sdk-0.3.0.tgz#ebc7fdfb57eaab960687053c0410e49ae57a9382"
+  integrity sha512-cnJFghpf4Y1oaiPem7LCIDBXAY4AtfopApJW4q6A2JzdLLknbKy4WhNW4H+VrmPRTzmNAdq9o/VeKQ/7a0B2cA==
   dependencies:
     "@babel/runtime" "7.19.4"
     "@cosmjs/stargate" "0.32.0"
