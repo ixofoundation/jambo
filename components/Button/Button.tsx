@@ -73,6 +73,7 @@ const Button = ({
   textCentered = true,
   prefixIcon,
   className,
+  disabled,
   ...other
 }: ButtonProps) => {
   return (
@@ -85,6 +86,7 @@ const Button = ({
         styles[borderColor as typeof BUTTON_BORDER_COLOR.primary],
         rounded ? styles.rounded : styles.squared,
         !textCentered ? styles.textLeft : styles.textCentered,
+        disabled ? styles.disabled : '',
         className,
       )}
       {...other}

@@ -27,7 +27,7 @@
       "@images/*": ["assets/images/*"],
       "@constants/*": ["constants/*"],
       "@contexts/*": ["contexts/*"],
-      "@steps/*": ["steps/*"],
+      "@providers/*": ["providers/*"],
       "@hooks/*": ["hooks/*"]
     }
   },
