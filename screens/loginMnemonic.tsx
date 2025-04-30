@@ -27,11 +27,12 @@ interface LoginWithMnemonicProps {
 
 function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
   const [mnemonic, setMnemonic] = useState('');
+  const [mnemonicFocused, setMnemonicFocused] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+  async function handleLogin() {
     setLoading(true);
     setError(null);
     try {
@@ -227,7 +228,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div
@@ -291,7 +292,10 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
                 }}
                 placeholder='Enter your mnemonic phrase'
                 value={mnemonic}
+                type={mnemonicFocused ? 'text' : 'password'}
                 onChange={(e) => setMnemonic(e.target.value)}
+                onFocus={() => setMnemonicFocused(true)}
+                onBlur={() => setMnemonicFocused(false)}
                 required
               />
             </div>

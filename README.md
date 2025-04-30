@@ -55,6 +55,106 @@ This app leverages several core SDKs to interact with the blockchain, Matrix, an
 
 > ℹ️ These SDKs are configured to work with IXO’s infrastructure but can be extended for other use cases or custom networks.
 
+## 📘 Concepts
+
+This section introduces important terms and technologies used in the JAMBO Claims app. Understanding these concepts will help you navigate and customize the app effectively.
+
+---
+
+### 🔑 Passkeys (WebAuthn)
+
+**Passkeys** are cryptographic credentials created via the WebAuthn standard.
+
+- Linked to biometric sensors (e.g., Face ID, fingerprint).
+- Stored securely in the browser or device.
+- Replace traditional passwords with **passwordless login**.
+- Used in this app for secure, user-friendly authentication of blockchain smart accounts.
+
+> JAMBO Claims uses passkeys to authenticate smart accounts and enable secure DID creation.
+
+### 🪙 Feegrant
+
+**Feegrants** allow a third party (e.g. the IXO team) to pay blockchain gas fees on behalf of a user. This ensures gasless interactions for users who may not hold tokens.
+
+- Used in this app to automatically fund new wallets.
+- Managed via the [`MsgGrantAllowance`](https://docs.cosmos.network/v0.46/modules/feegrant/) Cosmos SDK module.
+
+### 🪪 IID Document (DID)
+
+The **IID Document** is a **decentralized identity document** stored on-chain. It:
+
+- Follows the [W3C DID standard](https://www.w3.org/TR/did-core/).
+- Contains cryptographic keys, metadata, and service endpoints.
+- Is required for role-based access control on the IXO blockchain.
+
+Created and updated using `MsgCreateIidDocument` and `MsgUpdateIidDocument`.
+
+### 🟢 Matrix
+
+Matrix is a **decentralized communication protocol**. It is used in JAMBO Claims for:
+
+- **Secure data handling** between bots and users.
+- **Private data storage** (e.g., claims, bid forms).
+- **Encrypted identity coordination**.
+
+The app interacts with a Matrix homeserver using the official [`matrix-js-sdk`](https://matrix-org.github.io/matrix-js-sdk/).
+
+### 🔐 Matrix Mnemonic
+
+A **Matrix-specific mnemonic** is a randomly generated seed phrase used to:
+
+- Derive Matrix credentials deterministically.
+- Encrypt and decrypt stored data in the Matrix room.
+
+> 🚫 Not the same as the wallet mnemonic. This separation ensures better compartmentalization of access.
+
+### 🏠 Matrix Room
+
+A **Matrix room** is like a private chat space.
+
+- Used as a **secure storage container** for bids data, claims data, and keys.
+- Each claim collection's entity has its own dedicated Matrix room.
+- Access is restricted to users with the correct authorization or encryption key.
+
+### 🔒 Matrix End-to-End Encryption
+
+All sensitive data in Matrix (e.g., claim answers) is **end-to-end encrypted**:
+
+- Only the sender and authorized recipients can decrypt messages.
+- Prevents IXO servers or unauthorized users from viewing content.
+
+### 🔗 Matrix Cross-Signing
+
+**Cross-signing** allows trust across multiple Matrix devices:
+
+- A device signs the public keys of another device.
+- Once trusted, data encrypted by one device can be decrypted by another.
+- Enables seamless multi-device login and data recovery.
+
+> ⚠️ Not mandatory for this app, but important for robust multi-device support and included for demonstration purposes.
+
+### 🤖 Matrix Bid Bot
+
+The **Matrix Bid Bot** manages off-chain bid submission and management.
+
+- Listens to a specific Matrix room per claim collection.
+- Validates bid data submitted by users via SurveyJS forms.
+- Marks bids as **accepted** or **rejected** after admin approval.
+- Maintains decentralized bid data separate from the blockchain.
+
+### 🤖 Matrix Claim Bot
+
+The **Matrix Claim Bot** securely stores sensitive claim data off-chain.
+
+- Accepts form data (e.g., survey answers) and stores it in the Matrix room.
+- Generates a content identifier (CID) for the data.
+- Returns the CID, which is then referenced in the on-chain claim transaction.
+- Ensures data is encrypted and only accessible to authorized evaluators.
+
+> Together, the bots allow scalable and privacy-preserving workflows without putting sensitive data directly on the blockchain.
+
+---
+
 ## 🔐 Login Methods
 
 This app supports three login methods, integrating:
