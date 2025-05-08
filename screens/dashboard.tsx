@@ -224,6 +224,7 @@ export default function BidsDashboard({ did, address, onSign }: BidsDashboardPro
             <div style={{ marginTop: 10 }}>
               {auths.map((a) => (
                 <span
+                  key={a}
                   style={{
                     padding: 8,
                     borderRadius: 10,
