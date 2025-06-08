@@ -42,6 +42,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
   const [selectedBid, setSelectedBid] = useState<Bid | undefined>();
   const bidBotClientRef = useRef<MatrixBidBotClient>();
   const fetchMyBidsRef = useRef<string | undefined>();
+  const selectedRoleRef = useRef<'SA' | 'EA' | undefined>(undefined);
 
   useEffect(
     function () {
@@ -51,6 +52,12 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
     },
     [did, address, collectionId],
   );
+
+  function setRole(role: 'SA' | 'EA') {
+    console.log('setRole::', role, selectedRole);
+    selectedRoleRef.current = role;
+    setSelectedRole(role);
+  }
 
   const survey = useMemo(
     function () {
@@ -77,14 +84,14 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
           const response = await bidBotClient.bid.v1beta1.submitBid(
             collectionId,
             JSON.stringify(sender.data),
-            selectedRole ?? 'SA',
+            selectedRoleRef.current ?? 'SA',
           );
           if (!response.id) {
             throw new Error('Failed to submit bid');
           }
           sender.doComplete();
           setSurveyTemplate(undefined);
-          setSelectedRole('SA');
+          setRole('SA');
           fetchMyBids();
         } catch (err) {
           alert((err as Error).message);
@@ -294,21 +301,21 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
               {/* @ts-ignore */}
               <Button
                 size={BUTTON_SIZE.medium}
-                color={selectedRole === 'SA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
-                bgColor={selectedRole === 'SA' ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.white}
+                color={selectedRoleRef.current === 'SA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
+                bgColor={selectedRoleRef.current === 'SA' ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.white}
                 label='Apply as Service Agent'
                 onClick={function () {
-                  setSelectedRole('SA');
+                  setRole('SA');
                 }}
               />
               {/* @ts-ignore */}
               <Button
                 size={BUTTON_SIZE.medium}
-                color={selectedRole === 'EA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
-                bgColor={selectedRole === 'EA' ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.white}
+                color={selectedRoleRef.current === 'EA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
+                bgColor={selectedRoleRef.current === 'EA' ? BUTTON_BG_COLOR.primary : BUTTON_BG_COLOR.white}
                 label='Apply as Evaluation Agent'
                 onClick={function () {
-                  setSelectedRole('EA');
+                  setRole('EA');
                 }}
               />
             </div>

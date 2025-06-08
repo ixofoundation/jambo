@@ -99,35 +99,41 @@ export default function BidsDashboard({ did, address, onSign }: BidsDashboardPro
         }),
         fetchProtocolEntity(collection.entity),
       ]);
-      setAuths((prevState) =>
-        entity?.owner === address
-          ? prevState.some((v) => v === 'owner')
-            ? prevState
-            : [...prevState, 'owner']
-          : prevState.filter((v) => v !== 'owner'),
-      );
+      if (entity?.owner === address) {
+        if (!auths.includes('owner')) {
+          setAuths((prevState) => [...prevState, 'owner']);
+        }
+      } else {
+        if (auths.includes('owner')) {
+          setAuths((prevState) => prevState.filter((v) => v !== 'owner'));
+        }
+      }
       const hasSubmitClaimAuthz = (granteeGrants.grants as GrantAuthorization[])?.find(
         (g) =>
           g.authorization?.typeUrl === TRANSACTION_TYPES.SubmitClaimAuthorization && g.granter === collection.admin,
       );
-      setAuths((prevState) =>
-        hasSubmitClaimAuthz
-          ? prevState.some((v) => v === TRANSACTION_TYPES.SubmitClaimAuthorization)
-            ? prevState
-            : [...prevState, TRANSACTION_TYPES.SubmitClaimAuthorization]
-          : prevState.filter((v) => v !== TRANSACTION_TYPES.SubmitClaimAuthorization),
-      );
+      if (hasSubmitClaimAuthz) {
+        if (!auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization)) {
+          setAuths((prevState) => [...prevState, TRANSACTION_TYPES.SubmitClaimAuthorization]);
+        }
+      } else {
+        if (auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization)) {
+          setAuths((prevState) => prevState.filter((v) => v !== TRANSACTION_TYPES.SubmitClaimAuthorization));
+        }
+      }
       const hasEvaluateClaimAuthz = (granteeGrants.grants as GrantAuthorization[])?.find(
         (g) =>
           g.authorization?.typeUrl === TRANSACTION_TYPES.EvaluateClaimAuthorization && g.granter === collection.admin,
       );
-      setAuths((prevState) =>
-        hasEvaluateClaimAuthz
-          ? prevState.some((v) => v === TRANSACTION_TYPES.EvaluateClaimAuthorization)
-            ? prevState
-            : [...prevState, TRANSACTION_TYPES.EvaluateClaimAuthorization]
-          : prevState.filter((v) => v !== TRANSACTION_TYPES.EvaluateClaimAuthorization),
-      );
+      if (hasEvaluateClaimAuthz) {
+        if (!auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization)) {
+          setAuths((prevState) => [...prevState, TRANSACTION_TYPES.EvaluateClaimAuthorization]);
+        }
+      } else {
+        if (auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization)) {
+          setAuths((prevState) => prevState.filter((v) => v !== TRANSACTION_TYPES.EvaluateClaimAuthorization));
+        }
+      }
     } catch (errr) {
       // silent fail
     } finally {
