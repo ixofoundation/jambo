@@ -26,6 +26,7 @@
     "cbor": "10.0.3",
     "classnames": "2.3.2",
     "crypto-js": "4.2.0",
+    "eciesjs": "^0.4.15",
     "fido2-lib": "3.5.3",
     "jose": "6.0.10",
     "lodash.memoize": "4.1.2",

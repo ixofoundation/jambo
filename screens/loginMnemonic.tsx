@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { utils } from '@ixo/impactxclient-sdk';
 import { createMatrixApiClient } from '@ixo/matrixclient-sdk';
+import { OfflineSigner } from '@cosmjs/proto-signing';
 
 import { getSecpClient, SecpClient } from '@utils/secp';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
@@ -21,7 +22,6 @@ import {
 } from '@utils/matrix';
 import Loader from '@components/Loader/Loader';
 import useSteps from '@hooks/useSteps';
-import { OfflineSigner } from '@cosmjs/proto-signing';
 import { delay } from '@utils/timestamp';
 import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
@@ -210,7 +210,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
         homeServerUrl: homeServerUrl,
         username: mxUsername,
         password: mxPassword,
-        registrationToken: process.env.NEXT_PUBLIC_MATRIX_REGISTRATION_TOKEN as string,
+        wallet: wallet,
       });
       if (!account?.accessToken) {
         throw new Error('Failed to login or register matrix account, please try again.');

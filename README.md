@@ -26,10 +26,8 @@
     NEXT_PUBLIC_AUTHN_ORIGIN=http://localhost:3000
     NEXT_PUBLIC_AUTHN_RP_ID=localhost
     NEXT_PUBLIC_CHAIN_NETWORK=devnet
-    FEEGRANT_URL=https://feegrant.devnet.ixo.earth
-    FEEGRANT_AUTH="Bearer 1234567890"
-    NEXT_PUBLIC_MATRIX_HOMESERVER_URL='https://devmx.ixo.earth'
-    NEXT_PUBLIC_MATRIX_REGISTRATION_TOKEN='1234567890'
+    NEXT_PUBLIC_EMAIL_OTP_WORKER_URL="https://otp.email.ixo.earth"
+    NEXT_PUBLIC_MATRIX_HOMESERVER_URL="https://devmx.ixo.earth"
     NEXT_PUBLIC_MATRIX_ROOM_BOT_URL="https://rooms.bot.devmx.ixo.earth"
     NEXT_PUBLIC_MATRIX_BID_BOT_URL="https://bid.bot.devmx.ixo.earth"
     NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL="https://claim.bot.devmx.ixo.earth"
@@ -161,7 +159,7 @@ This app supports three login methods, integrating:
 
 - **Blockchain smart accounts**
 - **DID ledgering on the IXO chain**
-- **Feegrant setup**
+- **Feegrant setup via email**
 - **Passkey authentication (WebAuthn)**
 - **Matrix account + encrypted credential management**
 
@@ -174,7 +172,7 @@ All methods ultimately establish a fully functional user session, with DID regis
 These steps are performed (implicitly or explicitly) across all login methods:
 
 1. **Feegrant Check**  
-   Ensure the user's account has an active feegrant. If not, a grant is issued automatically to allow fee-less blockchain transactions.
+   Ensure the user's account has an active feegrant. If not, prompt for the user's email to automatically issue a feegrant to allow (limited) fee-less blockchain transactions.
 
 2. **DID Ledgering**  
    Ensure the user has a valid IID document (decentralized identifier) on the IXO blockchain. If absent, a new one is created using the user's wallet mnemonic.
