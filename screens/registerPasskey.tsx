@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { utils } from '@ixo/impactxclient-sdk';
 import { createMatrixApiClient } from '@ixo/matrixclient-sdk';
+import { OfflineSigner } from '@cosmjs/proto-signing';
 
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { getSecpClient, SecpClient } from '@utils/secp';
 import gqlQuery from '@utils/graphql';
 import { BLOCKSYNC_URL } from '@constants/common';
-import { grantAddressFeegrantIfNotExists } from '@utils/feegrant';
-import { createIidDocumentIfNotExists } from '@utils/did';
+import { checkAddressFeegrant } from '@utils/feegrant';
+import { checkIidDocumentExists, createIidDocument } from '@utils/did';
 import { registerPasskey } from 'lib/authn/register';
 import { encrypt } from '@utils/encryption';
 import { delay } from '@utils/timestamp';
@@ -23,6 +24,19 @@ import {
   mxRegister,
   setupCrossSigning,
 } from '@utils/matrix';
+import useSteps from '@hooks/useSteps';
+import Loader from '@components/Loader/Loader';
+import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
+import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
+
+enum STEPS {
+  loading = 0,
+  mnemonic = 1,
+  pin = 2,
+  email = 3,
+}
+
+const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.pin, STEPS.email];
 
 type Props = {
   onBack: () => void;
@@ -30,17 +44,68 @@ type Props = {
 };
 
 function RegisterPasskey({ onRegister, onBack }: Props) {
-  const [loading, setLoading] = useState(false);
+  const { step, reset, goTo } = useSteps(STEPS_STATE, STEPS.mnemonic);
   const [wallet, setWallet] = useState<SecpClient | null>(null);
-  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(function () {
-    (async function () {
-      const mnemonic = utils.mnemonic.generateMnemonic();
-      const newWallet = await getSecpClient(mnemonic);
-      setWallet(newWallet);
-    })();
+    if (!wallet) {
+      (async function () {
+        const mnemonic = utils.mnemonic.generateMnemonic();
+        const newWallet = await getSecpClient(mnemonic);
+        setWallet(newWallet);
+      })();
+    }
   }, []);
+
+  const handlerRef = useRef<{
+    resolve?: (value: any) => void;
+    reject?: (reason: any) => void;
+  }>({});
+  const addressRef = useRef<string | undefined>(undefined);
+
+  const stepIsLoading = step === STEPS.loading;
+  const stepIsMnemonic = step === STEPS.mnemonic;
+  const stepIsPin = step === STEPS.pin;
+  const stepIsEmail = step === STEPS.email;
+
+  function handleCopyMnemonic() {
+    navigator.clipboard.writeText(wallet?.mnemonic ?? '');
+  }
+
+  async function requestEmail(address: string) {
+    addressRef.current = address;
+    return new Promise(function (resolve, reject) {
+      handlerRef.current = {
+        resolve: function (value: any) {
+          resolve(value);
+          handlerRef.current = {};
+        },
+        reject: function (reason: any) {
+          reject(reason);
+          handlerRef.current = {};
+        },
+      };
+      addressRef.current = address;
+      goTo(STEPS.email);
+    });
+  }
+
+  async function requestPin() {
+    return new Promise(function (resolve, reject) {
+      handlerRef.current = {
+        resolve: function (value: any) {
+          resolve(value);
+          handlerRef.current = {};
+        },
+        reject: function (reason: any) {
+          reject(reason);
+          handlerRef.current = {};
+        },
+      };
+      goTo(STEPS.pin);
+    });
+  }
 
   async function fetchAddressAuthenticator(keyId: string, address: string) {
     const query = `
@@ -68,24 +133,23 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
   }
 
   async function handleRegister() {
-    setLoading(true);
+    goTo(STEPS.loading);
     try {
       if (!wallet?.baseAccount?.address) {
         throw new Error('No wallet found');
       }
-      if (!password || password.length < 6) {
-        throw new Error('Password must be at least 8 characters long');
-      }
       const address = wallet.baseAccount.address;
-
       // =================================================================================================
-      // Feegrant
+      // FEEGRANT (EMAIL OTP)
       // =================================================================================================
-      const hasFeegrant = await grantAddressFeegrantIfNotExists({
-        address: address,
-      });
-      if (!hasFeegrant) {
-        throw new Error('Failed to grant your feegrant, please try again later.');
+      const feegrant = await checkAddressFeegrant(address);
+      if (!feegrant) {
+        (await requestEmail(address)) as string;
+        goTo(STEPS.loading);
+        const feegrant = await checkAddressFeegrant(address);
+        if (!feegrant) {
+          throw new Error('Failed to grant feegrant, please try again.');
+        }
       }
 
       // =================================================================================================
@@ -103,12 +167,15 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       // =================================================================================================
       // DID
       // =================================================================================================
-      const did = await createIidDocumentIfNotExists({
-        address: address,
-        offlineSigner: wallet,
-      });
-      if (!did) {
-        throw new Error('Failed to create did, please try again.');
+      const did = utils.did.generateSecpDid(address);
+      const didExists = await checkIidDocumentExists(did);
+      if (!didExists) {
+        await createIidDocument(did, wallet as OfflineSigner);
+        await delay(500);
+        const didExists = await checkIidDocumentExists(did);
+        if (!didExists) {
+          throw new Error('Failed to create did, please try again.');
+        }
       }
 
       // =================================================================================================
@@ -196,8 +263,10 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
         }
       }
 
+      const pin = (await requestPin()) as string;
+
       // encrypt and store matrix mnemonic
-      const encryptedMnemonic = encrypt(mxMnemonic, password);
+      const encryptedMnemonic = encrypt(mxMnemonic, pin);
       const storeEncryptedMnemonicResponse = await fetch(
         `${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
         {
@@ -222,11 +291,47 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
         did: utils.did.generateSecpDid(wallet!.baseAccount.address),
         authenticatorId: authenticator?.id,
       });
-    } catch (error: any) {
-      console.error('handleRegister::', error.message);
-      alert('Error during registration: ' + error.message);
+    } catch (err: any) {
+      console.error('Register error:', err);
+      setError((typeof err === 'string' ? err : err.message) || 'Failed to register. Please try again.');
     } finally {
-      setLoading(false);
+      goTo(STEPS.mnemonic);
+    }
+  }
+
+  function handleEmailSuccess() {
+    try {
+      handlerRef.current?.resolve?.(true);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handleEmailError(error: string) {
+    try {
+      handlerRef.current?.reject?.(error);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handlePinSuccess(pin: string) {
+    try {
+      handlerRef.current?.resolve?.(pin);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handlePinError(error: string) {
+    try {
+      handlerRef.current?.reject?.(error);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
     }
   }
 
@@ -263,90 +368,117 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
             Register Passkey
           </h2>
 
-          <p
-            style={{
-              fontSize: '14px',
-              color: '#868e96',
-              marginBottom: '20px',
-            }}
-          >
-            This is the only time we are showing you the corresponding mnemonic for you to copy if you want to safely
-            back up the mnemonic or test the login with mnemonic flow.
-          </p>
-          <p
-            style={{
-              fontSize: '14px',
-              color: '#868e96',
-              marginBottom: '20px',
-            }}
-          >
-            Please note this is just for testing/demo purposes!
-          </p>
-
-          <p
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              marginBottom: '20px',
-            }}
-          >
-            {wallet?.mnemonic ?? 'loading...'}
-          </p>
-
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              marginBottom: '24px',
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                Encryption Password
-              </label>
-              <input
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-                type='password'
-                placeholder='Password for mnemonic encryption'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+          {stepIsLoading ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
+              }}
+            >
+              {/* @ts-ignore */}
+              <Loader />
+              <p style={{ marginLeft: '16px' }}>Loading...</p>
             </div>
-          </div>
+          ) : stepIsMnemonic ? (
+            <>
+              <p>
+                This is the only chance you have have to{' '}
+                <span
+                  style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}
+                  onClick={handleCopyMnemonic}
+                >
+                  copy
+                </span>{' '}
+                your mnemonic if you want to back it up or test the mnemonic-login flow (just for testing/demo
+                purposes).
+              </p>
 
-          {/* @ts-ignore */}
-          <Button
-            label='Register Passkey'
-            color={BUTTON_COLOR.white}
-            size={BUTTON_SIZE.mediumLarge}
-            bgColor={BUTTON_BG_COLOR.primary}
-            onClick={handleRegister}
-            disabled={loading || !password || password.length < 6}
-          />
-          <div style={{ marginTop: '16px' }} />
-          {/* @ts-ignore */}
-          <Button
-            label='Back'
-            color={BUTTON_COLOR.primary}
-            size={BUTTON_SIZE.mediumLarge}
-            bgColor={BUTTON_BG_COLOR.white}
-            onClick={onBack}
-            disabled={loading}
-          />
+              <div style={{ marginBottom: '16px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '4px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                  }}
+                >
+                  Mnemonic Phrase
+                </label>
+                <div
+                  style={{
+                    marginBottom: '16px',
+                    padding: '8px 12px',
+                    border: '1px solid #ced4da',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      margin: 0,
+                      padding: 0,
+                    }}
+                  >
+                    {wallet?.mnemonic ?? 'loading...'}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <p style={{ fontSize: '12px' }}>
+                  <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>Warning:</span> If you copy your
+                  mnemonic, store it somewhere safe and do not share it with anyone.
+                </p>
+              </div>
+
+              {error && (
+                <p
+                  style={{
+                    color: 'red',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {/* @ts-ignore */}
+                <Button
+                  label='Back'
+                  color={BUTTON_COLOR.primary}
+                  size={BUTTON_SIZE.mediumLarge}
+                  bgColor={BUTTON_BG_COLOR.white}
+                  onClick={onBack}
+                  disabled={stepIsLoading}
+                />
+                {/* @ts-ignore */}
+                <Button
+                  label={'Next'}
+                  onClick={handleRegister}
+                  disabled={stepIsLoading}
+                  color={BUTTON_COLOR.white}
+                  size={BUTTON_SIZE.mediumLarge}
+                  bgColor={BUTTON_BG_COLOR.primary}
+                />
+              </div>
+            </>
+          ) : stepIsEmail ? (
+            // @ts-ignore
+            <EmailFeegrantForm
+              address={addressRef.current as string}
+              onSuccess={handleEmailSuccess}
+              onError={handleEmailError}
+            />
+          ) : stepIsPin ? (
+            // @ts-ignore
+            <MatrixPinForm onSuccess={handlePinSuccess} onError={handlePinError} />
+          ) : null}
         </div>
       </div>
     </div>

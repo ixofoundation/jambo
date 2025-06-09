@@ -146,6 +146,7 @@ export default function HomePage() {
         goTo(STEPS.mnemonic);
         break;
       default:
+        console.error('Invalid method', method);
         break;
     }
   }
@@ -153,18 +154,24 @@ export default function HomePage() {
   return (
     <>
       {step === STEPS.auth ? (
+        // @ts-ignore
         <LoginMethodSelector onSelectMethod={handleSelectMethod} />
       ) : step === STEPS.register ? (
+        // @ts-ignore
         <RegisterPasskey onRegister={onRegisterPasskey} onBack={() => goBack()} />
       ) : step === STEPS.login ? (
+        // @ts-ignore
         <LoginPasskey onLogin={onLoginPasskey} onBack={() => goBack()} />
       ) : step === STEPS.mnemonic ? (
+        // @ts-ignore
         <LoginWithMnemonic onLogin={onLoginMnemonic} onBack={() => goBack()} />
       ) : step === STEPS.dashboard ? (
+        // @ts-ignore
         <Dashboard did={did!} address={address!} onSign={onSign} />
       ) : (
         <>
           <h2>Something went wrong.</h2>
+          {/* @ts-ignore */}
           <Button
             color={BUTTON_COLOR.primary}
             size={BUTTON_SIZE.medium}

@@ -18,51 +18,69 @@ export const FEEGRANT_TYPES: Record<FeegrantTypes, string> = {
 };
 
 /**
- * Grants feegrant to the address via the IXO feegrant api
+ * Grants feegrant to the address via email OTP verification
  * @param address - The address to grant feegrant to
+ * @param email - The email address for OTP verification
+ * @param otp - The OTP code from email
  * @returns The response from the feegrant grant
  */
-export async function grantAddressFeegrant(address: string) {
+export async function grantAddressFeegrantWithEmail(address: string, email: string, otp: string) {
+  // Import here to avoid circular dependency
+  const { verifyOTP } = await import('./emailOtp');
+
   try {
-    const response = await fetch(`/api/feegrant/grant`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        address,
-      }),
+    const response = await verifyOTP({
+      email,
+      ixoAddress: address,
+      otp,
     });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(`grantAddressFeegrant::Failed to grant feegrant - ${JSON.stringify(error)}`);
-    }
-    const data = await response.json().catch(() => ({}));
-    if (data.code !== 0) {
-      throw new Error(`grantAddressFeegrant::Feegrant failed with code ${data.code} - ${JSON.stringify(data)}`);
-    }
-    return data;
+    return response;
   } catch (error) {
-    console.error('grantAddressFeegrant::', (error as Error).message);
-    return undefined;
+    console.error('grantAddressFeegrantWithEmail::', (error as Error).message);
+    throw error;
   }
 }
 
 /**
- * Grants feegrant to the address via the IXO feegrant api if the account does not have a valid feegrant
+ * Grants feegrant to the address via email OTP if the account does not have a valid feegrant
+ * This function now requires email verification instead of the old direct API call
  * @param address - The address to grant feegrant to
- * @returns The response from the feegrant grant
+ * @param email - The email address for verification (optional, used only if feegrant needed)
+ * @param otp - The OTP code (optional, used only if feegrant needed)
+ * @returns True if feegrant exists or was successfully granted
  */
-export async function grantAddressFeegrantIfNotExists({ address }: { address: string }) {
+export async function grantAddressFeegrantIfNotExists({
+  address,
+  email,
+  otp,
+}: {
+  address: string;
+  email?: string;
+  otp?: string;
+}) {
   if (!address) {
     throw new Error('Address is required to grant feegrant - who should be sponsored?');
   }
+
   let hasFeegrant = await checkAddressFeegrant(address);
+
   if (!hasFeegrant) {
-    await grantAddressFeegrant(address);
+    if (!email || !otp) {
+      throw new Error('Email and OTP are required to grant feegrant for new addresses');
+    }
+    await grantAddressFeegrantWithEmail(address, email, otp);
+    hasFeegrant = await checkAddressFeegrant(address);
   }
-  hasFeegrant = await checkAddressFeegrant(address);
+
   return hasFeegrant;
+}
+
+/**
+ * Legacy function - kept for backward compatibility but now throws error
+ * @deprecated Use grantAddressFeegrantWithEmail instead
+ */
+export async function grantAddressFeegrant(address: string) {
+  throw new Error('Direct feegrant granting is no longer supported. Please use email OTP verification.');
 }
 
 /**

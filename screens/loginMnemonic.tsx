@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { utils } from '@ixo/impactxclient-sdk';
 import { createMatrixApiClient } from '@ixo/matrixclient-sdk';
 
 import { getSecpClient, SecpClient } from '@utils/secp';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import { grantAddressFeegrantIfNotExists } from '@utils/feegrant';
-import { createIidDocumentIfNotExists } from '@utils/did';
+import { checkAddressFeegrant } from '@utils/feegrant';
+import { checkIidDocumentExists, createIidDocument } from '@utils/did';
 import { decrypt, encrypt } from '@utils/encryption';
 import {
   checkIsUsernameAvailable,
@@ -19,6 +19,21 @@ import {
   logoutMatrixClient,
   setupCrossSigning,
 } from '@utils/matrix';
+import Loader from '@components/Loader/Loader';
+import useSteps from '@hooks/useSteps';
+import { OfflineSigner } from '@cosmjs/proto-signing';
+import { delay } from '@utils/timestamp';
+import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
+import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
+
+enum STEPS {
+  loading = 0,
+  mnemonic = 1,
+  pin = 2,
+  email = 3,
+}
+
+const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.pin, STEPS.email];
 
 interface LoginWithMnemonicProps {
   onBack: () => void;
@@ -26,45 +41,104 @@ interface LoginWithMnemonicProps {
 }
 
 function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
+  const { step, reset, goTo } = useSteps(STEPS_STATE, STEPS.mnemonic);
   const [mnemonic, setMnemonic] = useState('');
   const [mnemonicFocused, setMnemonicFocused] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handlerRef = useRef<{
+    resolve?: (value: any) => void;
+    reject?: (reason: any) => void;
+  }>({});
+  const addressRef = useRef<string | undefined>(undefined);
+  const encryptedMnemonicRef = useRef<string | undefined>(undefined);
+
+  const stepIsLoading = step === STEPS.loading;
+  const stepIsMnemonic = step === STEPS.mnemonic;
+  const stepIsPin = step === STEPS.pin;
+  const stepIsEmail = step === STEPS.email;
+
+  function handleGenerateMnemonic() {
+    const newMnemonic = utils.mnemonic.generateMnemonic(12);
+    setMnemonic(newMnemonic);
+    navigator.clipboard.writeText(newMnemonic);
+    setMnemonicFocused(true);
+    setTimeout(function () {
+      setMnemonicFocused(false);
+    }, 1000);
+  }
+
+  async function requestEmail(address: string) {
+    addressRef.current = address;
+    return new Promise(function (resolve, reject) {
+      handlerRef.current = {
+        resolve: function (value: any) {
+          resolve(value);
+          handlerRef.current = {};
+        },
+        reject: function (reason: any) {
+          reject(reason);
+          handlerRef.current = {};
+        },
+      };
+      addressRef.current = address;
+      goTo(STEPS.email);
+    });
+  }
+
+  async function requestPin(encryptedMnemonic?: string) {
+    encryptedMnemonicRef.current = undefined;
+    return new Promise(function (resolve, reject) {
+      handlerRef.current = {
+        resolve: function (value: any) {
+          resolve(value);
+          handlerRef.current = {};
+        },
+        reject: function (reason: any) {
+          reject(reason);
+          handlerRef.current = {};
+        },
+      };
+      encryptedMnemonicRef.current = encryptedMnemonic;
+      goTo(STEPS.pin);
+    });
+  }
+
   async function handleLogin() {
-    setLoading(true);
+    goTo(STEPS.loading);
     setError(null);
     try {
       if (!mnemonic) {
         throw new Error('Please enter your mnemonic phrase');
       }
-      if (!password) {
-        throw new Error('Please enter a password to decrypt your mnemonic');
-      }
       // Create wallet from mnemonic
       const wallet = await getSecpClient(mnemonic);
       const address = wallet.baseAccount.address;
+      const did = utils.did.generateSecpDid(address);
+      const didExists = await checkIidDocumentExists(did);
+      if (!didExists) {
+        // =================================================================================================
+        // FEEGRANT (EMAIL OTP)
+        // =================================================================================================
+        const feegrant = await checkAddressFeegrant(address);
+        if (!feegrant) {
+          (await requestEmail(address)) as string;
+          goTo(STEPS.loading);
+          const feegrant = await checkAddressFeegrant(address);
+          if (!feegrant) {
+            throw new Error('Failed to grant feegrant, please try again.');
+          }
+        }
 
-      // =================================================================================================
-      // Feegrant
-      // =================================================================================================
-      const hasFeegrant = await grantAddressFeegrantIfNotExists({
-        address: address,
-      });
-      if (!hasFeegrant) {
-        throw new Error('Failed to grant your feegrant, please try again later.');
-      }
-
-      // =================================================================================================
-      // DID
-      // =================================================================================================
-      const did = await createIidDocumentIfNotExists({
-        address: address,
-        offlineSigner: wallet,
-      });
-      if (!did) {
-        throw new Error('Failed to create did, please try again.');
+        // =================================================================================================
+        // DID
+        // =================================================================================================
+        await createIidDocument(did, wallet as OfflineSigner);
+        await delay(500);
+        const didExists = await checkIidDocumentExists(did);
+        if (!didExists) {
+          throw new Error('Failed to create did, please try again.');
+        }
       }
 
       // =================================================================================================
@@ -83,6 +157,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       let mxRoomAlias: string = generateUserRoomAliasFromAddress(address, homeServerUrl);
       let mxRoomId: string;
 
+      let pin: string = '';
       // existing account - fetch matrix mnemonic
       if (!isUsernameAvailable) {
         // Generate challenge (ISO timestamp and base64 encode it)
@@ -113,15 +188,19 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
           }
         } else {
           const { encryptedMnemonic, roomId } = await response.json();
-          mxMnemonic = decrypt(encryptedMnemonic, password);
+          pin = (await requestPin(encryptedMnemonic)) as string;
+          mxMnemonic = decrypt(encryptedMnemonic, pin);
           if (!mxMnemonic) {
-            throw new Error('Failed to decrypt mnemonic - incorrect password');
+            throw new Error('Failed to decrypt mnemonic - incorrect pin');
           }
           mxMnemonicSource = 'decrypted';
           mxPassword = generatePasswordFromMnemonic(mxMnemonic);
           mxPassphrase = generatePassphraseFromMnemonic(mxMnemonic);
           mxRoomId = roomId;
         }
+      }
+      if (!pin) {
+        pin = (await requestPin()) as string;
       }
 
       // clear residual matrix data
@@ -194,7 +273,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
           }
         }
         // store matrix mnemonic
-        const encryptedMnemonic = encrypt(mxMnemonic, password);
+        const encryptedMnemonic = encrypt(mxMnemonic, pin);
         const storeEncryptedMnemonicResponse = await fetch(
           `${homeServerUrl}/_matrix/client/r0/rooms/${mxRoomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
           {
@@ -223,10 +302,46 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       });
     } catch (err: any) {
       console.error('Login error:', err);
-      alert(err.message || 'Failed to login. Please try again.');
-      setError(err.message || 'Failed to login. Please try again.');
+      // alert(err.message || 'Failed to login. Please try again.');
+      setError((typeof err === 'string' ? err : err.message) || 'Failed to login. Please try again.');
     } finally {
-      setLoading(false);
+      goTo(STEPS.mnemonic);
+    }
+  }
+
+  function handleEmailSuccess() {
+    try {
+      handlerRef.current?.resolve?.(true);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handleEmailError(error: string) {
+    try {
+      handlerRef.current?.reject?.(error);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handlePinSuccess(pin: string) {
+    try {
+      handlerRef.current?.resolve?.(pin);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
+    }
+  }
+
+  function handlePinError(error: string) {
+    try {
+      handlerRef.current?.reject?.(error);
+    } catch (error) {
+      setError('Something went wrong. Please try again.');
+      reset();
     }
   }
 
@@ -262,101 +377,121 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
           >
             Login with Mnemonic
           </h2>
-          <p
-            style={{
-              fontWeight: 500,
-              marginBottom: '24px',
-            }}
-          >
-            Enter your mnemonic phrase to login
-          </p>
 
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                Mnemonic
-              </label>
-              <input
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-                placeholder='Enter your mnemonic phrase'
-                value={mnemonic}
-                type={mnemonicFocused ? 'text' : 'password'}
-                onChange={(e) => setMnemonic(e.target.value)}
-                onFocus={() => setMnemonicFocused(true)}
-                onBlur={() => setMnemonicFocused(false)}
-                required
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '4px',
-                  fontSize: '14px',
-                }}
-              >
-                Encryption Password
-              </label>
-              <input
-                type='password'
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                }}
-                placeholder='Password for mnemonic encryption'
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p
+          {stepIsLoading ? (
+            <div
               style={{
-                color: 'red',
-                fontSize: '14px',
-                marginBottom: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '100%',
               }}
             >
-              {error}
-            </p>
-          )}
+              {/* @ts-ignore */}
+              <Loader />
+              <p style={{ marginLeft: '16px' }}>Loading...</p>
+            </div>
+          ) : stepIsMnemonic ? (
+            <>
+              <p>
+                Enter your mnemonic phrase to login or generate a{' '}
+                <span
+                  style={{
+                    color: 'var(--primary-color)',
+                    textDecoration: 'underline',
+                  }}
+                  onClick={handleGenerateMnemonic}
+                >
+                  new mnemonic
+                </span>
+              </p>
 
-          {/* @ts-ignore */}
-          <Button
-            label={loading ? 'Logging in...' : 'Login'}
-            onClick={handleLogin}
-            disabled={loading}
-            color={BUTTON_COLOR.white}
-            size={BUTTON_SIZE.mediumLarge}
-            bgColor={BUTTON_BG_COLOR.primary}
-          />
-          <div style={{ marginTop: '16px' }} />
-          {/* @ts-ignore */}
-          <Button
-            label='Back'
-            color={BUTTON_COLOR.primary}
-            size={BUTTON_SIZE.mediumLarge}
-            bgColor={BUTTON_BG_COLOR.white}
-            onClick={onBack}
-            disabled={loading}
-          />
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    Mnemonic Phrase
+                  </label>
+                  <input
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #ced4da',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      marginBottom: '16px',
+                    }}
+                    placeholder={'Enter your mnemonic phrase'}
+                    value={mnemonic}
+                    type={mnemonicFocused ? 'text' : 'password'}
+                    onChange={(e) => setMnemonic(e.target.value)}
+                    onFocus={() => setMnemonicFocused(true)}
+                    onBlur={() => setMnemonicFocused(false)}
+                    required
+                  />
+                </div>
+
+                <p style={{ fontSize: '12px' }}>
+                  <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>Warning:</span> Your mnemonic is the
+                  only way to access your account and should be stored somewhere safe (do not share it with anyone).
+                </p>
+              </div>
+
+              {error && (
+                <p
+                  style={{
+                    color: 'red',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {error}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {/* @ts-ignore */}
+                <Button
+                  label='Back'
+                  color={BUTTON_COLOR.primary}
+                  size={BUTTON_SIZE.mediumLarge}
+                  bgColor={BUTTON_BG_COLOR.white}
+                  onClick={onBack}
+                  disabled={stepIsLoading}
+                />
+                {/* @ts-ignore */}
+                <Button
+                  label={'Next'}
+                  onClick={handleLogin}
+                  disabled={stepIsLoading}
+                  color={BUTTON_COLOR.white}
+                  size={BUTTON_SIZE.mediumLarge}
+                  bgColor={BUTTON_BG_COLOR.primary}
+                />
+              </div>
+            </>
+          ) : stepIsEmail ? (
+            // @ts-ignore
+            <EmailFeegrantForm
+              address={addressRef.current as string}
+              onSuccess={handleEmailSuccess}
+              onError={handleEmailError}
+            />
+          ) : stepIsPin ? (
+            // @ts-ignore
+            <MatrixPinForm
+              encryptedMnemonic={encryptedMnemonicRef.current}
+              onSuccess={handlePinSuccess}
+              onError={handlePinError}
+            />
+          ) : null}
         </div>
       </div>
     </div>
