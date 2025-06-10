@@ -38,7 +38,7 @@ export async function requestOTP(params: OTPRequest): Promise<OTPResponse> {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_EMAIL_OTP_WORKER_URL}/request-otp`, {
+    const response = await fetch('/api/email/request-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export async function verifyOTP(params: OTPVerification): Promise<OTPResponse> {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_EMAIL_OTP_WORKER_URL}/verify-otp`, {
+    const response = await fetch('/api/email/verify-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export async function queryOTPStatus(params: OTPRequest): Promise<OTPStatusRespo
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_EMAIL_OTP_WORKER_URL}/query-otp`, {
+    const response = await fetch('/api/email/query-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

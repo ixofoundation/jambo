@@ -103,7 +103,7 @@ interface UserCreationResponse {
  * @returns Public key information for encryption
  */
 export async function getPublicKeyForEncryption(): Promise<PublicKeyResponse> {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL}/public-key`, {
+  const response = await fetch('/api/matrix/public-key', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export async function createUserAccountWithPasskey(
     authnResult,
   };
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL}/user/create`, {
+  const response = await fetch('/api/matrix/create-user', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -216,7 +216,7 @@ export async function createUserAccountWithSecp(
     },
   };
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL}/user/create`, {
+  const response = await fetch('/api/matrix/create-user', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
