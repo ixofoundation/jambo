@@ -1,7 +1,7 @@
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 
 interface LoginMethodSelectorProps {
-  onSelectMethod: (method: 'register' | 'login' | 'mnemonic') => void;
+  onSelectMethod: (method: 'register' | 'login' | 'mnemonic' | 'signx') => void;
 }
 
 function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
@@ -15,6 +15,10 @@ function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
 
   function handleMnemonicClick() {
     onSelectMethod('mnemonic');
+  }
+
+  function handleSignXClick() {
+    onSelectMethod('signx');
   }
 
   return (
@@ -79,6 +83,14 @@ function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
               size={BUTTON_SIZE.mediumLarge}
               bgColor={BUTTON_BG_COLOR.primary}
               onClick={handleMnemonicClick}
+            />
+            {/* @ts-ignore */}
+            <Button
+              label='Login with SignX'
+              color={BUTTON_COLOR.white}
+              size={BUTTON_SIZE.mediumLarge}
+              bgColor={BUTTON_BG_COLOR.primary}
+              onClick={handleSignXClick}
             />
           </div>
         </div>

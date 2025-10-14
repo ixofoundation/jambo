@@ -41,6 +41,11 @@ export function convertIpfsToWeb3StorageUrl(url: string) {
       parsedUrl.pathname = '/';
       const web3StorageUrl = parsedUrl.toString();
       return web3StorageUrl;
+    } else if (parsedUrl.hostname === 'ipfs.gateway.ixo.world' && !parsedUrl.pathname.startsWith('/ipfs/')) {
+      const cid = parsedUrl.pathname.split('/')[parsedUrl.pathname.split('/').length - 1];
+      parsedUrl.pathname = `/ipfs/${cid}`;
+      const web3StorageUrl = parsedUrl.toString();
+      return web3StorageUrl;
     }
   } catch (error) {
     console.error('Invalid URL:', url);
@@ -59,11 +64,14 @@ export function getServiceEndpoint(url = '', services: EntityService[] = []) {
   }
   const service = url.substring(0, pos);
   const endUrl = url.substring(pos + 1);
-  const serviceEndpoint = services.find((s: any) => {
+  let serviceEndpoint = services.find((s: any) => {
     const posHash = s.id.indexOf('#');
     const id = s.id.substring(posHash + 1);
     return id === service;
   })?.serviceEndpoint;
+  if (!serviceEndpoint?.endsWith('/')) {
+    serviceEndpoint = serviceEndpoint + '/';
+  }
   if (!serviceEndpoint) {
     return convertIpfsToWeb3StorageUrl(url);
   }
@@ -73,6 +81,7 @@ export function getServiceEndpoint(url = '', services: EntityService[] = []) {
 
 export const getAdditionalInfo = async (url: string, tag?: string) => {
   const cleanUrl = cleanUrlString(url);
+  console.log('cleanUrl', cleanUrl);
   const res = await fetch(cleanUrl, {
     method: 'GET',
     headers: {
@@ -84,5 +93,6 @@ export const getAdditionalInfo = async (url: string, tag?: string) => {
     throw res.statusText;
   }
   const data = await res.json();
+  console.log('data', data);
   return data;
 };

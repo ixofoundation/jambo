@@ -40,6 +40,8 @@ interface MyClaimsProps {
 type MatrixClaimBotClient = ReturnType<typeof createMatrixClaimBotClient>;
 
 export default function MyClaims({ did, address, collectionId, onSign }: MyClaimsProps) {
+  console.log('secret.accessToken', secret.accessToken);
+
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
       }
 
       const surveyTemplateData = JSON.parse(surveyTemplate);
-      const survey = new Model(surveyTemplateData?.question);
+      const survey = new Model(surveyTemplateData?.question ?? surveyTemplateData);
       survey.applyTheme(themeJson);
       survey.allowCompleteSurveyAutomatic = false;
 
@@ -189,19 +191,23 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
 
   async function handleNewClaimPress() {
     try {
+      console.log('handleNewClaimPress');
       if (!collectionId) {
         throw new Error('Collection ID is required');
       }
       const collection = await fetchCollectionByCollectionId(collectionId);
       const protocolEntity = await fetchProtocolEntity(collection.protocol);
-      const formServiceEndpoints = [protocolEntity]
-        .concat([])
-        .filter((e) => e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate'))?.serviceEndpoint);
+      const formServiceEndpoints = [protocolEntity].filter(
+        (e) =>
+          e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'))
+            ?.serviceEndpoint,
+      );
       const formResponses = await Promise.allSettled(
         formServiceEndpoints.map((e) =>
           getAdditionalInfo(
             getServiceEndpoint(
-              e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate')).serviceEndpoint,
+              e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'))
+                .serviceEndpoint,
               e.service,
             ),
           ),
@@ -211,8 +217,8 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
         if (response.status !== 'fulfilled') {
           return acc;
         }
-        const key = formServiceEndpoints[index].linkedResource.find((r: any) =>
-          r?.id?.includes('#surveyTemplate'),
+        const key = formServiceEndpoints[index].linkedResource.find(
+          (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'),
         ).serviceEndpoint;
         return { ...acc, [key]: JSON.stringify(response.value) };
       }, {});
@@ -235,17 +241,17 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {!!error && <p style={{ color: 'red' }}>{error}</p>}
+        {/* @ts-ignore */}
+        <Button
+          size={BUTTON_SIZE.medium}
+          color={BUTTON_COLOR.white}
+          bgColor={BUTTON_BG_COLOR.primary}
+          label='New Claim'
+          onClick={handleNewClaimPress}
+        />
         {!claims?.length ? (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <p>No claims found</p>
-            {/* @ts-ignore */}
-            <Button
-              size={BUTTON_SIZE.medium}
-              color={BUTTON_COLOR.white}
-              bgColor={BUTTON_BG_COLOR.primary}
-              label='New Claim'
-              onClick={handleNewClaimPress}
-            />
           </div>
         ) : (
           claims.map((claim) => (

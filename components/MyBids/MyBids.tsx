@@ -79,6 +79,8 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
         survey.onCompleting.remove(preventComplete);
 
         survey.completeText = 'Submitting...';
+        console.log('sender.data', sender.data);
+        // throw new Error('test');
         const bidBotClient = getBidBotClient();
         try {
           const response = await bidBotClient.bid.v1beta1.submitBid(
@@ -140,40 +142,52 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
     }
   }
 
-  async function handleNewBidPress() {
+  async function handleNewBidPress(role: 'SA' | 'EA') {
     try {
       if (!collectionId) {
         throw new Error('Collection ID is required');
       }
+      setRole(role);
       const collection = await fetchCollectionByCollectionId(collectionId);
       const offerEntities = await fetchProtocolEntity(collection.protocol);
+      console.log('offerEntities', offerEntities);
       const formServiceEndpoints = []
         .concat(offerEntities)
         // @ts-ignore
-        .filter((e) => e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate'))?.serviceEndpoint);
+        .filter(
+          (e) =>
+            (e as any)?.linkedResource?.find(
+              (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes(role === 'SA' ? '#bco' : '#bev'),
+            )?.serviceEndpoint,
+        );
+      console.log('formServiceEndpoints', formServiceEndpoints);
       const formResponses = await Promise.allSettled(
         formServiceEndpoints.map((e) =>
           getAdditionalInfo(
             getServiceEndpoint(
               // @ts-ignore
-              e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate')).serviceEndpoint,
+              e?.linkedResource?.find(
+                (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes(role === 'SA' ? '#bco' : '#bev'),
+              )?.serviceEndpoint,
               // @ts-ignore
               e.service,
             ),
           ),
         ),
       );
+      console.log('formResponses', formResponses);
       const forms = formResponses.reduce((acc, response, index) => {
         if (response.status !== 'fulfilled') {
           return acc;
         }
         // @ts-ignore
-        const key = formServiceEndpoints[index].linkedResource.find((r: any) =>
-          r?.id?.includes('#surveyTemplate'),
+        const key = formServiceEndpoints[index].linkedResource.find(
+          (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes(role === 'SA' ? '#bco' : '#bev'),
         ).serviceEndpoint;
         return { ...acc, [key]: JSON.stringify(response.value) };
       }, {});
-      setSurveyTemplate(Object.entries(forms)[0][1] as string);
+      console.log('forms', forms);
+      setSurveyTemplate(Object.entries(forms)[0][1] as any as string);
     } catch (err) {
       console.error(err);
       setError((err as Error)?.message);
@@ -196,13 +210,22 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <p>No bids found</p>
             {/* @ts-ignore */}
-            <Button
-              size={BUTTON_SIZE.medium}
-              color={BUTTON_COLOR.white}
-              bgColor={BUTTON_BG_COLOR.primary}
-              label='New Bid'
-              onClick={handleNewBidPress}
-            />
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '16px' }}>
+              <Button
+                size={BUTTON_SIZE.medium}
+                color={BUTTON_COLOR.white}
+                bgColor={BUTTON_BG_COLOR.primary}
+                label='New bco'
+                onClick={() => handleNewBidPress('SA')}
+              />
+              <Button
+                size={BUTTON_SIZE.medium}
+                color={BUTTON_COLOR.white}
+                bgColor={BUTTON_BG_COLOR.primary}
+                label='New bev'
+                onClick={() => handleNewBidPress('EA')}
+              />
+            </div>
           </div>
         ) : (
           bids.map((bid) => (
@@ -297,8 +320,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
             {/* @ts-ignore */}
             <Survey model={survey} />
 
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-              {/* @ts-ignore */}
+            {/* <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 size={BUTTON_SIZE.medium}
                 color={selectedRoleRef.current === 'SA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
@@ -308,7 +330,6 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
                   setRole('SA');
                 }}
               />
-              {/* @ts-ignore */}
               <Button
                 size={BUTTON_SIZE.medium}
                 color={selectedRoleRef.current === 'EA' ? BUTTON_COLOR.white : BUTTON_COLOR.primary}
@@ -318,7 +339,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
                   setRole('EA');
                 }}
               />
-            </div>
+            </div> */}
           </div>
         </div>
       )}
