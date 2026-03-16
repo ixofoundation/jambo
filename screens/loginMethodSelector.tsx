@@ -69,22 +69,6 @@ function LoginMethodSelector() {
               bgColor={BUTTON_BG_COLOR.white}
               onClick={handleRegisterClick}
             />
-            {/* @ts-ignore */}
-            {/* <Button
-              label='Login with Mnemonic'
-              color={BUTTON_COLOR.grey}
-              size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.white}
-              onClick={handleMnemonicClick}
-            /> */}
-            {/* @ts-ignore */}
-            {/* <Button
-              label='Login with SignX'
-              color={BUTTON_COLOR.grey}
-              size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.white}
-              onClick={handleSignXClick}
-            /> */}
           </div>
         </div>
       </div>

@@ -39,8 +39,7 @@ function generateRandomColor(): string {
 }
 
 function generateBlobs(): { blobs: BlobConfig[]; baseColor: string } {
-  // const count = Math.floor(Math.random() * 6) + 3;
-  const count = 8;
+  const count = 5;
   const blobs = Array.from({ length: count }, () => {
     const size = randInRange(60, 100);
     return {
@@ -70,7 +69,7 @@ function ColorBlobBackground({ children, style }: ColorBlobBackgroundProps) {
           inset: 0,
           zIndex: 0,
           backgroundColor: baseColor,
-          filter: 'blur(60px)',
+          filter: 'blur(40px)',
         }}
       >
         {blobs.map((blob, i) => (

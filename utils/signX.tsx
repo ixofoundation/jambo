@@ -68,8 +68,6 @@ export const initializeSignX = async (
     });
     // removeModal();
 
-    console.log({ eventData });
-
     return {
       name: eventData.data.name,
       address: eventData.data.address,
@@ -197,8 +195,6 @@ export const signXDataPass = async (jsonData: any, type: string): Promise<any> =
       data: jsonData,
       type,
     });
-    console.log({ data });
-
     removeModal = renderModal(
       // @ts-ignore
       <SignXModal title='SignX Data Pass' data={data} timeout={signXClient.timeout} transactSequence={1} />,

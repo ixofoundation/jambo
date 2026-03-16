@@ -87,20 +87,25 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     setAuths((prev) => prev.filter((a) => a !== auth));
   }
 
+  const cancelledRef = useRef(false);
+
   useEffect(() => {
+    cancelledRef.current = false;
     if (address && claimCollectionIdRef.current) {
       checkAuthz();
       fetchBids();
       fetchMyClaims();
     }
     return () => {
+      cancelledRef.current = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [address]);
+  }, [address, collectionId]);
 
   async function checkAuthz() {
     try {
       const col = await fetchCollectionByCollectionId(claimCollectionIdRef.current);
+      if (cancelledRef.current) return;
       if (col.admin === address) addAuth('admin');
       else removeAuth('admin');
       const queryClient = await createQueryClient(CHAIN_RPC_URL);
@@ -108,6 +113,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
         queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address }),
         fetchProtocolEntity(col.entity),
       ]);
+      if (cancelledRef.current) return;
       if (entity?.owner === address) addAuth('owner');
       else removeAuth('owner');
       const grants = granteeGrants.grants as GrantAuthorization[];
@@ -135,8 +141,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     } catch {
       // silent fail
     } finally {
-      setAuthzLoading(false);
-      timeoutRef.current = setTimeout(checkAuthz, 5000);
+      if (!cancelledRef.current) {
+        setAuthzLoading(false);
+        timeoutRef.current = setTimeout(checkAuthz, 5000);
+      }
     }
   }
 
@@ -236,8 +244,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           claimData = parsed;
         }
       }
-      console.log('viewClaim data:', claimData);
-
       const col = await fetchCollectionByCollectionId(collectionId);
       const protocolEntity = await fetchProtocolEntity(col.protocol);
       const endpoint = protocolEntity?.linkedResource?.find(

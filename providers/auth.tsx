@@ -65,35 +65,11 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   const [wallet, setWallet] = useState<SecpClient | null>(null);
   const [signXUser, setSignXUser] = useState<any>(null);
 
-  // Refs for stable callback access to latest state
-  const credentialIdRef = useRef(credentialId);
-  const addressRef = useRef(address);
-  const authenticatorIdRef = useRef(authenticatorId);
-  const walletRef = useRef(wallet);
-  const signXUserRef = useRef(signXUser);
-
-  // Keep refs in sync
-  useEffect(() => {
-    credentialIdRef.current = credentialId;
-  }, [credentialId]);
-  useEffect(() => {
-    addressRef.current = address;
-  }, [address]);
-  useEffect(() => {
-    authenticatorIdRef.current = authenticatorId;
-  }, [authenticatorId]);
-  useEffect(() => {
-    walletRef.current = wallet;
-  }, [wallet]);
-  useEffect(() => {
-    signXUserRef.current = signXUser;
-  }, [signXUser]);
-
   const signingMethod = deriveSigningMethod(credentialId);
-  const signingMethodRef = useRef(signingMethod);
-  useEffect(() => {
-    signingMethodRef.current = signingMethod;
-  }, [signingMethod]);
+
+  // Single ref object for stable callback access to latest state
+  const stateRef = useRef({ credentialId, address, authenticatorId, wallet, signXUser, signingMethod });
+  stateRef.current = { credentialId, address, authenticatorId, wallet, signXUser, signingMethod };
 
   // Session revival on mount — Redux is the primary source of truth
   useEffect(() => {
@@ -227,14 +203,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }
 
   const onSign = useCallback(async (messages: any[]) => {
-    const method = signingMethodRef.current;
-    const addr = addressRef.current;
-    const cId = credentialIdRef.current;
-    const authId = authenticatorIdRef.current;
-    const w = walletRef.current;
-    const sxUser = signXUserRef.current;
+    const { signingMethod: method, address: addr, credentialId: cId, authenticatorId: authId, wallet: w, signXUser: sxUser } = stateRef.current;
 
-    console.log('onSign', method, messages);
     if (!method) {
       throw new Error('Unable to determine signing method');
     }
@@ -257,8 +227,6 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       } catch (error) {
         console.error(error);
       }
-      console.log('feegrantGranter', feegrantGranter);
-
       let result;
       switch (method) {
         case 'passkey':
@@ -300,11 +268,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const onAuthenticate = useCallback(async () => {
-    const method = signingMethodRef.current;
-    const addr = addressRef.current;
-    const authId = authenticatorIdRef.current;
-    const w = walletRef.current;
-    const sxUser = signXUserRef.current;
+    const { signingMethod: method, address: addr, authenticatorId: authId, wallet: w, signXUser: sxUser } = stateRef.current;
 
     switch (method) {
       case 'mnemonic': {
@@ -328,7 +292,6 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
           account: addr!,
           authenticatorId: Long.fromString(authId!),
         });
-        console.log({ response });
         if (!response.accountAuthenticator?.config) {
           throw new Error('Unable to get authenticator data');
         }

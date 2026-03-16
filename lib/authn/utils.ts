@@ -2,13 +2,14 @@ import cbor from 'cbor';
 
 export function extractDataFromAuthData(authDataBuffer: any) {
 	let authData: DataView<any> | null = null;
-	if (authDataBuffer?.constructor?.name === 'Uint8Array') {
-		authData = new DataView(authDataBuffer.buffer, authDataBuffer.byteOffset, authDataBuffer.byteLength);
-	} else if (authDataBuffer?.constructor?.name === 'Buffer') {
-		const uint8Array = new Uint8Array(authDataBuffer);
-		authData = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
-	} else if (authDataBuffer?.constructor?.name === 'ArrayBuffer') {
+	if (authDataBuffer instanceof ArrayBuffer) {
 		authData = new DataView(authDataBuffer);
+	} else if (ArrayBuffer.isView(authDataBuffer)) {
+		// Handles Uint8Array, Buffer, and any other TypedArray variant
+		authData = new DataView(authDataBuffer.buffer, authDataBuffer.byteOffset, authDataBuffer.byteLength);
+	} else if (authDataBuffer?.buffer instanceof ArrayBuffer) {
+		// Fallback for polyfilled Buffer that doesn't register as a view
+		authData = new DataView(authDataBuffer.buffer, authDataBuffer.byteOffset ?? 0, authDataBuffer.byteLength ?? authDataBuffer.length);
 	} else {
 		throw new Error('Invalid authDataBuffer type');
 	}

@@ -5,7 +5,6 @@ import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { useAuth } from '@hooks/useAuth';
-import EditAccountModal from '@components/EditAccountModal/EditAccountModal';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector } from '@store/hooks';
 import Header from '@components/Header/Header';
@@ -36,10 +35,6 @@ export default function Dashboard() {
   const authContext = useAuth();
   const did = authContext.did!;
   const address = authContext.address!;
-  const method = authContext.signingMethod!;
-  const onSign = authContext.onSign;
-  const onAuthenticate = authContext.onAuthenticate;
-  const [showEditAccount, setShowEditAccount] = useState(false);
 
   const {
     collections: protocolCollections,
@@ -255,17 +250,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-      {!!showEditAccount && (
-        // @ts-ignore
-        <EditAccountModal
-          address={address}
-          did={did}
-          method={method}
-          onClose={() => setShowEditAccount(false)}
-          onSign={onSign}
-          onAuthenticate={onAuthenticate}
-        />
-      )}
     </>
   );
 }

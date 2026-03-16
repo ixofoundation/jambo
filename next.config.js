@@ -13,12 +13,8 @@ const withTM = require('next-transpile-modules')([
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: false,
+  swcMinify: true,
   experimental: {
-    runtime: 'edge',
-    // Enable below when using React Server Components
-    // serverComponents: true,
-    // concurrentFeatures: true,
     esmExternals: 'loose',
   },
   webpack(config, { isServer }) {
