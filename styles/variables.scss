@@ -1,6 +1,6 @@
 :root {
   --bg-color: white;
-  --primary-color: #1db3d3;
+  --primary-color: #34d399;
   --secondary-color: #1297b4;
   --tertiary-color: #fc9a63;
   --success-color: #22c55e;
@@ -17,38 +17,56 @@
   --lighter-font-color: #4b5563;
   --main-font-color-inverted: rgba(255, 255, 255, 1);
   --button-border-radius: 18px;
-  --header-height: 90px;
+  --header-height: 60px;
   --header-logo-width: 42px;
   --header-logo-height: 42px;
   --footer-height: 90px;
   --card-border-radius: 16px;
   --max-width: 400px;
 
+  --surface-color: #ffffff;
+  --card-bg-color: rgba(0, 0, 0, 0.05);
+  --card-bg-hover-color: rgba(0, 0, 0, 0.08);
+  --border-color: #e9ecef;
+  --input-border-color: #ced4da;
+  --link-color: #34d399;
+  --muted-font-color: #868e96;
+  --form-bg-color: #f4f5f6;
+
   // dark mode
   .dark {
-    --bg-color: #0e2235;
-    --primary-color: #1db3d3;
+    --bg-color: #111113;
+    --primary-color: #34d399;
     --secondary-color: #1297b4;
     --tertiary-color: #fc9a63;
     --success-color: #22c55e;
     --warning-color: #fc9a63;
     --error-color: #ef4444;
     --disabled-color: #d1d5db;
-    --footer-bg-color: #0e2235;
+    --footer-bg-color: #111113;
     --grey-color: #9ca3af;
     --icon-grey-color: #d1d5db;
-    --light-grey-color: #1e686c;
+    --light-grey-color: #2a2a2c;
     --backdrop-color: rgba(255, 255, 255, 0.1);
     --main-font-size: 16px;
     --main-font-color: rgba(255, 255, 255, 1);
-    --lighter-font-color: #4b5563;
+    --lighter-font-color: #9ca3af;
     --main-font-color-inverted: rgba(0, 0, 0, 0.9);
     --button-border-radius: 18px;
-    --header-height: 90px;
+    --header-height: 60px;
     --header-logo-width: 42px;
     --header-logo-height: 42px;
     --footer-height: 90px;
     --card-border-radius: 16px;
     --max-width: 400px;
+
+    --surface-color: #1c1c1e;
+    --card-bg-color: rgba(255, 255, 255, 0.08);
+    --card-bg-hover-color: rgba(255, 255, 255, 0.12);
+    --border-color: #2a2a2c;
+    --input-border-color: #3a3a3c;
+    --link-color: #34d399;
+    --muted-font-color: #adb5bd;
+    --form-bg-color: #242426;
   }
 }

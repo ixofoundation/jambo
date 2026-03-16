@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import { utils } from '@ixo/impactxclient-sdk';
 
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { BLOCKSYNC_URL } from '@constants/common';
+import config from '@constants/config.json';
 import gqlQuery from '@utils/graphql';
 import { base64urlDecode, base64urlEncode } from '@utils/encoding';
 import { checkIidDocumentExists } from '@utils/did';
@@ -21,28 +23,27 @@ import useSteps from '@hooks/useSteps';
 import Loader from '@components/Loader/Loader';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { decrypt } from '@utils/encryption';
+import { errorToast } from '@components/Toast/Toast';
+import { delay } from '@utils/timestamp';
+import { useAuth } from '@hooks/useAuth';
 
 enum STEPS {
   loading = 0,
-  passkey = 1,
-  address = 2,
-  pin = 3,
+  address = 1,
+  pin = 2,
 }
 
-const STEPS_STATE = [STEPS.loading, STEPS.passkey, STEPS.address, STEPS.pin];
-
-type LoginProps = {
-  onBack: () => void;
-  onLogin: (response: { credentialId: string; address: string; did: string; authenticatorId?: string }) => void;
-};
+const STEPS_STATE = [STEPS.loading, STEPS.address, STEPS.pin];
 
 type AddressData = {
   address: string;
   id?: string;
 };
 
-function LoginPasskey({ onLogin, onBack }: LoginProps) {
-  const { step, reset, goTo } = useSteps(STEPS_STATE, STEPS.passkey);
+function LoginPasskey() {
+  const router = useRouter();
+  const auth = useAuth();
+  const { step, reset, goTo } = useSteps(STEPS_STATE, STEPS.loading);
 
   const [error, setError] = useState('');
   const [keyId, setKeyId] = useState('');
@@ -57,15 +58,65 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
   const encryptedMnemonicRef = useRef<string | undefined>(undefined);
 
   const stepIsLoading = step === STEPS.loading;
-  const stepIsPasskey = step === STEPS.passkey;
   const stepIsAddress = step === STEPS.address;
   const stepIsPin = step === STEPS.pin;
 
+  const initRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!initRef.current) {
+      initRef.current = true;
+      (async () => {
+        goTo(STEPS.loading);
+        setError('');
+
+        try {
+          await delay(200);
+          // Get initial challenge
+          const authOptions = await fetch('/api/auth/initial-challenge').then((r) => r.json());
+          console.log({ authOptions });
+
+          const publicKeyOptions: PublicKeyCredentialRequestOptions = {
+            ...authOptions,
+            challenge: base64urlDecode(authOptions.challenge),
+          };
+
+          // Step 3: Use navigator.credentials.get() to get passkey assertion
+          const assertion: any = await navigator.credentials.get({ publicKey: publicKeyOptions });
+          if (!assertion) {
+            throw new Error('Credential assertion failed');
+          }
+          console.log({ assertion });
+
+          // Skip authn verification as we only care to get the keyId
+          const newKeyId = assertion.id;
+          console.log({ newKeyId });
+          setKeyId(newKeyId);
+          setAssertion(assertion);
+
+          const fetchedAddresses = await fetchAddresses(newKeyId);
+          goTo(STEPS.address);
+          if (fetchedAddresses.length === 1) {
+            await delay(200);
+            handleFinalAuthentication({
+              address: fetchedAddresses[0].address,
+              authenticatorId: fetchedAddresses[0].id,
+              assertionData: assertion,
+              keyIdData: newKeyId,
+              addressesData: fetchedAddresses,
+            });
+          }
+        } catch (err: any) {
+          errorToast(err.message || 'Failed to verify passkey');
+          setTimeout(() => router.push('/auth'), 1500);
+        }
+      })();
+    }
+  }, []);
+
   function handleBack() {
-    if (stepIsPasskey) {
-      onBack();
-    } else if (stepIsAddress) {
-      goTo(STEPS.passkey);
+    if (stepIsAddress) {
+      router.push('/auth');
     }
   }
 
@@ -87,7 +138,7 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
     });
   }
 
-  async function fetchAddresses(keyId: string) {
+  async function fetchAddresses(keyId: string): Promise<AddressData[]> {
     const query = `
   		query GetAuthenticators {
   			smartAccountAuthenticators(
@@ -104,6 +155,7 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
   	`;
 
     const result = await gqlQuery<any>(BLOCKSYNC_URL, query);
+    console.log({ result });
     const addresses = result.data?.data?.smartAccountAuthenticators?.nodes || [];
     setAddresses(addresses);
     console.log({ BLOCKSYNC_URL, addresses });
@@ -111,52 +163,31 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
     if (addresses.length === 1) {
       setSelectedAddress(addresses[0].address);
     }
+
+    return addresses;
   }
 
-  async function handleInitialChallenge() {
+  async function handleFinalAuthentication(overrides?: {
+    address: string;
+    authenticatorId?: string;
+    assertionData: any;
+    keyIdData: string;
+    addressesData: AddressData[];
+  }) {
     goTo(STEPS.loading);
     setError('');
 
-    try {
-      // Get initial challenge
-      const authOptions = await fetch('/api/auth/initial-challenge').then((r) => r.json());
-      console.log({ authOptions });
-
-      const publicKeyOptions: PublicKeyCredentialRequestOptions = {
-        ...authOptions,
-        challenge: base64urlDecode(authOptions.challenge),
-      };
-
-      // Step 3: Use navigator.credentials.get() to get passkey assertion
-      const assertion: any = await navigator.credentials.get({ publicKey: publicKeyOptions });
-      if (!assertion) {
-        throw new Error('Credential assertion failed');
-      }
-      console.log({ assertion });
-
-      // Skip authn verification as we only care to get the keyId
-      const newKeyId = assertion.id;
-      setKeyId(newKeyId);
-      setAssertion(assertion);
-
-      await fetchAddresses(newKeyId);
-      goTo(STEPS.address);
-    } catch (err: any) {
-      setError(err.message || 'Failed to verify passkey');
-      goTo(STEPS.passkey);
-    }
-  }
-
-  async function handleFinalAuthentication() {
-    goTo(STEPS.loading);
-    setError('');
+    const resolvedAddress = overrides?.address || selectedAddress;
+    const resolvedAssertion = overrides?.assertionData || assertion;
+    const resolvedKeyId = overrides?.keyIdData || keyId;
+    const resolvedAddresses = overrides?.addressesData || addresses;
 
     try {
-      if (!selectedAddress) {
+      if (!resolvedAddress) {
         setError('Please select an address');
         return;
       }
-      const address = selectedAddress;
+      const address = resolvedAddress;
       const did = utils.did.generateSecpDid(address);
 
       // =================================================================================================
@@ -172,30 +203,37 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
       // =================================================================================================
       // prepare assertion for request to server
       const parsedAssertion = {
-        ...assertion,
+        id: resolvedAssertion.id,
+        type: resolvedAssertion.type,
+        rawId: base64urlEncode(resolvedAssertion.rawId),
+        authenticatorAttachment: resolvedAssertion.authenticatorAttachment,
         response: {
-          ...assertion.response,
-          clientDataJSON: base64urlEncode(assertion.response.clientDataJSON),
-          authenticatorData: base64urlEncode(assertion.response.authenticatorData),
-          signature: base64urlEncode(assertion.response.signature),
+          clientDataJSON: base64urlEncode(resolvedAssertion.response.clientDataJSON),
+          authenticatorData: base64urlEncode(resolvedAssertion.response.authenticatorData),
+          signature: base64urlEncode(resolvedAssertion.response.signature),
+          userHandle: resolvedAssertion.response.userHandle
+            ? base64urlEncode(resolvedAssertion.response.userHandle)
+            : null, // userHandle might be null
         },
       };
 
       // prepare assertion for request to server
       const { encryptedMnemonic, roomId } = await loginPasskey({
-        address: selectedAddress,
+        address: resolvedAddress,
         authnResult: parsedAssertion,
       });
+      console.log({ encryptedMnemonic });
       if (!encryptedMnemonic) {
         setError('Failed to login with passkey.');
         return;
       }
 
       const pin = (await requestPin(encryptedMnemonic)) as string;
+      console.log({ pin });
 
       // Find the authenticatorId for the selected address
-      const selectedAddressData = addresses.find((addr) => addr.address === selectedAddress);
-      const authenticatorId = selectedAddressData?.id;
+      const authenticatorId =
+        overrides?.authenticatorId ?? resolvedAddresses.find((addr) => addr.address === resolvedAddress)?.id;
 
       const mxMnemonic = decrypt(encryptedMnemonic, pin);
       let homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
@@ -229,12 +267,14 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
       }
 
       // done: Pass the authenticatorId along with the other data
-      onLogin({
-        credentialId: keyId,
+      auth.loginWithPasskey({
+        credentialId: resolvedKeyId,
         authenticatorId,
         address: address,
         did: did,
       });
+      const entityId: string | undefined = (config as any).entity;
+      router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     } catch (err: any) {
       setError(err.message || 'Login failed');
       clearState();
@@ -303,20 +343,20 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
       >
         <div
           style={{
-            border: '1px solid #e9ecef',
             borderRadius: '8px',
             padding: '24px',
-            backgroundColor: 'white',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
           }}
         >
-          <h2
+          <h1
             style={{
               textAlign: 'center',
               marginBottom: '16px',
+              color: 'white',
             }}
           >
-            Login with Passkey
-          </h2>
+            Welcome
+          </h1>
 
           {stepIsLoading ? (
             <div
@@ -326,52 +366,13 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
                 justifyContent: 'center',
                 alignItems: 'center',
                 height: '100%',
+                gap: '16px',
               }}
             >
               {/* @ts-ignore */}
               <Loader />
-              <p style={{ marginLeft: '16px' }}>Loading...</p>
+              <p style={{ marginLeft: '16px', color: 'white' }}>Authenticating with passkey...</p>
             </div>
-          ) : stepIsPasskey ? (
-            <>
-              <p
-                style={{
-                  marginBottom: '16px',
-                }}
-              >
-                Click below to login with your passkey
-              </p>
-
-              {error && (
-                <p
-                  style={{
-                    color: 'red',
-                    marginBottom: '20px',
-                  }}
-                >
-                  {error}
-                </p>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                {/* @ts-ignore */}
-                <Button
-                  label='Back'
-                  color={BUTTON_COLOR.primary}
-                  size={BUTTON_SIZE.mediumLarge}
-                  bgColor={BUTTON_BG_COLOR.white}
-                  onClick={handleBack}
-                />
-                {/* @ts-ignore */}
-                <Button
-                  onClick={handleInitialChallenge}
-                  label='Next'
-                  color={BUTTON_COLOR.white}
-                  size={BUTTON_SIZE.mediumLarge}
-                  bgColor={BUTTON_BG_COLOR.primary}
-                />
-              </div>
-            </>
           ) : stepIsAddress ? (
             <>
               <div style={{ marginBottom: '24px' }}>
@@ -428,7 +429,9 @@ function LoginPasskey({ onLogin, onBack }: LoginProps) {
                 />
                 {/* @ts-ignore */}
                 <Button
-                  onClick={handleFinalAuthentication}
+                  onClick={() => {
+                    void handleFinalAuthentication();
+                  }}
                   disabled={!selectedAddress}
                   label='Next'
                   color={BUTTON_COLOR.white}

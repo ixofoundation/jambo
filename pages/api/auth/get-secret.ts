@@ -20,20 +20,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				address,
 			}),
 		});
-		console.log('response', response.ok, response.status, await response.json());
+		const data = await response.json();
+		console.log('response', response.ok, response.status, data);
 		if (!response.ok) {
-			const message = await response
-				.json()
-				.then((res) => res?.message ?? 'Failed to fetch encrypted mnemonic')
-				.catch(() => 'Failed to fetch encrypted mnemonic');
 			res.status(response.status).json({
-				error: message,
+				error: data?.message ?? 'Failed to fetch encrypted mnemonic',
 			});
 			return;
-			// throw new Error('Failed to fetch encrypted mnemonic');
 		}
 
-		const { encryptedMnemonic, roomId } = await response.json();
+		const { encryptedMnemonic, roomId } = data;
 		res.json({ encryptedMnemonic, roomId, address });
 	} catch (error: any) {
 		console.error(error);

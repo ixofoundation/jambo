@@ -139,10 +139,10 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
       >
         <div
           style={{
-            border: '1px solid #e9ecef',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
             padding: '24px',
-            backgroundColor: 'white',
+            backgroundColor: 'var(--surface-color)',
           }}
         >
           <h2
@@ -186,7 +186,7 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
               {error && (
                 <p
                   style={{
-                    color: 'red',
+                    color: 'var(--error-color)',
                     fontSize: '14px',
                     marginBottom: '16px',
                   }}

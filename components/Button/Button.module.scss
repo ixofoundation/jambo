@@ -7,12 +7,15 @@
   flex-direction: row;
 }
 
+/* Button uses display:flex; text-align does not center flex children — use justify-content */
 .textCentered {
+  justify-content: center;
   text-align: center;
   align-items: center;
 }
 
 .textLeft {
+  justify-content: flex-start;
   text-align: left;
 }
 

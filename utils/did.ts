@@ -1,5 +1,6 @@
 import { createQueryClient, customMessages, ixo, utils } from '@ixo/impactxclient-sdk';
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing';
+import base58 from 'bs58';
 
 import { CHAIN_RPC_URL } from '../constants/common';
 import { decodeGrants, isAllowanceExpired, isAllowanceLimitReached, queryAddressAllowances } from './feegrant';
@@ -98,4 +99,38 @@ export async function createIidDocumentIfNotExists({
     await createIidDocument(did, offlineSigner);
   }
   return did;
+}
+
+export async function hasEd25519VerificationMethod(did: string, publicKeyBase58: string): Promise<boolean> {
+  try {
+    const queryClient = await createQueryClient(CHAIN_RPC_URL);
+    const iidDocumentResponse = await queryClient.ixo.iid.v1beta1.iidDocument({ id: did });
+    const doc = iidDocumentResponse?.iidDocument;
+    if (!doc) return false;
+    return (doc.verificationMethod ?? []).some(
+      (vm: any) => vm.type === 'Ed25519VerificationKey2018' && vm.publicKeyBase58 === publicKeyBase58,
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function buildAddEd25519VerificationMsg(did: string, publicKey: Uint8Array, address: string) {
+  const pubKeyBase58 = base58.encode(publicKey);
+  return {
+    typeUrl: '/ixo.iid.v1beta1.MsgAddVerification',
+    value: ixo.iid.v1beta1.MsgAddVerification.fromPartial({
+      id: did,
+      verification: ixo.iid.v1beta1.Verification.fromPartial({
+        relationships: ['authentication', 'assertionMethod'],
+        method: ixo.iid.v1beta1.VerificationMethod.fromPartial({
+          id: did + '#' + pubKeyBase58,
+          type: 'Ed25519VerificationKey2018',
+          publicKeyBase58: pubKeyBase58,
+          controller: did,
+        }),
+      }),
+      signer: address,
+    }),
+  };
 }

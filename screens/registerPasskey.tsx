@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import { utils } from '@ixo/impactxclient-sdk';
 import { createMatrixApiClient } from '@ixo/matrixclient-sdk';
 import { OfflineSigner } from '@cosmjs/proto-signing';
 
-import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { getSecpClient, SecpClient } from '@utils/secp';
 import gqlQuery from '@utils/graphql';
 import { BLOCKSYNC_URL } from '@constants/common';
+import config from '@constants/config.json';
 import { checkAddressFeegrant } from '@utils/feegrant';
 import { checkIidDocumentExists, createIidDocument } from '@utils/did';
 import { registerPasskey } from 'lib/authn/register';
 import { encrypt } from '@utils/encryption';
+import { cleanUrlString } from '@utils/url';
 import { delay } from '@utils/timestamp';
 import { base64urlEncode, base64urlDecode } from '@utils/encoding';
 import {
@@ -31,25 +33,26 @@ import Loader from '@components/Loader/Loader';
 import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { fido2 } from 'lib/authn/client';
+import SecretPhraseStep from '@components/SecretPhraseStep/SecretPhraseStep';
+import { useAuth } from '@hooks/useAuth';
 
 enum STEPS {
   loading = 0,
   mnemonic = 1,
-  pin = 2,
+  feegrantCheck = 2,
   email = 3,
+  pin = 4,
 }
 
-const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.pin, STEPS.email];
+const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.feegrantCheck, STEPS.email, STEPS.pin];
 
-type Props = {
-  onBack: () => void;
-  onRegister: (response: { address: string; did: string; credentialId: string; authenticatorId?: string }) => void;
-};
-
-function RegisterPasskey({ onRegister, onBack }: Props) {
+function RegisterPasskey() {
+  const router = useRouter();
+  const auth = useAuth();
   const { step, reset, goTo } = useSteps(STEPS_STATE, STEPS.mnemonic);
   const [wallet, setWallet] = useState<SecpClient | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState('Loading...');
 
   useEffect(function () {
     if (!wallet) {
@@ -69,12 +72,9 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
 
   const stepIsLoading = step === STEPS.loading;
   const stepIsMnemonic = step === STEPS.mnemonic;
+  const stepIsFeegrantCheck = step === STEPS.feegrantCheck;
   const stepIsPin = step === STEPS.pin;
   const stepIsEmail = step === STEPS.email;
-
-  function handleCopyMnemonic() {
-    navigator.clipboard.writeText(wallet?.mnemonic ?? '');
-  }
 
   async function requestEmail(address: string) {
     addressRef.current = address;
@@ -136,7 +136,7 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
   }
 
   async function handleRegister() {
-    goTo(STEPS.loading);
+    goTo(STEPS.feegrantCheck);
     try {
       if (!wallet?.baseAccount?.address) {
         throw new Error('No wallet found');
@@ -148,20 +148,23 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       const feegrant = await checkAddressFeegrant(address);
       if (!feegrant) {
         (await requestEmail(address)) as string;
-        goTo(STEPS.loading);
+        goTo(STEPS.feegrantCheck);
         const feegrant = await checkAddressFeegrant(address);
         if (!feegrant) {
           throw new Error('Failed to grant feegrant, please try again.');
         }
       }
-
       // =================================================================================================
       // PASSKEY / SMART ACC
       // =================================================================================================
+      setLoadingMessage('Creating your passkey...');
+      goTo(STEPS.loading);
       const { credentialId } = await registerPasskey({
         wallet: wallet,
       });
       await delay(1000);
+
+      setLoadingMessage('Verifying passkey registration...');
       const authenticator = await fetchAddressAuthenticator(credentialId, wallet!.baseAccount.address);
       if (!authenticator) {
         throw new Error('Failed to register passkey, please try again.');
@@ -184,6 +187,7 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       // =================================================================================================
       // MATRIX
       // =================================================================================================
+      setLoadingMessage('Generating Vault credentials...');
       const mxMnemonic = utils.mnemonic.generateMnemonic(12);
       let homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
       const mxUsername = generateUsernameFromAddress(address);
@@ -238,6 +242,7 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       };
 
       // register using new API
+      setLoadingMessage('Creating Vault account...');
       const account = await mxRegisterWithPasskey(address, mxPassword, authnResult);
       if (!account?.accessToken) {
         throw new Error('Failed to register matrix account, please try again later.');
@@ -249,6 +254,7 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
         accessToken: account.accessToken as string,
       });
       // setup cross signing
+      setLoadingMessage('Setting up Vault encryption...');
       let hasCrossSigning = hasCrossSigningAccountData(mxClient);
       if (!hasCrossSigning) {
         hasCrossSigning = await setupCrossSigning(mxClient, {
@@ -261,6 +267,7 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
         }
       }
       // create room
+      setLoadingMessage('Creating secure Vault room...');
       const mxRoomAlias = generateUserRoomAliasFromAddress(address, account.baseUrl);
       const queryIdResponse = await matrixApiClient.room.v1beta1.queryId(mxRoomAlias).catch(() => undefined);
       let roomId: string = queryIdResponse?.room_id ?? '';
@@ -303,9 +310,11 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       const pin = (await requestPin()) as string;
 
       // encrypt and store matrix mnemonic
+      setLoadingMessage('Configuring Vault encryption...');
+      goTo(STEPS.loading);
       const encryptedMnemonic = encrypt(mxMnemonic, pin);
       const storeEncryptedMnemonicResponse = await fetch(
-        `${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
+        cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
         {
           method: 'PUT',
           headers: {
@@ -322,12 +331,14 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       }
       await storeEncryptedMnemonicResponse.json();
       // done
-      onRegister({
+      auth.registerWithPasskey({
         credentialId,
         address: wallet!?.baseAccount?.address,
         did: utils.did.generateSecpDid(wallet!.baseAccount.address),
         authenticatorId: authenticator?.id,
       });
+      const entityId: string | undefined = (config as any).entity;
+      router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     } catch (err: any) {
       console.error('Register error:', err);
       setError((typeof err === 'string' ? err : err.message) || 'Failed to register. Please try again.');
@@ -390,119 +401,80 @@ function RegisterPasskey({ onRegister, onBack }: Props) {
       >
         <div
           style={{
-            border: '1px solid #e9ecef',
             borderRadius: '8px',
             padding: '24px',
-            backgroundColor: 'white',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
           }}
         >
-          <h2
-            style={{
-              textAlign: 'center',
-              marginBottom: '16px',
-            }}
-          >
-            Register Passkey
-          </h2>
-
           {stepIsLoading ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100%',
-              }}
-            >
-              {/* @ts-ignore */}
-              <Loader />
-              <p style={{ marginLeft: '16px' }}>Loading...</p>
-            </div>
-          ) : stepIsMnemonic ? (
             <>
-              <p>
-                This is the only chance you have have to{' '}
-                <span
-                  style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}
-                  onClick={handleCopyMnemonic}
-                >
-                  copy
-                </span>{' '}
-                your mnemonic if you want to back it up or test the mnemonic-login flow (just for testing/demo
-                purposes).
-              </p>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '4px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                  }}
-                >
-                  Mnemonic Phrase
-                </label>
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    padding: '8px 12px',
-                    border: '1px solid #ced4da',
-                    borderRadius: '4px',
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      margin: 0,
-                      padding: 0,
-                    }}
-                  >
-                    {wallet?.mnemonic ?? 'loading...'}
-                  </p>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ width: '28px' }} />
+                <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>
+                  Creating new account
+                </h1>
+                <div style={{ width: '28px' }} />
               </div>
-
-              <div style={{ marginBottom: '24px' }}>
-                <p style={{ fontSize: '12px' }}>
-                  <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>Warning:</span> If you copy your
-                  mnemonic, store it somewhere safe and do not share it with anyone.
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '40px 0',
+                }}
+              >
+                {/* @ts-ignore */}
+                <Loader />
+                <p style={{ marginTop: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+                  {loadingMessage}
                 </p>
               </div>
-
-              {error && (
-                <p
+            </>
+          ) : stepIsMnemonic ? (
+            <SecretPhraseStep
+              mnemonic={wallet?.mnemonic ?? ''}
+              error={error}
+              onBack={() => router.push('/auth')}
+              onContinue={handleRegister}
+            />
+          ) : stepIsFeegrantCheck ? (
+            <>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                <button
+                  onClick={() => router.push('/auth')}
                   style={{
-                    color: 'red',
-                    fontSize: '14px',
-                    marginBottom: '16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    fontSize: '20px',
+                    lineHeight: 1,
+                    color: 'white',
                   }}
                 >
-                  {error}
+                  &#8592;
+                </button>
+                <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>
+                  Creating new account
+                </h1>
+                <div style={{ width: '28px' }} />
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '40px 0',
+                }}
+              >
+                {/* @ts-ignore */}
+                <Loader />
+                <p style={{ marginTop: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+                  Checking for feegrant...
                 </p>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                {/* @ts-ignore */}
-                <Button
-                  label='Back'
-                  color={BUTTON_COLOR.primary}
-                  size={BUTTON_SIZE.mediumLarge}
-                  bgColor={BUTTON_BG_COLOR.white}
-                  onClick={onBack}
-                  disabled={stepIsLoading}
-                />
-                {/* @ts-ignore */}
-                <Button
-                  label={'Next'}
-                  onClick={handleRegister}
-                  disabled={stepIsLoading}
-                  color={BUTTON_COLOR.white}
-                  size={BUTTON_SIZE.mediumLarge}
-                  bgColor={BUTTON_BG_COLOR.primary}
-                />
               </div>
             </>
           ) : stepIsEmail ? (

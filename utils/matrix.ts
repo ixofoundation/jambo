@@ -715,7 +715,7 @@ export function generatePassphraseFromMnemonic(mnemonic: string): string {
  * @returns {string} cleaned homeserver URL
  */
 export function cleanMatrixHomeServerUrl(homeServer: string): string {
-  return homeServer.replace(/^(https?:\/\/)/, '').replace(/\/$/, '');
+  return homeServer.replace(/^(https?:\/\/)/, '').replace(/^matrix\./, '').replace(/\/$/, '');
 }
 
 /**

@@ -1,24 +1,15 @@
+import { useRouter } from 'next/router';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 
-interface LoginMethodSelectorProps {
-  onSelectMethod: (method: 'register' | 'login' | 'mnemonic' | 'signx') => void;
-}
+function LoginMethodSelector() {
+  const router = useRouter();
 
-function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
   function handleRegisterClick() {
-    onSelectMethod('register');
+    router.push('/auth/register');
   }
 
   function handleLoginClick() {
-    onSelectMethod('login');
-  }
-
-  function handleMnemonicClick() {
-    onSelectMethod('mnemonic');
-  }
-
-  function handleSignXClick() {
-    onSelectMethod('signx');
+    router.push('/auth/login');
   }
 
   return (
@@ -39,20 +30,20 @@ function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
       >
         <div
           style={{
-            border: '1px solid #e9ecef',
             borderRadius: '8px',
-            padding: '24px',
-            backgroundColor: 'white',
+            padding: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
           }}
         >
-          <h2
+          <h1
             style={{
               textAlign: 'center',
-              marginBottom: '24px',
+              marginBottom: '20px',
+              color: 'white',
             }}
           >
-            Select how you would like to continue.
-          </h2>
+            Welcome
+          </h1>
           <div
             style={{
               display: 'flex',
@@ -62,36 +53,38 @@ function LoginMethodSelector({ onSelectMethod }: LoginMethodSelectorProps) {
           >
             {/* @ts-ignore */}
             <Button
-              label='Register Passkey'
-              color={BUTTON_COLOR.white}
+              label='Use Passkey'
+              textCentered
+              color={BUTTON_COLOR.primary}
               size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.primary}
-              onClick={handleRegisterClick}
-            />
-            {/* @ts-ignore */}
-            <Button
-              label='Login with Passkey'
-              color={BUTTON_COLOR.white}
-              size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.primary}
+              bgColor={BUTTON_BG_COLOR.white}
               onClick={handleLoginClick}
             />
             {/* @ts-ignore */}
             <Button
-              label='Login with Mnemonic'
-              color={BUTTON_COLOR.white}
+              label='Register Passkey'
+              textCentered
+              color={BUTTON_COLOR.primary}
               size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.primary}
-              onClick={handleMnemonicClick}
+              bgColor={BUTTON_BG_COLOR.white}
+              onClick={handleRegisterClick}
             />
             {/* @ts-ignore */}
-            <Button
-              label='Login with SignX'
-              color={BUTTON_COLOR.white}
+            {/* <Button
+              label='Login with Mnemonic'
+              color={BUTTON_COLOR.grey}
               size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.primary}
+              bgColor={BUTTON_BG_COLOR.white}
+              onClick={handleMnemonicClick}
+            /> */}
+            {/* @ts-ignore */}
+            {/* <Button
+              label='Login with SignX'
+              color={BUTTON_COLOR.grey}
+              size={BUTTON_SIZE.mediumLarge}
+              bgColor={BUTTON_BG_COLOR.white}
               onClick={handleSignXClick}
-            />
+            /> */}
           </div>
         </div>
       </div>

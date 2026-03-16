@@ -240,7 +240,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {!!error && <p style={{ color: 'red' }}>{error}</p>}
+        {!!error && <p style={{ color: 'var(--error-color)' }}>{error}</p>}
         {/* @ts-ignore */}
         <Button
           size={BUTTON_SIZE.medium}
@@ -258,12 +258,12 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
             <div
               key={claim.claimId}
               style={{
-                border: '1px solid #e9ecef',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 padding: '16px',
-                backgroundColor: 'white',
+                backgroundColor: 'var(--surface-color)',
                 cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                boxShadow: '0 1px 3px var(--backdrop-color)',
               }}
             >
               <div
@@ -299,7 +299,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--backdrop-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -309,7 +309,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--surface-color)',
               borderRadius: '8px',
               padding: '24px',
               paddingBottom: '0',
@@ -358,7 +358,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--backdrop-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -368,7 +368,7 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--surface-color)',
               borderRadius: '8px',
               padding: '24px',
               maxWidth: '800px',
@@ -404,39 +404,39 @@ export default function MyClaims({ did, address, collectionId, onSign }: MyClaim
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Collection</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.collectionId}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.collectionId}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>DID</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.agentDid}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.agentDid}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Address</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.agentAddress}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.agentAddress}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Payment Status</p>
-                <p style={{ margin: 0, color: '#495057' }}>{JSON.stringify(selectedClaim.paymentsStatus)}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{JSON.stringify(selectedClaim.paymentsStatus)}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Schema Type</p>
-                <p style={{ margin: 0, color: '#495057' }}>{JSON.stringify(selectedClaim.schemaType)}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{JSON.stringify(selectedClaim.schemaType)}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Created</p>
-                <p style={{ margin: 0, color: '#495057' }}>{new Date(selectedClaim.submissionDate).toLocaleString()}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{new Date(selectedClaim.submissionDate).toLocaleString()}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Claim Data</p>
                 <pre
                   style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--card-bg-color)',
                     padding: '12px',
                     borderRadius: '4px',
                     overflow: 'auto',

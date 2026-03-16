@@ -74,10 +74,12 @@ const Button = ({
   prefixIcon,
   className,
   disabled,
+  onClick,
   ...other
 }: ButtonProps) => {
   return (
     <button
+      onClick={disabled ? () => {} : onClick}
       className={cls(
         styles.button,
         styles[size as typeof BUTTON_SIZE.medium],
@@ -104,6 +106,7 @@ type ViewOnExplorerButtonProps = {
 };
 
 export const ViewOnExplorerButton = ({ explorer }: ViewOnExplorerButtonProps) => (
+  // @ts-ignore
   <Button
     label={`View on ${explorer}`}
     size={BUTTON_SIZE.mediumLarge}

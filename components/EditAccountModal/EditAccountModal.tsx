@@ -208,7 +208,7 @@ export default function EditAccountModal({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'var(--backdrop-color)',
         padding: 20,
         alignItems: 'center',
         justifyContent: 'center',
@@ -217,7 +217,7 @@ export default function EditAccountModal({
     >
       <div
         style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--surface-color)',
           maxWidth: '768px',
           width: '98%',
           margin: '0 auto',
@@ -231,7 +231,7 @@ export default function EditAccountModal({
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #e9ecef',
+            borderBottom: '1px solid var(--border-color)',
           }}
         >
           <p style={{ fontWeight: 500, fontSize: 20 }}>
@@ -263,7 +263,7 @@ export default function EditAccountModal({
                 {authenticators?.map((authenticator: any) => (
                   <div
                     key={authenticator.id}
-                    style={{ padding: '16px', marginBottom: '5px', borderRadius: 20, border: '1px solid #e9ecef' }}
+                    style={{ padding: '16px', marginBottom: '5px', borderRadius: 20, border: '1px solid var(--border-color)' }}
                   >
                     {authenticator.keyId}
                     <span
@@ -276,7 +276,7 @@ export default function EditAccountModal({
                             : authenticator.type === 'AuthnVerification'
                             ? 'var(--tertiary-color)'
                             : 'var(--error-color)',
-                        color: '#FFF',
+                        color: 'var(--main-font-color-inverted)',
                         padding: '2px 5px',
                         borderRadius: 5,
                         fontWeight: 500,

@@ -3,6 +3,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  color: var(--main-font-color);
   font-family: var(--font-family-name), -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell,
     Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
 
@@ -18,8 +19,17 @@ body {
   box-sizing: border-box;
 }
 
+button {
+  color: inherit;
+}
+
 a {
   color: inherit;
   // color: var(--primary-color);
   text-decoration: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

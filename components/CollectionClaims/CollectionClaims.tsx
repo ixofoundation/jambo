@@ -11,6 +11,19 @@ import gqlQuery from '@utils/graphql';
 import { BLOCKSYNC_URL } from '@constants/common';
 import { fetchCollectionByCollectionId } from '@utils/claims';
 
+interface ClaimEvaluation {
+  agentAddress: string;
+  agentDid: string;
+  amount: any;
+  claimId: string;
+  collectionId: string;
+  evaluationDate: string;
+  oracle: string;
+  reason: number;
+  status: number;
+  verificationProof: string;
+}
+
 interface Claim {
   agentAddress: string;
   agentDid: string;
@@ -19,10 +32,24 @@ interface Claim {
   paymentsStatus: any;
   schemaType: string;
   submissionDate: string;
+  evaluationByClaimId: ClaimEvaluation | null;
 }
 interface ClaimWithData extends Claim {
   data?: any;
   error?: string;
+}
+
+function getEvaluationLabel(status: number | undefined | null): { text: string; color: string; bg: string } {
+  switch (status) {
+    case 1:
+      return { text: 'Approved', color: '#166534', bg: '#dcfce7' };
+    case 2:
+      return { text: 'Rejected', color: '#991b1b', bg: '#fee2e2' };
+    case 3:
+      return { text: 'Disputed', color: '#92400e', bg: '#fef3c7' };
+    default:
+      return { text: 'Pending', color: '#854d0e', bg: '#fef9c3' };
+  }
 }
 
 interface CollectionClaimsProps {
@@ -83,6 +110,18 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
               paymentsStatus
               schemaType
               submissionDate
+              evaluationByClaimId {
+                agentAddress
+                agentDid
+                amount
+                claimId
+                collectionId
+                evaluationDate
+                oracle
+                reason
+                status
+                verificationProof
+              }
             }
           }
         }
@@ -208,7 +247,7 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {!!error && <p style={{ color: 'red' }}>{error}</p>}
+        {!!error && <p style={{ color: 'var(--error-color)' }}>{error}</p>}
         {!claims?.length ? (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <p>No active claims found</p>
@@ -218,12 +257,12 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
             <div
               key={claim.claimId}
               style={{
-                border: '1px solid #e9ecef',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 padding: '16px',
-                backgroundColor: 'white',
+                backgroundColor: 'var(--surface-color)',
                 cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                boxShadow: '0 1px 3px var(--backdrop-color)',
               }}
             >
               <div
@@ -234,7 +273,7 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
                   alignItems: 'center',
                 }}
               >
-                <p style={{ fontWeight: 500 }}>Claim #{claim.claimId}</p>
+                <p style={{ fontWeight: 500, flex: 1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>Claim #{claim.claimId}</p>
                 {/* @ts-ignore */}
                 <Button
                   size={BUTTON_SIZE.small}
@@ -244,8 +283,33 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
                   onClick={() => selectClaim(claim)}
                 />
               </div>
-              <p style={{ fontWeight: 400, padding: 0, margin: 0, fontSize: 12 }}>DID: {claim.agentDid}</p>
-              <p style={{ fontWeight: 400, padding: 0, margin: 0, fontSize: 12 }}>Date: {claim.submissionDate}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <p style={{ fontWeight: 400, padding: 0, margin: 0, fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                  {claim.agentDid}
+                </p>
+                {(() => {
+                  const evalStatus = getEvaluationLabel(claim.evaluationByClaimId?.status);
+                  return (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: 9999,
+                        color: evalStatus.color,
+                        backgroundColor: evalStatus.bg,
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {evalStatus.text}
+                    </span>
+                  );
+                })()}
+              </div>
+              <p style={{ fontWeight: 400, padding: 0, margin: 0, fontSize: 12 }}>
+                {new Date(claim.submissionDate).toLocaleDateString()}
+              </p>
             </div>
           ))
         )}
@@ -260,7 +324,7 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--backdrop-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -270,7 +334,7 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--surface-color)',
               borderRadius: '8px',
               padding: '24px',
               maxWidth: '800px',
@@ -306,39 +370,68 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Collection</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.collectionId}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.collectionId}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>DID</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.agentDid}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.agentDid}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Address</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedClaim.agentAddress}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.agentAddress}</p>
               </div>
+
+              <div>
+                <p style={{ fontWeight: 500, marginBottom: '4px' }}>Evaluation Status</p>
+                {(() => {
+                  const evalStatus = getEvaluationLabel(selectedClaim.evaluationByClaimId?.status);
+                  return (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        padding: '3px 10px',
+                        borderRadius: 9999,
+                        color: evalStatus.color,
+                        backgroundColor: evalStatus.bg,
+                      }}
+                    >
+                      {evalStatus.text}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {selectedClaim.evaluationByClaimId && (
+                <>
+                  <div>
+                    <p style={{ fontWeight: 500, marginBottom: '4px' }}>Evaluation Date</p>
+                    <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{new Date(selectedClaim.evaluationByClaimId.evaluationDate).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 500, marginBottom: '4px' }}>Oracle</p>
+                    <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedClaim.evaluationByClaimId.oracle}</p>
+                  </div>
+                </>
+              )}
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Payment Status</p>
-                <p style={{ margin: 0, color: '#495057' }}>{JSON.stringify(selectedClaim.paymentsStatus)}</p>
-              </div>
-
-              <div>
-                <p style={{ fontWeight: 500, marginBottom: '4px' }}>Schema Type</p>
-                <p style={{ margin: 0, color: '#495057' }}>{JSON.stringify(selectedClaim.schemaType)}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{JSON.stringify(selectedClaim.paymentsStatus)}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Submission Date</p>
-                <p style={{ margin: 0, color: '#495057' }}>{new Date(selectedClaim.submissionDate).toLocaleString()}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{new Date(selectedClaim.submissionDate).toLocaleString()}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Claim Data</p>
                 <pre
                   style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--card-bg-color)',
                     padding: '12px',
                     borderRadius: '4px',
                     overflow: 'auto',
@@ -358,24 +451,26 @@ export default function CollectionClaims({ did, address, collectionId, onSign }:
               </div>
             </div>
 
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-              {/* @ts-ignore */}
-              <Button
-                size={BUTTON_SIZE.medium}
-                color={BUTTON_COLOR.primary}
-                bgColor={BUTTON_BG_COLOR.white}
-                label='Approve'
-                onClick={handleApproveClaim}
-              />
-              {/* @ts-ignore */}
-              <Button
-                size={BUTTON_SIZE.medium}
-                color={BUTTON_COLOR.primary}
-                bgColor={BUTTON_BG_COLOR.white}
-                label='Reject'
-                onClick={handleRejectClaim}
-              />
-            </div>
+            {!selectedClaim.evaluationByClaimId && (
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                {/* @ts-ignore */}
+                <Button
+                  size={BUTTON_SIZE.medium}
+                  color={BUTTON_COLOR.primary}
+                  bgColor={BUTTON_BG_COLOR.white}
+                  label='Approve'
+                  onClick={handleApproveClaim}
+                />
+                {/* @ts-ignore */}
+                <Button
+                  size={BUTTON_SIZE.medium}
+                  color={BUTTON_COLOR.primary}
+                  bgColor={BUTTON_BG_COLOR.white}
+                  label='Reject'
+                  onClick={handleRejectClaim}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

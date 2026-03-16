@@ -8,6 +8,7 @@ import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/
 import { checkAddressFeegrant } from '@utils/feegrant';
 import { checkIidDocumentExists, createIidDocument } from '@utils/did';
 import { decrypt, encrypt } from '@utils/encryption';
+import { cleanUrlString } from '@utils/url';
 import {
   checkIsUsernameAvailable,
   createMatrixClient,
@@ -275,7 +276,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
         // store matrix mnemonic
         const encryptedMnemonic = encrypt(mxMnemonic, pin);
         const storeEncryptedMnemonicResponse = await fetch(
-          `${homeServerUrl}/_matrix/client/r0/rooms/${mxRoomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
+          cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${mxRoomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
           {
             method: 'PUT',
             headers: {
@@ -363,10 +364,10 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       >
         <div
           style={{
-            border: '1px solid #e9ecef',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
             padding: '24px',
-            backgroundColor: 'white',
+            backgroundColor: 'var(--surface-color)',
           }}
         >
           <h2
@@ -423,7 +424,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
                     style={{
                       width: '100%',
                       padding: '8px 12px',
-                      border: '1px solid #ced4da',
+                      border: '1px solid var(--input-border-color)',
                       borderRadius: '4px',
                       fontSize: '14px',
                       marginBottom: '16px',
@@ -447,7 +448,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
               {error && (
                 <p
                   style={{
-                    color: 'red',
+                    color: 'var(--error-color)',
                     fontSize: '14px',
                     marginBottom: '16px',
                   }}

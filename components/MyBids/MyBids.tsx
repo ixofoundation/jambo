@@ -205,7 +205,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {!!error && <p style={{ color: 'red' }}>{error}</p>}
+        {!!error && <p style={{ color: 'var(--error-color)' }}>{error}</p>}
         {!bids?.length ? (
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <p>No bids found</p>
@@ -232,12 +232,12 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
             <div
               key={bid.id}
               style={{
-                border: '1px solid #e9ecef',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 padding: '16px',
-                backgroundColor: 'white',
+                backgroundColor: 'var(--surface-color)',
                 cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                boxShadow: '0 1px 3px var(--backdrop-color)',
               }}
             >
               <div
@@ -273,7 +273,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--backdrop-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -283,7 +283,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--surface-color)',
               borderRadius: '8px',
               padding: '24px',
               paddingBottom: '0',
@@ -353,7 +353,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--backdrop-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -363,7 +363,7 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--surface-color)',
               borderRadius: '8px',
               padding: '24px',
               maxWidth: '800px',
@@ -399,34 +399,34 @@ export default function MyBids({ did, address, collectionId }: MyBidsProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Collection</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedBid.collection}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedBid.collection}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>DID</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedBid.did}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedBid.did}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Address</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedBid.address}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedBid.address}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Role</p>
-                <p style={{ margin: 0, color: '#495057' }}>{selectedBid.role}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{selectedBid.role}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Created</p>
-                <p style={{ margin: 0, color: '#495057' }}>{new Date(selectedBid.created).toLocaleString()}</p>
+                <p style={{ margin: 0, color: 'var(--lighter-font-color)' }}>{new Date(selectedBid.created).toLocaleString()}</p>
               </div>
 
               <div>
                 <p style={{ fontWeight: 500, marginBottom: '4px' }}>Bid Data</p>
                 <pre
                   style={{
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--card-bg-color)',
                     padding: '12px',
                     borderRadius: '4px',
                     overflow: 'auto',

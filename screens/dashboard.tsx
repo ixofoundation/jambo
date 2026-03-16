@@ -1,378 +1,260 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { GrantAuthorization } from '@ixo/impactxclient-sdk/types/codegen/cosmos/authz/v1beta1/authz';
-import { DeliverTxResponse } from '@cosmjs/stargate';
-import { createQueryClient } from '@ixo/impactxclient-sdk';
+import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
+import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
-import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import { secret } from '@utils/secrets';
-import { fetchCollectionByCollectionId } from '@utils/claims';
-import MyBids from '@components/MyBids/MyBids';
-import CollectionBids from '@components/CollectionBids/CollectionBids';
-import MyClaims from '@components/MyClaims/MyClaims';
-import { logoutMatrixClient } from '@utils/matrix';
-import CollectionClaims from '@components/CollectionClaims/CollectionClaims';
+import { useAuth } from '@hooks/useAuth';
+import EditAccountModal from '@components/EditAccountModal/EditAccountModal';
+import { useProtocolCollections } from '@hooks/useProtocolCollections';
+import { useAppSelector } from '@store/hooks';
+import Header from '@components/Header/Header';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
-import { fetchProtocolEntity } from '@utils/entity';
-import EditAccountModal from '@components/EditAccountModal/EditAccountModal';
+import { secret } from '@utils/secrets';
 
-interface DashboardProps {
-  did: string;
-  address: string;
-  method: 'signx' | 'mnemonic' | 'passkey';
-  onSign: (messages: any[]) => Promise<DeliverTxResponse>;
-  onAuthenticate: () => Promise<{ type: string; data: Uint8Array }>;
+function readableStatus(status?: number): string {
+  if (status === 0) return 'Created';
+  if (status === 1) return 'Active';
+  if (status === 2) return 'Paused';
+  if (status === 3) return 'Closed';
+  return 'Active';
 }
 
-export default function Dashboard({ did, address, method, onSign, onAuthenticate }: DashboardProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [collectionId, setCollectionId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState('myBids');
-  const [auths, setAuths] = useState<string[]>([]);
+function readableType(type?: string): string {
+  if (!type) return '';
+  // "dao/project" → "Project", "protocol/claim" → "Claim Protocol"
+  const parts = type.split('/');
+  const last = parts[parts.length - 1] || '';
+  return last.charAt(0).toUpperCase() + last.slice(1);
+}
+
+export default function Dashboard() {
+  const router = useRouter();
+  const entityDid = router.query.entityId as string | undefined;
+
+  const authContext = useAuth();
+  const did = authContext.did!;
+  const address = authContext.address!;
+  const method = authContext.signingMethod!;
+  const onSign = authContext.onSign;
+  const onAuthenticate = authContext.onAuthenticate;
   const [showEditAccount, setShowEditAccount] = useState(false);
 
-  const claimCollectionIdRef = useRef<string>('');
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    collections: protocolCollections,
+    loading: collectionsLoading,
+  } = useProtocolCollections(entityDid);
 
-  const authsRef = useRef<string[]>([]);
-  const myBidsEnabled = !!address && !!claimCollectionIdRef.current;
-  const collectionBidsEnabled = !!auths.includes('owner') && !!claimCollectionIdRef.current;
-  const myClaimsEnabled =
-    !!auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization) && !!claimCollectionIdRef.current;
-  const collectionClaimsEnabled =
-    !!auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization) && !!claimCollectionIdRef.current;
+  const profile = useAppSelector((state) => (entityDid ? state.profiles.byEntityDid[entityDid] : undefined));
+  const entity = useAppSelector((state) => (entityDid ? state.entities.byId[entityDid] : undefined));
 
-  function addAuth(auth: string) {
-    if (authsRef.current.includes(auth)) {
-      return;
-    }
-    authsRef.current.push(auth);
-    setAuths((prevState) => [...prevState, auth]);
+  const projectName = profile?.name || entityDid || '';
+  const projectType = readableType(profile?.type || entity?.type);
+  const projectStatus = readableStatus(entity?.status);
+
+  // Per-collection authz status: 'agent' | 'pending' | 'unauthorized' | undefined (loading)
+  const [collectionStatus, setCollectionStatus] = useState<Record<string, 'agent' | 'pending' | 'unauthorized'>>({});
+  const [statusLoading, setStatusLoading] = useState(true);
+  const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
+
+  function getBidBotClient() {
+    if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
+    bidBotClientRef.current = createMatrixBidBotClient({
+      botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
+      accessToken: secret.accessToken as string,
+    });
+    return bidBotClientRef.current;
   }
-  function removeAuth(auth: string) {
-    if (!authsRef.current.includes(auth)) {
-      return;
-    }
-    authsRef.current = authsRef.current.filter((a) => a !== auth);
-    setAuths((prevState) => prevState.filter((a) => a !== auth));
-  }
 
-  useEffect(
-    function () {
-      if (address && claimCollectionIdRef.current) {
-        checkAuthz();
-      }
+  useEffect(() => {
+    if (!address || !did || protocolCollections.length === 0 || collectionsLoading) return;
 
-      return function () {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
+    let cancelled = false;
+    async function checkStatuses() {
+      try {
+        const queryClient = await createQueryClient(CHAIN_RPC_URL);
+        const { grants } = await queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address });
+        const typedGrants = grants as GrantAuthorization[];
+
+        const statuses: Record<string, 'agent' | 'pending' | 'unauthorized'> = {};
+        const bidClient = getBidBotClient();
+        const registry = createRegistry();
+
+        await Promise.all(
+          protocolCollections.map(async (c) => {
+            const hasSubmit = typedGrants?.find((g) => {
+              if (g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization || g.granter !== c.admin) return false;
+              try {
+                const decoded = registry.decode(g.authorization);
+                const constraints = decoded.constraints ?? [];
+                if (constraints.length === 0) return true;
+                return constraints.some((con: any) => con.collectionId === c.collectionId);
+              } catch {
+                return false;
+              }
+            });
+            if (hasSubmit) {
+              statuses[c.collectionId] = 'agent';
+              return;
+            }
+            try {
+              const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did);
+              if (response.data?.length > 0) {
+                statuses[c.collectionId] = 'pending';
+                return;
+              }
+            } catch {}
+            statuses[c.collectionId] = 'unauthorized';
+          }),
+        );
+
+        if (!cancelled) {
+          setCollectionStatus(statuses);
+          setStatusLoading(false);
         }
-      };
-    },
-    [claimCollectionIdRef.current, address],
-  );
-
-  async function handleSearch() {
-    try {
-      setLoading(true);
-      setError(null);
-      const collection = await fetchCollectionByCollectionId(collectionId);
-      console.log('collection', collection);
-      if (!collection?.id) {
-        throw new Error('Collection not found');
+      } catch {
+        if (!cancelled) setStatusLoading(false);
       }
-      claimCollectionIdRef.current = collectionId;
-    } catch (err) {
-      setError((err as Error).message);
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
-  }
 
-  async function checkAuthz() {
-    console.log('checkAuthz', collectionId);
-    try {
-      const collection = await fetchCollectionByCollectionId(collectionId);
-      if (collection.admin === address) {
-        addAuth('admin');
-      } else {
-        removeAuth('admin');
-      }
-      const queryClient = await createQueryClient(CHAIN_RPC_URL);
-      const [granteeGrants, entity] = await Promise.all([
-        queryClient.cosmos.authz.v1beta1.granteeGrants({
-          grantee: address,
-        }),
-        fetchProtocolEntity(collection.entity),
-      ]);
-      if (entity?.owner === address) {
-        addAuth('owner');
-      } else {
-        removeAuth('owner');
-      }
-      const hasSubmitClaimAuthz = (granteeGrants.grants as GrantAuthorization[])?.find(
-        (g) =>
-          g.authorization?.typeUrl === TRANSACTION_TYPES.SubmitClaimAuthorization && g.granter === collection.admin,
-      );
-      if (hasSubmitClaimAuthz) {
-        addAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
-      } else {
-        removeAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
-      }
-      const hasEvaluateClaimAuthz = (granteeGrants.grants as GrantAuthorization[])?.find(
-        (g) =>
-          g.authorization?.typeUrl === TRANSACTION_TYPES.EvaluateClaimAuthorization && g.granter === collection.admin,
-      );
-      if (hasEvaluateClaimAuthz) {
-        addAuth(TRANSACTION_TYPES.EvaluateClaimAuthorization);
-      } else {
-        removeAuth(TRANSACTION_TYPES.EvaluateClaimAuthorization);
-      }
-    } catch (errr) {
-      // silent fail
-    } finally {
-      timeoutRef.current = setTimeout(checkAuthz, 5000);
-    }
+    checkStatuses();
+    return () => { cancelled = true; };
+  }, [address, did, protocolCollections, collectionsLoading]);
+
+  function statusBadge(status?: 'agent' | 'pending' | 'unauthorized') {
+    if (!status) return null;
+    const config = {
+      agent: { label: 'Agent', color: 'var(--success-color)' },
+      pending: { label: 'Pending', color: 'var(--warning-color)' },
+      unauthorized: { label: 'Unauthorized', color: 'var(--muted-font-color)' },
+    }[status];
+    return (
+      <span
+        style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: config.color,
+          backgroundColor: `color-mix(in srgb, ${config.color} 12%, transparent)`,
+          padding: '2px 8px',
+          borderRadius: '10px',
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {config.label}
+      </span>
+    );
   }
 
   return (
     <>
-      <div
+      <Header />
+      <main
         style={{
-          maxWidth: '768px',
+          maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '48px 16px',
+          padding: '0 16px 16px',
+          paddingTop: 'calc(var(--header-height) + 8px)',
+          minHeight: '100vh',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div
-            style={{
-              border: '1px solid #e9ecef',
-              borderRadius: '8px',
-              padding: '16px',
-              backgroundColor: 'white',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-                <p style={{ fontWeight: 500 }}>Account</p>
-                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                  {/* @ts-ignore */}
-                  <Button
-                    label='Edit'
-                    color={BUTTON_COLOR.white}
-                    bgColor={BUTTON_BG_COLOR.primary}
-                    size={BUTTON_SIZE.medium}
-                    onClick={() => setShowEditAccount(true)}
-                  />
-                  {/* @ts-ignore */}
-                  <Button
-                    label='Logout'
-                    color={BUTTON_COLOR.white}
-                    bgColor={BUTTON_BG_COLOR.error}
-                    size={BUTTON_SIZE.medium}
-                    onClick={async () => {
-                      await logoutMatrixClient({ baseUrl: secret.baseUrl });
-                      window.location.reload();
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: '12px' }}>
-                  <span style={{ fontWeight: '500', padding: 0, margin: 0 }}>ADDRESS:</span> {address}
-                </p>
-                <p style={{ margin: 0, fontSize: '12px' }}>
-                  <span style={{ fontWeight: '500', padding: 0, margin: 0 }}>DID:</span> {did}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              border: '1px solid #e9ecef',
-              borderRadius: '8px',
-              padding: '16px',
-              backgroundColor: 'white',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label
-                  style={{
-                    // display: 'block',
-                    marginBottom: '4px',
-                    fontSize: '14px',
-                  }}
-                >
-                  Collection ID
-                </label>
-                <input
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #ced4da',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                  }}
-                  placeholder='Enter collection ID'
-                  value={collectionId}
-                  onChange={(e) => setCollectionId(e.target.value)}
-                />
-              </div>
-              {/* @ts-ignore */}
-              <Button
-                label='Search'
-                disabled={collectionId === claimCollectionIdRef.current}
-                onClick={handleSearch}
-                color={BUTTON_COLOR.primary}
-                size={BUTTON_SIZE.mediumLarge}
-                bgColor={BUTTON_BG_COLOR.white}
-                borderColor={BUTTON_BORDER_COLOR.primary}
-              />
-            </div>
-            {!!auths.length && (
-              <div style={{ marginTop: 10 }}>
-                {auths.map((a) => (
-                  <span
-                    key={a}
+        {/* Title */}
+        <h1
+          style={{
+            margin: '0 0 4px',
+            fontSize: '20px',
+            fontWeight: 600,
+            color: 'var(--main-font-color)',
+            letterSpacing: '-0.3px',
+            lineHeight: 1.2,
+          }}
+        >
+          {projectName}
+        </h1>
+
+        {/* Subtitle */}
+        {(projectType || projectStatus) && (
+          <p style={{ margin: '0 0 24px', fontSize: '13px', color: 'var(--muted-font-color)' }}>
+            {projectType}{projectType && projectStatus ? ' \u00B7 ' : ''}{projectStatus}
+          </p>
+        )}
+        {!projectType && !projectStatus && <div style={{ marginBottom: '24px' }} />}
+
+        {/* Collection list */}
+        {collectionsLoading ? (
+          <p style={{ margin: '32px 0', fontSize: '14px', color: 'var(--muted-font-color)', textAlign: 'center' }}>
+            Loading...
+          </p>
+        ) : protocolCollections.length === 0 ? (
+          <p style={{ margin: '32px 0', fontSize: '14px', color: 'var(--muted-font-color)', textAlign: 'center' }}>
+            No collections found
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {protocolCollections.map((c, i) => (
+              <button
+                key={c.collectionId}
+                onClick={() => router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 0',
+                  border: 'none',
+                  borderBottom: i < protocolCollections.length - 1 ? '1px solid var(--border-color)' : 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  width: '100%',
+                  color: 'var(--main-font-color)',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
                     style={{
-                      padding: 8,
-                      borderRadius: 10,
-                      marginRight: 10,
-                      border: '1px solid #e9ecef',
-                      fontSize: 12,
+                      margin: 0,
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
                     }}
                   >
-                    {a === TRANSACTION_TYPES.SubmitClaimAuthorization
-                      ? 'Service Agent'
-                      : a === TRANSACTION_TYPES.EvaluateClaimAuthorization
-                      ? 'Evaluation Agent'
-                      : a === 'admin'
-                      ? 'Collection Admin'
-                      : a === 'owner'
-                      ? 'Collection Owner'
-                      : 'Unknown'}
-                  </span>
-                ))}
-              </div>
-            )}
-            {(auths ?? []).some((a) => a === 'admin' || a === 'owner') && (
-              <div style={{ flexDirection: 'row', display: 'flex', marginTop: 20 }}>
-                <div style={{ flex: 1 }}>
-                  <label
-                    style={{
-                      // display: 'block',
-                      marginBottom: '4px',
-                      fontSize: '14px',
-                    }}
-                  >
-                    Collection ID
-                  </label>
-                  <input
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #ced4da',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                    }}
-                    placeholder='Enter collection ID'
-                    value={collectionId}
-                    onChange={(e) => setCollectionId(e.target.value)}
-                  />
+                    {c.formName || `Collection ${c.collectionId}`}
+                  </p>
+                  <div style={{ margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--muted-font-color)' }}>
+                      {c.endDate && new Date(c.endDate) < new Date()
+                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                        : c.startDate
+                          ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                          : ''}
+                    </span>
+                    {!statusLoading && statusBadge(collectionStatus[c.collectionId])}
+                  </div>
                 </div>
-                {/* @ts-ignore */}
-                <Button
-                  label='Search'
-                  disabled={collectionId === claimCollectionIdRef.current}
-                  onClick={handleSearch}
-                  color={BUTTON_COLOR.primary}
-                  size={BUTTON_SIZE.mediumLarge}
-                  bgColor={BUTTON_BG_COLOR.white}
-                  borderColor={BUTTON_BORDER_COLOR.primary}
-                />
-              </div>
-            )}
+                <div style={{ flexShrink: 0, marginLeft: '12px' }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--muted-font-color)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+              </button>
+            ))}
           </div>
-
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '24px',
-            }}
-          >
-            <div
-              style={{
-                borderBottom: '1px solid #e9ecef',
-                display: 'flex',
-                gap: '4px',
-              }}
-            >
-              {[
-                { id: 'myBids', label: 'My Bids', enabled: myBidsEnabled },
-                { id: 'collectionBids', label: 'Collection Bids', enabled: collectionBidsEnabled },
-                { id: 'myClaims', label: 'My Claims', enabled: myClaimsEnabled },
-                { id: 'collectionClaims', label: 'Collection Claims', enabled: collectionClaimsEnabled },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  disabled={!tab.enabled}
-                  style={{
-                    padding: '12px 16px',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    opacity: tab.enabled ? 1 : 0.5,
-                    borderBottom: activeTab === tab.id ? '2px solid #228be6' : '2px solid transparent',
-                    color: activeTab === tab.id ? '#228be6' : '#495057',
-                    fontWeight: activeTab === tab.id ? 500 : 400,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {activeTab === 'myBids' ? (
-              myBidsEnabled ? (
-                // @ts-ignore
-                <MyBids address={address} did={did} collectionId={claimCollectionIdRef.current} onSign={onSign} />
-              ) : null
-            ) : activeTab === 'collectionBids' ? (
-              collectionBidsEnabled ? (
-                // @ts-ignore
-                <CollectionBids
-                  address={address}
-                  did={did}
-                  collectionId={claimCollectionIdRef.current}
-                  onSign={onSign}
-                />
-              ) : null
-            ) : activeTab === 'myClaims' ? (
-              myClaimsEnabled ? (
-                // @ts-ignore
-                <MyClaims address={address} did={did} collectionId={claimCollectionIdRef.current} onSign={onSign} />
-              ) : null
-            ) : activeTab === 'collectionClaims' ? (
-              collectionClaimsEnabled ? (
-                // @ts-ignore
-                <CollectionClaims
-                  address={address}
-                  did={did}
-                  collectionId={claimCollectionIdRef.current}
-                  onSign={onSign}
-                />
-              ) : null
-            ) : null}
-          </div>
-        </div>
-      </div>
+        )}
+      </main>
       {!!showEditAccount && (
         // @ts-ignore
         <EditAccountModal

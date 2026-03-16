@@ -1,20 +1,90 @@
 import { BLOCKSYNC_URL, CHAIN_RPC_URL } from '@constants/common';
 import { createQueryClient } from '@ixo/impactxclient-sdk';
+import { store } from '@store/index';
+import { setCollection, setCollections, clearCollections } from '@store/slices/collectionsSlice';
 import gqlQuery from './graphql';
 
-const COLLECTION_CACHE = new Map<string, any>();
+export function clearCollectionCache() {
+  store.dispatch(clearCollections());
+}
 
 export async function fetchCollectionByCollectionId(collectionId: string) {
-  if (COLLECTION_CACHE.has(collectionId)) {
-    return COLLECTION_CACHE.get(collectionId);
-  }
+  const cached = store.getState().collections.byId[collectionId];
+  if (cached) return cached;
+
   const queryClient = await createQueryClient(CHAIN_RPC_URL);
   const claimCollectionResponse = await queryClient.ixo.claims.v1beta1.collection({ id: collectionId });
   if (!claimCollectionResponse?.collection?.id) {
     throw new Error('Collection not found');
   }
-  COLLECTION_CACHE.set(collectionId, claimCollectionResponse.collection);
-  return COLLECTION_CACHE.get(collectionId);
+  store.dispatch(setCollection({ id: collectionId, collection: claimCollectionResponse.collection }));
+  return claimCollectionResponse.collection;
+}
+
+export async function fetchCollectionsByProtocolDid(protocolDid: string) {
+  const query = `
+    query getCollectionsByProtocol {
+      claimCollections(filter: { protocol: { equalTo: "${protocolDid}" } }) {
+        nodes {
+          id
+          entity
+          admin
+          protocol
+          startDate
+          endDate
+          state
+          count
+          quota
+          evaluated
+          approved
+          rejected
+          disputed
+          payments
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery(BLOCKSYNC_URL, query);
+  // @ts-ignore
+  const collections = result.data?.data?.claimCollections?.nodes;
+  if (collections?.length) {
+    collections.forEach((c: any) => {
+      if (c?.id) store.dispatch(setCollection({ id: c.id, collection: c }));
+    });
+  }
+  return collections ?? [];
+}
+
+export async function fetchCollectionsByEntityDid(entityDid: string) {
+  const query = `
+    query getCollectionsByEntity {
+      claimCollections(filter: { entity: { equalTo: "${entityDid}" } }) {
+        nodes {
+          id
+          entity
+          admin
+          protocol
+          startDate
+          endDate
+          state
+          count
+          quota
+          evaluated
+          approved
+          rejected
+          disputed
+          payments
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery(BLOCKSYNC_URL, query);
+  // @ts-ignore
+  const collections = result.data?.data?.claimCollections?.nodes;
+  if (collections?.length) {
+    store.dispatch(setCollections({ entityDid, collections }));
+  }
+  return collections ?? [];
 }
 
 export async function fetchClaimsByCollectionId(collectionId: string, address: string) {
@@ -27,6 +97,11 @@ export async function fetchClaimsByCollectionId(collectionId: string, address: s
           paymentsStatus
           schemaType
           submissionDate
+          evaluationByClaimId {
+            status
+            evaluationDate
+            oracle
+          }
         }
       }
     }

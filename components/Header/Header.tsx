@@ -1,61 +1,52 @@
-import { useRouter } from 'next/router';
-import Image from 'next/image';
-
 import styles from './Header.module.scss';
-import ColoredIcon, { ICON_COLOR } from '@components/ColoredIcon/ColoredIcon';
-import Anchor from '@components/Anchor/Anchor';
-import VerticalDots from '@icons/vertical_dots.svg';
-import DappStore from '@icons/squares_grid.svg';
-import { pushNewRoute } from '@utils/router';
-import config from '@constants/config.json';
 import { FC } from 'react';
+import { useDrawer } from '@components/Drawer/Drawer';
 
 type HeaderProps = {
-  configure?: boolean;
-  header?: string;
+  onBack?: () => void;
 };
 
-const Header: FC<HeaderProps> = ({ configure = false, header }) => {
-  const { headerShowLogo, headerShowName } = config;
-  const router = useRouter();
+const Header: FC<HeaderProps> = ({ onBack }) => {
+  const { open } = useDrawer();
 
   return (
     <nav className={styles.nav}>
-      <Anchor active openInNewTab href='https://my.jambo.earth/'>
-        <ColoredIcon icon={DappStore} color={ICON_COLOR.iconGrey} size={25} className={styles.headerIcon} />
-      </Anchor>
-      <SiteHeader
-        displayLogo={!header && headerShowLogo}
-        displayName={!!(header || headerShowName)}
-        name={header}
-        onClick={() => (configure ? null : pushNewRoute('/'))}
-      />
-      <Anchor active href='/settings'>
-        <ColoredIcon icon={VerticalDots} color={ICON_COLOR.iconGrey} size={25} className={styles.headerIcon} />
-      </Anchor>
+      <div className={styles.inner}>
+        {onBack ? (
+          <button
+            className={styles.iconButton}
+            onClick={onBack}
+            aria-label="Go back"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            className={styles.iconButton}
+            onClick={() => window.location.assign('/')}
+            aria-label="Home"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </button>
+        )}
+        <button
+          className={styles.iconButton}
+          onClick={open}
+          aria-label="Open menu"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
     </nav>
-  );
-};
-
-type SiteHeaderProps = {
-  displayLogo?: boolean;
-  displayName?: boolean;
-  name?: string;
-  onClick?: () => void;
-};
-
-export const SiteHeader: FC<SiteHeaderProps> = ({ displayLogo, displayName, name, onClick }) => {
-  const { siteName } = config;
-
-  return (
-    <div className={styles.row} onClick={onClick}>
-      {displayLogo && (
-        <div className={styles.logo}>
-          <Image alt='logo' src='/images/logo.png' layout='fill' priority />
-        </div>
-      )}
-      {displayName && <h1 className={styles.name}>{name ?? siteName}</h1>}
-    </div>
   );
 };
 

@@ -4,7 +4,7 @@ import { useState, HTMLAttributes, useEffect } from 'react';
 import { Theme } from 'types/general';
 
 export const ThemeProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>('dark');
   const [loaded, setLoaded] = useState<boolean>(false);
 
   const updateTheme = (newTheme: Theme) => {
@@ -15,6 +15,13 @@ export const ThemeProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     const persistedTheme = getLocalStorage('theme');
     setLoaded(true);
     if (persistedTheme) setTheme(persistedTheme as Theme);
+
+    // Restore persisted accent color
+    const accentColor = localStorage.getItem('jambo-accent-color');
+    if (accentColor) {
+      document.documentElement.style.setProperty('--primary-color', accentColor);
+      document.documentElement.style.setProperty('--link-color', accentColor);
+    }
   }, []);
 
   useEffect(() => {
