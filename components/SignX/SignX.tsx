@@ -1,11 +1,9 @@
 import { FC, HTMLAttributes, useEffect, useRef } from 'react';
 import QRCode from 'react-qr-code';
-import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { isMobile, isIOS, isMacOs } from 'react-device-detect';
 import { SIGN_X_CLEAN_DEEPLINK, convertDataToDeeplink } from '@ixo/signx-sdk';
 
 import styles from './SignX.module.scss';
-import { getCSSVariable } from '../../utils/styles';
 
 type SignXProps = {
   title: string;
@@ -19,8 +17,6 @@ type SignXProps = {
 const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequence }) => {
   const isNewSession = transactSequence === 1;
   const firstLoad = useRef(false);
-  const timeoutFull = (timeout - 1000) / 1000;
-  const timeoutThird = timeoutFull / 3;
   const deeplink = convertDataToDeeplink(isNewSession ? data : { type: SIGN_X_CLEAN_DEEPLINK });
   console.log({ data: deeplink });
 
@@ -63,24 +59,6 @@ const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequenc
           </a>
         </p>
       )}
-      <div className={styles.timeWrapper}>
-        {/* @ts-ignore */}
-        <CountdownCircleTimer
-          isPlaying
-          duration={timeoutFull}
-          colors={[getCSSVariable('--primary-color') || ('#004777' as any), '#F7B801', '#A30000']}
-          colorsTime={[timeoutFull, timeoutThird, 0]}
-          size={75}
-          strokeWidth={5}
-        >
-          {({ remainingTime, color }) => (
-            <div className={styles.time} style={{ color: color }}>
-              <div>{remainingTime}</div>
-              <p>seconds</p>
-            </div>
-          )}
-        </CountdownCircleTimer>
-      </div>
       {isNewSession && (
         <>
           {/* @ts-ignore */}

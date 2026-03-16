@@ -8135,11 +8135,6 @@ rdf-canonize@^5.0.0:
   dependencies:
     setimmediate "^1.0.5"
 
-react-countdown-circle-timer@3.2.1:
-  version "3.2.1"
-  resolved "https://registry.npmjs.org/react-countdown-circle-timer/-/react-countdown-circle-timer-3.2.1.tgz"
-  integrity sha512-yBAy/9ILXOiFbLBM+3jS72TW5LeRcH8wkRC9NNqMpUkCXkGjSnaeRbJMsR9lsYF0oVXjSDbJaRbCuVMT+9HnKA==
-
 react-device-detect@2.2.3:
   version "2.2.3"
   resolved "https://registry.npmjs.org/react-device-detect/-/react-device-detect-2.2.3.tgz"
