@@ -85,7 +85,6 @@ export async function signAndBroadcastWithPasskey({
     ],
   });
   const memo = 'Signing with Passkey Demo';
-  console.log('getUsedFee', { feegrantGranter, address, messages, fee: 'auto', memo });
   // NOTE: must manually calculate simulated fee for now as chain cant handle simulations with nonCriticalExtensionOptions.
   // Don't pass txBodyBytes to getUsedFee, it will throw an error, only pass messages
   // usedFee already multiplies the simulated gas, if that too little then manually simulate and increase multiplier

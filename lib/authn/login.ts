@@ -22,7 +22,6 @@ export async function loginPasskey({ address, authnResult }: LoginPasskeyParams)
   });
 
   if (!response.ok) {
-    response.json().then(console.log).catch(console.error);
     throw new Error('Failed to fetch encrypted mnemonic');
   }
 

@@ -1,12 +1,10 @@
-import { HTMLAttributes } from 'react';
-
 import styles from './Loader.module.scss';
 
 type LoaderProps = {
   size?: number;
-} & HTMLAttributes<HTMLDivElement>;
+};
 
-const Loader = ({ size = 50, className, ...other }: LoaderProps) => {
+const Loader = ({ size = 50 }: LoaderProps) => {
   return (
     <div
       className={styles.tailSpin}

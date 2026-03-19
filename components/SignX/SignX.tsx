@@ -18,7 +18,6 @@ const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequenc
   const isNewSession = transactSequence === 1;
   const firstLoad = useRef(false);
   const deeplink = convertDataToDeeplink(isNewSession ? data : { type: SIGN_X_CLEAN_DEEPLINK });
-  console.log({ data: deeplink });
 
   const downloadLink =
     isIOS || isMacOs
@@ -30,7 +29,6 @@ const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequenc
     firstLoad.current = true;
 
     if (isMobile) {
-      console.log('isMobile');
       setTimeout(() => {
         const newWindow = window.open(deeplink, '_top', 'noopener,noreferrer');
         if (newWindow) newWindow.opener = null;

@@ -22,13 +22,6 @@ const claimDraftsSlice = createSlice({
     saveDraft(state, action: PayloadAction<{ collectionId: string; draft: ClaimDraft }>) {
       state.byCollectionId[action.payload.collectionId] = action.payload.draft;
     },
-    updateDraftData(state, action: PayloadAction<{ collectionId: string; surveyData: Record<string, any> }>) {
-      const draft = state.byCollectionId[action.payload.collectionId];
-      if (draft) {
-        draft.surveyData = action.payload.surveyData;
-        draft.updatedAt = Date.now();
-      }
-    },
     clearDraft(state, action: PayloadAction<string>) {
       delete state.byCollectionId[action.payload];
     },
@@ -38,5 +31,5 @@ const claimDraftsSlice = createSlice({
   },
 });
 
-export const { saveDraft, updateDraftData, clearDraft, clearAllDrafts } = claimDraftsSlice.actions;
+export const { saveDraft, clearDraft, clearAllDrafts } = claimDraftsSlice.actions;
 export default claimDraftsSlice.reducer;

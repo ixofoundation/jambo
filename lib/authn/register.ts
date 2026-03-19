@@ -21,8 +21,6 @@ export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
 
   // Generate registration options
   const registrationOptions = await fido2.attestationOptions();
-  console.log('registrationOptions');
-  console.log(registrationOptions);
 
   // Create registration options
   const publicKeyCredentialCreationOptions = {
@@ -42,12 +40,9 @@ export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
   if (!credential) {
     throw new Error('Credential creation failed');
   }
-  console.log('credential');
-  console.log(credential);
   const rawPublicKey = new Uint8Array(credential.response?.getPublicKey());
   // @ts-ignore
   const publicKeyEncoded = base64urlEncode(rawPublicKey);
-  console.log({ publicKeyEncoded });
 
   // Prepare expected parameters for attestation result verification
   const expectedAttestationResult: ExpectedAttestationResult = {
@@ -100,8 +95,6 @@ export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
     memo: 'Register passkey as authenticator',
     feegrantGranter,
   });
-
-  console.log('result', result);
 
   return { result, credentialId: credential.id };
 }

@@ -80,12 +80,3 @@ export function secureReset(key: string) {
   return true;
 }
 
-/**
- * Resets all credentials saved.
- * @returns True if the operation was successful.
- */
-export function secureResetAll() {
-  // @ts-ignore
-  secureStorage.clear();
-  return true;
-}

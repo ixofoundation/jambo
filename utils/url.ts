@@ -81,7 +81,6 @@ export function getServiceEndpoint(url = '', services: EntityService[] = []) {
 
 export const getAdditionalInfo = async (url: string, tag?: string) => {
   const cleanUrl = cleanUrlString(url);
-  console.log('cleanUrl', cleanUrl);
   const res = await fetch(cleanUrl, {
     method: 'GET',
     headers: {
@@ -93,6 +92,5 @@ export const getAdditionalInfo = async (url: string, tag?: string) => {
     throw res.statusText;
   }
   const data = await res.json();
-  console.log('data', data);
   return data;
 };

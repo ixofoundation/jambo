@@ -109,7 +109,6 @@ export async function queryAddressAllowances(address: string) {
 export async function checkAddressFeegrant(address: string) {
   try {
     const allowancesResponse = await queryAddressAllowances(address);
-    console.log('allowancesResponse', allowancesResponse);
     if (!allowancesResponse?.length) {
       return false;
     }

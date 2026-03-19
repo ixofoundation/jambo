@@ -21,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 			}),
 		});
 		const data = await response.json();
-		console.log('response', response.ok, response.status, data);
 		if (!response.ok) {
 			res.status(response.status).json({
 				error: data?.message ?? 'Failed to fetch encrypted mnemonic',

@@ -74,8 +74,6 @@ function LoginPasskey() {
           await delay(200);
           // Get initial challenge
           const authOptions = await fetch('/api/auth/initial-challenge').then((r) => r.json());
-          console.log({ authOptions });
-
           const publicKeyOptions: PublicKeyCredentialRequestOptions = {
             ...authOptions,
             challenge: base64urlDecode(authOptions.challenge),
@@ -86,11 +84,8 @@ function LoginPasskey() {
           if (!assertion) {
             throw new Error('Credential assertion failed');
           }
-          console.log({ assertion });
-
           // Skip authn verification as we only care to get the keyId
           const newKeyId = assertion.id;
-          console.log({ newKeyId });
           setKeyId(newKeyId);
           setAssertion(assertion);
 
@@ -155,10 +150,8 @@ function LoginPasskey() {
   	`;
 
     const result = await gqlQuery<any>(BLOCKSYNC_URL, query);
-    console.log({ result });
     const addresses = result.data?.data?.smartAccountAuthenticators?.nodes || [];
     setAddresses(addresses);
-    console.log({ BLOCKSYNC_URL, addresses });
 
     if (addresses.length === 1) {
       setSelectedAddress(addresses[0].address);
@@ -222,14 +215,12 @@ function LoginPasskey() {
         address: resolvedAddress,
         authnResult: parsedAssertion,
       });
-      console.log({ encryptedMnemonic });
       if (!encryptedMnemonic) {
         setError('Failed to login with passkey.');
         return;
       }
 
       const pin = (await requestPin(encryptedMnemonic)) as string;
-      console.log({ pin });
 
       // Find the authenticatorId for the selected address
       const authenticatorId =
@@ -247,7 +238,6 @@ function LoginPasskey() {
         username: mxUsername,
         password: mxPassword,
       });
-      console.log('mxLogin', account);
       if (!account?.accessToken) {
         throw new Error('Failed to login matrix account, please try again later.');
       }
@@ -287,24 +277,6 @@ function LoginPasskey() {
     setAssertion(null);
     setAddresses([]);
     setSelectedAddress('');
-  }
-
-  function handleEmailSuccess() {
-    try {
-      handlerRef.current?.resolve?.(true);
-    } catch (error) {
-      setError('Something went wrong. Please try again.');
-      reset();
-    }
-  }
-
-  function handleEmailError(error: string) {
-    try {
-      handlerRef.current?.reject?.(error);
-    } catch (error) {
-      setError('Something went wrong. Please try again.');
-      reset();
-    }
   }
 
   function handlePinSuccess(pin: string) {

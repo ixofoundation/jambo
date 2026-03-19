@@ -100,18 +100,3 @@ const Button = ({
 };
 
 export default Button;
-
-type ViewOnExplorerButtonProps = {
-  explorer: string;
-};
-
-export const ViewOnExplorerButton = ({ explorer }: ViewOnExplorerButtonProps) => (
-  // @ts-ignore
-  <Button
-    label={`View on ${explorer}`}
-    size={BUTTON_SIZE.mediumLarge}
-    rounded
-    bgColor={BUTTON_BG_COLOR.lightGrey}
-    borderColor={BUTTON_BORDER_COLOR.lightGrey}
-  />
-);

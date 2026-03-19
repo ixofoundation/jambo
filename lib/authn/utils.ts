@@ -17,7 +17,6 @@ export function extractDataFromAuthData(authDataBuffer: any) {
 	let offset = 0;
 	// rpIdHash: 32 bytes
 	const rpIdHash = authDataBuffer.slice(offset, offset + 32);
-	console.log({ rpIdHash: rpIdHash.toString('hex') });
 	// Skip rpIdHash (32 bytes)
 	offset += 32;
 	// Read flags (1 byte)
@@ -59,7 +58,6 @@ export function extractDataFromAuthData(authDataBuffer: any) {
 	const curve = cosePublicKey.get(-1);
 	// const x = cosePublicKey.get(-2);
 	// const y = cosePublicKey.get(-3);
-	console.log({ keyType, algorithm, curve });
 	return { keyType, algorithm, curve, rpIdHash };
 
 	// if (keyType !== 2 || curve !== 1) {

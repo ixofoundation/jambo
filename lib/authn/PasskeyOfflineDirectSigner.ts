@@ -50,7 +50,6 @@ export class PasskeyOfflineDirectSigner implements OfflineDirectSigner {
   }
 
   async signDirect(signerAddress: string, signDoc: any): Promise<DirectSignResponse> {
-    console.log('signDirect', signerAddress, signDoc);
     if (signerAddress !== this.options.address) {
       throw new Error(`Address ${signerAddress} not found in wallet`);
     }
@@ -73,13 +72,10 @@ export class PasskeyOfflineDirectSigner implements OfflineDirectSigner {
         },
       ],
     };
-    console.log({ publicKeyCredentialRequestOptions });
-
     // Get assertion
     const assertion: any = await navigator.credentials.get({
       publicKey: publicKeyCredentialRequestOptions,
     });
-    console.log({ assertion });
 
     // Prepare signature data
     const signatureData = {

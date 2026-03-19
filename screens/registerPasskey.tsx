@@ -14,7 +14,6 @@ import { registerPasskey } from 'lib/authn/register';
 import { encrypt } from '@utils/encryption';
 import { cleanUrlString } from '@utils/url';
 import { delay } from '@utils/timestamp';
-import { base64urlEncode, base64urlDecode } from '@utils/encoding';
 import {
   checkIsUsernameAvailable,
   createMatrixClient,
@@ -24,15 +23,13 @@ import {
   generateUserRoomAliasFromAddress,
   hasCrossSigningAccountData,
   logoutMatrixClient,
-  mxRegisterWithPasskey,
+  mxRegisterWithSecp,
   setupCrossSigning,
-  createUserCreationChallenge,
 } from '@utils/matrix';
 import useSteps from '@hooks/useSteps';
 import Loader from '@components/Loader/Loader';
 import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
-import { fido2 } from 'lib/authn/client';
 import SecretPhraseStep from '@components/SecretPhraseStep/SecretPhraseStep';
 import { useAuth } from '@hooks/useAuth';
 
@@ -203,47 +200,9 @@ function RegisterPasskey() {
       // clear any residual matrix data
       await logoutMatrixClient({ baseUrl: homeServerUrl });
 
-      const options = await fido2.assertionOptions();
-      // Create WebAuthn assertion for matrix user creation
-      const { challenge, challengeBase64 } = createUserCreationChallenge(address);
-
-      // Create assertion options for the challenge
-      const publicKeyOptions: PublicKeyCredentialRequestOptions = {
-        ...options,
-        challenge: new TextEncoder().encode(JSON.stringify(challenge)),
-        allowCredentials: [
-          {
-            type: 'public-key',
-            id: base64urlDecode(credentialId),
-          },
-        ],
-        userVerification: 'preferred',
-      };
-
-      // Get WebAuthn assertion for matrix account creation
-      const assertion: any = await navigator.credentials.get({
-        publicKey: publicKeyOptions,
-      });
-
-      if (!assertion) {
-        throw new Error('Failed to create WebAuthn assertion for matrix account creation');
-      }
-
-      // Format assertion for API
-      const authnResult = {
-        ...assertion,
-        id: assertion.id,
-        response: {
-          ...assertion.response,
-          clientDataJSON: base64urlEncode(assertion.response.clientDataJSON),
-          authenticatorData: base64urlEncode(assertion.response.authenticatorData),
-          signature: base64urlEncode(assertion.response.signature),
-        },
-      };
-
-      // register using new API
+      // register using new API (sign challenge with mnemonic wallet — no second passkey prompt)
       setLoadingMessage('Creating Vault account...');
-      const account = await mxRegisterWithPasskey(address, mxPassword, authnResult);
+      const account = await mxRegisterWithSecp(address, mxPassword, wallet);
       if (!account?.accessToken) {
         throw new Error('Failed to register matrix account, please try again later.');
       }

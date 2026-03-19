@@ -5,8 +5,6 @@ import { createQueryClient, createRegistry, cosmos, ixo } from '@ixo/impactxclie
 import { createMatrixBidBotClient, createMatrixClaimBotClient } from '@ixo/matrixclient-sdk';
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
-import 'survey-core/defaultV2.min.css';
-import 'survey-core/themes/borderless-dark';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
@@ -30,7 +28,7 @@ import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredentia
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
 import base58 from 'bs58';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
-import { saveDraft, updateDraftData, clearDraft } from '@store/slices/claimDraftsSlice';
+import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
 import { toast } from 'react-toastify';
 
 interface CollectionDetailProps {
@@ -101,6 +99,13 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [address, collectionId]);
+
+  useEffect(() => {
+    if (surveyTemplate) {
+      import('survey-core/defaultV2.min.css');
+      import('survey-core/themes/borderless-dark');
+    }
+  }, [surveyTemplate]);
 
   async function checkAuthz() {
     try {

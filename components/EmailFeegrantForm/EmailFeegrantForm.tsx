@@ -76,7 +76,6 @@ export default function EmailFeegrantForm({ address, onSuccess, onError }: Email
 
     try {
       const response = await verifyOTP({ email, ixoAddress: address, otp });
-      console.log('OTP verified successfully:', response.message);
       onSuccess();
     } catch (err: any) {
       console.error('Failed to verify OTP:', err);

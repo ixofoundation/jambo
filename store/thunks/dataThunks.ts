@@ -75,7 +75,6 @@ export const fetchAllCollectionData = createAsyncThunk(
             if (!vctResource?.serviceEndpoint) return;
             const url = getServiceEndpoint(vctResource.serviceEndpoint, entity.service);
             const formData = await getAdditionalInfo(url);
-            console.log('formData', formData);
             if (formData) {
               dispatch(setVctTemplate({ protocolDid: did, template: formData }));
               const name = formData?.title || formData?.question?.title;
