@@ -174,8 +174,8 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
                   aspectRatio: '1',
                   position: 'relative',
                   borderRadius: '12px',
-                  border: isCurrent ? '2px solid white' : '1px solid rgba(255,255,255,0.3)',
-                  backgroundColor: isCurrent ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)',
+                  border: isCurrent ? '2px solid var(--text-primary)' : '1px solid var(--input-border-color)',
+                  backgroundColor: isCurrent ? 'var(--card-bg-hover-color)' : 'var(--card-bg-color)',
                   boxSizing: 'border-box',
                 }}
               >
@@ -189,7 +189,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: 'white',
+                      backgroundColor: 'var(--text-primary)',
                     }}
                   />
                 )}
@@ -203,7 +203,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      backgroundColor: 'rgba(0,0,0,0.25)',
+                      backgroundColor: 'var(--disabled-color)',
                     }}
                   />
                 )}
@@ -223,13 +223,13 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
       <>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ width: '28px' }} />
-          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>Data Vault</h1>
+          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Data Vault</h1>
           <div style={{ width: '28px' }} />
         </div>
 
         {renderPinBoxes(confirmDigits)}
 
-        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', textAlign: 'center' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
           Enter your Data Vault PIN
         </p>
 
@@ -246,7 +246,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
       <>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ width: '28px' }} />
-          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>
+          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>
             Set up Data Vault
           </h1>
           <div style={{ width: '28px' }} />
@@ -254,11 +254,11 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
 
         {renderPinBoxes(digits)}
 
-        <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', textAlign: 'center' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
           Set a 6 digit PIN
         </p>
 
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
           <span style={{ color: 'var(--yellow-primary)', fontWeight: 500 }}>WARNING:</span> Your Data Vault is your
           personal data storage. There is no way to retrieve your PIN if you lose it, so store it somewhere safely.
         </p>
@@ -273,10 +273,10 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
             marginBottom: '20px',
             cursor: 'pointer',
             fontSize: '13px',
-            color: 'rgba(255,255,255,0.85)',
+            color: 'var(--text-primary)',
             padding: '12px',
             borderRadius: '12px',
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: 'var(--card-bg-color)',
             transition: 'border-color 0.2s',
           }}
         >
@@ -292,7 +292,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
               height: '20px',
               minWidth: '20px',
               borderRadius: '4px',
-              border: storedSafely ? 'none' : '2px solid rgba(255,255,255,0.4)',
+              border: storedSafely ? 'none' : '2px solid var(--input-border-color)',
               backgroundColor: storedSafely ? 'var(--accent-color)' : 'transparent',
               display: 'flex',
               alignItems: 'center',
@@ -347,18 +347,18 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
             padding: '4px',
             fontSize: '20px',
             lineHeight: 1,
-            color: 'white',
+            color: 'var(--text-primary)',
           }}
         >
           &#8592;
         </button>
-        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>Set up Data Vault</h1>
+        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Set up Data Vault</h1>
         <div style={{ width: '28px' }} />
       </div>
 
       {renderPinBoxes(confirmDigits)}
 
-      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', textAlign: 'center' }}>
+      <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
         Confirm your Data Vault PIN
       </p>
 

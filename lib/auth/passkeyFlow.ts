@@ -26,6 +26,16 @@ import {
   mxRegisterWithSecp,
   setupCrossSigning,
 } from '@utils/matrix';
+import {
+  saveMnemonicWithWebCrypto,
+  encryptWithPin,
+  readMnemonicFromVault,
+  saveToVault,
+  loadFromVault,
+  clearAllVaultData,
+} from '@utils/setupVault';
+import { store } from '@store/index';
+import { advanceStep, updateFlowData, startFlow } from '@store/slices/setupFlowSlice';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -117,6 +127,10 @@ export async function passkeyLoginBlocking(callbacks: FlowCallbacks): Promise<{
     throw new Error('No addresses found for this passkey');
   }
 
+  // Track login flow
+  store.dispatch(startFlow({ flowType: 'login', keyId }));
+  store.dispatch(advanceStep('PASSKEY_ASSERTED'));
+
   // Return addresses and assertion for address selection in the UI
   return { result: null as any, addresses, assertion, keyId };
 }
@@ -168,6 +182,11 @@ export async function passkeyLoginBlockingFinalize(params: {
     throw new Error('Failed to login with passkey.');
   }
 
+  // Cache encrypted mnemonic in vault for resume (already PIN-encrypted from registration)
+  saveToVault('matrix', encryptedMnemonic);
+  store.dispatch(updateFlowData({ address, did, credentialId: keyId, authenticatorId }));
+  store.dispatch(advanceStep('ENCRYPTED_MNEMONIC_CACHED'));
+
   return {
     credentialId: keyId,
     authenticatorId,
@@ -194,6 +213,8 @@ export async function matrixLoginBackground(params: {
   callbacks.onStatusUpdate('PIN needed to unlock Data Vault...');
   const pin = await callbacks.requestPin(encryptedMnemonic);
 
+  store.dispatch(advanceStep('PIN_ENTERED'));
+
   callbacks.onStatusUpdate('Decrypting Data Vault credentials...');
   const mxMnemonic = decrypt(encryptedMnemonic, pin);
   const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
@@ -212,6 +233,8 @@ export async function matrixLoginBackground(params: {
     throw new Error('Failed to login to Data Vault, please try again later.');
   }
 
+  store.dispatch(advanceStep('MATRIX_LOGGED_IN'));
+
   callbacks.onStatusUpdate('Setting up encryption...');
   const mxClient = await createMatrixClient();
 
@@ -226,25 +249,46 @@ export async function matrixLoginBackground(params: {
       throw new Error('Failed to setup cross signing, please try again.');
     }
   }
+
+  // Cleanup vault — login flow complete
+  await clearAllVaultData();
+  store.dispatch(advanceStep('COMPLETE'));
+}
+
+// ─── Feegrant Helper ────────────────────────────────────────────────────────
+
+export async function ensureFeegrant(address: string): Promise<void> {
+  const hasFeegrant = await checkAddressFeegrant(address);
+  if (!hasFeegrant) {
+    await grantFeegrant(address);
+  }
 }
 
 // ─── BLOCKING: Register ─────────────────────────────────────────────────────
-// Steps: generate mnemonic → create wallet → check feegrant (may prompt email) →
-//        create passkey → verify on-chain → create DID
+// Steps: generate mnemonic → create wallet → save to vault (WebCrypto) →
+//        check feegrant → create passkey → verify on-chain → compute DID
 
 export async function passkeyRegisterBlocking(params: {
   wallet: SecpClient;
   callbacks: FlowCallbacks;
+  pendingFeegrantPromise?: Promise<void> | null;
 }): Promise<RegisterBlockingResult> {
-  const { wallet, callbacks } = params;
+  const { wallet, callbacks, pendingFeegrantPromise } = params;
 
   if (!wallet?.baseAccount?.address) {
     throw new Error('No wallet found');
   }
   const address = wallet.baseAccount.address;
 
-  // Check feegrant
+  // Await pre-started feegrant if available, then verify on-chain
   callbacks.onStatusUpdate('Checking fee grant...');
+  if (pendingFeegrantPromise) {
+    try {
+      await pendingFeegrantPromise;
+    } catch {
+      // Background attempt failed — will check and retry below
+    }
+  }
   const feegrant = await checkAddressFeegrant(address);
   if (!feegrant) {
     callbacks.onStatusUpdate('Requesting fee grant...');
@@ -254,6 +298,7 @@ export async function passkeyRegisterBlocking(params: {
       throw new Error('Failed to grant feegrant, please try again.');
     }
   }
+  store.dispatch(advanceStep('FEEGRANT_GRANTED'));
 
   // Register passkey
   callbacks.onStatusUpdate('Creating your passkey...');
@@ -270,6 +315,9 @@ export async function passkeyRegisterBlocking(params: {
   // DID is deterministic — compute it but defer on-chain creation to background
   const did = utils.did.generateSecpDid(address);
 
+  store.dispatch(updateFlowData({ address, did, credentialId, authenticatorId: authenticator?.id }));
+  store.dispatch(advanceStep('PASSKEY_REGISTERED'));
+
   return {
     credentialId,
     authenticatorId: authenticator?.id,
@@ -282,15 +330,16 @@ export async function passkeyRegisterBlocking(params: {
 // ─── BACKGROUND: Register Setup (DID + Matrix) ──────────────────────────────
 // Steps: create DID on-chain → generate Matrix creds → check username availability →
 //        register Matrix → create client → setup cross-signing → create/join room →
-//        prompt PIN → encrypt & store mnemonic
+//        encrypt & store mnemonic (using PIN from blocking phase)
 
 export async function registerBackground(params: {
   address: string;
   did: string;
   wallet: SecpClient;
+  pin: string;
   callbacks: FlowCallbacks;
 }): Promise<void> {
-  const { address, did, wallet, callbacks } = params;
+  const { address, did, wallet, pin, callbacks } = params;
 
   // Step 1: Create DID on-chain (must complete before Matrix room bot needs it)
   callbacks.onStatusUpdate('Creating your digital identity...');
@@ -303,9 +352,15 @@ export async function registerBackground(params: {
       throw new Error('Failed to create DID, please try again.');
     }
   }
+  store.dispatch(advanceStep('DID_CREATED'));
 
+  // Step 2: Generate Matrix mnemonic and save encrypted to vault
   callbacks.onStatusUpdate('Generating Vault credentials...');
   const mxMnemonic = utils.mnemonic.generateMnemonic(12);
+  const pinEncrypted = await encryptWithPin(mxMnemonic, pin);
+  saveToVault('matrix', pinEncrypted);
+  store.dispatch(advanceStep('MATRIX_MNEMONIC_SAVED'));
+
   const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
   const mxUsername = generateUsernameFromAddress(address);
   const mxPassword = generatePasswordFromMnemonic(mxMnemonic);
@@ -327,6 +382,7 @@ export async function registerBackground(params: {
   if (!account?.accessToken) {
     throw new Error('Failed to register Data Vault account, please try again later.');
   }
+  store.dispatch(advanceStep('MATRIX_ACCOUNT_CREATED'));
 
   // Setup Matrix client
   const mxClient = await createMatrixClient();
@@ -348,6 +404,7 @@ export async function registerBackground(params: {
       throw new Error('Failed to setup cross signing, please try again.');
     }
   }
+  store.dispatch(advanceStep('CROSS_SIGNING_DONE'));
 
   // Create/join room
   callbacks.onStatusUpdate('Creating secure Vault room...');
@@ -387,12 +444,9 @@ export async function registerBackground(params: {
       throw new Error('Failed to join matrix room.');
     }
   }
+  store.dispatch(advanceStep('MATRIX_ROOM_CREATED'));
 
-  // Request PIN from user
-  callbacks.onStatusUpdate('PIN needed to secure your Data Vault...');
-  const pin = await callbacks.requestPin();
-
-  // Encrypt and store mnemonic
+  // Encrypt and store mnemonic in Matrix room (using PIN from blocking phase)
   callbacks.onStatusUpdate('Securing Data Vault...');
   const encryptedMnemonic = encrypt(mxMnemonic, pin);
   const storeResponse = await fetch(
@@ -414,4 +468,127 @@ export async function registerBackground(params: {
     throw new Error('Failed to store encrypted mnemonic in matrix room.');
   }
   await storeResponse.json();
+  store.dispatch(advanceStep('MNEMONIC_STORED_IN_ROOM'));
+
+  // Cleanup — registration flow complete
+  await clearAllVaultData();
+  store.dispatch(advanceStep('COMPLETE'));
+}
+
+// ─── BACKGROUND: Resume Register (for interrupted flows) ─────────────────────
+// Picks up from wherever the flow was interrupted, re-using the vault.
+
+export async function resumeRegisterBackground(params: {
+  address: string;
+  did: string;
+  pin: string;
+  currentStep: string;
+  callbacks: FlowCallbacks;
+}): Promise<void> {
+  const { address, did, pin, currentStep, callbacks } = params;
+
+  // Load wallet mnemonic from vault
+  const walletMnemonic = await readMnemonicFromVault('wallet', pin);
+  if (!walletMnemonic) {
+    throw new Error('Cannot resume — wallet mnemonic not found in vault');
+  }
+  const wallet = await getSecpClient(walletMnemonic);
+
+  // Determine which steps to run based on currentStep
+  const stepOrder = [
+    'MNEMONIC_SAVED',
+    'FEEGRANT_GRANTED',
+    'PASSKEY_REGISTERED',
+    'PIN_COLLECTED',
+    'DID_CREATED',
+    'MATRIX_MNEMONIC_SAVED',
+    'MATRIX_ACCOUNT_CREATED',
+    'CROSS_SIGNING_DONE',
+    'MATRIX_ROOM_CREATED',
+    'MNEMONIC_STORED_IN_ROOM',
+    'COMPLETE',
+  ];
+  const currentIdx = stepOrder.indexOf(currentStep);
+  const shouldRun = (step: string) => currentIdx < stepOrder.indexOf(step);
+
+  // Step: Feegrant (idempotent)
+  if (shouldRun('FEEGRANT_GRANTED')) {
+    callbacks.onStatusUpdate('Checking fee grant...');
+    const feegrant = await checkAddressFeegrant(address);
+    if (!feegrant) {
+      callbacks.onStatusUpdate('Requesting fee grant...');
+      await grantFeegrant(address);
+      const feegrantAfter = await checkAddressFeegrant(address);
+      if (!feegrantAfter) {
+        throw new Error('Failed to grant feegrant, please try again.');
+      }
+    }
+    store.dispatch(advanceStep('FEEGRANT_GRANTED'));
+  }
+
+  // Step: Passkey registration (idempotent — check if already on-chain)
+  if (shouldRun('PASSKEY_REGISTERED')) {
+    callbacks.onStatusUpdate('Checking passkey registration...');
+    // If we have a credentialId in flow state, check if it's on-chain
+    const flowState = store.getState().setupFlow;
+    if (flowState.credentialId) {
+      const authenticator = await fetchAddressAuthenticator(flowState.credentialId, address);
+      if (authenticator) {
+        store.dispatch(advanceStep('PASSKEY_REGISTERED'));
+      } else {
+        // Passkey not on-chain — need to re-register
+        callbacks.onStatusUpdate('Creating your passkey...');
+        const { credentialId } = await registerPasskey({ wallet });
+        await delay(1000);
+        const auth = await fetchAddressAuthenticator(credentialId, address);
+        if (!auth) throw new Error('Failed to register passkey, please try again.');
+        store.dispatch(updateFlowData({ credentialId, authenticatorId: auth.id }));
+        store.dispatch(advanceStep('PASSKEY_REGISTERED'));
+      }
+    } else {
+      callbacks.onStatusUpdate('Creating your passkey...');
+      const { credentialId } = await registerPasskey({ wallet });
+      await delay(1000);
+      const auth = await fetchAddressAuthenticator(credentialId, address);
+      if (!auth) throw new Error('Failed to register passkey, please try again.');
+      store.dispatch(updateFlowData({ credentialId, authenticatorId: auth.id }));
+      store.dispatch(advanceStep('PASSKEY_REGISTERED'));
+    }
+  }
+
+  // PIN_COLLECTED is already done if we're in this function (we have the pin)
+  if (shouldRun('PIN_COLLECTED')) {
+    store.dispatch(advanceStep('PIN_COLLECTED'));
+  }
+
+  // From here, delegate to registerBackground which handles DID → Matrix → Store
+  // registerBackground is idempotent (checks didExists, etc.) so safe to re-run from any point
+  await registerBackground({ address, did, wallet, pin, callbacks });
+}
+
+// ─── BACKGROUND: Resume Login (for interrupted flows) ────────────────────────
+
+export async function resumeLoginBackground(params: {
+  address: string;
+  currentStep: string;
+  callbacks: FlowCallbacks;
+}): Promise<void> {
+  const { address, currentStep, callbacks } = params;
+
+  const stepOrder = ['PASSKEY_ASSERTED', 'ENCRYPTED_MNEMONIC_CACHED', 'PIN_ENTERED', 'MATRIX_LOGGED_IN', 'CROSS_SIGNING_DONE', 'COMPLETE'];
+  const currentIdx = stepOrder.indexOf(currentStep);
+
+  if (currentIdx < stepOrder.indexOf('ENCRYPTED_MNEMONIC_CACHED')) {
+    // Need to re-do passkey assertion — can't resume from here
+    throw new Error('PASSKEY_REDO_NEEDED');
+  }
+
+  // Load cached encrypted mnemonic from vault
+  const encryptedMnemonic = loadFromVault('matrix');
+  if (!encryptedMnemonic) {
+    throw new Error('Encrypted mnemonic not found in vault — cannot resume login');
+  }
+
+  // From here, delegate to the standard login background
+  await matrixLoginBackground({ address, encryptedMnemonic, callbacks });
 }

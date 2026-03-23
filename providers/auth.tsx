@@ -14,6 +14,7 @@ import { signAndBroadcastWithPasskey } from 'lib/authn/signAndBroadcast';
 import { store, persistor, RootState } from '@store/index';
 import { setAccount, clearAccount } from '@store/slices/accountSlice';
 import { clearSSOSession } from '@store/slices/ssoSlice';
+import { clearFlow } from '@store/slices/setupFlowSlice';
 import { ssoConfig } from 'lib/sso/config';
 import { clearEntities } from '@store/slices/entitiesSlice';
 import { clearCollections } from '@store/slices/collectionsSlice';
@@ -21,6 +22,7 @@ import { clearProtocols } from '@store/slices/protocolsSlice';
 import { clearProfiles } from '@store/slices/profilesSlice';
 import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfileSlice';
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
+import { clearAllVaultData } from '@utils/setupVault';
 
 function fetchMatrixProfile() {
   try {
@@ -234,6 +236,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
     await logoutMatrixClient({ baseUrl: secret.baseUrl });
     clearAuthStorage();
+    await clearAllVaultData();
     setIsLoggedIn(false);
     setCredentialId('');
     setAddress(null);
@@ -247,6 +250,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     store.dispatch(clearMatrixProfile());
     store.dispatch(clearAllDrafts());
     store.dispatch(clearSSOSession());
+    store.dispatch(clearFlow());
     await persistor.purge();
 
     // Redirect to Keycloak logout (navigates away from app, which triggers full re-auth on return)

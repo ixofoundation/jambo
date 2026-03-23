@@ -7,6 +7,7 @@ import { ReduxProvider } from '@store/provider';
 import { ThemeProvider } from '@providers/theme';
 import { AuthProvider } from '@providers/auth';
 import { BackgroundSetupProvider } from '@providers/backgroundSetup';
+import { SetupResumeProvider } from '@providers/setupResume';
 import { ToastContainer } from '@components/Toast/Toast';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -15,8 +16,10 @@ function MyApp({ Component, pageProps }: AppProps) {
       <ThemeProvider>
         <AuthProvider>
           <BackgroundSetupProvider>
-            <Component {...pageProps} />
-            <ToastContainer />
+            <SetupResumeProvider>
+              <Component {...pageProps} />
+              <ToastContainer />
+            </SetupResumeProvider>
           </BackgroundSetupProvider>
         </AuthProvider>
       </ThemeProvider>
