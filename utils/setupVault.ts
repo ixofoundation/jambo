@@ -128,7 +128,6 @@ async function decryptWithVaultKey(key: CryptoKey, data: string): Promise<string
   const [ivHex, cipherHex] = parts;
   const iv = hexDecode(ivHex);
   const cipher = hexDecode(cipherHex);
-  // @ts-ignore
   const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
   return new TextDecoder().decode(plainBuf);
 }
@@ -142,8 +141,7 @@ async function deriveKeyFromPin(pin: string, salt: Uint8Array): Promise<CryptoKe
     'deriveKey',
   ]);
   return crypto.subtle.deriveKey(
-    // @ts-ignore
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -168,7 +166,6 @@ export async function decryptWithPin(data: string, pin: string): Promise<string>
   const iv = hexDecode(ivHex);
   const cipher = hexDecode(cipherHex);
   const key = await deriveKeyFromPin(pin, salt);
-  // @ts-ignore
   const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
   return new TextDecoder().decode(plainBuf);
 }

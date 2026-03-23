@@ -35,7 +35,7 @@ import {
   clearAllVaultData,
 } from '@utils/setupVault';
 import { store } from '@store/index';
-import { advanceStep, updateFlowData, startFlow } from '@store/slices/setupFlowSlice';
+import { advanceStep, updateFlowData, startFlow, REGISTER_STEP_ORDER, LOGIN_STEP_ORDER } from '@store/slices/setupFlowSlice';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -387,7 +387,7 @@ export async function registerBackground(params: {
   // Setup Matrix client
   const mxClient = await createMatrixClient();
   const matrixApiClient = createMatrixApiClient({
-    homeServerUrl,
+    homeServerUrl: cleanUrlString(homeServerUrl),
     accessToken: account.accessToken as string,
   });
 
@@ -495,21 +495,8 @@ export async function resumeRegisterBackground(params: {
   const wallet = await getSecpClient(walletMnemonic);
 
   // Determine which steps to run based on currentStep
-  const stepOrder = [
-    'MNEMONIC_SAVED',
-    'FEEGRANT_GRANTED',
-    'PASSKEY_REGISTERED',
-    'PIN_COLLECTED',
-    'DID_CREATED',
-    'MATRIX_MNEMONIC_SAVED',
-    'MATRIX_ACCOUNT_CREATED',
-    'CROSS_SIGNING_DONE',
-    'MATRIX_ROOM_CREATED',
-    'MNEMONIC_STORED_IN_ROOM',
-    'COMPLETE',
-  ];
-  const currentIdx = stepOrder.indexOf(currentStep);
-  const shouldRun = (step: string) => currentIdx < stepOrder.indexOf(step);
+  const currentIdx = REGISTER_STEP_ORDER.indexOf(currentStep as any);
+  const shouldRun = (step: string) => currentIdx < REGISTER_STEP_ORDER.indexOf(step as any);
 
   // Step: Feegrant (idempotent)
   if (shouldRun('FEEGRANT_GRANTED')) {
@@ -575,10 +562,9 @@ export async function resumeLoginBackground(params: {
 }): Promise<void> {
   const { address, currentStep, callbacks } = params;
 
-  const stepOrder = ['PASSKEY_ASSERTED', 'ENCRYPTED_MNEMONIC_CACHED', 'PIN_ENTERED', 'MATRIX_LOGGED_IN', 'CROSS_SIGNING_DONE', 'COMPLETE'];
-  const currentIdx = stepOrder.indexOf(currentStep);
+  const currentIdx = LOGIN_STEP_ORDER.indexOf(currentStep as any);
 
-  if (currentIdx < stepOrder.indexOf('ENCRYPTED_MNEMONIC_CACHED')) {
+  if (currentIdx < LOGIN_STEP_ORDER.indexOf('ENCRYPTED_MNEMONIC_CACHED')) {
     // Need to re-do passkey assertion — can't resume from here
     throw new Error('PASSKEY_REDO_NEEDED');
   }

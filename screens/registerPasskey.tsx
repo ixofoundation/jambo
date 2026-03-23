@@ -56,7 +56,7 @@ function RegisterPasskey() {
         }
 
         // Start feegrant in background while user reads mnemonic
-        feegrantPromiseRef.current = ensureFeegrant(newWallet.baseAccount.address).catch(() => {});
+        feegrantPromiseRef.current = ensureFeegrant(newWallet.baseAccount.address).catch((err) => console.warn('Background feegrant failed, will retry:', err));
       })();
     }
   }, []);

@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
     await logoutMatrixClient({ baseUrl: secret.baseUrl });
     clearAuthStorage();
-    await clearAllVaultData();
+    try { await clearAllVaultData(); } catch (err) { console.error('Vault cleanup failed:', err); }
     setIsLoggedIn(false);
     setCredentialId('');
     setAddress(null);

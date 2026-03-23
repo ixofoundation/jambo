@@ -160,7 +160,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   function getBidBotClient() {
     if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
     bidBotClientRef.current = createMatrixBidBotClient({
-      botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
+      botUrl: cleanUrlString(process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!),
       accessToken: secret.accessToken as string,
     });
     return bidBotClientRef.current;
@@ -169,7 +169,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   function getClaimBotClient() {
     if (claimBotClientRef.current?.claim) return claimBotClientRef.current;
     claimBotClientRef.current = createMatrixClaimBotClient({
-      botUrl: process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!,
+      botUrl: cleanUrlString(process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!),
       accessToken: secret.accessToken as string,
     });
     return claimBotClientRef.current;

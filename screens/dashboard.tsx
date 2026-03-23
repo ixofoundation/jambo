@@ -13,6 +13,7 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
+import { cleanUrlString } from '@utils/url';
 
 function readableStatus(status?: number): string {
   if (status === 0) return 'Created';
@@ -58,7 +59,7 @@ export default function Dashboard() {
   function getBidBotClient() {
     if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
     bidBotClientRef.current = createMatrixBidBotClient({
-      botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
+      botUrl: cleanUrlString(process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!),
       accessToken: secret.accessToken as string,
     });
     return bidBotClientRef.current;
