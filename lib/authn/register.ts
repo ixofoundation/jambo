@@ -11,9 +11,10 @@ import { signAndBroadcastWithMnemonic } from '@utils/transaction';
 
 interface RegisterPasskeyParams {
   wallet: SecpClient;
+  displayName?: string;
 }
 
-export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
+export async function registerPasskey({ wallet, displayName }: RegisterPasskeyParams) {
   const accountAddress = wallet?.baseAccount?.address;
   if (!accountAddress) {
     throw new Error('No account found');
@@ -22,14 +23,15 @@ export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
   // Generate registration options
   const registrationOptions = await fido2.attestationOptions();
 
-  // Create registration options
+  // Create registration options — use SSO name if available for better passkey identification
+  const passkeyName = displayName || accountAddress;
   const publicKeyCredentialCreationOptions = {
     ...registrationOptions,
     user: {
       // @ts-ignore
       id: Uint8Array.from(accountAddress, (c) => c.charCodeAt(0)),
-      name: accountAddress,
-      displayName: accountAddress,
+      name: passkeyName,
+      displayName: passkeyName,
     },
   };
 

@@ -8,7 +8,6 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import config from '@constants/config.json';
 import Loader from '@components/Loader/Loader';
 import { errorToast } from '@components/Toast/Toast';
-import { delay } from '@utils/timestamp';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import {
@@ -36,6 +35,7 @@ function LoginPasskey() {
   const [selectedAddress, setSelectedAddress] = useState('');
 
   const initRef = useRef<boolean>(false);
+  const redirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stepIsLoading = step === STEPS.loading;
   const stepIsAddress = step === STEPS.address;
@@ -45,6 +45,9 @@ function LoginPasskey() {
       initRef.current = true;
       void initPasskeyLogin();
     }
+    return () => {
+      if (redirectTimeoutRef.current) clearTimeout(redirectTimeoutRef.current);
+    };
   }, []);
 
   async function initPasskeyLogin() {
@@ -61,11 +64,9 @@ function LoginPasskey() {
       setKeyId(result.keyId);
       setAssertion(result.assertion);
       setAddresses(result.addresses);
-      setStep(STEPS.address);
 
       if (result.addresses.length === 1) {
-        setSelectedAddress(result.addresses[0].address);
-        await delay(200);
+        // Single address — skip selection UI entirely, stay on loading screen
         await handleFinalAuthentication({
           address: result.addresses[0].address,
           authenticatorId: result.addresses[0].id,
@@ -73,6 +74,9 @@ function LoginPasskey() {
           keyIdData: result.keyId,
           addressesData: result.addresses,
         });
+      } else {
+        // Multiple addresses — show selection UI
+        setStep(STEPS.address);
       }
     } catch (err: any) {
       // User cancelled passkey prompt or no passkeys available → register new passkey
@@ -81,7 +85,7 @@ function LoginPasskey() {
         return;
       }
       errorToast(err.message || 'Failed to verify passkey');
-      setTimeout(() => router.push('/auth'), 1500);
+      redirectTimeoutRef.current = setTimeout(() => router.push('/auth'), 500);
     }
   }
 
@@ -148,8 +152,14 @@ function LoginPasskey() {
       const entityId: string | undefined = (config as any).entity;
       router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
-      setStep(STEPS.address);
+      if (resolvedAddresses.length <= 1) {
+        // Single address — no address selection to show, redirect with error
+        errorToast(err.message || 'Login failed');
+        redirectTimeoutRef.current = setTimeout(() => router.push('/auth'), 500);
+      } else {
+        setError(err.message || 'Login failed');
+        setStep(STEPS.address);
+      }
     }
   }
 

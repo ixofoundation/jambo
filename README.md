@@ -1,506 +1,916 @@
-# JAMBO Claims
+# Jambo Passkey Claims
+
+A Next.js application for blockchain-based claims management with passkey (WebAuthn) authentication, Yoma SSO integration, and encrypted Matrix Data Vault storage on the ixo blockchain.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+- [Architecture](#architecture)
+- [Authentication Flows](#authentication-flows)
+  - [SSO Flow (Yoma Keycloak)](#sso-flow-yoma-keycloak)
+  - [Passkey Registration](#passkey-registration)
+  - [Passkey Login](#passkey-login)
+  - [Mnemonic Login (Recovery)](#mnemonic-login-recovery)
+- [Matrix Data Vault](#matrix-data-vault)
+- [Two-Tier Encrypted Vault](#two-tier-encrypted-vault)
+- [Background Setup and Resilience](#background-setup-and-resilience)
+- [Blockchain Integration](#blockchain-integration)
+- [Transaction Signing](#transaction-signing)
+- [Dashboard](#dashboard)
+- [Bids](#bids)
+- [Claims](#claims)
+- [Project Structure](#project-structure)
+- [SDKs Used](#sdks-used)
+- [Environment Variables](#environment-variables)
+
+---
+
+## Overview
+
+Jambo Passkey Claims enables users to submit verifiable claims on the ixo blockchain using passkeys for authentication and transaction signing. The system integrates:
+
+- **Yoma SSO** (Keycloak OIDC) for identity verification
+- **WebAuthn/Passkeys** for passwordless authentication and on-chain transaction signing
+- **Matrix Protocol** as an encrypted "Data Vault" for mnemonic storage and recovery
+- **ixo Blockchain** for DID management, fee grants, and claim submission
+- **Veramo** for W3C Verifiable Credential issuance
+- **Matrix Bots** (Bid Bot, Claim Bot, Room Bot) for off-chain data management
+
+```mermaid
+graph TB
+    User([User]) --> SSO[Yoma SSO / Keycloak]
+    User --> Passkey[WebAuthn Passkey]
+
+    SSO -->|OIDC + PKCE| App[Jambo App]
+    Passkey -->|FIDO2 Assertion| App
+
+    App --> Chain[ixo Blockchain]
+    App --> Matrix[Matrix Data Vault]
+    App --> Bot[Matrix Room Bot]
+
+    Chain -->|DID Documents| IID[IID Registry]
+    Chain -->|Fee Grants| Feegrant[Feegrant Module]
+    Chain -->|Claims| Claims[Claims Module]
+    Chain -->|Smart Accounts| SA[Smart Account Authenticators]
+
+    Matrix -->|Encrypted Room State| Mnemonic[Encrypted Mnemonic]
+    Matrix -->|Cross-Signing| E2EE[End-to-End Encryption]
+
+    Bot -->|Room Management| Matrix
+    Bot -->|Mnemonic Retrieval| Mnemonic
+```
+
+---
 
 ## Getting Started
 
-1. **Clone the Repository**
+### Prerequisites
 
-   - Clone the repository to your local machine
+- Node.js 16+
+- yarn
 
-   ```bash
-   git clone https://github.com/ixofoundation/jambo-claims.git
-   cd jambo-claims
-   ```
+### Installation
 
-2. **Install Dependencies**
+```bash
+git clone https://github.com/ixofoundation/jambo-claims.git
+cd jambo-claims
+yarn install
+```
 
-   ```bash
-   yarn install
-   ```
+### Configuration
 
-3. **Set Environment Variables**
+1. Create a `.env` file in the root directory based on `.env.example`
+2. Add the required environment variables (see [Environment Variables](#environment-variables))
+3. Update `constants/config.json` with your entity and protocol DIDs
 
-   - Create a `.env` file in the root directory based on `.env.example`
-   - Add the following environment variables:
+### Development
 
-   ```env
-    NEXT_PUBLIC_AUTHN_ORIGIN=http://localhost:3000
-    NEXT_PUBLIC_AUTHN_RP_ID=localhost
-    NEXT_PUBLIC_CHAIN_NETWORK=devnet
-    NEXT_PUBLIC_FEEGRANT_URL=""
-    FEEGRANT_API_KEY=""
-    NEXT_PUBLIC_MATRIX_HOMESERVER_URL="https://devmx.ixo.earth"
-    NEXT_PUBLIC_MATRIX_ROOM_BOT_URL="https://rooms.bot.devmx.ixo.earth"
-    NEXT_PUBLIC_MATRIX_BID_BOT_URL="https://bid.bot.devmx.ixo.earth"
-    NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL="https://claim.bot.devmx.ixo.earth"
-   ```
+```bash
+yarn dev
+```
 
-4. **Start Development Server**
-   ```bash
-   yarn dev
-   ```
-   The application will be available at `http://localhost:3000`
+The application will be available at `http://localhost:3000`.
 
-🎉 🎉 🎉 That's it!
+### Build
 
-## 📦 SDKs Used
-
-This app leverages several core SDKs to interact with the blockchain, Matrix, and passkey infrastructure:
-
-| SDK                                                                              | Description                                                                                                                                     | Link                                                               |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [`@ixo/impactxclient-sdk`](https://www.npmjs.com/package/@ixo/impactxclient-sdk) | TypeScript SDK for interacting with the IXO blockchain. Includes transaction building, DID creation, signing, and Cosmos-based features.        | [📘 Docs](https://docs.ixo.world/sdk/impactxclient)                |
-| [`@ixo/matrixclient-sdk`](https://www.npmjs.com/package/@ixo/matrixclient-sdk)   | Lightweight wrapper for interacting with IXO Matrix Bots (e.g., Claim Bot, Bid Bot, Room Bot). Simplifies API calls to Matrix-powered features. | [📘 GitHub](https://github.com/ixofoundation/ixo-matrixclient-sdk) |
-| [`matrix-js-sdk`](https://www.npmjs.com/package/matrix-js-sdk)                   | Official Matrix client library used to register, log in, and interact with Matrix homeservers directly.                                         | [📘 Docs](https://matrix-org.github.io/matrix-js-sdk/)             |
-
-> ℹ️ These SDKs are configured to work with IXO’s infrastructure but can be extended for other use cases or custom networks.
-
-## 📘 Concepts
-
-This section introduces important terms and technologies used in the JAMBO Claims app. Understanding these concepts will help you navigate and customize the app effectively.
+```bash
+yarn build
+yarn start
+```
 
 ---
 
-### 🔑 Passkeys (WebAuthn)
+## Architecture
 
-**Passkeys** are cryptographic credentials created via the WebAuthn standard.
+### High-Level Flow
 
-- Linked to biometric sensors (e.g., Face ID, fingerprint).
-- Stored securely in the browser or device.
-- Replace traditional passwords with **passwordless login**.
-- Used in this app for secure, user-friendly authentication of blockchain smart accounts.
+The application uses a hybrid authentication model where SSO provides identity, passkeys provide cryptographic authentication, and Matrix provides encrypted persistent storage:
 
-> JAMBO Claims uses passkeys to authenticate smart accounts and enable secure DID creation.
+```mermaid
+flowchart LR
+    subgraph Identity
+        SSO[Yoma SSO]
+    end
 
-### 🪙 Feegrant
+    subgraph Authentication
+        PK[Passkey / WebAuthn]
+        MN[Mnemonic Recovery]
+    end
 
-**Feegrants** allow a third party (e.g. the IXO team) to pay blockchain gas fees on behalf of a user. This ensures gasless interactions for users who may not hold tokens.
+    subgraph Blockchain
+        DID[DID Document]
+        FG[Fee Grant]
+        SA[Smart Account]
+        CL[Claims]
+    end
 
-- Used in this app to automatically fund new wallets.
-- Managed via the [`MsgGrantAllowance`](https://docs.cosmos.network/v0.46/modules/feegrant/) Cosmos SDK module.
+    subgraph "Data Vault"
+        MX[Matrix Homeserver]
+        CS[Cross-Signing]
+        RM[Encrypted Room State]
+    end
 
-### 🪪 IID Document (DID)
+    SSO --> PK
+    PK --> SA
+    MN --> SA
+    SA --> DID
+    SA --> FG
+    SA --> CL
+    PK --> MX
+    MX --> CS
+    MX --> RM
+```
 
-The **IID Document** is a **decentralized identity document** stored on-chain. It:
+### Key Concepts
 
-- Follows the [W3C DID standard](https://www.w3.org/TR/did-core/).
-- Contains cryptographic keys, metadata, and service endpoints.
-- Is required for role-based access control on the IXO blockchain.
-
-Created and updated using `MsgCreateIidDocument` and `MsgUpdateIidDocument`.
-
-### 🟢 Matrix
-
-Matrix is a **decentralized communication protocol**. It is used in JAMBO Claims for:
-
-- **Secure data handling** between bots and users.
-- **Private data storage** (e.g., claims, bid forms).
-- **Encrypted identity coordination**.
-
-The app interacts with a Matrix homeserver using the official [`matrix-js-sdk`](https://matrix-org.github.io/matrix-js-sdk/).
-
-### 🔐 Matrix Mnemonic
-
-A **Matrix-specific mnemonic** is a randomly generated seed phrase used to:
-
-- Derive Matrix credentials deterministically.
-- Encrypt and decrypt stored data in the Matrix room.
-
-> 🚫 Not the same as the wallet mnemonic. This separation ensures better compartmentalization of access.
-
-### 🏠 Matrix Room
-
-A **Matrix room** is like a private chat space.
-
-- Used as a **secure storage container** for bids data, claims data, and keys.
-- Each claim collection's entity has its own dedicated Matrix room.
-- Access is restricted to users with the correct authorization or encryption key.
-
-### 🔒 Matrix End-to-End Encryption
-
-All sensitive data in Matrix (e.g., claim answers) is **end-to-end encrypted**:
-
-- Only the sender and authorized recipients can decrypt messages.
-- Prevents IXO servers or unauthorized users from viewing content.
-
-### 🔗 Matrix Cross-Signing
-
-**Cross-signing** allows trust across multiple Matrix devices:
-
-- A device signs the public keys of another device.
-- Once trusted, data encrypted by one device can be decrypted by another.
-- Enables seamless multi-device login and data recovery.
-
-> ⚠️ Not mandatory for this app, but important for robust multi-device support and included for demonstration purposes.
-
-### 🤖 Matrix Bid Bot
-
-The **Matrix Bid Bot** manages off-chain bid submission and management.
-
-- Listens to a specific Matrix room per claim collection.
-- Validates bid data submitted by users via SurveyJS forms.
-- Marks bids as **accepted** or **rejected** after admin approval.
-- Maintains decentralized bid data separate from the blockchain.
-
-### 🤖 Matrix Claim Bot
-
-The **Matrix Claim Bot** securely stores sensitive claim data off-chain.
-
-- Accepts form data (e.g., survey answers) and stores it in the Matrix room.
-- Generates a content identifier (CID) for the data.
-- Returns the CID, which is then referenced in the on-chain claim transaction.
-- Ensures data is encrypted and only accessible to authorized evaluators.
-
-> Together, the bots allow scalable and privacy-preserving workflows without putting sensitive data directly on the blockchain.
+| Concept | Description |
+|---------|-------------|
+| **Passkeys (WebAuthn)** | Cryptographic credentials linked to biometric sensors. Replace passwords with passwordless login. Registered on-chain as smart account authenticators. |
+| **DID (IID Document)** | Decentralized identity document stored on-chain following the W3C DID standard. Format: `did:ixo:{address}`. |
+| **Fee Grants** | Allow a third party to pay blockchain gas fees on behalf of users, enabling gasless interactions. |
+| **Matrix Data Vault** | Matrix rooms used as encrypted storage containers for mnemonics, claim data, and keys. |
+| **Matrix Mnemonic** | A separate 12-word seed phrase used to derive Matrix credentials. Not the same as the wallet mnemonic. |
+| **Cross-Signing** | Enables trust across Matrix devices so encrypted data can be accessed from multiple sessions. |
+| **Matrix Bots** | Room Bot (room management), Bid Bot (off-chain bid storage), Claim Bot (encrypted claim data storage). |
 
 ---
 
-## 🔐 Login Methods
+## Authentication Flows
 
-This app supports three login methods, integrating:
+All authentication begins with Yoma SSO, then proceeds to passkey registration or login.
 
-- **Blockchain smart accounts**
-- **DID ledgering on the IXO chain**
-- **Feegrant setup via email**
-- **Passkey authentication (WebAuthn)**
-- **Matrix account + encrypted credential management**
+### SSO Flow (Yoma Keycloak)
 
-All methods ultimately establish a fully functional user session, with DID registration and a secure Matrix room used for encrypted credential storage and future recovery.
+The user signs in via Yoma Keycloak OIDC with PKCE protection. The app extracts their profile (name, email, picture) for use in passkey and Matrix profile setup.
 
----
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant App as Jambo App
+    participant KC as Yoma Keycloak
+    participant Store as Redux Store
 
-### 🧱 Common Setup Steps
+    U->>App: Click "Sign in with Yoma"
+    App->>App: Generate PKCE code_verifier + code_challenge (S256)
+    App->>App: Generate CSRF state token (32 random bytes)
+    App->>App: Store verifier + state in sessionStorage
+    App->>KC: Redirect to authorization endpoint
+    Note right of KC: client_id, redirect_uri,<br/>code_challenge, state,<br/>scope: openid email profile
+    KC->>U: Keycloak login page
+    U->>KC: Authenticate
+    KC->>App: Redirect to /auth/passkey?code=X&state=Y
+    App->>App: Validate state matches sessionStorage (CSRF check)
+    App->>App: Retrieve code_verifier from sessionStorage
+    App->>KC: POST /token (code + code_verifier)
+    KC-->>App: {access_token, id_token}
+    App->>App: Validate ID token signature (JWKS)
+    App->>App: Extract SSOUserInfo {name, email, picture, sub}
+    App->>Store: setSSOSession({name, email, picture, tokens})
+    App->>App: Clear query params, render passkey flow
+```
 
-These steps are performed (implicitly or explicitly) across all login methods:
+**Key details:**
+- PKCE S256 prevents authorization code interception
+- ID token validated against Keycloak JWKS endpoint using the `jose` library
+- SSO profile stored in Redux for passkey display name and Matrix profile
+- Redirect URI is `/auth/passkey` (handles both SSO callback and passkey flow)
+- Legacy `/auth/callback` route redirects to `/auth/passkey` preserving query params
+- Display name fallback: SSO name, then email if name is absent
 
-1. **Feegrant Check**  
-   Ensure the user's account has an active feegrant. If not, prompt for the user's email to automatically issue a feegrant to allow (limited) fee-less blockchain transactions.
-
-2. **DID Ledgering**  
-   Ensure the user has a valid IID document (decentralized identifier) on the IXO blockchain. If absent, a new one is created using the user's wallet mnemonic.
-
-3. **Matrix Setup**
-   - A Matrix account is either registered or logged into.
-   - A secure Matrix room is created (if needed).
-   - A **Matrix-specific mnemonic** is encrypted with a user-defined password and stored in the room’s state for later recovery.
-
----
-
-### 🆕 Register Passkey
-
-This method uses the WebAuthn (FIDO2) standard to register a passkey, enabling passwordless smart account authentication using biometric data or hardware tokens.
-
-#### 🔁 Process Flow:
-
-- Generate a **new IXO wallet** using a fresh mnemonic.
-- Check or grant a **feegrant** for the new address.
-- Register a **passkey** and add it to the wallet using `MsgAddAuthenticator`.
-- Create and ledger a **DID document** for the wallet.
-- Generate a **Matrix-specific mnemonic** (independent from wallet mnemonic).
-- Register a new **Matrix account** using credentials derived from the Matrix mnemonic.
-- Create a **personal Matrix room** and join it.
-- Encrypt the Matrix mnemonic using the user’s password and store it in Matrix room state.
-
-> 💡 _This flow is ideal for new users or demos. The Matrix mnemonic and wallet mnemonic are always kept separate._
+**Key files:** `lib/sso/redirect.ts`, `lib/sso/pkce.ts`, `lib/sso/tokens.ts`, `lib/sso/config.ts`, `pages/auth/passkey.tsx`
 
 ---
 
-### 🔐 Login with Passkey
+### Passkey Registration
 
-This flow is used when a user already has a registered passkey and wants to log in securely.
+Registration is split into a **blocking phase** (user-facing, must complete before app entry) and a **background phase** (runs asynchronously after the user enters the app).
 
-#### 🔁 Process Flow:
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Register Screen
+    participant Vault as Encrypted Vault
+    participant Chain as ixo Blockchain
+    participant WebAuthn as WebAuthn API
+    participant BG as Background Flow
+    participant Matrix as Matrix Homeserver
+    participant Bot as Room Bot
 
-- Fetch an **authentication challenge** from the server.
-- Use `navigator.credentials.get()` to retrieve a passkey assertion.
-- Determine **associated smart accounts** based on the passkey credential ID.
-- Select the target account and verify:
-  - **Feegrant** exists or is created.
-  - **DID** exists on chain.
-- Request and decrypt the stored **Matrix mnemonic** via the Matrix room bot.
-- Use this to **login to Matrix**.
+    Note over UI: Phase 0: Wallet Setup
+    UI->>UI: Generate 12-word wallet mnemonic
+    UI->>UI: Derive secp256k1 wallet (HD path m/44'/118'/0'/0/0)
+    UI->>Vault: Save mnemonic (WebCrypto tier)
+    UI->>UI: Start background feegrant check (parallel)
+    UI->>U: Display mnemonic for backup
 
-> 🔐 _The Matrix mnemonic is encrypted with a password only the user knows — this ensures recovery is secure._
+    Note over UI: Phase 1: Blocking
+    UI->>Chain: Verify/grant feegrant for address
+    UI->>WebAuthn: navigator.credentials.create()
+    WebAuthn-->>U: Biometric/PIN prompt
+    U-->>WebAuthn: Approve
+    WebAuthn-->>UI: Credential (public key + ID)
+    UI->>Chain: Broadcast MsgAddAuthenticator (on-chain)
+    UI->>Chain: Verify authenticator registered (GraphQL)
+    UI->>UI: Compute DID = did:ixo:{address}
+
+    Note over UI: Phase 1.5: PIN Collection
+    UI->>U: Request PIN
+    U-->>UI: Enter PIN
+    UI->>Vault: Upgrade vault: WebCrypto -> PIN encryption
+
+    Note over UI: User enters app
+    UI->>UI: auth.registerWithPasskey()
+    UI->>UI: Navigate to dashboard
+
+    Note over BG: Phase 2: Background (async)
+    BG->>Chain: Create IID Document on-chain (if not exists)
+    BG->>BG: Generate 12-word Matrix mnemonic
+    BG->>Vault: Encrypt Matrix mnemonic with PIN, save to vault
+    BG->>BG: Derive Matrix username, password, passphrase
+
+    alt Username available
+        BG->>Matrix: Register via secp256k1 challenge signature
+    else Username taken (prior interrupted attempt)
+        Note over BG: 3-Step Cascade Recovery
+        BG->>Matrix: Step A: Login with current mnemonic password
+        alt Login succeeds
+            BG->>BG: Verify userId matches expected
+        else Login fails
+            BG->>Bot: Step B: Sign challenge, POST /api/auth/get-secret-secp
+            BG->>BG: Decrypt recovered mnemonic with PIN
+            BG->>BG: Re-derive password from old mnemonic
+            BG->>Matrix: Login with recovered password
+            alt Recovery also fails
+                BG->>BG: Step C: Throw error (contact support)
+            end
+        end
+    end
+
+    BG->>Matrix: Set display name from SSO (name or email fallback)
+    BG->>Matrix: Upload avatar from SSO picture
+    BG->>Matrix: Bootstrap cross-signing + secret storage
+    BG->>Bot: Create/join user room via Room Bot
+    BG->>Matrix: Store PIN-encrypted mnemonic in room state event
+    BG->>Vault: Clear all vault data
+```
+
+#### Registration Step Order (Redux)
+
+The setup flow is tracked in Redux for resilience. Each step represents a checkpoint that can be resumed from:
+
+| # | Step | Description |
+|---|------|-------------|
+| 1 | `MNEMONIC_SAVED` | Wallet mnemonic saved to vault (WebCrypto tier) |
+| 2 | `FEEGRANT_GRANTED` | Fee grant verified/granted on-chain |
+| 3 | `PASSKEY_REGISTERED` | WebAuthn credential created and verified on-chain |
+| 4 | `PIN_COLLECTED` | User provided PIN, vault upgraded to PIN tier |
+| 5 | `DID_CREATED` | IID document created on-chain |
+| 6 | `MATRIX_MNEMONIC_SAVED` | Matrix mnemonic encrypted with PIN, saved to vault |
+| 7 | `MATRIX_ACCOUNT_CREATED` | Matrix account registered or recovered via cascade |
+| 8 | `CROSS_SIGNING_DONE` | Cross-signing and secret storage bootstrapped |
+| 9 | `MATRIX_ROOM_CREATED` | User room created/joined via Room Bot |
+| 10 | `MNEMONIC_STORED_IN_ROOM` | Encrypted mnemonic stored in Matrix room state |
+| 11 | `COMPLETE` | Vault cleared, setup finished |
+
+#### Matrix Account Recovery Cascade
+
+When registration is interrupted after a Matrix account was created but before the flow completed, a subsequent attempt finds the username already taken. The system uses a 3-step cascade to recover gracefully:
+
+```mermaid
+flowchart TD
+    A[Username not available] --> B{Step A: Login with<br/>current mnemonic password}
+    B -->|Success| C[Verify userId matches expected]
+    C --> D[Continue setup]
+    B -->|Fails| E{Step B: Recover old mnemonic<br/>via secp API}
+    E --> F[Sign timestamp challenge with wallet]
+    F --> G[POST /api/auth/get-secret-secp]
+    G --> H[Decrypt old mnemonic with PIN]
+    H --> I[Re-derive password from old mnemonic]
+    I --> J[Login with recovered password]
+    J -->|Success| K[Update vault with old mnemonic]
+    K --> D
+    J -->|Fails| L[Step C: Throw error<br/>'Contact support']
+    E -->|API/decrypt fails| L
+
+    style A fill:#f0e6ff,stroke:#333
+    style D fill:#e6ffe6,stroke:#333
+    style L fill:#ffe6e6,stroke:#333
+```
+
+**Key files:** `lib/auth/passkeyFlow.ts` (`passkeyRegisterBlocking`, `registerBackground`), `screens/registerPasskey.tsx`, `lib/authn/register.ts`
 
 ---
 
-### ✍️ Login with Mnemonic
+### Passkey Login
 
-This method allows logging in using a **raw mnemonic seed phrase**, ideal for developers or advanced users.
+Login uses blocking + background phases, with an address selection step when multiple addresses are associated with a single passkey credential.
 
-#### 🔁 Process Flow:
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Login Screen
+    participant WebAuthn as WebAuthn API
+    participant Chain as ixo Blockchain
+    participant Bot as Room Bot
+    participant BG as Background Flow
+    participant Matrix as Matrix Homeserver
 
-- Derive the wallet from the **entered mnemonic**.
-- Check or grant a **feegrant** for the wallet address.
-- Ensure a **DID document** is ledgered (create if not).
-- Attempt to fetch the **Matrix mnemonic** from the Matrix bot using a signed challenge.
-  - If not available, a **new Matrix account and room** are created.
-- Decrypt the Matrix mnemonic using the user’s password.
-- Login or register on Matrix with the derived credentials.
+    Note over UI: Phase 1: Passkey Assertion
+    UI->>UI: GET /api/auth/initial-challenge
+    UI->>WebAuthn: navigator.credentials.get(challenge)
+    WebAuthn-->>U: Biometric/PIN prompt
+    U-->>WebAuthn: Approve
+    WebAuthn-->>UI: Signed assertion
+    UI->>Chain: Query addresses by credential keyId (GraphQL)
 
-> 🧠 _This flow enables deterministic wallet access and Matrix account linkage based on a known mnemonic._
+    alt Single address found
+        UI->>UI: Auto-select, stay on loading screen
+    else Multiple addresses found
+        UI->>U: Show address selection UI
+        U-->>UI: Select address
+    end
 
-## 📊 Dashboard
+    Note over UI: Phase 2: Finalize (blocking)
+    UI->>UI: Generate DID from selected address
+    UI->>Chain: Verify DID exists on-chain
+    UI->>Bot: POST assertion + address to verify and fetch encrypted mnemonic
+    UI->>UI: Cache encrypted mnemonic in vault
+    UI->>UI: auth.loginWithPasskey()
+    UI->>UI: Navigate to dashboard
 
-Once logged in, users land on the **Dashboard**, which acts as the main interface for interacting with a specific **Claim Collection**.
+    Note over BG: Phase 3: Background (async)
+    BG->>U: Request PIN (via BackgroundSetupModal)
+    U-->>BG: Enter PIN
+    BG->>BG: Decrypt Matrix mnemonic with PIN
+    BG->>BG: Derive username + password from mnemonic
+    BG->>Matrix: Logout existing session, login fresh
+    BG->>Matrix: Set display name from SSO (name or email, if not already set)
+    BG->>Matrix: Initialize crypto client
+    BG->>Matrix: Verify/setup cross-signing
+    BG->>BG: Clear all vault data
+```
 
-The user must provide a valid numeric `collectionId` to begin. Once fetched, the dashboard reveals various tabs that allow the user to view or manage bids and claims related to that collection depending on their role.
+#### Login Step Order (Redux)
+
+| # | Step | Description |
+|---|------|-------------|
+| 1 | `PASSKEY_ASSERTED` | WebAuthn assertion obtained, addresses queried |
+| 2 | `ENCRYPTED_MNEMONIC_CACHED` | Encrypted mnemonic fetched from bot, cached in vault |
+| 3 | `PIN_ENTERED` | User provided PIN, mnemonic decrypted |
+| 4 | `MATRIX_LOGGED_IN` | Logged in to Matrix homeserver |
+| 5 | `CROSS_SIGNING_DONE` | Cross-signing verified/setup |
+| 6 | `COMPLETE` | Vault cleared, login finished |
+
+**Key files:** `lib/auth/passkeyFlow.ts` (`passkeyLoginBlocking`, `passkeyLoginBlockingFinalize`, `matrixLoginBackground`), `screens/loginPasskey.tsx`
 
 ---
 
-### 🔎 Collection ID Search
+### Mnemonic Login (Recovery)
 
-At the top of the dashboard is a field to input the `collectionId`.
+An alternative login path using a 12-word mnemonic for account recovery or direct access. Uses secp256k1 wallet signing instead of passkey assertion to authenticate with the Matrix Room Bot.
 
-- Enter the ID and click **Search**
-- If the collection exists, the dashboard will load tabs with associated claim and bid data
-- If not found, an error is shown
+```mermaid
+flowchart TD
+    A[User enters mnemonic] --> B[Derive secp256k1 wallet]
+    B --> C[Check/grant feegrant]
+    C --> D[Ensure DID on-chain]
+    D --> E{Matrix username available?}
+    E -->|Yes| F[Register new Matrix account]
+    E -->|No| G[Try login with mnemonic password]
+    G -->|Success| H[Continue]
+    G -->|Fail| I[Sign secp challenge, recover old mnemonic]
+    I -->|Success| J[Login with recovered password]
+    I -->|Fail| K[Create new Matrix account + room]
+    F --> L[Setup cross-signing + room]
+    J --> H
+    K --> L
+    H --> M[Decrypt/store mnemonic in room]
+    L --> M
+    M --> N[Ready]
+```
 
-Once a collection is successfully loaded, the app continuously checks the user's authorization status (admin, owner, agent) using:
+**Key file:** `screens/loginMnemonic.tsx`
 
+---
+
+## Matrix Data Vault
+
+Matrix is used as a decentralized, encrypted "Data Vault" for persistent storage of sensitive credentials. This allows mnemonic recovery across devices using only a passkey assertion + PIN.
+
+### Storage Architecture
+
+```mermaid
+graph LR
+    subgraph "Registration"
+        A[Generate Matrix mnemonic] --> B[Encrypt with PIN]
+        B --> C[Store in Matrix room state event]
+    end
+
+    subgraph "Login from any device"
+        D[Passkey assertion] --> E[Room Bot verifies assertion]
+        E --> F[Returns encrypted mnemonic from room]
+        F --> G[User enters PIN]
+        G --> H[Decrypt mnemonic]
+        H --> I[Derive Matrix password]
+        I --> J[Login to Matrix]
+    end
+
+    C -->|ixo.room.state.secure/<br/>encrypted_mnemonic| F
+```
+
+### Credential Derivation
+
+All Matrix credentials are deterministically derived from the Matrix mnemonic:
+
+| Credential | Derivation | Purpose |
+|-----------|-----------|---------|
+| **Username** | `'did-ixo-' + blockchain_address` | Account identifier |
+| **Password** | `base64(MD5(mnemonic)).slice(0, 24)` | Login authentication |
+| **Passphrase** | `base64(SHA256(mnemonic)).slice(0, 32)` | Cross-signing recovery key |
+| **Room Alias** | `#did-ixo-{address}:{homeserver}` | Personal room identifier |
+
+### Account Creation
+
+New Matrix accounts are created via the Room Bot using a secp256k1 challenge-response:
+
+1. Client creates a challenge: `{timestamp, address, service: 'matrix', type: 'create-account'}`
+2. Client signs challenge with secp256k1 wallet
+3. Password encrypted with ECIES using the bot's public key
+4. Bot verifies signature and creates the Matrix account
+
+### Cross-Signing and E2E Encryption
+
+After account creation/login, the app:
+
+1. Derives a recovery key from the mnemonic passphrase
+2. Bootstraps Matrix secret storage with the recovery key
+3. Bootstraps cross-signing with password authentication
+4. Resets key backup
+
+This ensures encrypted room state is accessible across sessions and devices.
+
+**Key files:** `utils/matrix.ts`, `utils/signingMnemonic.ts`, `utils/secretStorageKeys.ts`
+
+---
+
+## Two-Tier Encrypted Vault
+
+A browser-based encrypted vault survives interruptions during registration/login. It uses two encryption tiers depending on whether the user has entered their PIN yet.
+
+```mermaid
+stateDiagram-v2
+    [*] --> WebCryptoTier: Mnemonic generated<br/>(before PIN)
+
+    state WebCryptoTier {
+        [*] --> GenKey: crypto.subtle.generateKey()
+        GenKey --> Encrypt1: AES-256-GCM<br/>(non-extractable key in IndexedDB)
+        Encrypt1 --> Save1: Data in localStorage<br/>Key in IndexedDB
+    }
+
+    WebCryptoTier --> PINTier: User enters PIN
+
+    state PINTier {
+        [*] --> Derive: PBKDF2 (100k iterations, PIN + salt)
+        Derive --> ReEncrypt: AES-256-GCM with derived key
+        ReEncrypt --> DeleteKey: Remove WebCrypto key from IndexedDB
+        DeleteKey --> Save2: Data in localStorage only
+    }
+
+    PINTier --> [*]: Vault cleared on flow completion
+```
+
+### Tier Comparison
+
+| Property | Tier 1: WebCrypto | Tier 2: PIN |
+|----------|-------------------|-------------|
+| **When used** | Before PIN collected | After PIN collected |
+| **Encryption key** | Non-extractable AES-256-GCM in IndexedDB | PBKDF2-derived AES-256-GCM from PIN |
+| **Key storage** | IndexedDB (non-extractable) | Derived on-the-fly from PIN |
+| **Data storage** | localStorage | localStorage |
+| **Data format** | `iv_hex:ciphertext_hex` | `salt_hex:iv_hex:ciphertext_hex` |
+
+### Vault Slots
+
+| Slot | Content | Lifecycle |
+|------|---------|-----------|
+| `wallet` | Blockchain signing mnemonic (secp256k1 wallet) | Saved at registration start, cleared on completion |
+| `matrix` | Matrix account mnemonic (for password/passphrase derivation) | Saved during background setup, cleared on completion |
+
+### Crash Recovery
+
+The vault tracks its tier state (`webcrypto`, `upgrading`, `pin`). If a crash occurs during the tier upgrade:
+
+1. Tier is marked as `'upgrading'` before starting
+2. On resume, tries PIN decryption first
+3. Falls back to WebCrypto decryption for slots that weren't yet upgraded
+4. Completes the upgrade
+
+**Key file:** `utils/setupVault.ts`
+
+---
+
+## Background Setup and Resilience
+
+### Background Setup Provider
+
+After the blocking phase completes and the user enters the app, Matrix setup runs asynchronously via the `BackgroundSetupProvider`. This keeps the app responsive while long-running operations happen in the background.
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> running: startSetup(task)
+    running --> needs_input: requestPin()
+    needs_input --> running: PIN provided
+    running --> success: Task completes
+    running --> error: Task fails
+    error --> running: retry()
+    success --> [*]
+    error --> [*]: dismiss()
+```
+
+The `BackgroundSetupModal` component shows progress status messages and a PIN input form when needed. The `HeaderStatusIndicator` shows setup status in the app header.
+
+### Flow Resume on Page Reload
+
+If the page reloads during setup, the `SetupResumeProvider` detects incomplete flows via Redux persisted state and vault data:
+
+```mermaid
+flowchart TD
+    A[Page loads] --> B{Incomplete flow in Redux?}
+    B -->|No| C[Normal app]
+    B -->|Yes| D{Vault data exists?}
+    D -->|No| E[Clear stale flow state]
+    D -->|Yes| F{Flow type?}
+    F -->|Register| G[Resume from last step<br/>All operations idempotent]
+    F -->|Login| H{Past ENCRYPTED_MNEMONIC_CACHED?}
+    H -->|Yes| I[Resume with cached mnemonic]
+    H -->|No| J[Require fresh passkey assertion]
+```
+
+**Registration resume**: Loads wallet mnemonic from vault, skips completed steps using `REGISTER_STEP_ORDER` index comparison. All operations check existence before creating (idempotent).
+
+**Login resume**: If encrypted mnemonic is cached in vault, resumes from PIN collection. If not yet cached, requires a fresh passkey assertion (`PASSKEY_REDO_NEEDED`).
+
+**Key files:** `providers/backgroundSetup.tsx`, `providers/setupResume.tsx`, `store/slices/setupFlowSlice.ts`
+
+---
+
+## Blockchain Integration
+
+### DID Management
+
+Each user gets a decentralized identifier (DID) on the ixo blockchain:
+
+- **Format**: `did:ixo:{address}` (deterministic from secp256k1 address)
+- **IID Document**: Created on-chain with `MsgCreateIidDocument`
+- **Verification Methods**: secp256k1 key for authentication
+- **Ed25519**: Optional verification method added for credential signing (via Veramo)
+
+### Fee Grants
+
+Users don't need native tokens to transact. The feegrant module provides transaction fee delegation:
+
+```mermaid
+flowchart LR
+    A[Check on-chain grant] -->|Exists + valid| B[Proceed]
+    A -->|Missing/expired| C[POST /api/feegrant/grant]
+    C --> D[Feegrant service grants allowance]
+    D --> E[Re-verify on-chain]
+    E --> B
+```
+
+During registration, the feegrant check is started in the background as soon as the wallet is created (parallel with mnemonic display), so it's likely ready by the time the user clicks Continue.
+
+### Smart Account Authenticators
+
+Passkeys are registered on-chain as smart account authenticators:
+
+1. WebAuthn credential created with ES256 or RS256
+2. Public key extracted and encoded as `AuthnPubKey` protobuf
+3. `MsgAddAuthenticator` broadcast with credential data
+4. Verified via BlockSync GraphQL query for the credential ID
+
+**Key files:** `utils/did.ts`, `utils/feegrant.ts`, `lib/authn/register.ts`
+
+---
+
+## Transaction Signing
+
+The app supports two signing methods:
+
+### Passkey Signing
+
+Used for all transactions after registration (claims, authz grants, etc.):
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant Signer as PasskeyOfflineDirectSigner
+    participant WebAuthn as WebAuthn API
+    participant Chain as ixo Blockchain
+
+    App->>Signer: signDirect(address, signDoc)
+    Signer->>Signer: Encode signDoc to bytes
+    Signer->>Signer: SHA-256 hash
+    Signer->>WebAuthn: navigator.credentials.get(challenge = hash)
+    WebAuthn-->>Signer: {authenticatorData, clientDataJSON, signature}
+    Signer->>Signer: Package as DirectSignResponse<br/>+ TxExtension(authenticatorId)
+    App->>Chain: Broadcast transaction
+```
+
+The `PasskeyOfflineDirectSigner` implements the Cosmos `OfflineDirectSigner` interface, enabling standard Cosmos transaction signing via passkey.
+
+### Mnemonic Signing
+
+Standard Cosmos signing using the secp256k1 wallet derived from the user's mnemonic. Used during registration for on-chain operations (DID creation, authenticator registration) and as the mnemonic login signing method.
+
+- Gas estimation via simulation with 1.7x multiplier
+- Fee calculation from chain gas step prices
+- Feegrant granter address included when applicable
+
+**Key files:** `lib/authn/signAndBroadcast.ts`, `lib/authn/PasskeyOfflineDirectSigner.ts`, `utils/transaction.ts`
+
+---
+
+## Dashboard
+
+Once logged in, users land on the **Dashboard**, which displays available **Claim Collections** for the configured entity.
+
+The dashboard checks the user's authorization status for each collection using:
 - The collection admin field
 - Protocol entity ownership
 - Blockchain authz module grant data
 
----
+### Roles
 
-### 🧑‍💼 Role Display
+| Role | Description |
+|------|-------------|
+| `Collection Admin` | Full control over the collection |
+| `Collection Owner` | Owner of the protocol entity |
+| `Service Agent` | Authorized to submit claims (SubmitClaimAuthorization) |
+| `Evaluation Agent` | Authorized to evaluate claims (EvaluateClaimAuthorization) |
 
-If the user has any roles, they will be displayed as labeled badges:
+### Tabs
 
-- `Collection Admin`
-- `Collection Owner`
-- `Service Agent` (SubmitClaimAuthorization)
-- `Evaluation Agent` (EvaluateClaimAuthorization)
-
-These roles affect what tabs the user sees or what actions they can take inside each tab.
-
----
-
-### 🗂️ Tabs Overview
-
-The dashboard has four main sections:
-
-| Tab                   | Description                                                    | Required Role(s)                     |
-| --------------------- | -------------------------------------------------------------- | ------------------------------------ |
-| **My Bids**           | View and manage bids submitted by the currently logged-in user | Any logged-in user                   |
-| **Collection Bids**   | View all bids submitted to the current collection              | `admin`, `owner`                     |
-| **My Claims**         | View and manage claims submitted by the user                   | `Service Agent`                      |
-| **Collection Claims** | View all claims submitted to the collection                    | `admin`, `owner`, `Evaluation Agent` |
+| Tab | Description | Required Role(s) |
+|-----|-------------|------------------|
+| **My Bids** | View and manage bids submitted by the current user | Any logged-in user |
+| **Collection Bids** | View all bids submitted to the collection | Admin, Owner |
+| **My Claims** | View and manage claims submitted by the user | Service Agent |
+| **Collection Claims** | View all claims submitted to the collection | Admin, Owner, Evaluation Agent |
 
 ---
 
-### 📝 Signing Transactions
+## Bids
 
-Actions inside the tabs (e.g., submitting a claim or granting authz) trigger blockchain transactions. These transactions are passed to the `onSign()` function provided via props and signed using the user's smart account (registered via passkey) or base account (mnemonic login).
+The Bids section is managed entirely by the **Matrix Bid Bot**. All bids are stored and managed in Matrix, not on-chain.
 
-## 📑 Bids
+### How it Works
 
-The **Bids** section revolves entirely around the **Matrix Bid Bot**, a service responsible for managing bids within the Matrix ecosystem.
+```mermaid
+flowchart TD
+    A[User submits bid form] --> B[Bid sent to Matrix Bid Bot]
+    B --> C[Stored in collection's Matrix room]
+    C --> D{Admin reviews bid}
+    D -->|Approve| E[MsgGrantEntityAccountAuthz<br/>on-chain transaction]
+    E --> F[Bid Bot notified of approval]
+    D -->|Reject| G[Bid Bot marks bid inactive]
+```
 
-> 🧠 All bids are **stored and managed in Matrix**, not on-chain.
+1. Users submit bids through a **SurveyJS** form rendered from the collection's protocol
+2. The bid is sent to the **Matrix Bid Bot**, which validates and stores it
+3. No blockchain transaction occurs at submission — the bid exists entirely off-chain
+4. When an admin approves a bid:
+   - An `MsgGrantEntityAccountAuthz` transaction grants the bidder a role (Service Agent or Evaluation Agent)
+   - The Bid Bot is notified and marks the bid as accepted
 
-Each claim collection's entity has a dedicated **Matrix room**, where the Bid Bot processes and tracks submitted bids. This room acts as the authoritative source of truth for bids, ensuring decentralized and flexible bid storage.
+### My Bids
 
----
+Any logged-in user can:
+- View their existing bids
+- Submit a new bid as a Service Agent (SA) or Evaluation Agent (EA)
+- Only one active bid per user per collection
 
-### 🔄 How it Works
+### Collection Bids
 
-- Users submit bids through a form rendered by the app.
-- The bid is sent to the **Matrix Bid Bot**, which validates and stores it in the appropriate Matrix room.
-- No blockchain transaction occurs at this stage — the bid exists **entirely off-chain**.
-
-Only once a bid is **approved** by an admin or owner:
-
-1. An **authz blockchain transaction** is signed and broadcast.
-2. This grants the bidder a role (e.g. `Service Agent`, `Evaluation Agent`) via a `MsgGrantEntityAccountAuthz` transaction.
-3. The Matrix Bid Bot is notified of the approval and marks the bid as accepted.
-
----
-
-### 📦 Why Matrix?
-
-This architecture offers:
-
-- **Flexible bid formats** (via SurveyJS JSON forms)
-- **Off-chain coordination** before incurring gas costs
-- **Seamless integration with IXO's Matrix-based identity and permission system**
-
-> 💡 Bids can be rotated, updated, or re-submitted without touching the blockchain — until a role is formally granted.
-
----
-
-### 🧍 My Bids
-
-**Role Required**: Any logged-in user  
-**Component**: `MyBids`
-
-This section allows a user to:
-
-- View their existing bids submitted to the selected claim collection.
-- Submit a **new bid** as either a:
-  - `Service Agent (SA)`
-  - `Evaluation Agent (EA)`
-
-#### 🔁 Flow for Submitting a Bid:
-
-1. **Click "New Bid"**
-2. The app fetches the bid form template (a `SurveyJS` JSON schema) from the claim collection's offers and protocol entity.
-3. The form is rendered inside a modal using SurveyJS.
-4. The user selects their desired role (`SA` or `EA`) and submits the bid.
-5. The bid is sent to the Matrix Bid Bot via the `submitBid()` endpoint.
-
-> 🔐 The bid data is stored in Matrix and indexed by IXO’s custom Matrix bot infrastructure.
-
-#### 🧾 Additional Features:
-
-- View details of each bid (including role, date, DID, and JSON data).
-- Only one bid can be active per user per collection.
+Admins and owners can:
+- View all bids submitted to the collection
+- Approve bids (triggers on-chain authz grant)
+- Reject bids with an optional reason
 
 ---
 
-### 🗃️ Collection Bids
+## Claims
 
-**Role Required**: `admin` or `owner`  
-**Component**: `CollectionBids`
+Claims are recorded **on-chain** through blockchain transactions, but the associated data (survey responses) is stored privately in the collection's **Matrix room** via the **Matrix Claim Bot**.
 
-This sectoin allows privileged users to:
+### How it Works
 
-- View **all bids** submitted to the claim collection.
-- **Approve or reject** bids based on their content and associated role.
+```mermaid
+flowchart TD
+    A[Service Agent submits claim form] --> B[Claim data sent to Matrix Claim Bot]
+    B --> C[Stored in collection Matrix room]
+    C --> D[Claim Bot returns CID]
+    D --> E[MsgSubmitClaim broadcast on-chain<br/>referencing CID]
+    E --> F[Claim visible on-chain]
 
-#### ✅ Approving a Bid:
+    G[Evaluation Agent reviews claim] --> H[Fetch claim data from Matrix]
+    H --> I{Evaluate}
+    I -->|Approve| J[MsgEvaluateClaim - APPROVED]
+    I -->|Reject| K[MsgEvaluateClaim - REJECTED]
+```
 
-When approving a bid, the app:
+1. A Service Agent completes a **SurveyJS** form
+2. Claim data is encrypted and stored in the Matrix room via the **Claim Bot**, which returns a CID
+3. A `MsgSubmitClaim` transaction is broadcast on-chain, linking the CID
+4. Evaluation Agents can fetch and decrypt the claim data from Matrix
+5. Evaluation triggers a `MsgEvaluateClaim` transaction on-chain
 
-1. Creates an `MsgGrantEntityAccountAuthz` message to authorize the selected address as a Service or Evaluation Agent.
-2. Defines constraints such as:
-   - Agent quota
-   - Max token payments
-   - Validity duration
-3. Sends the transaction using the `onSign()` callback.
-4. Notifies the Matrix Bid Bot to **finalize approval** using `approveBid()`.
+### Credential Signing
 
-#### ❌ Rejecting a Bid:
-
-1. Calls the `rejectBid()` method on the Bid Bot with an optional reason.
-2. The bid becomes inactive.
-
-#### 🧾 Additional Features:
-
-- Modal UI to inspect bid metadata and raw JSON contents.
-- Buttons to approve or reject depending on role.
-
-> 🧠 **Service Agent (SA)** and **Evaluation Agent (EA)** roles have distinct grant types and constraints.
-
----
-
-## 🧾 Claims
-
-The **Claims** section revolves around submitting and evaluating **claims** made against a **Claim Collection**.
-
-Unlike bids, **claims are recorded on-chain** through blockchain transactions.  
-However, the **data associated with each claim** (such as the responses submitted) is stored privately inside the **collection's entity Matrix room**, managed by the **Matrix Claim Bot**.
+Claims are signed as W3C Verifiable Credentials using **Veramo**:
+- Ed25519 key pair derived from user's mnemonic
+- `VerifiableCredential` with type `ClaimCredential`
+- Signed with `Ed25519VerificationKey2018` proof
 
 ---
 
-### 🔄 How it Works
+## Project Structure
 
-- A user submits a claim by completing a form (based on a SurveyJS template attached to the collection or protocol).
-- The **claim data** is securely stored in the collection’s Matrix room using the **Matrix Claim Bot** and a cid gets provided in response.
-- A blockchain transaction (`MsgSubmitClaim`) is executed, **linking the claim data** (via the CID) to the claim on the IXO chain.
-- The full, sensitive claim details remain off-chain and accessible only via Matrix to authorized agents (e.g., evaluators).
-- Evaluation (approval or rejection) of claims triggers a blockchain transaction (`MsgEvaluateClaim`).
-
-> 🔐 **Private data access**: Only users authorized through the collection's authz permissions (e.g., Evaluation Agents) can access and view the full claim content.
+```
+jambo-passkey-claims/
+├── pages/
+│   ├── auth/
+│   │   ├── index.tsx              # Auth landing (SSO redirect button)
+│   │   ├── passkey.tsx            # SSO callback handler + passkey login
+│   │   ├── register.tsx           # Passkey registration entry
+│   │   └── callback.tsx           # Legacy SSO redirect
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── initial-challenge.ts   # FIDO2 challenge generation
+│   │   │   ├── get-secret.ts          # Passkey-based mnemonic retrieval
+│   │   │   └── get-secret-secp.ts     # Secp-based mnemonic retrieval (recovery)
+│   │   ├── matrix/
+│   │   │   ├── create-user.ts         # Matrix account creation proxy
+│   │   │   └── public-key.ts          # Bot encryption public key
+│   │   └── feegrant/
+│   │       └── grant.ts               # Fee grant request proxy
+│   ├── entities/[entityId]/
+│   │   ├── index.tsx                  # Dashboard
+│   │   └── claimCollections/
+│   │       └── [collectionId].tsx     # Claim submission UI
+│   ├── index.tsx                  # Homepage (auth redirect)
+│   └── profile.tsx                # User profile
+│
+├── screens/                       # Main screen components
+│   ├── registerPasskey.tsx        # Registration UI orchestration
+│   ├── loginPasskey.tsx           # Login UI orchestration
+│   ├── loginMnemonic.tsx          # Mnemonic login (recovery)
+│   ├── loginSignX.tsx             # SignX login
+│   ├── loginMethodSelector.tsx    # Login method selection
+│   ├── dashboard.tsx              # Collection dashboard
+│   ├── collectionDetail.tsx       # Claim/bid submission UI
+│   └── profile.tsx                # Profile screen
+│
+├── lib/
+│   ├── auth/
+│   │   └── passkeyFlow.ts        # Core flow orchestration (register + login)
+│   ├── authn/                     # WebAuthn/FIDO2 implementation
+│   │   ├── client.ts             # FIDO2 server initialization
+│   │   ├── register.ts           # Passkey credential creation
+│   │   ├── login.ts              # Passkey assertion verification
+│   │   ├── signAndBroadcast.ts   # Passkey transaction signing
+│   │   └── PasskeyOfflineDirectSigner.ts  # Cosmos signer interface
+│   └── sso/                       # Yoma SSO / OIDC
+│       ├── config.ts             # Keycloak configuration
+│       ├── pkce.ts               # PKCE challenge generation
+│       ├── redirect.ts           # Authorization redirect
+│       └── tokens.ts             # Token exchange + JWT validation
+│
+├── components/                    # Reusable UI components
+│   ├── AuthGuard.tsx             # Protected route wrapper
+│   ├── GuestGuard.tsx            # Auth route wrapper (redirect if logged in)
+│   ├── BackgroundSetupModal/     # Background task progress + PIN input
+│   ├── MatrixPinForm/            # PIN entry form
+│   ├── SecretPhraseStep/         # Mnemonic display/confirm
+│   ├── Header/                   # Main navigation
+│   ├── HeaderStatusIndicator/    # Background setup status in header
+│   └── ...                       # Button, Loader, Modal, Toast, etc.
+│
+├── store/                         # Redux state management
+│   ├── slices/
+│   │   ├── accountSlice.ts       # Account (address, DID, signing method)
+│   │   ├── setupFlowSlice.ts     # Setup progress tracking + step ordering
+│   │   ├── ssoSlice.ts           # SSO session (tokens, profile)
+│   │   ├── matrixProfileSlice.ts # Matrix display name, avatar
+│   │   ├── collectionsSlice.ts   # Claim collections
+│   │   ├── entitiesSlice.ts      # Entity data
+│   │   └── ...                   # protocols, profiles, claimDrafts
+│   └── thunks/
+│       └── dataThunks.ts         # Async data fetching
+│
+├── utils/                         # Core utilities
+│   ├── setupVault.ts             # Two-tier encrypted vault (WebCrypto + PIN)
+│   ├── encryption.ts             # AES-256-CBC encrypt/decrypt
+│   ├── matrix.ts                 # Matrix client, login, register, cross-signing
+│   ├── signingMnemonic.ts        # Matrix room mnemonic storage/retrieval
+│   ├── secp.ts                   # Secp256k1 wallet client (BIP39 + SLIP-10)
+│   ├── did.ts                    # DID creation and management
+│   ├── feegrant.ts               # Fee grant check/request
+│   ├── claims.ts                 # Claim submission logic
+│   ├── transaction.ts            # Transaction building + broadcasting
+│   ├── veramo.ts                 # Veramo agent + credential signing
+│   ├── url.ts                    # URL sanitization (cleanUrlString)
+│   ├── secrets.ts                # Secure credential storage (AES localStorage)
+│   ├── secretStorageKeys.ts      # Matrix secret storage key cache
+│   └── ...                       # encoding, graphql, storage, etc.
+│
+├── providers/                     # React context providers
+│   ├── auth.tsx                  # Auth context (login state, credentials)
+│   ├── theme.tsx                 # Theme provider (light/dark mode)
+│   ├── backgroundSetup.tsx       # Background task manager + modal
+│   └── setupResume.tsx           # Flow resume on page reload
+│
+├── hooks/                         # Custom React hooks
+│   ├── useAuth.ts                # Auth context access
+│   ├── useBackgroundSetup.ts     # Background setup control
+│   └── ...                       # useProtocolCollections, useSteps
+│
+├── constants/                     # Configuration
+│   ├── config.json               # Site config (entity DID, protocol DIDs)
+│   ├── common.ts                 # Chain networks, RPC URLs, chain IDs
+│   ├── auth.ts                   # Secure storage key names
+│   └── matrix.ts                 # Matrix constants
+│
+└── styles/
+    ├── variables.scss            # CSS variables (light/dark themes)
+    └── globals.scss              # Global styles
+```
 
 ---
 
-### 🧩 Why This Approach?
+## SDKs Used
 
-This hybrid model ensures:
-
-- **On-chain proof** of claim submissions.
-- **Off-chain encryption** and privacy for sensitive information.
-- **Efficient evaluation** processes without overloading blockchain storage.
-- **Scalability** by keeping large or complex forms in Matrix.
-
----
-
-## 🧍 My Claims
-
-**Role Required**: `Service Agent`  
-**Component**: `MyClaims`
-
-This tab allows authenticated users who have been approved as Service Agents to:
-
-- View a list of **claims** they have submitted to the currently selected claim collection.
-- **Submit a new claim** by filling out a dynamic form (SurveyJS), which:
-  - Saves the form data to Matrix (via the **Matrix Claim Bot**).
-  - Broadcasts a blockchain transaction (`MsgSubmitClaim`) to register the claim on-chain.
-
-### 🔁 Flow for Submitting a Claim:
-
-1. User clicks **"New Claim"**.
-2. The app fetches the form JSON from the claim collection's `#surveyTemplate` resource.
-3. Form is displayed using **SurveyJS**.
-4. Upon submission:
-   - Claim data is stored in the Matrix room via the **Claim Bot**.
-   - A blockchain transaction (`MsgSubmitClaim`) is executed.
-5. The claim appears in the "My Claims" list with metadata like date, DID, and status.
-
-> 📦 Claim form data (including survey answers) is **not stored on-chain** — only a reference (`claimId`) is committed to the chain.
+| SDK | Description | Link |
+|-----|-------------|------|
+| [`@ixo/impactxclient-sdk`](https://www.npmjs.com/package/@ixo/impactxclient-sdk) | TypeScript SDK for interacting with the IXO blockchain. Includes transaction building, DID creation, signing, and Cosmos-based features. | [Docs](https://docs.ixo.world/sdk/impactxclient) |
+| [`@ixo/matrixclient-sdk`](https://www.npmjs.com/package/@ixo/matrixclient-sdk) | Lightweight wrapper for interacting with IXO Matrix Bots (Claim Bot, Bid Bot, Room Bot). | [GitHub](https://github.com/ixofoundation/ixo-matrixclient-sdk) |
+| [`matrix-js-sdk`](https://www.npmjs.com/package/matrix-js-sdk) | Official Matrix client library for registration, login, and homeserver interaction. | [Docs](https://matrix-org.github.io/matrix-js-sdk/) |
+| [`fido2-lib`](https://www.npmjs.com/package/fido2-lib) | FIDO2/WebAuthn server-side library for challenge generation and attestation/assertion verification. | [npm](https://www.npmjs.com/package/fido2-lib) |
+| [`jose`](https://www.npmjs.com/package/jose) | JWT/JWS/JWE library used for OIDC ID token validation against Keycloak JWKS. | [GitHub](https://github.com/panva/jose) |
+| [`@veramo/*`](https://veramo.io/) | DID and Verifiable Credential framework for Ed25519 credential signing. | [Docs](https://veramo.io/docs/basics/introduction) |
+| [`@cosmjs/*`](https://github.com/cosmos/cosmjs) | Cosmos SDK client libraries for transaction signing, encoding, and RPC interaction. | [GitHub](https://github.com/cosmos/cosmjs) |
 
 ---
 
-## 🏛️ Collection Claims
+## Environment Variables
 
-**Role Required**: `admin`, `owner`, or `Evaluation Agent`  
-**Component**: `CollectionClaims`
+```env
+# Application origin (WebAuthn relying party)
+NEXT_PUBLIC_AUTHN_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_AUTHN_RP_ID=localhost
 
-This tab allows privileged users to:
+# Blockchain network (devnet | testnet | mainnet)
+NEXT_PUBLIC_CHAIN_NETWORK=devnet
 
-- View **all submitted claims** for the active claim collection.
-- Access the full **claim data** for review (fetched securely from the Matrix room).
-- Approve or reject claims by signing a transaction (`MsgEvaluateClaim`) on-chain.
+# Service URLs
+NEXT_PUBLIC_FEEGRANT_URL=""
+FEEGRANT_API_KEY=""
+NEXT_PUBLIC_MATRIX_HOMESERVER_URL=""
+NEXT_PUBLIC_MATRIX_ROOM_BOT_URL=""
+NEXT_PUBLIC_MATRIX_BID_BOT_URL=""
+NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL=""
 
-### ✅ Evaluating a Claim:
-
-1. Click **"View Claim"** to inspect full metadata and form data (fetched from Matrix).
-2. If the user has evaluation rights:
-   - Press **Approve** to execute `MsgEvaluateClaim` with status `APPROVED`.
-   - Press **Reject** to execute `MsgEvaluateClaim` with status `REJECTED`.
-3. Evaluation is broadcast via a signed transaction, updating the claim’s status on-chain.
-
-> 🔐 Only users with explicit blockchain **authz grants** can evaluate claims. The Matrix data is decrypted and shown only to authorized roles.
-
----
-
-### 💡 Notes
-
-- Evaluation rights are enforced both by chain-side authz and Matrix access.
-- Claims support rich data submission via customizable forms (SurveyJS).
-- Matrix ensures scalability, security, and data privacy.
-
-## ✅ Wrapping Up
-
-This demo app showcases a fully functional flow for working with **IXO’s decentralized identity and claim infrastructure**, combining:
-
-- 🔐 **Secure authentication** via **Passkeys** and **mnemonics**
-- 🧾 **Bids and claims** backed by on-chain transactions
-- 🛰️ **Matrix bots** for secure, off-chain data storage and coordination
-
-By separating sensitive data from public blockchain records and leveraging Matrix as a decentralized communication and storage layer, this architecture achieves both **privacy** and **auditability**.
+# Yoma SSO (OIDC / Keycloak)
+NEXT_PUBLIC_YOMA_SSO_ISSUER=https://stage.yoma.world/auth/realms/yoma
+NEXT_PUBLIC_YOMA_SSO_CLIENT_ID=<client_id>
+NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI=http://localhost:3000/auth/passkey
+NEXT_PUBLIC_YOMA_SSO_SCOPES=openid email profile
+```
 
 ---
 
-### 🧰 Next Steps
+## License
 
-- Explore the [source code](#) to customize flows for your own claim collections and roles.
-
----
-
-### 🙌 Thanks for Building on IXO
-
-Together, we're enabling trusted impact through verifiable data, transparent processes, and open infrastructure.
-
-Welcome to the future of public good tech.
+MIT

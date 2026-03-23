@@ -156,7 +156,7 @@ export async function passkeyLoginBlockingFinalize(params: {
   // Check DID exists
   const didExists = await checkIidDocumentExists(did);
   if (!didExists) {
-    throw new Error('Iid Document does not exist, please try another account.');
+    throw new Error('No identity found for this address. Please register a new account.');
   }
 
   // Prepare assertion for server
@@ -174,12 +174,22 @@ export async function passkeyLoginBlockingFinalize(params: {
   };
 
   // Fetch encrypted mnemonic from server
-  const { encryptedMnemonic } = await loginPasskey({
-    address,
-    authnResult: parsedAssertion,
-  });
+  let encryptedMnemonic: string | undefined;
+  try {
+    const loginResult = await loginPasskey({
+      address,
+      authnResult: parsedAssertion,
+    });
+    encryptedMnemonic = loginResult.encryptedMnemonic;
+  } catch (err: any) {
+    console.error('loginPasskey failed:', err);
+    throw new Error(
+      'Could not retrieve your Data Vault credentials. Your account setup may not have completed.',
+      { cause: err },
+    );
+  }
   if (!encryptedMnemonic) {
-    throw new Error('Failed to login with passkey.');
+    throw new Error('Could not retrieve your Data Vault credentials. Your account setup may not have completed. Please try registering again or contact support.');
   }
 
   // Cache encrypted mnemonic in vault for resume (already PIN-encrypted from registration)
@@ -230,13 +240,27 @@ export async function matrixLoginBackground(params: {
     password: mxPassword,
   });
   if (!account?.accessToken) {
-    throw new Error('Failed to login to Data Vault, please try again later.');
+    throw new Error('Could not connect to Data Vault. Please check your connection and try again.');
   }
 
   store.dispatch(advanceStep('MATRIX_LOGGED_IN'));
 
   callbacks.onStatusUpdate('Setting up encryption...');
   const mxClient = await createMatrixClient();
+
+  // Set Matrix display name from SSO if not already set
+  try {
+    const ssoState = store.getState().sso;
+    const ssoDisplayName = ssoState.name || ssoState.email;
+    if (ssoDisplayName) {
+      const currentName = mxClient.getUser(mxClient.getUserId()!)?.displayName;
+      if (!currentName) {
+        await mxClient.setDisplayName(ssoDisplayName);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to update Matrix display name:', err);
+  }
 
   let hasCrossSigning = hasCrossSigningAccountData(mxClient);
   if (!hasCrossSigning) {
@@ -300,9 +324,11 @@ export async function passkeyRegisterBlocking(params: {
   }
   store.dispatch(advanceStep('FEEGRANT_GRANTED'));
 
-  // Register passkey
+  // Register passkey — use SSO name for better passkey identification
   callbacks.onStatusUpdate('Creating your passkey...');
-  const { credentialId } = await registerPasskey({ wallet });
+  const ssoState = store.getState().sso;
+  const ssoDisplayName = ssoState.name || ssoState.email || undefined;
+  const { credentialId } = await registerPasskey({ wallet, displayName: ssoDisplayName });
   await delay(1000);
 
   // Verify on-chain
@@ -356,31 +382,83 @@ export async function registerBackground(params: {
 
   // Step 2: Generate Matrix mnemonic and save encrypted to vault
   callbacks.onStatusUpdate('Generating Vault credentials...');
-  const mxMnemonic = utils.mnemonic.generateMnemonic(12);
-  const pinEncrypted = await encryptWithPin(mxMnemonic, pin);
+  let mxMnemonic = utils.mnemonic.generateMnemonic(12);
+  let pinEncrypted = await encryptWithPin(mxMnemonic, pin);
   saveToVault('matrix', pinEncrypted);
   store.dispatch(advanceStep('MATRIX_MNEMONIC_SAVED'));
 
   const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
   const mxUsername = generateUsernameFromAddress(address);
-  const mxPassword = generatePasswordFromMnemonic(mxMnemonic);
-  const mxPassphrase = generatePassphraseFromMnemonic(mxMnemonic);
+  let mxPassword = generatePasswordFromMnemonic(mxMnemonic);
+  let mxPassphrase = generatePassphraseFromMnemonic(mxMnemonic);
+
+  // Clear residual Matrix data
+  await logoutMatrixClient({ baseUrl: homeServerUrl });
 
   const isUsernameAvailable = await checkIsUsernameAvailable({
     homeServerUrl,
     username: mxUsername,
   });
+
+  let account;
   if (!isUsernameAvailable) {
-    throw new Error('Matrix account already exists, please try again.');
-  }
+    // Account exists from a prior interrupted attempt — try cascade recovery
+    callbacks.onStatusUpdate('Reconnecting to existing Vault account...');
 
-  // Clear residual Matrix data
-  await logoutMatrixClient({ baseUrl: homeServerUrl });
+    // Step A: Try login with current mnemonic-derived password
+    try {
+      account = await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
+      if (!account?.accessToken) throw new Error('No access token');
+      // Verify the logged-in account matches the expected username
+      const expectedUserId = `@${mxUsername}:${new URL(homeServerUrl).hostname}`;
+      if (account.userId && account.userId !== expectedUserId) {
+        throw new Error('Data Vault account mismatch.');
+      }
+    } catch (loginErr) {
+      // Step B: Login failed — try to recover old mnemonic via secp API
+      callbacks.onStatusUpdate('Recovering Vault credentials...');
+      try {
+        const timestamp = new Date().toISOString();
+        const challenge = Buffer.from(timestamp).toString('base64');
+        const signature = await wallet.sign(challenge);
+        const response = await fetch('/api/auth/get-secret-secp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address,
+            secpResult: {
+              challenge,
+              signature: Buffer.from(signature).toString('base64'),
+            },
+          }),
+        });
+        if (!response.ok) throw new Error('Failed to fetch encrypted mnemonic');
+        const { encryptedMnemonic } = await response.json();
+        const recoveredMnemonic = decrypt(encryptedMnemonic, pin);
+        if (!recoveredMnemonic) throw new Error('Could not decrypt recovered mnemonic');
 
-  callbacks.onStatusUpdate('Creating Vault account...');
-  const account = await mxRegisterWithSecp(address, mxPassword, wallet);
-  if (!account?.accessToken) {
-    throw new Error('Failed to register Data Vault account, please try again later.');
+        // Recovery succeeded — use the old mnemonic
+        mxMnemonic = recoveredMnemonic;
+        mxPassword = generatePasswordFromMnemonic(mxMnemonic);
+        mxPassphrase = generatePassphraseFromMnemonic(mxMnemonic);
+        pinEncrypted = await encryptWithPin(mxMnemonic, pin);
+        saveToVault('matrix', pinEncrypted);
+
+        // Login with the recovered (correct) password
+        account = await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
+        if (!account?.accessToken) throw new Error('Login with recovered credentials failed');
+      } catch (recoveryErr) {
+        // Step C: Everything failed — throw original registration error
+        console.error('Matrix account recovery failed:', recoveryErr);
+        throw new Error('Data Vault account already exists and could not be recovered. Please contact support.');
+      }
+    }
+  } else {
+    callbacks.onStatusUpdate('Creating Vault account...');
+    account = await mxRegisterWithSecp(address, mxPassword, wallet);
+    if (!account?.accessToken) {
+      throw new Error('Failed to register Data Vault account, please try again later.');
+    }
   }
   store.dispatch(advanceStep('MATRIX_ACCOUNT_CREATED'));
 
@@ -390,6 +468,26 @@ export async function registerBackground(params: {
     homeServerUrl: cleanUrlString(homeServerUrl),
     accessToken: account.accessToken as string,
   });
+
+  // Set Matrix profile from SSO data (non-blocking)
+  try {
+    const ssoState = store.getState().sso;
+    const ssoDisplayName = ssoState.name || ssoState.email;
+    if (ssoDisplayName) {
+      await mxClient.setDisplayName(ssoDisplayName);
+    }
+    if (ssoState.picture) {
+      const imgResponse = await fetch(ssoState.picture);
+      if (imgResponse.ok) {
+        const blob = await imgResponse.blob();
+        const uploaded = await mxClient.uploadContent(blob, { type: blob.type });
+        const mxcUrl = typeof uploaded === 'string' ? uploaded : uploaded?.content_uri;
+        if (mxcUrl) await mxClient.setAvatarUrl(mxcUrl);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to set Matrix profile from SSO:', err);
+  }
 
   // Setup cross-signing
   callbacks.onStatusUpdate('Setting up Vault encryption...');
