@@ -1,5 +1,5 @@
 .button {
-  border: 1px solid var(--bg-color);
+  border: 1px solid var(--bg-primary);
   cursor: pointer;
   font-size: 1rem;
   display: flex;
@@ -56,23 +56,23 @@
 }
 
 .withPrimaryColor {
-  color: var(--primary-color);
+  color: var(--accent-color);
 }
 
 .withSecondaryColor {
-  color: var(--secondary-color);
+  color: var(--purple-secondary);
 }
 
 .withTertiaryColor {
-  color: var(--tertiary-color);
+  color: var(--yellow-primary);
 }
 
 .withSuccessColor {
-  color: var(--success-color);
+  color: var(--green-primary);
 }
 
 .withWarningColor {
-  color: var(--warning-color);
+  color: var(--yellow-primary);
 }
 
 .withErrorColor {
@@ -84,7 +84,7 @@
 }
 
 .withGreyColor {
-  color: var(--grey-color);
+  color: var(--text-secondary);
 }
 
 .withLightGreyColor {
@@ -96,23 +96,23 @@
 }
 
 .withPrimaryBgColor {
-  background-color: var(--primary-color);
+  background-color: var(--accent-color);
 }
 
 .withSecondaryBgColor {
-  background-color: var(--secondary-color);
+  background-color: var(--purple-secondary);
 }
 
 .withTertiaryBgColor {
-  background-color: var(--tertiary-color);
+  background-color: var(--yellow-primary);
 }
 
 .withSuccessBgColor {
-  background-color: var(--success-color);
+  background-color: var(--green-primary);
 }
 
 .withWarningBgColor {
-  background-color: var(--warning-color);
+  background-color: var(--yellow-primary);
 }
 
 .withErrorBgColor {
@@ -124,7 +124,7 @@
 }
 
 .withGreyBgColor {
-  background-color: var(--grey-color);
+  background-color: var(--text-secondary);
 }
 
 .withLightGreyBgColor {
@@ -136,23 +136,23 @@
 }
 
 .withPrimaryBorderColor {
-  border-color: var(--primary-color);
+  border-color: var(--accent-color);
 }
 
 .withSecondaryBorderColor {
-  border-color: var(--secondary-color);
+  border-color: var(--purple-secondary);
 }
 
 .withTertiaryBorderColor {
-  border-color: var(--tertiary-color);
+  border-color: var(--yellow-primary);
 }
 
 .withSuccessBorderColor {
-  border-color: var(--success-color);
+  border-color: var(--green-primary);
 }
 
 .withWarningBorderColor {
-  border-color: var(--warning-color);
+  border-color: var(--yellow-primary);
 }
 
 .withErrorBorderColor {
@@ -164,7 +164,7 @@
 }
 
 .withGreyBorderColor {
-  border-color: var(--grey-color);
+  border-color: var(--text-secondary);
 }
 
 .withLightGreyBorderColor {

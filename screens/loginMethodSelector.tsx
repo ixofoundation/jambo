@@ -1,45 +1,49 @@
 import { useRouter } from 'next/router';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
+import GradientBand from '@components/GradientBand/GradientBand';
+import AuthHeader from '@components/AuthHeader/AuthHeader';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 
 function LoginMethodSelector() {
   const router = useRouter();
 
-  function handleRegisterClick() {
-    router.push('/auth/register');
-  }
-
   function handleLoginClick() {
-    router.push('/auth/login');
+    router.push('/auth/passkey');
   }
 
   return (
     <div
       style={{
+        position: 'relative',
         minHeight: '100vh',
         padding: '20px',
         display: 'flex',
-        alignItems: 'center',
         justifyContent: 'center',
       }}
     >
+      <GradientBand {...GRADIENT_COLORS.auth} />
+      <AuthHeader />
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: '400px',
+          marginTop: 'calc(30vh - 50px)',
         }}
       >
         <div
           style={{
-            borderRadius: '8px',
+            borderRadius: '12px',
             padding: '20px',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            backgroundColor: 'var(--bg-secondary)',
           }}
         >
           <h1
             style={{
               textAlign: 'center',
               marginBottom: '20px',
-              color: 'white',
+              color: 'var(--text-primary)',
             }}
           >
             Welcome
@@ -53,21 +57,12 @@ function LoginMethodSelector() {
           >
             {/* @ts-ignore */}
             <Button
-              label='Use Passkey'
+              label='Connect'
               textCentered
-              color={BUTTON_COLOR.primary}
+              color={BUTTON_COLOR.white}
               size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.white}
+              bgColor={BUTTON_BG_COLOR.primary}
               onClick={handleLoginClick}
-            />
-            {/* @ts-ignore */}
-            <Button
-              label='Register Passkey'
-              textCentered
-              color={BUTTON_COLOR.primary}
-              size={BUTTON_SIZE.mediumLarge}
-              bgColor={BUTTON_BG_COLOR.white}
-              onClick={handleRegisterClick}
             />
           </div>
         </div>

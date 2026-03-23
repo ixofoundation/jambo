@@ -5,7 +5,7 @@ import { OfflineSigner } from '@cosmjs/proto-signing';
 
 import { getSecpClient, SecpClient } from '@utils/secp';
 import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import { checkAddressFeegrant } from '@utils/feegrant';
+import { checkAddressFeegrant, grantFeegrant } from '@utils/feegrant';
 import { checkIidDocumentExists, createIidDocument } from '@utils/did';
 import { decrypt, encrypt } from '@utils/encryption';
 import { cleanUrlString } from '@utils/url';
@@ -24,17 +24,15 @@ import {
 import Loader from '@components/Loader/Loader';
 import useSteps from '@hooks/useSteps';
 import { delay } from '@utils/timestamp';
-import EmailFeegrantForm from '@components/EmailFeegrantForm/EmailFeegrantForm';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 
 enum STEPS {
   loading = 0,
   mnemonic = 1,
   pin = 2,
-  email = 3,
 }
 
-const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.pin, STEPS.email];
+const STEPS_STATE = [STEPS.loading, STEPS.mnemonic, STEPS.pin];
 
 interface LoginWithMnemonicProps {
   onBack: () => void;
@@ -51,13 +49,11 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
     resolve?: (value: any) => void;
     reject?: (reason: any) => void;
   }>({});
-  const addressRef = useRef<string | undefined>(undefined);
   const encryptedMnemonicRef = useRef<string | undefined>(undefined);
 
   const stepIsLoading = step === STEPS.loading;
   const stepIsMnemonic = step === STEPS.mnemonic;
   const stepIsPin = step === STEPS.pin;
-  const stepIsEmail = step === STEPS.email;
 
   function handleGenerateMnemonic() {
     const newMnemonic = utils.mnemonic.generateMnemonic(12);
@@ -67,24 +63,6 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
     setTimeout(function () {
       setMnemonicFocused(false);
     }, 1000);
-  }
-
-  async function requestEmail(address: string) {
-    addressRef.current = address;
-    return new Promise(function (resolve, reject) {
-      handlerRef.current = {
-        resolve: function (value: any) {
-          resolve(value);
-          handlerRef.current = {};
-        },
-        reject: function (reason: any) {
-          reject(reason);
-          handlerRef.current = {};
-        },
-      };
-      addressRef.current = address;
-      goTo(STEPS.email);
-    });
   }
 
   async function requestPin(encryptedMnemonic?: string) {
@@ -119,14 +97,13 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       const didExists = await checkIidDocumentExists(did);
       if (!didExists) {
         // =================================================================================================
-        // FEEGRANT (EMAIL OTP)
+        // FEEGRANT
         // =================================================================================================
         const feegrant = await checkAddressFeegrant(address);
         if (!feegrant) {
-          (await requestEmail(address)) as string;
-          goTo(STEPS.loading);
-          const feegrant = await checkAddressFeegrant(address);
-          if (!feegrant) {
+          await grantFeegrant(address);
+          const feegrantAfter = await checkAddressFeegrant(address);
+          if (!feegrantAfter) {
             throw new Error('Failed to grant feegrant, please try again.');
           }
         }
@@ -276,7 +253,9 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
         // store matrix mnemonic
         const encryptedMnemonic = encrypt(mxMnemonic, pin);
         const storeEncryptedMnemonicResponse = await fetch(
-          cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${mxRoomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
+          cleanUrlString(
+            `${homeServerUrl}/_matrix/client/r0/rooms/${mxRoomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
+          ),
           {
             method: 'PUT',
             headers: {
@@ -307,24 +286,6 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       setError((typeof err === 'string' ? err : err.message) || 'Failed to login. Please try again.');
     } finally {
       goTo(STEPS.mnemonic);
-    }
-  }
-
-  function handleEmailSuccess() {
-    try {
-      handlerRef.current?.resolve?.(true);
-    } catch (error) {
-      setError('Something went wrong. Please try again.');
-      reset();
-    }
-  }
-
-  function handleEmailError(error: string) {
-    try {
-      handlerRef.current?.reject?.(error);
-    } catch (error) {
-      setError('Something went wrong. Please try again.');
-      reset();
     }
   }
 
@@ -365,9 +326,9 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
         <div
           style={{
             border: '1px solid var(--border-color)',
-            borderRadius: '8px',
+            borderRadius: '12px',
             padding: '24px',
-            backgroundColor: 'var(--surface-color)',
+            backgroundColor: 'var(--bg-secondary)',
           }}
         >
           <h2
@@ -399,7 +360,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
                 Enter your mnemonic phrase to login or generate a{' '}
                 <span
                   style={{
-                    color: 'var(--primary-color)',
+                    color: 'var(--accent-color)',
                     textDecoration: 'underline',
                   }}
                   onClick={handleGenerateMnemonic}
@@ -440,7 +401,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
                 </div>
 
                 <p style={{ fontSize: '12px' }}>
-                  <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>Warning:</span> Your mnemonic is the
+                  <span style={{ color: 'var(--yellow-primary)', fontWeight: 500 }}>Warning:</span> Your mnemonic is the
                   only way to access your account and should be stored somewhere safe (do not share it with anyone).
                 </p>
               </div>
@@ -478,13 +439,6 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
                 />
               </div>
             </>
-          ) : stepIsEmail ? (
-            // @ts-ignore
-            <EmailFeegrantForm
-              address={addressRef.current as string}
-              onSuccess={handleEmailSuccess}
-              onError={handleEmailError}
-            />
           ) : stepIsPin ? (
             // @ts-ignore
             <MatrixPinForm

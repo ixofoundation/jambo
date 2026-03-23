@@ -1,0 +1,41 @@
+.indicator {
+  background: var(--header-btn-bg, var(--card-bg-color));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 6px;
+  color: var(--header-btn-color, var(--text-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-color, #4CADE9);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pulse {
+  animation: pulseAnim 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseAnim {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

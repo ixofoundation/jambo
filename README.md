@@ -26,7 +26,8 @@
     NEXT_PUBLIC_AUTHN_ORIGIN=http://localhost:3000
     NEXT_PUBLIC_AUTHN_RP_ID=localhost
     NEXT_PUBLIC_CHAIN_NETWORK=devnet
-    NEXT_PUBLIC_EMAIL_OTP_WORKER_URL="https://otp.email.ixo.earth"
+    NEXT_PUBLIC_FEEGRANT_URL=""
+    FEEGRANT_API_KEY=""
     NEXT_PUBLIC_MATRIX_HOMESERVER_URL="https://devmx.ixo.earth"
     NEXT_PUBLIC_MATRIX_ROOM_BOT_URL="https://rooms.bot.devmx.ixo.earth"
     NEXT_PUBLIC_MATRIX_BID_BOT_URL="https://bid.bot.devmx.ixo.earth"

@@ -1,49 +1,49 @@
 import styles from './Header.module.scss';
 import { FC } from 'react';
-import { useDrawer } from '@components/Drawer/Drawer';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import HeaderStatusIndicator from '@components/HeaderStatusIndicator/HeaderStatusIndicator';
+import { useAppSelector } from '@store/hooks';
 
 type HeaderProps = {
-  onBack?: () => void;
+  onGradient?: boolean;
 };
 
-const Header: FC<HeaderProps> = ({ onBack }) => {
-  const { open } = useDrawer();
+const Header: FC<HeaderProps> = ({ onGradient }) => {
+  const router = useRouter();
+  const avatarUrl = useAppSelector((state) => state.matrixProfile.avatarUrl);
 
   return (
-    <nav className={styles.nav}>
+    <nav className={`${styles.nav}${onGradient ? ` ${styles.onGradient}` : ''}`}>
       <div className={styles.inner}>
-        {onBack ? (
-          <button
-            className={styles.iconButton}
-            onClick={onBack}
-            aria-label="Go back"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            className={styles.iconButton}
-            onClick={() => window.location.assign('/')}
-            aria-label="Home"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-          </button>
-        )}
+        <Link href='/' className={styles.logo} aria-label='Home'>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src='/images/logo.png' alt='Jambo' className={styles.logoImg} />
+        </Link>
+        <div className={styles.spacer} />
+        <HeaderStatusIndicator />
         <button
-          className={styles.iconButton}
-          onClick={open}
-          aria-label="Open menu"
+          className={`${styles.iconButton} ${styles.profileButton}`}
+          onClick={() => router.push('/profile')}
+          aria-label='Profile'
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt='Profile' className={styles.profileAvatar} />
+          ) : (
+            <svg
+              width='20'
+              height='20'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <circle cx='12' cy='8' r='4' />
+              <path d='M20 21a8 8 0 1 0-16 0' />
+            </svg>
+          )}
         </button>
       </div>
     </nav>

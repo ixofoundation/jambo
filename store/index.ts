@@ -9,6 +9,7 @@ import protocolsReducer from './slices/protocolsSlice';
 import profilesReducer from './slices/profilesSlice';
 import matrixProfileReducer from './slices/matrixProfileSlice';
 import claimDraftsReducer from './slices/claimDraftsSlice';
+import ssoReducer from './slices/ssoSlice';
 
 const rootReducer = combineReducers({
   account: accountReducer,
@@ -18,13 +19,14 @@ const rootReducer = combineReducers({
   profiles: profilesReducer,
   matrixProfile: matrixProfileReducer,
   claimDrafts: claimDraftsReducer,
+  sso: ssoReducer,
 });
 
 const persistConfig = {
   key: 'jambo-cache',
   version: 1,
   storage,
-  whitelist: ['account', 'entities', 'collections', 'protocols', 'profiles', 'matrixProfile', 'claimDrafts'],
+  whitelist: ['account', 'entities', 'collections', 'protocols', 'profiles', 'matrixProfile', 'claimDrafts', 'sso'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

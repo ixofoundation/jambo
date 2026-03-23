@@ -140,9 +140,9 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
         <div
           style={{
             border: '1px solid var(--border-color)',
-            borderRadius: '8px',
+            borderRadius: '12px',
             padding: '24px',
-            backgroundColor: 'var(--surface-color)',
+            backgroundColor: 'var(--bg-secondary)',
           }}
         >
           <h2
@@ -176,7 +176,7 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
                   href='https://apps.apple.com/app/impacts-x/id6444948058'
                   target='_blank'
                   rel='noopener noreferrer'
-                  style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}
+                  style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}
                 >
                   IXO mobile app
                 </a>{' '}

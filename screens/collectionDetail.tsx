@@ -8,8 +8,11 @@ import { Survey } from 'survey-react-ui';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { useAuth } from '@hooks/useAuth';
+import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
@@ -40,6 +43,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const router = useRouter();
   const dispatch = useAppDispatch();
   const authContext = useAuth();
+  const { awaitCompletion } = useBackgroundSetup();
   const address = authContext.address!;
   const did = authContext.did!;
   const onSign = authContext.onSign;
@@ -349,6 +353,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       model.onCompleting.remove(preventComplete);
       model.completeText = 'Submitting...';
       try {
+        await awaitCompletion();
         if (surveyMode === 'bid') {
           const client = getBidBotClient();
           const response = await client.bid.v1beta1.submitBid(collectionId, JSON.stringify(sender.data), 'SA');
@@ -504,24 +509,28 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   function statusLabel(claim: any): { text: string; color: string; bg: string } {
     const s = claim.evaluationByClaimId?.status;
-    if (s === 1) return { text: 'Approved', color: '#166534', bg: '#dcfce7' };
+    if (s === 1) return { text: 'Approved', color: '#2F6A59', bg: '#dcfce7' };
     if (s === 2) return { text: 'Rejected', color: '#991b1b', bg: '#fee2e2' };
-    if (s === 3) return { text: 'Disputed', color: '#92400e', bg: '#fef3c7' };
-    return { text: 'Pending', color: '#854d0e', bg: '#fef9c3' };
+    if (s === 3) return { text: 'Disputed', color: '#E49526', bg: '#fef3c7' };
+    return { text: 'Pending', color: '#545859', bg: '#F3F6FA' };
   }
 
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
       <div
         style={{
+          position: 'relative',
           transform: surveyVisible ? 'translateX(-100%)' : 'translateX(0)',
           transition: 'transform 0.35s ease-in-out',
           minHeight: '100vh',
         }}
       >
-        <Header onBack={() => router.push(`/entities/${entityDid}`)} />
+        <GradientBand {...GRADIENT_COLORS.collectionDetail} />
+        <Header onGradient />
         <main
           style={{
+            position: 'relative',
+            zIndex: 1,
             maxWidth: 'var(--max-width)',
             margin: '0 auto',
             padding: '0 16px 16px',
@@ -530,45 +539,89 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             minHeight: '100vh',
           }}
         >
-          {/* Title */}
-          <h1
+          {/* Page title section */}
+          <div
             style={{
-              margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 600,
-              color: 'var(--main-font-color)',
-              letterSpacing: '-0.3px',
-              lineHeight: 1.2,
+              minHeight: '150px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
             }}
           >
-            {collectionName}
-          </h1>
-
-          {/* Subtle stats line */}
-          {collection && (
-            <p style={{ margin: '0 0 24px', fontSize: '13px', color: 'var(--muted-font-color)' }}>
-              {quota ? `${submitted}/${quota}` : submitted} submitted
-            </p>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
+              <button
+                onClick={() => router.push(`/entities/${entityDid}`)}
+                aria-label='Go back'
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width='20'
+                  height='20'
+                  viewBox='0 0 24 24'
+                  fill='none'
+                  stroke='currentColor'
+                  strokeWidth='2'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                >
+                  <polyline points='15 18 9 12 15 6' />
+                </svg>
+              </button>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  color: '#fff',
+                  letterSpacing: '-0.3px',
+                  lineHeight: 1.2,
+                }}
+              >
+                {collectionName}
+              </h1>
+            </div>
+            {collection && (
+              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
+                {quota ? `${submitted}/${quota}` : submitted} submitted
+              </p>
+            )}
+          </div>
 
           {/* Status banner for non-agents */}
           {dataLoading && (
-            <p style={{ margin: '32px 0', fontSize: '14px', color: 'var(--muted-font-color)', textAlign: 'center' }}>
-              Loading...
-            </p>
+            <div
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                padding: '32px 16px',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading...</p>
+            </div>
           )}
 
           {!dataLoading && !isAgent && !hasPendingBid && (
             <div
               style={{
-                margin: '32px 0',
                 padding: '20px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--card-bg-color)',
+                borderRadius: '16px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
                 textAlign: 'center',
               }}
             >
-              <p style={{ margin: 0, fontSize: '14px', color: 'var(--muted-font-color)' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
                 Apply as a service agent to start submitting claims.
               </p>
             </div>
@@ -577,17 +630,17 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           {!dataLoading && hasPendingBid && (
             <div
               style={{
-                margin: '32px 0',
                 padding: '20px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--card-bg-color)',
+                borderRadius: '16px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
                 textAlign: 'center',
               }}
             >
-              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--main-font-color)' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                 Application pending
               </p>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--muted-font-color)' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Your agent application is being reviewed.
               </p>
             </div>
@@ -597,19 +650,22 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           {!dataLoading && isAgent && (
             <>
               {claims.length === 0 ? (
-                <p
+                <div
                   style={{
-                    margin: '32px 0',
-                    fontSize: '14px',
-                    color: 'var(--muted-font-color)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border-color)',
+                    padding: '32px 16px',
                     textAlign: 'center',
                   }}
                 >
-                  No claims yet. Submit your first claim to get started.
-                </p>
+                  <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                    No claims yet. Submit your first claim to get started.
+                  </p>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                  {claims.map((claim: any, i: number) => {
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {claims.map((claim: any) => {
                     const status = statusLabel(claim);
                     return (
                       <div
@@ -619,16 +675,18 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '14px 0',
-                          borderBottom: i < claims.length - 1 ? '1px solid var(--border-color)' : 'none',
+                          padding: '14px 16px',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '16px',
+                          backgroundColor: 'var(--bg-secondary)',
                           cursor: 'pointer',
                         }}
                       >
                         <div>
-                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--main-font-color)' }}>
+                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                             {claim.claimId?.slice(0, 25)}...
                           </p>
-                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--muted-font-color)' }}>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
                             {new Date(claim.submissionDate).toLocaleDateString(undefined, {
                               month: 'short',
                               day: 'numeric',
@@ -687,7 +745,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 padding: '14px',
                 borderRadius: '12px',
                 border: 'none',
-                backgroundColor: 'var(--primary-color)',
+                backgroundColor: 'var(--accent-color)',
                 color: '#fff',
                 fontSize: '15px',
                 fontWeight: 600,
@@ -750,7 +808,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             right: 0,
             bottom: 0,
             width: '100%',
-            backgroundColor: 'var(--form-bg-color)',
+            backgroundColor: 'var(--bg-secondary)',
             zIndex: 1000,
             display: 'flex',
             flexDirection: 'column',
@@ -776,7 +834,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 borderRadius: '8px',
                 cursor: 'pointer',
                 padding: '6px',
-                color: 'var(--main-font-color)',
+                color: 'var(--text-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -807,7 +865,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 height: '32px',
                 display: 'flex',
                 alignItems: 'center',
-                color: 'var(--main-font-color)',
+                color: 'var(--text-primary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -854,15 +912,15 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               maxWidth: '300px',
               margin: '0 20px',
               borderRadius: '14px',
-              backgroundColor: 'var(--surface-color)',
+              backgroundColor: 'var(--bg-secondary)',
               overflow: 'hidden',
             }}
           >
             <div style={{ padding: '20px 20px 16px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600, color: 'var(--main-font-color)' }}>
+              <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Unsaved changes
               </p>
-              <p style={{ margin: 0, fontSize: '14px', color: 'var(--muted-font-color)', lineHeight: 1.4 }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                 Your progress has been saved as a draft. What would you like to do?
               </p>
             </div>
@@ -878,7 +936,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                   cursor: 'pointer',
                   fontSize: '15px',
                   fontWeight: 500,
-                  color: 'var(--primary-color)',
+                  color: 'var(--accent-color)',
                 }}
               >
                 Save & close
@@ -907,7 +965,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                   backgroundColor: 'transparent',
                   cursor: 'pointer',
                   fontSize: '15px',
-                  color: 'var(--muted-font-color)',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 Cancel

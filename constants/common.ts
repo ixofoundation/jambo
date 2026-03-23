@@ -31,9 +31,6 @@ export const CHAIN_IDS: { [network in CHAIN_NETWORK_TYPE]: string } = {
 };
 export const CHAIN_ID = CHAIN_IDS[DefaultChainNetwork];
 
-// Email OTP Worker URL
-export const EMAIL_OTP_WORKER_URL = process.env.NEXT_PUBLIC_EMAIL_OTP_WORKER_URL;
-
 export const STEPS = {
   register: 'register',
   dashboard: 'dashboard',

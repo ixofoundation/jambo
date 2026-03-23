@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { useAuth } from '@hooks/useAuth';
 import { useRouter } from 'next/router';
 import { useAppSelector } from '@store/hooks';
@@ -86,10 +88,13 @@ export default function ProfileScreen() {
   }
 
   return (
-    <>
-      <Header />
+    <div style={{ position: 'relative', minHeight: '100vh' }}>
+      <GradientBand {...GRADIENT_COLORS.profile} />
+      <Header onGradient />
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '16px',
@@ -99,76 +104,92 @@ export default function ProfileScreen() {
           flexDirection: 'column' as const,
         }}
       >
-        {/* Profile section */}
-        <section style={{ marginBottom: '24px' }}>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '16px 0' }}
-          >
-            {matrixProfile?.avatarUrl ? (
-              <img
-                src={matrixProfile.avatarUrl}
-                alt=''
-                style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '72px',
-                  height: '72px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--primary-color)',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '28px',
-                  fontWeight: 500,
-                }}
-              >
-                {displayName ? displayName.charAt(0).toUpperCase() : '?'}
-              </div>
-            )}
-            <p style={{ margin: 0, fontSize: '18px', fontWeight: 500, color: 'var(--main-font-color)' }}>
-              {displayName || 'Unknown'}
-            </p>
-          </div>
-        </section>
+        {/* Profile card */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '16px',
+            border: '1px solid var(--border-color)',
+            padding: '16px',
+            marginBottom: '16px',
+          }}
+        >
+          {/* Profile section */}
+          <section style={{ marginBottom: '20px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '16px 0' }}
+            >
+              {matrixProfile?.avatarUrl ? (
+                <img
+                  src={matrixProfile.avatarUrl}
+                  alt=''
+                  style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '72px',
+                    height: '72px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-color)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    fontWeight: 500,
+                  }}
+                >
+                  {displayName ? displayName.charAt(0).toUpperCase() : '?'}
+                </div>
+              )}
+              <p style={{ margin: 0, fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                {displayName || 'Unknown'}
+              </p>
+            </div>
+          </section>
 
-        {/* Divider */}
-        <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '0 0 24px' }} />
+          {/* Divider */}
+          <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '0 0 20px' }} />
 
-        {/* Account info */}
-        <section style={{ marginBottom: '24px' }}>
-          <h3
-            style={{
-              margin: '0 0 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--muted-font-color)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Account Information
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {userId && <InfoRow label='Matrix ID' value={userId} />}
-            {did && <InfoRow label='Profile DID' value={did} />}
-            {address && <InfoRow label='Impact Hub Address' value={address} />}
-          </div>
-        </section>
-
-        {/* Divider */}
-        <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '0 0 24px' }} />
+          {/* Account info */}
+          <section>
+            <h3
+              style={{
+                margin: '0 0 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Account Information
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {userId && <InfoRow label='Matrix ID' value={userId} />}
+              {did && <InfoRow label='Profile DID' value={did} />}
+              {address && <InfoRow label='Impact Hub Address' value={address} />}
+            </div>
+          </section>
+        </div>
 
         {/* Credentials */}
-        <section>
+        <div
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '16px',
+            border: '1px solid var(--border-color)',
+            padding: '16px',
+            marginBottom: '16px',
+          }}
+        >
           <h3
             style={{
               margin: '0 0 16px',
               fontSize: '13px',
               fontWeight: 600,
-              color: 'var(--muted-font-color)',
+              color: 'var(--text-secondary)',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
             }}
@@ -189,7 +210,7 @@ export default function ProfileScreen() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                color: 'var(--main-font-color)',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
               }}
             >
@@ -225,7 +246,7 @@ export default function ProfileScreen() {
                     margin: '0 0 8px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: 'var(--muted-font-color)',
+                    color: 'var(--text-secondary)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
                   }}
@@ -248,7 +269,7 @@ export default function ProfileScreen() {
                     margin: '0 0 8px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: 'var(--muted-font-color)',
+                    color: 'var(--text-secondary)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
                   }}
@@ -268,14 +289,14 @@ export default function ProfileScreen() {
                   backgroundColor: 'transparent',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  color: 'var(--main-font-color)',
+                  color: 'var(--text-primary)',
                 }}
               >
                 Hide credentials
               </button>
             </div>
           )}
-        </section>
+        </div>
 
         {/* Spacer to push logout to bottom */}
         <div style={{ flex: 1 }} />
@@ -304,7 +325,7 @@ export default function ProfileScreen() {
       {credentialsState === 'pin' && (
         <PinModal onSuccess={handlePinSuccess} onCancel={() => setCredentialsState('hidden')} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -332,7 +353,7 @@ function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
           background: 'none',
           border: 'none',
           padding: '2px',
-          color: 'var(--success-color)',
+          color: 'var(--green-primary)',
           flexShrink: 0,
           cursor: 'default',
         }}
@@ -361,7 +382,7 @@ function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
         border: 'none',
         cursor: 'pointer',
         padding: '2px',
-        color: 'var(--muted-font-color)',
+        color: 'var(--text-secondary)',
         flexShrink: 0,
       }}
       title='Copy'
@@ -390,12 +411,12 @@ function CopyButton({ text, size = 14 }: { text: string; size?: number }) {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <span style={{ fontSize: '12px', color: 'var(--muted-font-color)', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
         <span
           style={{
             fontSize: '13px',
-            color: 'var(--main-font-color)',
+            color: 'var(--text-primary)',
             fontFamily: 'monospace',
             wordBreak: 'break-all',
             lineHeight: 1.4,
@@ -418,7 +439,7 @@ function CredentialValue({ value }: { value: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
       <code
-        style={{ flex: 1, fontSize: '13px', color: 'var(--main-font-color)', wordBreak: 'break-all', lineHeight: 1.5 }}
+        style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', wordBreak: 'break-all', lineHeight: 1.5 }}
       >
         {value}
       </code>

@@ -1,0 +1,26 @@
+.band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30vh;
+  max-height: 300px;
+  z-index: 0;
+  pointer-events: none;
+
+  &.purple {
+    background: radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%);
+  }
+
+  &.blue {
+    background: radial-gradient(ellipse at top right, var(--blue-secondary), var(--blue-primary) 70%);
+  }
+
+  &.green {
+    background: radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%);
+  }
+
+  &.yellow {
+    background: radial-gradient(ellipse at top right, var(--yellow-secondary), var(--yellow-primary) 70%);
+  }
+}

@@ -8,6 +8,8 @@ import { useAuth } from '@hooks/useAuth';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector } from '@store/hooks';
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
@@ -120,9 +122,9 @@ export default function Dashboard() {
   function statusBadge(status?: 'agent' | 'pending' | 'unauthorized') {
     if (!status) return null;
     const config = {
-      agent: { label: 'Agent', color: 'var(--success-color)' },
-      pending: { label: 'Pending', color: 'var(--warning-color)' },
-      unauthorized: { label: 'Unauthorized', color: 'var(--muted-font-color)' },
+      agent: { label: 'Agent', color: 'var(--green-primary)' },
+      pending: { label: 'Pending', color: 'var(--yellow-primary)' },
+      unauthorized: { label: 'Unauthorized', color: 'var(--text-secondary)' },
     }[status];
     return (
       <span
@@ -143,10 +145,13 @@ export default function Dashboard() {
   }
 
   return (
-    <>
-      <Header />
+    <div style={{ position: 'relative', minHeight: '100vh' }}>
+      <GradientBand {...GRADIENT_COLORS.dashboard} />
+      <Header onGradient />
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '0 16px 16px',
@@ -154,40 +159,62 @@ export default function Dashboard() {
           minHeight: '100vh',
         }}
       >
-        {/* Title */}
-        <h1
+        {/* Page title section */}
+        <div
           style={{
-            margin: '0 0 4px',
-            fontSize: '20px',
-            fontWeight: 600,
-            color: 'var(--main-font-color)',
-            letterSpacing: '-0.3px',
-            lineHeight: 1.2,
+            minHeight: '150px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
           }}
         >
-          {projectName}
-        </h1>
-
-        {/* Subtitle */}
-        {(projectType || projectStatus) && (
-          <p style={{ margin: '0 0 24px', fontSize: '13px', color: 'var(--muted-font-color)' }}>
-            {projectType}{projectType && projectStatus ? ' \u00B7 ' : ''}{projectStatus}
-          </p>
-        )}
-        {!projectType && !projectStatus && <div style={{ marginBottom: '24px' }} />}
+          <h1
+            style={{
+              margin: '0 0 4px',
+              fontSize: '20px',
+              fontWeight: 600,
+              color: '#fff',
+              letterSpacing: '-0.3px',
+              lineHeight: 1.2,
+            }}
+          >
+            {projectName}
+          </h1>
+          {(projectType || projectStatus) && (
+            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
+              {projectType}{projectType && projectStatus ? ' \u00B7 ' : ''}{projectStatus}
+            </p>
+          )}
+        </div>
 
         {/* Collection list */}
         {collectionsLoading ? (
-          <p style={{ margin: '32px 0', fontSize: '14px', color: 'var(--muted-font-color)', textAlign: 'center' }}>
-            Loading...
-          </p>
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading...</p>
+          </div>
         ) : protocolCollections.length === 0 ? (
-          <p style={{ margin: '32px 0', fontSize: '14px', color: 'var(--muted-font-color)', textAlign: 'center' }}>
-            No collections found
-          </p>
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>No collections found</p>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {protocolCollections.map((c, i) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {protocolCollections.map((c) => (
               <button
                 key={c.collectionId}
                 onClick={() => router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)}
@@ -195,14 +222,14 @@ export default function Dashboard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '14px 0',
-                  border: 'none',
-                  borderBottom: i < protocolCollections.length - 1 ? '1px solid var(--border-color)' : 'none',
-                  background: 'none',
+                  padding: '14px 16px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
                   cursor: 'pointer',
                   textAlign: 'left',
                   width: '100%',
-                  color: 'var(--main-font-color)',
+                  color: 'var(--text-primary)',
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -221,7 +248,7 @@ export default function Dashboard() {
                     {c.formName || `Collection ${c.collectionId}`}
                   </p>
                   <div style={{ margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--muted-font-color)' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                       {c.endDate && new Date(c.endDate) < new Date()
                         ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
                         : c.startDate
@@ -237,7 +264,7 @@ export default function Dashboard() {
                     height="16"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="var(--muted-font-color)"
+                    stroke="var(--text-secondary)"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -250,6 +277,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }

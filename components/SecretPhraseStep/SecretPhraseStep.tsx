@@ -20,7 +20,7 @@ const actionButtonBase: CSSProperties = {
   fontSize: '14px',
   fontWeight: 500,
   padding: '10px 12px',
-  color: 'rgba(255,255,255,0.85)',
+  color: 'var(--text-primary)',
 };
 
 export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }: SecretPhraseStepProps) {
@@ -49,12 +49,12 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
             padding: '4px',
             fontSize: '20px',
             lineHeight: 1,
-            color: 'white',
+            color: 'var(--text-primary)',
           }}
         >
           &#8592;
         </button>
-        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>
+        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>
           Secret Phrase
         </h1>
         {/* Spacer to balance the back arrow */}
@@ -74,12 +74,12 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
             <div
               key={i}
               style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                backgroundColor: 'var(--bg-primary)',
                 borderRadius: '6px',
                 padding: '10px 6px',
                 textAlign: 'center',
                 fontSize: '13px',
-                color: visible ? 'white' : 'transparent',
+                color: visible ? 'var(--text-primary)' : 'transparent',
                 userSelect: visible ? 'text' : 'none',
               }}
             >
@@ -104,7 +104,7 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
               height='40'
               viewBox='0 0 24 24'
               fill='none'
-              stroke='rgba(255,255,255,0.5)'
+              stroke='var(--text-secondary)'
               strokeWidth='2'
               strokeLinecap='round'
               strokeLinejoin='round'
@@ -124,7 +124,7 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
           onClick={() => setVisible((v) => !v)}
           style={{
             ...actionButtonBase,
-            backgroundColor: visible ? 'rgba(0, 0, 0, 0.25)' : 'transparent',
+            backgroundColor: visible ? 'var(--bg-primary)' : 'transparent',
           }}
         >
           {/* Eye / Eye-off icon */}
@@ -158,7 +158,7 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
           onClick={handleCopy}
           style={{
             ...actionButtonBase,
-            backgroundColor: copied ? 'rgba(0, 0, 0, 0.25)' : 'transparent',
+            backgroundColor: copied ? 'var(--bg-primary)' : 'transparent',
           }}
         >
           {/* Copy / Check icon */}
@@ -186,10 +186,9 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
       </div>
 
       {/* Warning */}
-      <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '16px' }}>
-        <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>WARNING:</span> Your Secret Phrase is
-        the key to your account and your backup. Store this phrase somewhere safe (offline) and don&apos;t share
-        it with anyone.
+      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+        <span style={{ color: 'var(--yellow-primary)', fontWeight: 500 }}>WARNING:</span> Your Secret Phrase is the key
+        to your account and your backup. Store this phrase somewhere safe (offline) and don&apos;t share it with anyone.
       </p>
 
       {error && <p style={{ color: 'red', fontSize: '14px', marginBottom: '16px' }}>{error}</p>}
@@ -203,10 +202,10 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
           marginBottom: '20px',
           cursor: 'pointer',
           fontSize: '13px',
-          color: 'rgba(255,255,255,0.85)',
+          color: 'var(--text-primary)',
           padding: '12px',
-          borderRadius: '8px',
-          backgroundColor: 'rgba(0, 0, 0, 0.05)',
+          borderRadius: '12px',
+          backgroundColor: 'var(--bg-primary)',
           transition: 'border-color 0.2s',
         }}
       >
@@ -222,8 +221,8 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
             height: '20px',
             minWidth: '20px',
             borderRadius: '4px',
-            border: storedSafely ? 'none' : '2px solid rgba(255,255,255,0.4)',
-            backgroundColor: storedSafely ? 'var(--primary-color)' : 'transparent',
+            border: storedSafely ? 'none' : '2px solid var(--border-color)',
+            backgroundColor: storedSafely ? 'var(--accent-color)' : 'transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -254,9 +253,9 @@ export default function SecretPhraseStep({ mnemonic, error, onBack, onContinue }
         label='Continue'
         onClick={onContinue}
         disabled={!storedSafely}
-        color={BUTTON_COLOR.primary}
+        color={BUTTON_COLOR.white}
         size={BUTTON_SIZE.mediumLarge}
-        bgColor={BUTTON_BG_COLOR.white}
+        bgColor={BUTTON_BG_COLOR.primary}
         style={{ width: '100%' }}
       />
     </>

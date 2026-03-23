@@ -18,69 +18,19 @@ export const FEEGRANT_TYPES: Record<FeegrantTypes, string> = {
 };
 
 /**
- * Grants feegrant to the address via email OTP verification
+ * Grants feegrant to the address via server-side API call
  * @param address - The address to grant feegrant to
- * @param email - The email address for OTP verification
- * @param otp - The OTP code from email
- * @returns The response from the feegrant grant
  */
-export async function grantAddressFeegrantWithEmail(address: string, email: string, otp: string) {
-  // Import here to avoid circular dependency
-  const { verifyOTP } = await import('./emailOtp');
-
-  try {
-    const response = await verifyOTP({
-      email,
-      ixoAddress: address,
-      otp,
-    });
-    return response;
-  } catch (error) {
-    console.error('grantAddressFeegrantWithEmail::', (error as Error).message);
-    throw error;
+export async function grantFeegrant(address: string): Promise<void> {
+  const res = await fetch('/api/feegrant/grant', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to grant feegrant');
   }
-}
-
-/**
- * Grants feegrant to the address via email OTP if the account does not have a valid feegrant
- * This function now requires email verification instead of the old direct API call
- * @param address - The address to grant feegrant to
- * @param email - The email address for verification (optional, used only if feegrant needed)
- * @param otp - The OTP code (optional, used only if feegrant needed)
- * @returns True if feegrant exists or was successfully granted
- */
-export async function grantAddressFeegrantIfNotExists({
-  address,
-  email,
-  otp,
-}: {
-  address: string;
-  email?: string;
-  otp?: string;
-}) {
-  if (!address) {
-    throw new Error('Address is required to grant feegrant - who should be sponsored?');
-  }
-
-  let hasFeegrant = await checkAddressFeegrant(address);
-
-  if (!hasFeegrant) {
-    if (!email || !otp) {
-      throw new Error('Email and OTP are required to grant feegrant for new addresses');
-    }
-    await grantAddressFeegrantWithEmail(address, email, otp);
-    hasFeegrant = await checkAddressFeegrant(address);
-  }
-
-  return hasFeegrant;
-}
-
-/**
- * Legacy function - kept for backward compatibility but now throws error
- * @deprecated Use grantAddressFeegrantWithEmail instead
- */
-export async function grantAddressFeegrant(address: string) {
-  throw new Error('Direct feegrant granting is no longer supported. Please use email OTP verification.');
 }
 
 /**

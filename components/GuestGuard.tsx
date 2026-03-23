@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
 import config from '@constants/config.json';
-import ColorBlobBackground from '@components/ColorBlobBackground/ColorBlobBackground';
+import GradientBand from '@components/GradientBand/GradientBand';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 
 export default function GuestGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, isLoading } = useAuth();
@@ -18,9 +19,10 @@ export default function GuestGuard({ children }: { children: React.ReactNode }) 
 
   if (isLoading) {
     return (
-      <ColorBlobBackground style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading...</p>
-      </ColorBlobBackground>
+      <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <GradientBand {...GRADIENT_COLORS.auth} />
+        <p style={{ position: 'relative', zIndex: 1 }}>Loading...</p>
+      </div>
     );
   }
 

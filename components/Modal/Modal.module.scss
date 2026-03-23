@@ -14,7 +14,7 @@
 
 .modal {
   max-height: 90vh;
-  background: white;
+  background: var(--bg-secondary);
   width: auto;
   height: auto;
   border-radius: var(--card-border-radius);
@@ -30,7 +30,7 @@
   font-size: 1.5rem;
   margin: 10px 25px 1em;
   text-align: center;
-  color: var(--main-font-color);
+  color: var(--text-primary);
 }
 
 .closeCross {

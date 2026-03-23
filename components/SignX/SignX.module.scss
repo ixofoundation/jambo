@@ -2,17 +2,17 @@
   padding: 15px;
 
   h2 {
-    color: var(--primary-color);
+    color: var(--accent-color);
     margin-bottom: 0;
   }
 
   p {
     margin-top: 10px;
-    color: var(--main-font-color);
+    color: var(--text-primary);
   }
 
   a {
-    color: var(--primary-color);
+    color: var(--accent-color);
     text-decoration: none;
   }
 }
