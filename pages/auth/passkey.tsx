@@ -18,31 +18,47 @@ export default function AuthPasskeyPage() {
   const router = useRouter();
   const ssoAuthenticated = useSelector((state: RootState) => state.sso.isAuthenticated);
   const [ssoProcessing, setSsoProcessing] = useState(false);
-  const [ssoError, setSsoError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const processedRef = useRef(false);
 
   useEffect(() => {
     if (!router.isReady || processedRef.current) return;
 
-    const { code, state, error: ssoError, error_description } = router.query;
+    const { bypass, code, state, error: ssoError, error_description } = router.query;
 
-    // No SSO params — skip straight to passkey flow
-    if (!code && !state && !ssoError) return;
+    // Manual passkey bypass — skip SSO entirely
+    if (bypass === 'passkey') {
+      processedRef.current = true;
+      setReady(true);
+      return;
+    }
 
-    processedRef.current = true;
+    // Already authenticated via SSO (e.g. returning from another page)
+    if (ssoAuthenticated && !code && !state && !ssoError) {
+      processedRef.current = true;
+      setReady(true);
+      return;
+    }
 
+    // SSO error from Keycloak
     if (ssoError) {
-      setSsoError(error_description?.toString() || ssoError.toString());
+      processedRef.current = true;
+      setError(error_description?.toString() || ssoError.toString());
       return;
     }
 
+    // Expect SSO callback params — if missing, show error
     if (!code || !state) {
-      setSsoError('Missing authorization code or state parameter.');
+      processedRef.current = true;
+      setError('Missing authorization parameters. Please sign in through the login page.');
       return;
     }
 
+    // Process SSO callback
+    processedRef.current = true;
     void handleSSOCallback(code as string, state as string);
-  }, [router.isReady, router.query]);
+  }, [router.isReady, router.query, ssoAuthenticated]);
 
   async function handleSSOCallback(code: string, state: string) {
     setSsoProcessing(true);
@@ -77,11 +93,12 @@ export default function AuthPasskeyPage() {
         }),
       );
 
-      // Clear query params so the passkey flow renders cleanly
-      router.replace('/auth/passkey', undefined, { shallow: true });
+      // Clear query params and show passkey flow
+      setReady(true);
+      router.replace('/auth/passkey?bypass=passkey', undefined, { shallow: true });
     } catch (err: any) {
       console.error('SSO callback error:', err);
-      setSsoError(err.message || 'Authentication failed. Please try again.');
+      setError(err.message || 'Authentication failed. Please try again.');
     } finally {
       setSsoProcessing(false);
     }
@@ -91,8 +108,58 @@ export default function AuthPasskeyPage() {
     router.replace('/auth');
   }
 
-  // SSO callback in progress — show loader
-  if (ssoProcessing) {
+  // Error — show error UI
+  if (error) {
+    return (
+      <GuestGuard>
+        <div
+          style={{
+            position: 'relative',
+            minHeight: '100vh',
+            padding: '20px',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <GradientBand {...GRADIENT_COLORS.auth} />
+          <AuthHeader />
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              maxWidth: '400px',
+              marginTop: 'calc(30vh - 50px)',
+            }}
+          >
+            <div
+              style={{
+                borderRadius: '12px',
+                padding: '24px',
+                backgroundColor: 'var(--bg-secondary)',
+                textAlign: 'center',
+              }}
+            >
+              <h2 style={{ color: 'var(--text-primary)', marginBottom: '16px' }}>Authentication Error</h2>
+              <p style={{ color: 'var(--error-color, red)', marginBottom: '24px', fontSize: '14px' }}>{error}</p>
+              {/* @ts-ignore */}
+              <Button
+                label="Try Again"
+                textCentered
+                color={BUTTON_COLOR.white}
+                size={BUTTON_SIZE.mediumLarge}
+                bgColor={BUTTON_BG_COLOR.primary}
+                onClick={handleRetry}
+              />
+            </div>
+          </div>
+        </div>
+      </GuestGuard>
+    );
+  }
+
+  // Processing SSO or waiting for router — show loader
+  if (ssoProcessing || !ready) {
     return (
       <GuestGuard>
         <div
@@ -143,57 +210,7 @@ export default function AuthPasskeyPage() {
     );
   }
 
-  // SSO callback failed — show error
-  if (ssoError) {
-    return (
-      <GuestGuard>
-        <div
-          style={{
-            position: 'relative',
-            minHeight: '100vh',
-            padding: '20px',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <GradientBand {...GRADIENT_COLORS.auth} />
-          <AuthHeader />
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: '100%',
-              maxWidth: '400px',
-              marginTop: 'calc(30vh - 50px)',
-            }}
-          >
-            <div
-              style={{
-                borderRadius: '12px',
-                padding: '24px',
-                backgroundColor: 'var(--bg-secondary)',
-                textAlign: 'center',
-              }}
-            >
-              <h2 style={{ color: 'var(--text-primary)', marginBottom: '16px' }}>Authentication Error</h2>
-              <p style={{ color: 'var(--error-color, red)', marginBottom: '24px', fontSize: '14px' }}>{ssoError}</p>
-              {/* @ts-ignore */}
-              <Button
-                label="Try Again"
-                textCentered
-                color={BUTTON_COLOR.white}
-                size={BUTTON_SIZE.mediumLarge}
-                bgColor={BUTTON_BG_COLOR.primary}
-                onClick={handleRetry}
-              />
-            </div>
-          </div>
-        </div>
-      </GuestGuard>
-    );
-  }
-
-  // SSO complete (or no SSO needed) — show passkey flow
+  // Ready — show passkey flow
   return (
     <GuestGuard>
       <LoginPasskey />
