@@ -217,7 +217,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
         const queryIdResponse = await matrixApiClient.room.v1beta1.queryId(mxRoomAlias).catch(() => undefined);
         mxRoomId = queryIdResponse?.room_id ?? '';
         if (!mxRoomId) {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL}/room/source`, {
+          const response = await fetch(cleanUrlString(`${process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL}/room/source`), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

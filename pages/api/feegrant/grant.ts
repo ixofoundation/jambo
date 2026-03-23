@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { cleanUrlString } from '@utils/url';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -18,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const response = await fetch(`${feegrantUrl}/feegrant/${address}`, {
+    const response = await fetch(cleanUrlString(`${feegrantUrl}/feegrant/${address}`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

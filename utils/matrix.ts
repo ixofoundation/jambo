@@ -8,6 +8,7 @@ import { secureReset, secureSave } from './storage';
 import cons from '@constants/matrix';
 import { isAuthenticated, secret } from './secrets';
 import { cacheSecretStorageKey, clearSecretStorageKeys, getSecretStorageKey } from './secretStorageKeys';
+import { cleanUrlString } from '@utils/url';
 import { delay } from './timestamp';
 
 const WELL_KNOWN_URI = '/.well-known/matrix/client';
@@ -743,7 +744,7 @@ export async function getBaseUrl(servername: string): Promise<string> {
   }
   const serverDiscoveryUrl = `${protocol}${servername}${WELL_KNOWN_URI}`;
   try {
-    const response = await fetch(serverDiscoveryUrl, { method: 'GET' });
+    const response = await fetch(cleanUrlString(serverDiscoveryUrl), { method: 'GET' });
     const result = await response.json();
     const baseUrl = result?.['m.homeserver']?.base_url;
     if (baseUrl === undefined) {

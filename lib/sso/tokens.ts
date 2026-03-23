@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose';
 import { ssoConfig } from './config';
+import { cleanUrlString } from '@utils/url';
 
 export interface SSOTokens {
   access_token: string;
@@ -24,7 +25,7 @@ export async function exchangeCodeForTokens(code: string, codeVerifier: string):
     code_verifier: codeVerifier,
   });
 
-  const response = await fetch(ssoConfig.tokenEndpoint, {
+  const response = await fetch(cleanUrlString(ssoConfig.tokenEndpoint), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),

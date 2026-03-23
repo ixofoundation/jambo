@@ -1,3 +1,5 @@
+import { cleanUrlString } from '@utils/url';
+
 export type IRequestResult<ReturnType> = Promise<{
   data?: ReturnType;
   error?: Error | unknown;
@@ -5,7 +7,7 @@ export type IRequestResult<ReturnType> = Promise<{
 
 export default async function gqlQuery<TReturn>(url: string, query: string): IRequestResult<TReturn> {
   try {
-    const response = await fetch(url + '/graphql', {
+    const response = await fetch(cleanUrlString(url + '/graphql'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
