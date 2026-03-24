@@ -24,7 +24,7 @@ export default function HomePage() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <GradientBand {...GRADIENT_COLORS.auth} />
+      <GradientBand {...GRADIENT_COLORS.auth} fullScreen />
       <p style={{ position: 'relative', zIndex: 1 }}>Loading...</p>
     </div>
   );

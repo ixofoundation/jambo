@@ -42,7 +42,7 @@ export default function AuthPage() {
           justifyContent: 'center',
         }}
       >
-        <GradientBand {...GRADIENT_COLORS.auth} />
+        <GradientBand {...GRADIENT_COLORS.auth} fullScreen />
         <AuthHeader />
         <div
           style={{

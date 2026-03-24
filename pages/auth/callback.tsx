@@ -87,7 +87,7 @@ export default function SSOCallbackPage() {
         justifyContent: 'center',
       }}
     >
-      <GradientBand {...GRADIENT_COLORS.auth} />
+      <GradientBand {...GRADIENT_COLORS.auth} fullScreen />
       <AuthHeader />
       <div
         style={{

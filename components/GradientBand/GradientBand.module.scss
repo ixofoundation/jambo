@@ -23,4 +23,10 @@
   &.yellow {
     background: radial-gradient(ellipse at top right, var(--yellow-secondary), var(--yellow-primary) 70%);
   }
+
+  &.fullScreen {
+    height: 100%;
+    max-height: none;
+    bottom: 0;
+  }
 }
