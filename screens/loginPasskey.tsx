@@ -16,6 +16,9 @@ import {
   passkeyLoginBlockingFinalize,
   matrixLoginBackground,
 } from 'lib/auth/passkeyFlow';
+import { loadPendingSSO, clearPendingSSO } from 'lib/sso/pending';
+import { store } from '@store/index';
+import { setSSOSession } from '@store/slices/ssoSlice';
 
 enum STEPS {
   loading = 0,
@@ -134,6 +137,13 @@ function LoginPasskey() {
         address: blockingResult.address,
         did: blockingResult.did,
       });
+
+      // Promote pending SSO data to Redux (persisted) now that blocking is complete
+      const pendingSSO = loadPendingSSO();
+      if (pendingSSO) {
+        store.dispatch(setSSOSession(pendingSSO));
+        clearPendingSSO();
+      }
 
       // Start background Matrix setup
       startSetup(() =>

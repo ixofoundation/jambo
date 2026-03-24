@@ -1,30 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSelector } from 'react-redux';
 
 import GuestGuard from '@components/GuestGuard';
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { redirectToSSO } from 'lib/sso/redirect';
-import { RootState } from '@store/index';
 
 export default function AuthPage() {
   const router = useRouter();
-  const ssoAuthenticated = useSelector((state: RootState) => state.sso.isAuthenticated);
-  const redirectedRef = useRef(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-
-  // If SSO session already exists, skip straight to passkey flow
-  useEffect(() => {
-    if (!router.isReady || redirectedRef.current) return;
-    if (router.query.error) return;
-
-    if (ssoAuthenticated) {
-      redirectedRef.current = true;
-      router.replace('/auth/login');
-    }
-  }, [router.isReady, router.query.error, ssoAuthenticated]);
 
   function handleSignIn() {
     setIsRedirecting(true);

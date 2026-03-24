@@ -13,6 +13,9 @@ import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import useSteps from '@hooks/useSteps';
 import { ensureFeegrant, passkeyRegisterBlocking, registerBackground } from 'lib/auth/passkeyFlow';
+import { loadPendingSSO, clearPendingSSO } from 'lib/sso/pending';
+import { store } from '@store/index';
+import { setSSOSession } from '@store/slices/ssoSlice';
 
 enum STEPS {
   loading = 0,
@@ -75,10 +78,15 @@ function RegisterPasskey() {
         await feegrantRef.current;
       }
 
+      // Read pending SSO for passkey display name
+      const pendingSSO = loadPendingSSO();
+      const ssoLabel = pendingSSO?.name || pendingSSO?.email || undefined;
+
       // Blocking phase: passkey → DID (feegrant already handled)
       const result = await passkeyRegisterBlocking({
         wallet,
         callbacks: blockingCallbacks,
+        ssoLabel,
       });
 
       // Registration complete (address + DID verified) — enter the app
@@ -88,6 +96,12 @@ function RegisterPasskey() {
         did: result.did,
         authenticatorId: result.authenticatorId,
       });
+
+      // Promote pending SSO data to Redux (persisted) now that blocking is complete
+      if (pendingSSO) {
+        store.dispatch(setSSOSession(pendingSSO));
+        clearPendingSSO();
+      }
 
       // Start background Matrix setup
       startSetup(() =>
