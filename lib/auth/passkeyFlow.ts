@@ -331,7 +331,7 @@ export async function registerBackground(params: {
   // Setup Matrix client
   const mxClient = await createMatrixClient();
   const matrixApiClient = createMatrixApiClient({
-    homeServerUrl,
+    homeServerUrl: cleanUrlString(homeServerUrl),
     accessToken: account.accessToken as string,
   });
 
@@ -396,9 +396,7 @@ export async function registerBackground(params: {
   callbacks.onStatusUpdate('Securing Data Vault...');
   const encryptedMnemonic = encrypt(mxMnemonic, pin);
   const storeResponse = await fetch(
-    cleanUrlString(
-      `${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`,
-    ),
+    cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
     {
       method: 'PUT',
       headers: {

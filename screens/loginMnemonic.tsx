@@ -196,7 +196,7 @@ function LoginWithMnemonic({ onLogin, onBack }: LoginWithMnemonicProps) {
       // setup clients
       const mxClient = await createMatrixClient();
       const matrixApiClient = createMatrixApiClient({
-        homeServerUrl: homeServerUrl,
+        homeServerUrl: cleanUrlString(homeServerUrl),
         accessToken: account.accessToken as string,
       });
       // setup cross signing and create room for new account

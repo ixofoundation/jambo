@@ -36,8 +36,9 @@ function fetchMatrixProfile() {
       .then((data) => {
         if (!data) return;
         const avatarUrl = data.avatar_url
-          ? cleanUrlString(`${baseUrl}/_matrix/media/v3/thumbnail`) +
-            `/${data.avatar_url.replace('mxc://', '')}?width=96&height=96&method=crop`
+          ? cleanUrlString(
+              `${baseUrl}/_matrix/media/v3/thumbnail/${data.avatar_url.replace('mxc://', '')}?width=96&height=96&method=crop`,
+            )
           : null;
         store.dispatch(setMatrixProfile({ displayName: data.displayname ?? null, avatarUrl }));
       })

@@ -1756,10 +1756,10 @@
   dependencies:
     multiformats "^13.1.0"
 
-"@ixo/impactxclient-sdk@2.4.0":
-  version "2.4.0"
-  resolved "https://registry.npmjs.org/@ixo/impactxclient-sdk/-/impactxclient-sdk-2.4.0.tgz"
-  integrity sha512-gsYDY4+gP0dWAdhQo8StbMTNqhA9Lxu+ufrK3it9p0amJPqMg/v+23NtjGKdEi/5+kZa97nj8QUdYbiYakVzfQ==
+"@ixo/impactxclient-sdk@2.4.10":
+  version "2.4.10"
+  resolved "https://registry.yarnpkg.com/@ixo/impactxclient-sdk/-/impactxclient-sdk-2.4.10.tgz#46c46b4aff1f71503566bec3225853c471b84f28"
+  integrity sha512-WL45/DfsW4KnV2RQZ4XbrPpFoL8oKTEEGhgfzR5pnMiFz7Tb46qH9tp7VFtwthIIse2i/yh1WdOS/FAwk6hfFQ==
   dependencies:
     "@babel/runtime" "7.19.4"
     "@cosmjs/amino" "0.32.4"
@@ -1770,25 +1770,25 @@
     "@cosmjs/stargate" "0.32.4"
     "@cosmjs/tendermint-rpc" "0.32.4"
     axios "1.2.5"
-    bip39 "3.0.4"
+    bip39-light "1.0.7"
     bs58 "5.0.0"
     dotenv "16.0.3"
     protobufjs "6.11.2"
 
-"@ixo/matrixclient-sdk@0.3.2":
-  version "0.3.2"
-  resolved "https://registry.npmjs.org/@ixo/matrixclient-sdk/-/matrixclient-sdk-0.3.2.tgz"
-  integrity sha512-o7yCP26iQObBPFfhdP6OyKm4+h05qWQSk6Wv+3hpbSLi2sPgaO19IrwSHOEXGAe2oM+JNFoejub5ccCNWtCjsw==
+"@ixo/matrixclient-sdk@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@ixo/matrixclient-sdk/-/matrixclient-sdk-2.0.0.tgz#d410060b7d16b488ade2654ca1f5bed89144577d"
+  integrity sha512-Nfh/EnOd2a1XHoubxupwQBhv195h5Wvn62kCeaqAxxOifLSCoqrZtFj85gZNcLohwU/qUagqWGk9t4bREEBFaw==
   dependencies:
     "@babel/runtime" "7.19.4"
     "@cosmjs/stargate" "0.32.0"
     node-fetch "2.7.0"
     whatwg-fetch "3.6.19"
 
-"@ixo/signx-sdk@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/@ixo/signx-sdk/-/signx-sdk-1.2.0.tgz"
-  integrity sha512-is6bd8mGY+nF+kz4PTqemeD1zSIkGsVzkcx9SMf3CIeEYEjYt3dYdix8oLGpKWSXkry43y03xEP0y7H6dgG2uQ==
+"@ixo/signx-sdk@1.3.2":
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/@ixo/signx-sdk/-/signx-sdk-1.3.2.tgz#6c6f01ad952d13c390232ea39531586cb2d6f35e"
+  integrity sha512-6XE+QHD+3Z/7aK522dVyTlK1V2hyf3z6wgIceKuMKV8qDsIVg3Lwlqe3bsHCVXGBW8Cg/alGEYCclS/PyyKrdA==
   dependencies:
     "@babel/runtime" "7.19.4"
     axios "1.3.4"
@@ -2762,11 +2762,6 @@
   dependencies:
     undici-types "~5.26.4"
 
-"@types/node@11.11.6":
-  version "11.11.6"
-  resolved "https://registry.npmjs.org/@types/node/-/node-11.11.6.tgz"
-  integrity sha512-Exw4yUWMBXM3X+8oqzJNRqZSwUAaS4+7NdvHqQuFi/d+synz++xmX3QIf+BFqneW8N31R8Ky+sikfZUXq07ggQ==
-
 "@types/node@17.0.35":
   version "17.0.35"
   resolved "https://registry.npmjs.org/@types/node/-/node-17.0.35.tgz"
@@ -3582,15 +3577,13 @@ binary-extensions@^2.0.0:
   resolved "https://registry.npmjs.org/binary-extensions/-/binary-extensions-2.3.0.tgz"
   integrity sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==
 
-bip39@3.0.4:
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/bip39/-/bip39-3.0.4.tgz"
-  integrity sha512-YZKQlb752TrUWqHWj7XAwCSjYEgGAk+/Aas3V7NyjQeZYsztO8JnQUaCWhcnL4T+jL8nvB8typ2jRPzTlgugNw==
+bip39-light@1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/bip39-light/-/bip39-light-1.0.7.tgz#06a72f251b89389a136d3f177f29b03342adc5ba"
+  integrity sha512-WDTmLRQUsiioBdTs9BmSEmkJza+8xfJmptsNJjxnoq3EydSa/ZBXT6rm66KoT3PJIRYMnhSKNR7S9YL1l7R40Q==
   dependencies:
-    "@types/node" "11.11.6"
     create-hash "^1.1.0"
     pbkdf2 "^3.0.9"
-    randombytes "^2.0.1"
 
 bl@^4.0.3:
   version "4.1.0"
@@ -7992,13 +7985,6 @@ radix3@^1.1.0:
   resolved "https://registry.npmjs.org/radix3/-/radix3-1.1.2.tgz"
   integrity sha512-b484I/7b8rDEdSDKckSSBA8knMpcdsXudlE/LNL639wFoHKwLbEkQFZHWEYwDC0wa0FKUcCY+GAF73Z7wxNVFA==
 
-randombytes@^2.0.1:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/randombytes/-/randombytes-2.1.0.tgz"
-  integrity sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==
-  dependencies:
-    safe-buffer "^5.1.0"
-
 range-parser@~1.2.1:
   version "1.2.1"
   resolved "https://registry.npmjs.org/range-parser/-/range-parser-1.2.1.tgz"
@@ -8366,7 +8352,7 @@ safe-buffer@5.1.2:
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz"
   integrity sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==
 
-safe-buffer@5.2.1, safe-buffer@^5.0.1, safe-buffer@^5.1.0, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
+safe-buffer@5.2.1, safe-buffer@^5.0.1, safe-buffer@^5.1.2, safe-buffer@^5.2.0, safe-buffer@~5.2.0:
   version "5.2.1"
   resolved "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==

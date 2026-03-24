@@ -464,7 +464,7 @@ export function createTemporaryClient(homeServerUrl: string) {
     throw new Error('Home server URL is required to instantiate matrix client');
   }
   return createClient({
-    baseUrl: homeServerUrl,
+    baseUrl: cleanUrlString(homeServerUrl),
   });
 }
 
@@ -485,7 +485,7 @@ export async function createMatrixClient() {
   // const legacyCryptoStore = new IndexedDBCryptoStore()
 
   const mxClient = createClient({
-    baseUrl: homeServerUrl,
+    baseUrl: cleanUrlString(homeServerUrl),
     accessToken,
     userId,
     store: indexedDBStore,
@@ -568,7 +568,7 @@ export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: Mat
     const userId = secret.userId;
     const deviceId = secret.deviceId;
     client = createClient({
-      baseUrl: homeServerUrl ?? baseUrl,
+      baseUrl: cleanUrlString((homeServerUrl ?? baseUrl) || ''),
       accessToken,
       userId,
       deviceId,
