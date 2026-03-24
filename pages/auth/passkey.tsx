@@ -51,9 +51,11 @@ export default function SSOCallbackPage() {
 
       // Exchange authorization code for tokens
       const tokens = await exchangeCodeForTokens(code, codeVerifier);
+      console.log('[SSO] Tokens:', tokens);
 
       // Validate ID token
       const userInfo = await validateIdToken(tokens.id_token);
+      console.log('[SSO] User info:', userInfo);
 
       // Stage SSO data in sessionStorage (promoted to Redux after passkey blocking completes)
       savePendingSSO({
