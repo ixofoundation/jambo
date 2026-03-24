@@ -47,6 +47,7 @@ export async function validateIdToken(idToken: string): Promise<SSOUserInfo> {
     issuer: ssoConfig.issuer,
     audience: ssoConfig.clientId,
   });
+  console.log('[SSO] jwt payload', idToken, payload);
 
   return {
     email: (payload as JWTPayload & { email?: string }).email ?? null,
