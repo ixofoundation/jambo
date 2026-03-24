@@ -22,7 +22,7 @@ export default function AuthPage() {
 
     if (ssoAuthenticated) {
       redirectedRef.current = true;
-      router.replace('/auth/passkey');
+      router.replace('/auth/login');
     }
   }, [router.isReady, router.query.error, ssoAuthenticated]);
 

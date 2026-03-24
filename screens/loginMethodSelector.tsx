@@ -8,7 +8,7 @@ function LoginMethodSelector() {
   const router = useRouter();
 
   function handleLoginClick() {
-    router.push('/auth/passkey');
+    router.push('/auth/login');
   }
 
   return (
