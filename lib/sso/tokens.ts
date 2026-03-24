@@ -13,6 +13,7 @@ export interface SSOTokens {
 export interface SSOUserInfo {
   email: string | null;
   name: string | null;
+  picture: string | null;
   sub: string;
 }
 
@@ -50,6 +51,7 @@ export async function validateIdToken(idToken: string): Promise<SSOUserInfo> {
   return {
     email: (payload as JWTPayload & { email?: string }).email ?? null,
     name: (payload as JWTPayload & { name?: string }).name ?? null,
+    picture: (payload as JWTPayload & { picture?: string }).picture ?? null,
     sub: payload.sub!,
   };
 }

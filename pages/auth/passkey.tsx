@@ -62,6 +62,7 @@ export default function SSOCallbackPage() {
           idToken: tokens.id_token,
           email: userInfo.email,
           name: userInfo.name,
+          picture: userInfo.picture,
         }),
       );
 

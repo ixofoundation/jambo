@@ -11,9 +11,10 @@ import { signAndBroadcastWithMnemonic } from '@utils/transaction';
 
 interface RegisterPasskeyParams {
   wallet: SecpClient;
+  passkeyDisplayName?: string;
 }
 
-export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
+export async function registerPasskey({ wallet, passkeyDisplayName }: RegisterPasskeyParams) {
   const accountAddress = wallet?.baseAccount?.address;
   if (!accountAddress) {
     throw new Error('No account found');
@@ -28,8 +29,8 @@ export async function registerPasskey({ wallet }: RegisterPasskeyParams) {
     user: {
       // @ts-ignore
       id: Uint8Array.from(accountAddress, (c) => c.charCodeAt(0)),
-      name: accountAddress,
-      displayName: accountAddress,
+      name: passkeyDisplayName || accountAddress,
+      displayName: passkeyDisplayName || accountAddress,
     },
   };
 

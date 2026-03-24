@@ -13,6 +13,8 @@ import { cleanUrlString } from '@utils/url';
 import { delay } from '@utils/timestamp';
 import gqlQuery from '@utils/graphql';
 import { BLOCKSYNC_URL } from '@constants/common';
+import { store, RootState } from '@store/index';
+import { MatrixClient } from 'matrix-js-sdk';
 import {
   checkIsUsernameAvailable,
   createMatrixClient,
@@ -215,6 +217,9 @@ export async function matrixLoginBackground(params: {
   callbacks.onStatusUpdate('Setting up encryption...');
   const mxClient = await createMatrixClient();
 
+  // Sync Yoma SSO profile to Matrix (display name + avatar)
+  await syncMatrixProfileFromSSO(mxClient);
+
   let hasCrossSigning = hasCrossSigningAccountData(mxClient);
   if (!hasCrossSigning) {
     hasCrossSigning = await setupCrossSigning(mxClient, {
@@ -224,6 +229,32 @@ export async function matrixLoginBackground(params: {
     });
     if (!hasCrossSigning) {
       throw new Error('Failed to setup cross signing, please try again.');
+    }
+  }
+}
+
+// ─── Matrix Profile Sync ───────────────────────────────────────────────────
+
+async function syncMatrixProfileFromSSO(mxClient: MatrixClient): Promise<void> {
+  const ssoState = (store.getState() as RootState).sso;
+
+  // Display name
+  const displayName = ssoState.name || ssoState.email;
+  if (displayName) {
+    await mxClient.setDisplayName(displayName).catch(console.warn);
+  }
+
+  // Avatar (download external URL → upload to Matrix → set mxc:// URL)
+  if (ssoState.picture) {
+    try {
+      const response = await fetch(ssoState.picture);
+      const blob = await response.blob();
+      const uploaded = await mxClient.uploadContent(blob, { type: blob.type });
+      if (uploaded.content_uri) {
+        await mxClient.setAvatarUrl(uploaded.content_uri);
+      }
+    } catch (err) {
+      console.warn('Failed to sync SSO avatar to Matrix:', err);
     }
   }
 }
@@ -256,9 +287,12 @@ export async function passkeyRegisterBlocking(params: {
   }
   const address = wallet.baseAccount.address;
 
-  // Register passkey
+  // Register passkey (use SSO name if available)
   callbacks.onStatusUpdate('Creating your passkey...');
-  const { credentialId } = await registerPasskey({ wallet });
+  const ssoState = (store.getState() as RootState).sso;
+  const ssoLabel = ssoState.name || ssoState.email;
+  const passkeyDisplayName = ssoLabel ? `${ssoLabel} (${address})` : address;
+  const { credentialId } = await registerPasskey({ wallet, passkeyDisplayName });
   await delay(1000);
 
   // Verify on-chain
@@ -335,6 +369,9 @@ export async function registerBackground(params: {
     homeServerUrl: cleanUrlString(homeServerUrl),
     accessToken: account.accessToken as string,
   });
+
+  // Sync Yoma SSO profile to Matrix (display name + avatar)
+  await syncMatrixProfileFromSSO(mxClient);
 
   // Setup cross-signing
   callbacks.onStatusUpdate('Setting up Vault encryption...');
