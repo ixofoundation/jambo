@@ -1,6 +1,10 @@
 import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { BackgroundSetupContext, BackgroundSetupStatus, InputRequest } from '@contexts/backgroundSetup';
 import BackgroundSetupModal from '@components/BackgroundSetupModal/BackgroundSetupModal';
+import { secureLoad } from '@utils/storage';
+import cons from '@constants/matrix';
+import { store, RootState } from '@store/index';
+import { registerBackground, matrixLoginBackground } from 'lib/auth/passkeyFlow';
 
 interface BackgroundSetupProviderProps {
   children: ReactNode;
@@ -96,6 +100,42 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       setStatus('needs_input');
     });
   }, []);
+
+  // Resume backed-up background setup on mount (e.g. after page refresh)
+  const resumeAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (resumeAttemptedRef.current) return;
+    resumeAttemptedRef.current = true;
+
+    const bgType = secureLoad(cons.secretKey.BACKGROUND_TYPE);
+    if (!bgType) return;
+
+    const account = (store.getState() as RootState).account;
+    if (!account?.address || !account?.did) return;
+
+    if (bgType === 'register') {
+      const mnemonic = secureLoad(cons.secretKey.MNEMONIC_BACKUP);
+      if (!mnemonic) return;
+      void runTask(() =>
+        registerBackground({
+          address: account.address!,
+          did: account.did!,
+          mxMnemonicOverride: mnemonic,
+          callbacks: { onStatusUpdate: setStatusMessage, requestPin },
+        }),
+      );
+    } else if (bgType === 'login') {
+      const encMnemonic = secureLoad(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
+      if (!encMnemonic) return;
+      void runTask(() =>
+        matrixLoginBackground({
+          address: account.address!,
+          encryptedMnemonic: encMnemonic,
+          callbacks: { onStatusUpdate: setStatusMessage, requestPin },
+        }),
+      );
+    }
+  }, [runTask, requestPin]);
 
   const getFlowCallbacks = useCallback(
     () => ({

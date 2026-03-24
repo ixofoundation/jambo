@@ -11,7 +11,9 @@ import { getSecpClient, SecpClient } from '@utils/secp';
 import { encrypt, decrypt } from '@utils/encryption';
 import { cleanUrlString } from '@utils/url';
 import { delay } from '@utils/timestamp';
+import { secureSave, secureReset } from '@utils/storage';
 import gqlQuery from '@utils/graphql';
+import cons from '@constants/matrix';
 import { BLOCKSYNC_URL } from '@constants/common';
 import { store, RootState } from '@store/index';
 import { MatrixClient } from 'matrix-js-sdk';
@@ -193,6 +195,10 @@ export async function matrixLoginBackground(params: {
 }): Promise<void> {
   const { address, encryptedMnemonic, callbacks } = params;
 
+  // Back up encrypted mnemonic so we can resume if the user refreshes
+  secureSave(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP, encryptedMnemonic);
+  secureSave(cons.secretKey.BACKGROUND_TYPE, 'login');
+
   callbacks.onStatusUpdate('PIN needed to unlock Data Vault...');
   const pin = await callbacks.requestPin(encryptedMnemonic);
 
@@ -231,6 +237,10 @@ export async function matrixLoginBackground(params: {
       throw new Error('Failed to setup cross signing, please try again.');
     }
   }
+
+  // Clear backup — login background completed successfully
+  secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
+  secureReset(cons.secretKey.BACKGROUND_TYPE);
 }
 
 // ─── Matrix Profile Sync ───────────────────────────────────────────────────
@@ -322,15 +332,19 @@ export async function passkeyRegisterBlocking(params: {
 export async function registerBackground(params: {
   address: string;
   did: string;
-  wallet: SecpClient;
+  wallet?: SecpClient;
+  mxMnemonicOverride?: string;
   callbacks: FlowCallbacks;
 }): Promise<void> {
-  const { address, did, wallet, callbacks } = params;
+  const { address, did, wallet, mxMnemonicOverride, callbacks } = params;
 
   // Step 1: Create DID on-chain (must complete before Matrix room bot needs it)
   callbacks.onStatusUpdate('Creating your digital identity...');
   const didExists = await checkIidDocumentExists(did);
   if (!didExists) {
+    if (!wallet) {
+      throw new Error('Wallet required for DID creation. Please register again.');
+    }
     await createIidDocument(did, wallet as OfflineSigner);
     await delay(500);
     const didExistsNow = await checkIidDocumentExists(did);
@@ -340,7 +354,11 @@ export async function registerBackground(params: {
   }
 
   callbacks.onStatusUpdate('Generating Vault credentials...');
-  const mxMnemonic = utils.mnemonic.generateMnemonic(12);
+  const mxMnemonic = mxMnemonicOverride || utils.mnemonic.generateMnemonic(12);
+
+  // Back up mnemonic so we can resume if the user refreshes
+  secureSave(cons.secretKey.MNEMONIC_BACKUP, mxMnemonic);
+  secureSave(cons.secretKey.BACKGROUND_TYPE, 'register');
   const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
   const mxUsername = generateUsernameFromAddress(address);
   const mxPassword = generatePasswordFromMnemonic(mxMnemonic);
@@ -350,15 +368,19 @@ export async function registerBackground(params: {
     homeServerUrl,
     username: mxUsername,
   });
-  if (!isUsernameAvailable) {
-    throw new Error('Matrix account already exists, please try again.');
-  }
 
   // Clear residual Matrix data
   await logoutMatrixClient({ baseUrl: homeServerUrl });
 
   callbacks.onStatusUpdate('Creating Vault account...');
-  const account = await mxRegisterWithSecp(address, mxPassword, wallet);
+  let account;
+  if (isUsernameAvailable && wallet) {
+    account = await mxRegisterWithSecp(address, mxPassword, wallet);
+  }
+  // Fall back to login if account already exists (e.g. resuming after refresh)
+  if (!account?.accessToken) {
+    account = await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
+  }
   if (!account?.accessToken) {
     throw new Error('Failed to register Data Vault account, please try again later.');
   }
@@ -450,4 +472,8 @@ export async function registerBackground(params: {
     throw new Error('Failed to store encrypted mnemonic in matrix room.');
   }
   await storeResponse.json();
+
+  // Clear backup — register background completed successfully
+  secureReset(cons.secretKey.MNEMONIC_BACKUP);
+  secureReset(cons.secretKey.BACKGROUND_TYPE);
 }

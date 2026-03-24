@@ -449,6 +449,9 @@ export function clearLocalStore() {
   secureReset(cons.secretKey.DEVICE_ID);
   secureReset(cons.secretKey.USER_ID);
   secureReset(cons.secretKey.BASE_URL);
+  secureReset(cons.secretKey.MNEMONIC_BACKUP);
+  secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
+  secureReset(cons.secretKey.BACKGROUND_TYPE);
 }
 
 // =================================================================================================
