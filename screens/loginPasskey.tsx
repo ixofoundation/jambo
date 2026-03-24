@@ -8,7 +8,6 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import config from '@constants/config.json';
 import Loader from '@components/Loader/Loader';
 import { errorToast } from '@components/Toast/Toast';
-import { delay } from '@utils/timestamp';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import {
@@ -61,11 +60,9 @@ function LoginPasskey() {
       setKeyId(result.keyId);
       setAssertion(result.assertion);
       setAddresses(result.addresses);
-      setStep(STEPS.address);
 
       if (result.addresses.length === 1) {
-        setSelectedAddress(result.addresses[0].address);
-        await delay(200);
+        // Single address — auto-select without showing address picker
         await handleFinalAuthentication({
           address: result.addresses[0].address,
           authenticatorId: result.addresses[0].id,
@@ -73,6 +70,9 @@ function LoginPasskey() {
           keyIdData: result.keyId,
           addressesData: result.addresses,
         });
+      } else {
+        // Multiple addresses — show address selection UI
+        setStep(STEPS.address);
       }
     } catch (err: any) {
       // User cancelled passkey prompt or no passkeys available → register new passkey
@@ -148,8 +148,8 @@ function LoginPasskey() {
       const entityId: string | undefined = (config as any).entity;
       router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
-      setStep(STEPS.address);
+      errorToast(err.message || 'Login failed');
+      setTimeout(() => router.push('/auth'), 1500);
     }
   }
 
