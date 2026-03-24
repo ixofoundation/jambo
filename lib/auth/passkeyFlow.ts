@@ -228,9 +228,22 @@ export async function matrixLoginBackground(params: {
   }
 }
 
+// ─── Feegrant Helper ────────────────────────────────────────────────────────
+
+export async function ensureFeegrant(address: string): Promise<void> {
+  const hasFeegrant = await checkAddressFeegrant(address);
+  if (!hasFeegrant) {
+    await grantFeegrant(address);
+    const granted = await checkAddressFeegrant(address);
+    if (!granted) {
+      throw new Error('Failed to grant feegrant, please try again.');
+    }
+  }
+}
+
 // ─── BLOCKING: Register ─────────────────────────────────────────────────────
-// Steps: generate mnemonic → create wallet → check feegrant (may prompt email) →
-//        create passkey → verify on-chain → create DID
+// Steps: create passkey → verify on-chain → compute DID
+// Note: feegrant is handled separately (started in background during mnemonic backup)
 
 export async function passkeyRegisterBlocking(params: {
   wallet: SecpClient;
@@ -242,18 +255,6 @@ export async function passkeyRegisterBlocking(params: {
     throw new Error('No wallet found');
   }
   const address = wallet.baseAccount.address;
-
-  // Check feegrant
-  callbacks.onStatusUpdate('Checking fee grant...');
-  const feegrant = await checkAddressFeegrant(address);
-  if (!feegrant) {
-    callbacks.onStatusUpdate('Requesting fee grant...');
-    await grantFeegrant(address);
-    const feegrantAfter = await checkAddressFeegrant(address);
-    if (!feegrantAfter) {
-      throw new Error('Failed to grant feegrant, please try again.');
-    }
-  }
 
   // Register passkey
   callbacks.onStatusUpdate('Creating your passkey...');

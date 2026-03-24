@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { utils } from '@ixo/impactxclient-sdk';
 
@@ -12,7 +12,7 @@ import SecretPhraseStep from '@components/SecretPhraseStep/SecretPhraseStep';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import useSteps from '@hooks/useSteps';
-import { passkeyRegisterBlocking, registerBackground } from 'lib/auth/passkeyFlow';
+import { ensureFeegrant, passkeyRegisterBlocking, registerBackground } from 'lib/auth/passkeyFlow';
 
 enum STEPS {
   loading = 0,
@@ -29,6 +29,7 @@ function RegisterPasskey() {
   const [wallet, setWallet] = useState<SecpClient | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading...');
+  const feegrantRef = useRef<Promise<void> | null>(null);
 
   useEffect(function () {
     if (!wallet) {
@@ -36,6 +37,8 @@ function RegisterPasskey() {
         const mnemonic = utils.mnemonic.generateMnemonic();
         const newWallet = await getSecpClient(mnemonic);
         setWallet(newWallet);
+        // Start feegrant in background while user backs up mnemonic
+        feegrantRef.current = ensureFeegrant(newWallet.baseAccount.address);
       })();
     }
   }, []);
@@ -58,7 +61,21 @@ function RegisterPasskey() {
         requestPin: getFlowCallbacks().requestPin,
       };
 
-      // Blocking phase: feegrant → passkey → DID
+      // Await background feegrant (or retry if it failed)
+      setLoadingMessage('Checking fee grant...');
+      try {
+        if (feegrantRef.current) {
+          await feegrantRef.current;
+        } else {
+          await ensureFeegrant(wallet.baseAccount.address);
+        }
+      } catch {
+        setLoadingMessage('Requesting fee grant...');
+        feegrantRef.current = ensureFeegrant(wallet.baseAccount.address);
+        await feegrantRef.current;
+      }
+
+      // Blocking phase: passkey → DID (feegrant already handled)
       const result = await passkeyRegisterBlocking({
         wallet,
         callbacks: blockingCallbacks,
