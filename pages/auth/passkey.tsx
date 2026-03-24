@@ -8,8 +8,7 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import Loader from '@components/Loader/Loader';
 import { getCodeVerifier } from 'lib/sso/pkce';
 import { exchangeCodeForTokens, validateIdToken } from 'lib/sso/tokens';
-import { store } from '@store/index';
-import { setSSOSession } from '@store/slices/ssoSlice';
+import { savePendingSSO } from 'lib/sso/pending';
 
 export default function SSOCallbackPage() {
   const router = useRouter();
@@ -56,15 +55,13 @@ export default function SSOCallbackPage() {
       // Validate ID token
       const userInfo = await validateIdToken(tokens.id_token);
 
-      // Store SSO session in Redux
-      store.dispatch(
-        setSSOSession({
-          idToken: tokens.id_token,
-          email: userInfo.email,
-          name: userInfo.name,
-          picture: userInfo.picture,
-        }),
-      );
+      // Stage SSO data in sessionStorage (promoted to Redux after passkey blocking completes)
+      savePendingSSO({
+        idToken: tokens.id_token,
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture,
+      });
 
       // SSO gate passed — proceed to passkey flow
       router.replace('/auth/login');

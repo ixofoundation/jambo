@@ -289,6 +289,7 @@ export async function ensureFeegrant(address: string): Promise<void> {
 export async function passkeyRegisterBlocking(params: {
   wallet: SecpClient;
   callbacks: FlowCallbacks;
+  ssoLabel?: string;
 }): Promise<RegisterBlockingResult> {
   const { wallet, callbacks } = params;
 
@@ -299,9 +300,7 @@ export async function passkeyRegisterBlocking(params: {
 
   // Register passkey (use SSO name if available)
   callbacks.onStatusUpdate('Creating your passkey...');
-  const ssoState = (store.getState() as RootState).sso;
-  const ssoLabel = ssoState.name || ssoState.email;
-  const passkeyDisplayName = ssoLabel ? `${ssoLabel} (${address})` : address;
+  const passkeyDisplayName = params.ssoLabel ? `${params.ssoLabel} (${address})` : address;
   const { credentialId } = await registerPasskey({ wallet, passkeyDisplayName });
   await delay(1000);
 
