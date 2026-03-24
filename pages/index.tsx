@@ -12,7 +12,7 @@ export default function HomePage() {
   useEffect(() => {
     if (isLoading) return;
 
-    const entityId: string | undefined = (config as any).entity;
+    const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
 
     if (isLoggedIn && entityId) {
       router.replace(`/entities/${encodeURIComponent(entityId)}`);

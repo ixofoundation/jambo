@@ -114,7 +114,7 @@ function RegisterPasskey() {
       );
 
       // Navigate to app
-      const entityId: string | undefined = (config as any).entity;
+      const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
       router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     } catch (err: any) {
       console.error('Register error:', err);

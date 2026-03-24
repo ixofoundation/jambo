@@ -11,7 +11,7 @@ export default function GuestGuard({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
-      const entityId: string | undefined = (config as any).entity;
+      const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
       router.replace(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
