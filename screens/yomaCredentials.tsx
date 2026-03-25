@@ -101,35 +101,38 @@ export default function YomaCredentialsScreen() {
           paddingTop: 'calc(var(--header-height) + 20px)',
         }}
       >
-        {/* Back link */}
+        {/* Back breadcrumb */}
         <button
           onClick={() => router.push('/profile')}
+          aria-label='Go back to profile'
           style={{
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            padding: '4px 0',
-            marginBottom: '16px',
+            padding: 0,
+            margin: '0 0 6px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            color: 'var(--text-secondary)',
-            fontSize: '14px',
+            gap: '4px',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '13px',
+            fontWeight: 400,
+            lineHeight: 1.2,
           }}
         >
           <svg
-            width='16'
-            height='16'
+            width='14'
+            height='14'
             viewBox='0 0 24 24'
             fill='none'
             stroke='currentColor'
-            strokeWidth='2'
+            strokeWidth='2.5'
             strokeLinecap='round'
             strokeLinejoin='round'
           >
             <polyline points='15 18 9 12 15 6' />
           </svg>
-          Back to Profile
+          Profile
         </button>
 
         {/* Title */}

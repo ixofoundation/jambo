@@ -1,11 +1,10 @@
-import { ssoConfig } from './config';
 import { getValidAccessToken } from './refresh';
 
 async function yomaFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = await getValidAccessToken();
   if (!token) throw new Error('Yoma SSO session expired');
 
-  const response = await fetch(`${ssoConfig.apiBaseUrl}${path}`, {
+  const response = await fetch(`/api/yoma${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -22,18 +21,18 @@ async function yomaFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export async function getYomaUser(): Promise<any> {
-  return yomaFetch('/v3/user');
+  return yomaFetch('/user');
 }
 
 export async function searchYomaCredentials(params?: Record<string, unknown>): Promise<any> {
-  return yomaFetch('/v3/ssi/wallet/user/search', {
+  return yomaFetch('/credentials/search', {
     method: 'POST',
     body: JSON.stringify(params ?? { pageNumber: 1, pageSize: 10 }),
   });
 }
 
 export async function getYomaCredential(credentialId: string): Promise<any> {
-  return yomaFetch(`/v3/ssi/wallet/user/${credentialId}`, {
+  return yomaFetch(`/credentials/${credentialId}`, {
     method: 'POST',
   });
 }
