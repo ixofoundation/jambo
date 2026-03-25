@@ -6,7 +6,6 @@ import { getSecpClient, SecpClient } from '@utils/secp';
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
-import config from '@constants/config.json';
 import Loader from '@components/Loader/Loader';
 import SecretPhraseStep from '@components/SecretPhraseStep/SecretPhraseStep';
 import { useAuth } from '@hooks/useAuth';
@@ -113,9 +112,8 @@ function RegisterPasskey() {
         }),
       );
 
-      // Navigate to app
-      const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
-      router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
+      // Navigate to app — home page handles multi-project routing
+      router.push('/');
     } catch (err: any) {
       console.error('Register error:', err);
       setError((typeof err === 'string' ? err : err.message) || 'Failed to register. Please try again.');

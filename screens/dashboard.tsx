@@ -7,7 +7,8 @@ import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
-import { useAppSelector } from '@store/hooks';
+import { useAppSelector, useAppDispatch } from '@store/hooks';
+import { addProject } from '@store/slices/projectsSlice';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -41,17 +42,24 @@ export default function Dashboard() {
   const did = authContext.did!;
   const address = authContext.address!;
 
-  const {
-    collections: protocolCollections,
-    loading: collectionsLoading,
-  } = useProtocolCollections(entityDid);
+  const { collections: protocolCollections, loading: collectionsLoading } = useProtocolCollections(entityDid);
 
+  const dispatch = useAppDispatch();
   const profile = useAppSelector((state) => (entityDid ? state.profiles.byEntityDid[entityDid] : undefined));
   const entity = useAppSelector((state) => (entityDid ? state.entities.byId[entityDid] : undefined));
 
   const projectName = profile?.name || entityDid || '';
   const projectType = readableType(profile?.type || entity?.type);
   const projectStatus = readableStatus(entity?.status);
+
+  // Auto-add this entity to the projects list if it's a project type
+  useEffect(() => {
+    if (!entityDid) return;
+    const type = (entity?.type || profile?.type || '').toLowerCase();
+    if (type.includes('project')) {
+      dispatch(addProject(entityDid));
+    }
+  }, [entityDid, entity?.type, profile?.type, dispatch]);
 
   // Per-collection authz status: 'agent' | 'pending' | 'unauthorized' | undefined (loading)
   const [collectionStatus, setCollectionStatus] = useState<Record<string, 'agent' | 'pending' | 'unauthorized'>>({});
@@ -92,7 +100,8 @@ export default function Dashboard() {
         await Promise.all(
           protocolCollections.map(async (c) => {
             const hasSubmit = typedGrants?.find((g) => {
-              if (g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization || g.granter !== c.admin) return false;
+              if (g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization || g.granter !== c.admin)
+                return false;
               try {
                 const decoded = registry.decode(g.authorization);
                 const constraints = decoded.constraints ?? [];
@@ -132,7 +141,9 @@ export default function Dashboard() {
     }
 
     checkStatuses();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [address, did, protocolCollections, collectionsLoading]);
 
   function statusBadge(status?: 'agent' | 'pending' | 'unauthorized') {
@@ -184,6 +195,38 @@ export default function Dashboard() {
             justifyContent: 'center',
           }}
         >
+          <button
+            onClick={() => router.push('/entities')}
+            aria-label='Go back to projects'
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              margin: '0 0 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '13px',
+              fontWeight: 400,
+              lineHeight: 1.2,
+            }}
+          >
+            <svg
+              width='14'
+              height='14'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <polyline points='15 18 9 12 15 6' />
+            </svg>
+            Projects
+          </button>
           <h1
             style={{
               margin: '0 0 4px',
@@ -198,7 +241,9 @@ export default function Dashboard() {
           </h1>
           {(projectType || projectStatus) && (
             <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-              {projectType}{projectType && projectStatus ? ' \u00B7 ' : ''}{projectStatus}
+              {projectType}
+              {projectType && projectStatus ? ' \u00B7 ' : ''}
+              {projectStatus}
             </p>
           )}
         </div>
@@ -233,7 +278,9 @@ export default function Dashboard() {
             {protocolCollections.map((c) => (
               <button
                 key={c.collectionId}
-                onClick={() => router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)}
+                onClick={() =>
+                  router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)
+                }
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -265,27 +312,35 @@ export default function Dashboard() {
                   </p>
                   <div style={{ margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {c.endDate && new Date(c.endDate) < new Date()
-                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                      {c.endDate && new Date(c.endDate).getFullYear() > 1970 && new Date(c.endDate) < new Date()
+                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}`
                         : c.startDate
-                          ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
-                          : ''}
+                        ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}`
+                        : ''}
                     </span>
                     {!statusLoading && statusBadge(collectionStatus[c.collectionId])}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, marginLeft: '12px' }}>
                   <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--text-secondary)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    width='16'
+                    height='16'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='var(--text-secondary)'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
                   >
-                    <polyline points="9 18 15 12 9 6" />
+                    <polyline points='9 18 15 12 9 6' />
                   </svg>
                 </div>
               </button>

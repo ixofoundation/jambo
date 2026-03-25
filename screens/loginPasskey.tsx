@@ -5,7 +5,6 @@ import Button, { BUTTON_BG_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
-import config from '@constants/config.json';
 import Loader from '@components/Loader/Loader';
 import { errorToast } from '@components/Toast/Toast';
 import { useAuth } from '@hooks/useAuth';
@@ -154,9 +153,8 @@ function LoginPasskey() {
         }),
       );
 
-      // Navigate to app
-      const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
-      router.push(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
+      // Navigate to app — home page handles multi-project routing
+      router.push('/');
     } catch (err: any) {
       errorToast(err.message || 'Login failed');
       setTimeout(() => router.push('/auth'), 1500);

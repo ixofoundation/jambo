@@ -21,6 +21,7 @@ import { clearProtocols } from '@store/slices/protocolsSlice';
 import { clearProfiles } from '@store/slices/profilesSlice';
 import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfileSlice';
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
+import { clearProjects } from '@store/slices/projectsSlice';
 
 function fetchMatrixProfile() {
   try {
@@ -248,6 +249,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     store.dispatch(clearMatrixProfile());
     store.dispatch(clearAllDrafts());
     store.dispatch(clearSSOSession());
+    store.dispatch(clearProjects());
     await persistor.purge();
 
     // Redirect to Keycloak logout (navigates away from app, which triggers full re-auth on return)

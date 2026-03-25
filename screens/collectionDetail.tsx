@@ -80,8 +80,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const { collections: protocolCollections } = useProtocolCollections(entityDid);
   const collection = protocolCollections.find((c) => c.collectionId === collectionId);
 
-  const isExpired = !!collection?.endDate && new Date(collection.endDate).getTime() !== 0 && new Date(collection.endDate) < new Date();
-  const hasStarted = !collection?.startDate || new Date(collection.startDate).getTime() === 0 || new Date(collection.startDate) <= new Date();
+  const isExpired = !!collection?.endDate && new Date(collection.endDate).getFullYear() > 1970 && new Date(collection.endDate) < new Date();
+  const hasStarted = !collection?.startDate || new Date(collection.startDate).getFullYear() <= 1970 || new Date(collection.startDate) <= new Date();
   const isCollectionOpen = hasStarted && !isExpired;
 
   function addAuth(auth: string) {
