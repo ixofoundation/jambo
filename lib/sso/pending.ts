@@ -5,6 +5,9 @@ export interface PendingSSOData {
   email: string | null;
   name: string | null;
   picture: string | null;
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: number;
 }
 
 export function savePendingSSO(data: PendingSSOData): void {

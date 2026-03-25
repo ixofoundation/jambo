@@ -18,6 +18,8 @@ import {
 import { loadPendingSSO, clearPendingSSO } from 'lib/sso/pending';
 import { store } from '@store/index';
 import { setSSOSession } from '@store/slices/ssoSlice';
+import { secureSave } from '@utils/storage';
+import authConstants from '@constants/auth';
 
 enum STEPS {
   loading = 0,
@@ -141,6 +143,9 @@ function LoginPasskey() {
       const pendingSSO = loadPendingSSO();
       if (pendingSSO) {
         store.dispatch(setSSOSession(pendingSSO));
+        secureSave(authConstants.yomaKey.ACCESS_TOKEN, pendingSSO.accessToken);
+        if (pendingSSO.refreshToken) secureSave(authConstants.yomaKey.REFRESH_TOKEN, pendingSSO.refreshToken);
+        secureSave(authConstants.yomaKey.EXPIRES_AT, String(pendingSSO.expiresAt));
         clearPendingSSO();
       }
 

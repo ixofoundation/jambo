@@ -4,9 +4,10 @@ export const ssoConfig = {
   issuer,
   clientId: process.env.NEXT_PUBLIC_YOMA_SSO_CLIENT_ID ?? '',
   redirectUri: process.env.NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI ?? 'http://localhost:3000/auth/passkey',
-  scopes: process.env.NEXT_PUBLIC_YOMA_SSO_SCOPES ?? 'openid email profile',
+  scopes: 'openid email profile yoma-api',
   authorizationEndpoint: `${issuer}/protocol/openid-connect/auth`,
   tokenEndpoint: `${issuer}/protocol/openid-connect/token`,
   jwksUri: `${issuer}/protocol/openid-connect/certs`,
   logoutEndpoint: `${issuer}/protocol/openid-connect/logout`,
+  apiBaseUrl: 'https://stage.yoma.world/api',
 };

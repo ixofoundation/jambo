@@ -236,6 +236,9 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
     await logoutMatrixClient({ baseUrl: secret.baseUrl });
     clearAuthStorage();
+    secureReset(authConstants.yomaKey.ACCESS_TOKEN);
+    secureReset(authConstants.yomaKey.REFRESH_TOKEN);
+    secureReset(authConstants.yomaKey.EXPIRES_AT);
     setIsLoggedIn(false);
     setCredentialId('');
     setAddress(null);

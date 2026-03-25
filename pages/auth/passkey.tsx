@@ -71,12 +71,15 @@ export default function SSOCallbackPage() {
       const userInfo = await validateIdToken(tokens.id_token);
       console.log('[SSO] User info:', userInfo);
 
-      // Stage SSO data in sessionStorage (promoted to Redux after passkey blocking completes)
+      // Stage SSO data in sessionStorage (promoted to Redux + secure storage after passkey blocking completes)
       savePendingSSO({
         idToken: tokens.id_token,
         email: userInfo.email,
         name: userInfo.name,
         picture: userInfo.picture,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        expiresAt: Date.now() + tokens.expires_in * 1000,
       });
 
       // SSO gate passed — proceed to passkey flow
