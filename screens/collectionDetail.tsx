@@ -80,6 +80,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const { collections: protocolCollections } = useProtocolCollections(entityDid);
   const collection = protocolCollections.find((c) => c.collectionId === collectionId);
 
+  const isExpired = !!collection?.endDate && new Date(collection.endDate).getTime() !== 0 && new Date(collection.endDate) < new Date();
+  const hasStarted = !collection?.startDate || new Date(collection.startDate).getTime() === 0 || new Date(collection.startDate) <= new Date();
+  const isCollectionOpen = hasStarted && !isExpired;
+
   function addAuth(auth: string) {
     if (authsRef.current.includes(auth)) return;
     authsRef.current.push(auth);
@@ -541,8 +545,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const isAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
   const hasPendingBid = !isAgent && bids.length > 0;
   const dataLoading = authzLoading || bidsLoading || claimsLoading;
-  const showApplyButton = !dataLoading && !isAgent && !hasPendingBid;
-  const showNewClaimButton = !dataLoading && isAgent;
+  const showApplyButton = !dataLoading && !isAgent && !hasPendingBid && isCollectionOpen;
+  const showNewClaimButton = !dataLoading && isAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
 
   const collectionName = collection?.formName || `Collection ${collectionId}`;
@@ -591,52 +595,50 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               justifyContent: 'center',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
-              <button
-                onClick={() => router.push(`/entities/${entityDid}`)}
-                aria-label='Go back'
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexShrink: 0,
-                }}
+            <button
+              onClick={() => router.push(`/entities/${entityDid}`)}
+              aria-label='Go back to claim collections'
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                margin: '0 0 6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '13px',
+                fontWeight: 400,
+                lineHeight: 1.2,
+              }}
+            >
+              <svg
+                width='14'
+                height='14'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2.5'
+                strokeLinecap='round'
+                strokeLinejoin='round'
               >
-                <svg
-                  width='20'
-                  height='20'
-                  viewBox='0 0 24 24'
-                  fill='none'
-                  stroke='currentColor'
-                  strokeWidth='2'
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                >
-                  <polyline points='15 18 9 12 15 6' />
-                </svg>
-              </button>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  color: '#fff',
-                  letterSpacing: '-0.3px',
-                  lineHeight: 1.2,
-                }}
-              >
-                {collectionName}
-              </h1>
-            </div>
-            {collection && (
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-                {quota ? `${submitted}/${quota}` : submitted} submitted
-              </p>
-            )}
+                <polyline points='15 18 9 12 15 6' />
+              </svg>
+              Claim Collections
+            </button>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: '20px',
+                fontWeight: 600,
+                color: '#fff',
+                letterSpacing: '-0.3px',
+                lineHeight: 1.2,
+              }}
+            >
+              {collectionName}
+            </h1>
           </div>
 
           {/* Status banner for non-agents */}
@@ -765,6 +767,32 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
         </main>
 
         {/* Bottom action */}
+        {!dataLoading && !isCollectionOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '12px 16px',
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+              display: 'flex',
+              justifyContent: 'center',
+              zIndex: 2,
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+              }}
+            >
+              {isExpired ? 'Collection has ended' : 'Collection has not started yet'}
+            </p>
+          </div>
+        )}
         {(showApplyButton || showNewClaimButton) && (
           <div
             style={{

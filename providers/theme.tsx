@@ -13,7 +13,7 @@ export const ThemeProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     const accentColor = localStorage.getItem('jambo-accent-color');
     if (accentColor) {
       document.documentElement.style.setProperty('--accent-color', accentColor);
-      document.documentElement.style.setProperty('--blue-primary', accentColor);
+      // document.documentElement.style.setProperty('--blue-primary', accentColor);
     }
   }, []);
 
