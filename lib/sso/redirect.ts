@@ -5,7 +5,7 @@ function generateState(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   const state = Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
-  sessionStorage.setItem('sso_state', state);
+  localStorage.setItem('sso_state', JSON.stringify({ value: state, ts: Date.now() }));
   return state;
 }
 

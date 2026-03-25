@@ -21,14 +21,23 @@ export async function generatePKCE(state: string): Promise<{ codeVerifier: strin
   const digest = await sha256(codeVerifier);
   const codeChallenge = base64UrlEncode(digest);
 
-  sessionStorage.setItem(`sso_verifier_${state}`, codeVerifier);
+  localStorage.setItem(`sso_verifier_${state}`, JSON.stringify({ value: codeVerifier, ts: Date.now() }));
 
   return { codeVerifier, codeChallenge };
 }
 
+const SSO_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 export function getCodeVerifier(state: string): string | null {
   const key = `sso_verifier_${state}`;
-  const verifier = sessionStorage.getItem(key);
-  sessionStorage.removeItem(key);
-  return verifier;
+  const raw = localStorage.getItem(key);
+  localStorage.removeItem(key);
+  if (!raw) return null;
+  try {
+    const { value, ts } = JSON.parse(raw);
+    if (Date.now() - ts > SSO_TTL_MS) return null;
+    return value;
+  } catch {
+    return null;
+  }
 }

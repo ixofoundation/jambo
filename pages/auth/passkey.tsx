@@ -36,12 +36,26 @@ export default function SSOCallbackPage() {
 
   async function handleCallback(code: string, state: string) {
     try {
-      // Validate state (CSRF protection)
-      const savedState = sessionStorage.getItem('sso_state');
+      // Validate state (CSRF protection) with TTL
+      const raw = localStorage.getItem('sso_state');
+      localStorage.removeItem('sso_state');
+      if (!raw) {
+        throw new Error('Missing SSO state. Please try logging in again.');
+      }
+      let savedState: string;
+      try {
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.ts > 10 * 60 * 1000) {
+          throw new Error('SSO session expired. Please try logging in again.');
+        }
+        savedState = parsed.value;
+      } catch (e: any) {
+        if (e.message?.includes('expired')) throw e;
+        throw new Error('Invalid SSO state. Please try logging in again.');
+      }
       if (state !== savedState) {
         throw new Error('Invalid state parameter — possible CSRF attack.');
       }
-      sessionStorage.removeItem('sso_state');
 
       // Retrieve PKCE code verifier
       const codeVerifier = getCodeVerifier(state);
