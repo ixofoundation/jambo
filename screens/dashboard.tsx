@@ -5,6 +5,7 @@ import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { useAuth } from '@hooks/useAuth';
+import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector } from '@store/hooks';
 import Header from '@components/Header/Header';
@@ -13,6 +14,7 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
+import { getMatrixOpenIdToken } from '@utils/matrix';
 
 function readableStatus(status?: number): string {
   if (status === 0) return 'Created';
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const entityDid = router.query.entityId as string | undefined;
 
   const authContext = useAuth();
+  const { awaitCompletion } = useBackgroundSetup();
   const did = authContext.did!;
   const address = authContext.address!;
 
@@ -56,10 +59,14 @@ export default function Dashboard() {
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
 
   function getBidBotClient() {
-    if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
+    const token = secret.accessToken as string;
+    if (bidBotClientRef.current?.bid && token) return bidBotClientRef.current;
+    bidBotClientRef.current = undefined;
+    if (!token) return null;
     bidBotClientRef.current = createMatrixBidBotClient({
+      homeServerUrl: process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL!,
       botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
-      accessToken: secret.accessToken as string,
+      accessToken: token,
     });
     return bidBotClientRef.current;
   }
@@ -70,12 +77,16 @@ export default function Dashboard() {
     let cancelled = false;
     async function checkStatuses() {
       try {
+        await awaitCompletion();
+        if (cancelled) return;
+
         const queryClient = await createQueryClient(CHAIN_RPC_URL);
         const { grants } = await queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address });
         const typedGrants = grants as GrantAuthorization[];
 
         const statuses: Record<string, 'agent' | 'pending' | 'unauthorized'> = {};
         const bidClient = getBidBotClient();
+        const openIdToken = bidClient ? await getMatrixOpenIdToken() : undefined;
         const registry = createRegistry();
 
         await Promise.all(
@@ -95,13 +106,17 @@ export default function Dashboard() {
               statuses[c.collectionId] = 'agent';
               return;
             }
-            try {
-              const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did);
-              if (response.data?.length > 0) {
-                statuses[c.collectionId] = 'pending';
-                return;
+            if (bidClient) {
+              try {
+                const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did, openIdToken!, did);
+                if (response.data?.length > 0) {
+                  statuses[c.collectionId] = 'pending';
+                  return;
+                }
+              } catch (err) {
+                console.warn(`[Dashboard] Bid query failed for collection ${c.collectionId}:`, err);
               }
-            } catch {}
+            }
             statuses[c.collectionId] = 'unauthorized';
           }),
         );
@@ -110,7 +125,8 @@ export default function Dashboard() {
           setCollectionStatus(statuses);
           setStatusLoading(false);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[Dashboard] checkStatuses error:', err);
         if (!cancelled) setStatusLoading(false);
       }
     }

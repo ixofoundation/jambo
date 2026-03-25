@@ -20,6 +20,7 @@ import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getServiceEndpoint, cleanUrlString } from '@utils/url';
 import { themeJson } from '@constants/surveyTheme';
 import { secret } from '@utils/secrets';
+import { getMatrixOpenIdToken } from '@utils/matrix';
 import {
   resolveUserMatrixRoomId,
   fetchEncryptedSigningMnemonic,
@@ -66,6 +67,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [pinMode, setPinMode] = useState<'hidden' | 'prompt'>('hidden');
   const [pinEncryptedMnemonic, setPinEncryptedMnemonic] = useState<string | undefined>();
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const claimCollectionIdRef = useRef<string>(collectionId);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,7 +108,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   useEffect(() => {
     if (surveyTemplate) {
+      // @ts-ignore
       import('survey-core/defaultV2.min.css');
+      // @ts-ignore
       import('survey-core/themes/borderless-dark');
     }
   }, [surveyTemplate]);
@@ -158,19 +162,27 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   }
 
   function getBidBotClient() {
-    if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
+    const token = secret.accessToken as string;
+    if (bidBotClientRef.current?.bid && token) return bidBotClientRef.current;
+    bidBotClientRef.current = undefined;
+    if (!token) return null;
     bidBotClientRef.current = createMatrixBidBotClient({
+      homeServerUrl: process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL!,
       botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
-      accessToken: secret.accessToken as string,
+      accessToken: token,
     });
     return bidBotClientRef.current;
   }
 
   function getClaimBotClient() {
-    if (claimBotClientRef.current?.claim) return claimBotClientRef.current;
+    const token = secret.accessToken as string;
+    if (claimBotClientRef.current?.claim && token) return claimBotClientRef.current;
+    claimBotClientRef.current = undefined;
+    if (!token) return null;
     claimBotClientRef.current = createMatrixClaimBotClient({
+      homeServerUrl: process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL!,
       botUrl: process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!,
-      accessToken: secret.accessToken as string,
+      accessToken: token,
     });
     return claimBotClientRef.current;
   }
@@ -186,11 +198,18 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   async function fetchBids() {
     try {
       setBidsLoading(true);
+      await awaitCompletion();
+      if (cancelledRef.current) return;
       const client = getBidBotClient();
-      const response = await client.bid.v1beta1.queryBidsByDid(collectionId, did);
+      if (!client) {
+        console.warn('[CollectionDetail] No Matrix access token available; skipping bid fetch');
+        return;
+      }
+      const openIdToken = await getMatrixOpenIdToken();
+      const response = await client.bid.v1beta1.queryBidsByDid(collectionId, did, openIdToken, did);
       setBids(response.data ?? []);
-    } catch {
-      // silent fail
+    } catch (err) {
+      console.warn('[CollectionDetail] fetchBids error:', err);
     } finally {
       setBidsLoading(false);
     }
@@ -210,27 +229,26 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   async function handleApplyAsAgent() {
     try {
+      setIsApplying(true);
       setFormError(null);
       const col = await fetchCollectionByCollectionId(collectionId);
       const protocolEntity = await fetchProtocolEntity(col.protocol);
-      const entities = ([] as any[]).concat(protocolEntity);
-      const endpoint = entities
-        .map((e: any) =>
-          e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#bco')),
-        )
-        .find((r: any) => r?.serviceEndpoint);
-      if (!endpoint?.serviceEndpoint) throw new Error('Application form not found');
-      const entity = entities.find((e: any) =>
-        e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#bco')),
+      const endpoint = protocolEntity?.linkedResource?.find(
+        (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#bco') || r?.id?.includes('#vct'),
       );
-      const url = getServiceEndpoint(endpoint.serviceEndpoint, entity?.service);
+      if (!endpoint?.serviceEndpoint) throw new Error('Application form not found');
+      const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
       const formData = await getAdditionalInfo(url);
       setSurveyTemplate(JSON.stringify(formData));
       setSurveyMode('bid');
       surveyHasChangesRef.current = false;
       requestAnimationFrame(() => setSurveyVisible(true));
     } catch (err) {
-      setFormError((err as Error).message);
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Something went wrong');
+      toast.error(message || 'Something went wrong');
+    } finally {
+      setIsApplying(false);
     }
   }
 
@@ -238,7 +256,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     try {
       setFormError(null);
       const client = getClaimBotClient();
-      const response = await client.claim.v1beta1.queryClaim(collectionId, claim.claimId);
+      const openIdToken = await getMatrixOpenIdToken();
+      const response = await client!?.claim.v1beta1.queryClaim(collectionId, claim.claimId, openIdToken, did);
       let claimData: Record<string, any> = {};
       if (response) {
         let parsed = typeof response === 'string' ? JSON.parse(response) : response;
@@ -270,7 +289,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       surveyHasChangesRef.current = false;
       requestAnimationFrame(() => setSurveyVisible(true));
     } catch (err) {
-      setFormError((err as Error).message);
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Something went wrong');
+      toast.error(message || 'Something went wrong');
     }
   }
 
@@ -300,7 +321,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       surveyHasChangesRef.current = false;
       requestAnimationFrame(() => setSurveyVisible(true));
     } catch (err) {
-      setFormError((err as Error).message);
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Something went wrong');
+      toast.error(message || 'Something went wrong');
     }
   }
 
@@ -326,127 +349,147 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   const survey = useMemo(() => {
     if (!surveyTemplate || !surveyMode) return undefined;
-    const parsed = JSON.parse(surveyTemplate);
-    const model = new Model(parsed?.question ?? parsed);
-    model.applyTheme(themeJson);
-    model.allowCompleteSurveyAutomatic = false;
+    try {
+      const parsed = JSON.parse(surveyTemplate);
+      console.log('parsed survey template', parsed);
+      const model = new Model(parsed?.question ?? parsed);
+      model.applyTheme(themeJson);
+      model.allowCompleteSurveyAutomatic = false;
 
-    // View mode — read-only with pre-filled data
-    if (surveyMode === 'view') {
-      if (viewClaimData) model.data = viewClaimData;
-      model.mode = 'display';
-      model.showNavigationButtons = 'none' as any;
-      return model;
-    }
-
-    // Restore draft data if available
-    if (draft?.surveyData && draft.surveyMode === surveyMode) {
-      model.data = draft.surveyData;
-    }
-
-    function preventComplete(sender: any, options: any) {
-      options.allowComplete = false;
-      submitForm(sender);
-    }
-
-    async function submitForm(sender: any) {
-      model.onCompleting.remove(preventComplete);
-      model.completeText = 'Submitting...';
-      try {
-        await awaitCompletion();
-        if (surveyMode === 'bid') {
-          const client = getBidBotClient();
-          const response = await client.bid.v1beta1.submitBid(collectionId, JSON.stringify(sender.data), 'SA');
-          if (!response.id) throw new Error('Failed to submit application');
-        } else {
-          const homeServerUrl = secret.baseUrl as string;
-          const accessToken = secret.accessToken as string;
-
-          // 1. Resolve Matrix room
-          const roomId = await resolveUserMatrixRoomId(address, accessToken, homeServerUrl);
-
-          // 2. Fetch encrypted signing mnemonic from room state
-          const existingEncrypted = await fetchEncryptedSigningMnemonic(roomId, accessToken, homeServerUrl);
-
-          // 3. Prompt for PIN
-          const pin = await requestPin('pin-only');
-
-          // 4. Decrypt or generate signing mnemonic
-          let signingMnemonic: string;
-          if (existingEncrypted) {
-            signingMnemonic = decryptSigningMnemonic(existingEncrypted, pin);
-            if (!signingMnemonic) throw new Error('Failed to decrypt signing mnemonic - incorrect PIN');
-          } else {
-            signingMnemonic = generateSigningMnemonic();
-            await storeEncryptedSigningMnemonic(roomId, signingMnemonic, pin, accessToken, homeServerUrl);
-          }
-
-          // 5. Derive Ed25519 key pair
-          const keyPair = deriveEd25519KeyPairFromMnemonic(signingMnemonic);
-          const pubKeyBase58 = base58.encode(keyPair.publicKey);
-
-          // 6. Register Ed25519 VM on IID if needed
-          const hasVm = await hasEd25519VerificationMethod(did, pubKeyBase58);
-          if (!hasVm) {
-            const addVmMsg = buildAddEd25519VerificationMsg(did, keyPair.publicKey, address);
-            await onSign([addVmMsg]);
-          }
-
-          // 7-8. Create Veramo agent and sign VC
-          const agent = await createVeramoAgent(keyPair, did);
-          const signedVC = await signClaimCredential(agent, did, sender.data);
-
-          // 9. Save signed VC to claim bot
-          const client = getClaimBotClient();
-          const col = await fetchCollectionByCollectionId(collectionId);
-          const response = await client.claim.v1beta1.saveClaim(collectionId, JSON.stringify(signedVC));
-          if (!response.data.cid) throw new Error('Failed to submit claim');
-
-          // 10-11. Submit claim to blockchain
-          const message = {
-            typeUrl: '/cosmos.authz.v1beta1.MsgExec',
-            value: cosmos.authz.v1beta1.MsgExec.fromPartial({
-              grantee: address,
-              msgs: [
-                {
-                  typeUrl: '/ixo.claims.v1beta1.MsgSubmitClaim',
-                  value: ixo.claims.v1beta1.MsgSubmitClaim.encode({
-                    adminAddress: col.admin as string,
-                    agentAddress: address,
-                    agentDid: did,
-                    claimId: response.data.cid as string,
-                    collectionId: collectionId,
-                    useIntent: false,
-                    amount: [],
-                    cw20Payment: [],
-                  }).finish(),
-                },
-              ] as any[],
-            }),
-          };
-          await onSign([message]);
-        }
-        // Success — clear draft and close
-        dispatch(clearDraft(collectionId));
-        sender.doComplete();
-        doCloseSurvey();
-        fetchBids();
-        fetchMyClaims();
-      } catch (err) {
-        toast.error((err as Error).message);
-        console.error('error', err);
-        model.completeText = 'Try again';
-        model.onCompleting.add(preventComplete);
+      // View mode — read-only with pre-filled data
+      if (surveyMode === 'view') {
+        if (viewClaimData) model.data = viewClaimData;
+        model.mode = 'display';
+        model.showNavigationButtons = 'none' as any;
+        return model;
       }
+
+      // Restore draft data if available
+      if (draft?.surveyData && draft.surveyMode === surveyMode) {
+        model.data = draft.surveyData;
+      }
+
+      function preventComplete(sender: any, options: any) {
+        options.allowComplete = false;
+        submitForm(sender);
+      }
+
+      async function submitForm(sender: any) {
+        model.onCompleting.remove(preventComplete);
+        model.completeText = 'Submitting...';
+        try {
+          await awaitCompletion();
+          if (surveyMode === 'bid') {
+            const client = getBidBotClient();
+            const openIdToken = await getMatrixOpenIdToken();
+            const response = await client!?.bid.v1beta1.submitBid(
+              collectionId,
+              JSON.stringify(sender.data),
+              'SA',
+              openIdToken,
+              did,
+            );
+            if (!response.id) throw new Error('Failed to submit application');
+          } else {
+            const homeServerUrl = secret.baseUrl as string;
+            const accessToken = secret.accessToken as string;
+
+            // 1. Resolve Matrix room
+            const roomId = await resolveUserMatrixRoomId(address, accessToken, homeServerUrl);
+
+            // 2. Fetch encrypted signing mnemonic from room state
+            const existingEncrypted = await fetchEncryptedSigningMnemonic(roomId, accessToken, homeServerUrl);
+
+            // 3. Prompt for PIN
+            const pin = await requestPin('pin-only');
+
+            // 4. Decrypt or generate signing mnemonic
+            let signingMnemonic: string;
+            if (existingEncrypted) {
+              signingMnemonic = decryptSigningMnemonic(existingEncrypted, pin);
+              if (!signingMnemonic) throw new Error('Failed to decrypt signing mnemonic - incorrect PIN');
+            } else {
+              signingMnemonic = generateSigningMnemonic();
+              await storeEncryptedSigningMnemonic(roomId, signingMnemonic, pin, accessToken, homeServerUrl);
+            }
+
+            // 5. Derive Ed25519 key pair
+            const keyPair = deriveEd25519KeyPairFromMnemonic(signingMnemonic);
+            const pubKeyBase58 = base58.encode(keyPair.publicKey);
+
+            // 6. Register Ed25519 VM on IID if needed
+            const hasVm = await hasEd25519VerificationMethod(did, pubKeyBase58);
+            if (!hasVm) {
+              const addVmMsg = buildAddEd25519VerificationMsg(did, keyPair.publicKey, address);
+              await onSign([addVmMsg]);
+            }
+
+            // 7-8. Create Veramo agent and sign VC
+            const agent = await createVeramoAgent(keyPair, did);
+            const signedVC = await signClaimCredential(agent, did, sender.data);
+
+            // 9. Save signed VC to claim bot
+            const client = getClaimBotClient();
+            const openIdToken = await getMatrixOpenIdToken();
+            const col = await fetchCollectionByCollectionId(collectionId);
+            const response = await client!?.claim.v1beta1.saveClaim(
+              collectionId,
+              JSON.stringify(signedVC),
+              openIdToken,
+              did,
+            );
+            if (!response.data.cid) throw new Error('Failed to submit claim');
+
+            // 10-11. Submit claim to blockchain
+            const message = {
+              typeUrl: '/cosmos.authz.v1beta1.MsgExec',
+              value: cosmos.authz.v1beta1.MsgExec.fromPartial({
+                grantee: address,
+                msgs: [
+                  {
+                    typeUrl: '/ixo.claims.v1beta1.MsgSubmitClaim',
+                    value: ixo.claims.v1beta1.MsgSubmitClaim.encode({
+                      adminAddress: col.admin as string,
+                      agentAddress: address,
+                      agentDid: did,
+                      claimId: response.data.cid as string,
+                      collectionId: collectionId,
+                      useIntent: false,
+                      amount: [],
+                      cw20Payment: [],
+                      cw1155Payment: [],
+                    }).finish(),
+                  },
+                ] as any[],
+              }),
+            };
+            await onSign([message]);
+          }
+          // Success — clear draft and close
+          dispatch(clearDraft(collectionId));
+          sender.doComplete();
+          doCloseSurvey();
+          fetchBids();
+          fetchMyClaims();
+        } catch (err) {
+          toast.error((err as Error).message);
+          console.error('error', err);
+          model.completeText = 'Try again';
+          model.onCompleting.add(preventComplete);
+        }
+      }
+
+      model.onCompleting.add(preventComplete);
+      model.completeText = 'Submit';
+
+      // Track value changes for draft saving
+      model.onValueChanged.add(handleSurveyValueChanged);
+
+      return model;
+    } catch (err) {
+      console.error('Failed to initialize survey model:', err);
+      return undefined;
     }
-
-    model.onCompleting.add(preventComplete);
-    model.completeText = 'Submit';
-
-    // Track value changes for draft saving
-    model.onValueChanged.add(handleSurveyValueChanged);
-
-    return model;
   }, [surveyTemplate, surveyMode, viewClaimData]);
 
   // Clean up value change listener when survey is destroyed
@@ -735,10 +778,12 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               flexDirection: 'column',
               alignItems: 'center',
               gap: '8px',
+              zIndex: 2,
             }}
           >
             <button
               onClick={showApplyButton ? handleApplyAsAgent : () => openClaimSurvey(hasDraft)}
+              disabled={isApplying}
               style={{
                 width: '100%',
                 maxWidth: 'var(--max-width)',
@@ -749,11 +794,18 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 color: '#fff',
                 fontSize: '15px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isApplying ? 'default' : 'pointer',
                 letterSpacing: '-0.2px',
+                opacity: isApplying ? 0.5 : 1,
               }}
             >
-              {showApplyButton ? 'Apply as Agent' : hasDraft ? 'Continue Claim' : 'New Claim'}
+              {showApplyButton
+                ? isApplying
+                  ? 'Loading...'
+                  : 'Apply as Agent'
+                : hasDraft
+                ? 'Continue Claim'
+                : 'New Claim'}
             </button>
           </div>
         )}

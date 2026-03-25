@@ -89,7 +89,7 @@ export const getAdditionalInfo = async (url: string, tag?: string) => {
   });
   if (!res.ok) {
     console.error(res);
-    throw res.statusText;
+    throw new Error(res.statusText || `Request failed with status ${res.status}`);
   }
   const data = await res.json();
   return data;
