@@ -591,8 +591,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             margin: '0 auto',
             padding: '0 16px 16px',
             paddingTop: 'calc(var(--header-height) + 8px)',
-            paddingBottom: showApplyButton || showNewClaimButton ? '80px' : '16px',
-            minHeight: '100vh',
           }}
         >
           {/* Page title section */}
@@ -773,79 +771,65 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               {formError}
             </p>
           )}
-        </main>
 
-        {/* Bottom action */}
-        {!dataLoading && !isCollectionOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '12px 16px',
-              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-              display: 'flex',
-              justifyContent: 'center',
-              zIndex: 2,
-            }}
-          >
-            <p
+          {/* Bottom action */}
+          {!dataLoading && !isCollectionOpen && (
+            <div
               style={{
-                margin: 0,
-                fontSize: '14px',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
+                marginTop: '16px',
+                display: 'flex',
+                justifyContent: 'center',
               }}
             >
-              {isExpired ? 'Collection has ended' : 'Collection has not started yet'}
-            </p>
-          </div>
-        )}
-        {(showApplyButton || showNewClaimButton) && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '12px 16px',
-              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              zIndex: 2,
-            }}
-          >
-            <button
-              onClick={showApplyButton ? handleApplyAsAgent : () => openClaimSurvey(hasDraft)}
-              disabled={isApplying}
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  color: 'var(--text-secondary)',
+                  textAlign: 'center',
+                }}
+              >
+                {isExpired ? 'Collection has ended' : 'Collection has not started yet'}
+              </p>
+            </div>
+          )}
+          {(showApplyButton || showNewClaimButton) && (
+            <div
               style={{
-                width: '100%',
-                maxWidth: 'var(--max-width)',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: 'var(--accent-color)',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: isApplying ? 'default' : 'pointer',
-                letterSpacing: '-0.2px',
-                opacity: isApplying ? 0.5 : 1,
+                marginTop: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
               }}
             >
-              {showApplyButton
-                ? isApplying
-                  ? 'Loading...'
-                  : 'Apply as Agent'
-                : hasDraft
-                ? 'Continue Claim'
-                : 'New Claim'}
-            </button>
-          </div>
-        )}
+              <button
+                onClick={showApplyButton ? handleApplyAsAgent : () => openClaimSurvey(hasDraft)}
+                disabled={isApplying}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-color)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: isApplying ? 'default' : 'pointer',
+                  letterSpacing: '-0.2px',
+                  opacity: isApplying ? 0.5 : 1,
+                }}
+              >
+                {showApplyButton
+                  ? isApplying
+                    ? 'Loading...'
+                    : 'Apply as Agent'
+                  : hasDraft
+                  ? 'Continue Claim'
+                  : 'New Claim'}
+              </button>
+            </div>
+          )}
+        </main>
       </div>
 
       {/* PIN prompt overlay */}
