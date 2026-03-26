@@ -18,6 +18,7 @@ export async function loginPasskey({ address, authnResult }: LoginPasskeyParams)
       // roomAlias: `did-ixo-${address}`,
       authnResult: authnResult,
       address,
+      rpId: process.env.NEXT_PUBLIC_AUTHN_RP_ID,
     }),
   });
 
