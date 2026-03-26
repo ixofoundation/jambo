@@ -163,6 +163,11 @@ export async function passkeyLoginBlockingFinalize(params: {
     },
   };
 
+  console.log('loginPasskey', {
+    address,
+    authResult: parsedAssertion,
+  });
+
   // Fetch encrypted mnemonic from server
   const { encryptedMnemonic } = await loginPasskey({
     address,
