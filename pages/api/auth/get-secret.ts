@@ -21,15 +21,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 				address,
 			}),
 		});
-		const data = await response.json();
 		if (!response.ok) {
-			res.status(response.status).json({
-				error: data?.message ?? 'Failed to fetch encrypted mnemonic',
-			});
-			return;
+			let message = `Upstream ${response.status}: ${response.statusText}`;
+			try {
+				const errorData = await response.json();
+				if (errorData.error || errorData.message) {
+					message = `Upstream ${response.status}: ${errorData.error || errorData.message}`;
+				}
+			} catch {
+				// response body wasn't JSON — keep the status text
+			}
+			return res.status(response.status).json({ error: message });
 		}
 
-		const { encryptedMnemonic, roomId } = data;
+		const { encryptedMnemonic, roomId } = await response.json();
 		res.json({ encryptedMnemonic, roomId, address });
 	} catch (error: any) {
 		console.error(error);

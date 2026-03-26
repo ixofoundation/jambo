@@ -15,7 +15,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch public key for encryption');
+      let message = `Upstream ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error || errorData.message) {
+          message = `Upstream ${response.status}: ${errorData.error || errorData.message}`;
+        }
+      } catch {
+        // response body wasn't JSON — keep the status text
+      }
+      return res.status(response.status).json({ error: message });
     }
 
     const data = await response.json();
