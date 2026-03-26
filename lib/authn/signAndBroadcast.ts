@@ -63,8 +63,12 @@ export async function signAndBroadcastWithPasskey({
       gasPrice: GasPrice.fromString('0.025uixo'),
     },
     {
-      getLocalData: async (k) => localStorage.getItem(k),
-      setLocalData: (k, d) => localStorage.setItem(k, d),
+      getLocalData: async (k) => {
+        const v = localStorage.getItem(k);
+        if (!v) return null;
+        try { return JSON.parse(v); } catch { return null; }
+      },
+      setLocalData: (k, d) => localStorage.setItem(k, JSON.stringify(d)),
     },
   );
 

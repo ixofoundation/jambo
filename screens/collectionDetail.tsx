@@ -19,6 +19,7 @@ import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getServiceEndpoint, cleanUrlString } from '@utils/url';
 import { themeJson } from '@constants/surveyTheme';
+import { configureFileQuestions, createAttachUploadHandler, createAttachDownloadHandler } from '@constants/surveyDefaultConfig';
 import { secret } from '@utils/secrets';
 import { getMatrixOpenIdToken } from '@utils/matrix';
 import {
@@ -360,13 +361,21 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       model.applyTheme(themeJson);
       model.allowCompleteSurveyAutomatic = false;
 
+      // Configure file questions for all modes
+      configureFileQuestions(model);
+
       // View mode — read-only with pre-filled data
       if (surveyMode === 'view') {
+        createAttachDownloadHandler(did)(model);
         if (viewClaimData) model.data = viewClaimData;
         model.mode = 'display';
         model.showNavigationButtons = 'none' as any;
         return model;
       }
+
+      // Attach upload + download handlers for claim and bid modes
+      createAttachUploadHandler(collectionId, did)(model);
+      createAttachDownloadHandler(did)(model);
 
       // Restore draft data if available
       if (draft?.surveyData && draft.surveyMode === surveyMode) {

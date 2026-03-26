@@ -21,3 +21,12 @@ export function base64urlDecode(base64url: string): ArrayBuffer {
   }
   return bytes.buffer;
 }
+
+export function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
