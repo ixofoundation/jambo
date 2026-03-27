@@ -19,7 +19,11 @@ import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getServiceEndpoint, cleanUrlString } from '@utils/url';
 import { themeJson } from '@constants/surveyTheme';
-import { configureFileQuestions, createAttachUploadHandler, createAttachDownloadHandler } from '@constants/surveyDefaultConfig';
+import {
+  configureFileQuestions,
+  createAttachUploadHandler,
+  createAttachDownloadHandler,
+} from '@constants/surveyDefaultConfig';
 import { secret } from '@utils/secrets';
 import { getMatrixOpenIdToken } from '@utils/matrix';
 import {
@@ -59,7 +63,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [surveyTemplate, setSurveyTemplate] = useState<string | undefined>();
-  const [surveyMode, setSurveyMode] = useState<'bid' | 'claim' | 'view' | null>(null);
+  const [surveyMode, setSurveyMode] = useState<'bco' | 'bev' | 'claim' | 'view' | null>(null);
   const [surveyVisible, setSurveyVisible] = useState(false);
   const [surveyClosing, setSurveyClosing] = useState(false);
   const [viewClaimData, setViewClaimData] = useState<Record<string, any> | null>(null);
@@ -68,6 +72,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [pinMode, setPinMode] = useState<'hidden' | 'prompt'>('hidden');
   const [pinEncryptedMnemonic, setPinEncryptedMnemonic] = useState<string | undefined>();
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const [hasBcoForm, setHasBcoForm] = useState(false);
+  const [hasBevForm, setHasBevForm] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
 
   const claimCollectionIdRef = useRef<string>(collectionId);
@@ -81,8 +87,14 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const { collections: protocolCollections } = useProtocolCollections(entityDid);
   const collection = protocolCollections.find((c) => c.collectionId === collectionId);
 
-  const isExpired = !!collection?.endDate && new Date(collection.endDate).getFullYear() > 1970 && new Date(collection.endDate) < new Date();
-  const hasStarted = !collection?.startDate || new Date(collection.startDate).getFullYear() <= 1970 || new Date(collection.startDate) <= new Date();
+  const isExpired =
+    !!collection?.endDate &&
+    new Date(collection.endDate).getFullYear() > 1970 &&
+    new Date(collection.endDate) < new Date();
+  const hasStarted =
+    !collection?.startDate ||
+    new Date(collection.startDate).getFullYear() <= 1970 ||
+    new Date(collection.startDate) <= new Date();
   const isCollectionOpen = hasStarted && !isExpired;
 
   function addAuth(auth: string) {
@@ -127,13 +139,17 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       if (col.admin === address) addAuth('admin');
       else removeAuth('admin');
       const queryClient = await createQueryClient(CHAIN_RPC_URL);
-      const [granteeGrants, entity] = await Promise.all([
+      const [granteeGrants, entity, protocolEntity] = await Promise.all([
         queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address }),
         fetchProtocolEntity(col.entity),
+        fetchProtocolEntity(col.protocol),
       ]);
       if (cancelledRef.current) return;
       if (entity?.owner === address) addAuth('owner');
       else removeAuth('owner');
+      const linkedResources = protocolEntity?.linkedResource ?? [];
+      setHasBcoForm(linkedResources.some((r: any) => r?.id?.includes('#bco')));
+      setHasBevForm(linkedResources.some((r: any) => r?.id?.includes('#bev')));
       const grants = granteeGrants.grants as GrantAuthorization[];
       const registry = createRegistry();
       const targetCollectionId = claimCollectionIdRef.current;
@@ -245,7 +261,31 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
       const formData = await getAdditionalInfo(url);
       setSurveyTemplate(JSON.stringify(formData));
-      setSurveyMode('bid');
+      setSurveyMode('bco');
+      surveyHasChangesRef.current = false;
+      requestAnimationFrame(() => setSurveyVisible(true));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setFormError(message || 'Something went wrong');
+      toast.error(message || 'Something went wrong');
+    } finally {
+      setIsApplying(false);
+    }
+  }
+
+  async function handleApplyAsEvalAgent() {
+    try {
+      setIsApplying(true);
+      setFormError(null);
+      const col = await fetchCollectionByCollectionId(collectionId);
+      const protocolEntity = await fetchProtocolEntity(col.protocol);
+      console.log('protocolEntity', protocolEntity);
+      const endpoint = protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#bev'));
+      if (!endpoint?.serviceEndpoint) throw new Error('Evaluation agent application form not found');
+      const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
+      const formData = await getAdditionalInfo(url);
+      setSurveyTemplate(JSON.stringify(formData));
+      setSurveyMode('bev');
       surveyHasChangesRef.current = false;
       requestAnimationFrame(() => setSurveyVisible(true));
     } catch (err) {
@@ -392,13 +432,14 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
         model.completeText = 'Submitting...';
         try {
           await awaitCompletion();
-          if (surveyMode === 'bid') {
+          if (surveyMode === 'bco' || surveyMode === 'bev') {
             const client = getBidBotClient();
             const openIdToken = await getMatrixOpenIdToken();
+            const role = surveyMode === 'bev' ? 'EA' : 'SA';
             const response = await client!?.bid.v1beta1.submitBid(
               collectionId,
               JSON.stringify(sender.data),
-              'SA',
+              role,
               openIdToken,
               did,
             );
@@ -551,11 +592,16 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     doCloseSurvey();
   }
 
-  const isAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
-  const hasPendingBid = !isAgent && bids.length > 0;
+  const isServiceAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
+  const isEvalAgent = auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization);
+  const saBids = bids.filter((b: any) => b.role === 'SA');
+  const eaBids = bids.filter((b: any) => b.role === 'EA');
+  const hasPendingSaBid = !isServiceAgent && saBids.length > 0;
+  const hasPendingEaBid = !isEvalAgent && eaBids.length > 0;
   const dataLoading = authzLoading || bidsLoading || claimsLoading;
-  const showApplyButton = !dataLoading && !isAgent && !hasPendingBid && isCollectionOpen;
-  const showNewClaimButton = !dataLoading && isAgent && isCollectionOpen;
+  const showApplySaButton = !dataLoading && !isServiceAgent && !hasPendingSaBid && isCollectionOpen && hasBcoForm;
+  const showApplyEaButton = !dataLoading && !isEvalAgent && !hasPendingEaBid && isCollectionOpen && hasBevForm;
+  const showNewClaimButton = !dataLoading && isServiceAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
 
   const collectionName = collection?.formName || `Collection ${collectionId}`;
@@ -663,7 +709,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             </div>
           )}
 
-          {!dataLoading && !isAgent && !hasPendingBid && (
+          {!dataLoading && !isServiceAgent && !hasPendingSaBid && !isEvalAgent && !hasPendingEaBid && (showApplySaButton || showApplyEaButton) && (
             <div
               style={{
                 padding: '20px',
@@ -674,12 +720,16 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               }}
             >
               <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                Apply as a service agent to start submitting claims.
+                {showApplySaButton && showApplyEaButton
+                  ? 'Apply as a service agent or evaluation agent to get started.'
+                  : showApplySaButton
+                  ? 'Apply as a service agent to start submitting claims.'
+                  : 'Apply as an evaluation agent to get started.'}
               </p>
             </div>
           )}
 
-          {!dataLoading && hasPendingBid && (
+          {!dataLoading && (hasPendingSaBid || hasPendingEaBid) && (
             <div
               style={{
                 padding: '20px',
@@ -687,19 +737,67 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 backgroundColor: 'var(--bg-secondary)',
                 border: '1px solid var(--border-color)',
                 textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
               }}
             >
-              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                Application pending
-              </p>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Your agent application is being reviewed.
-              </p>
+              {hasPendingSaBid && (
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                    Service agent application pending
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Your service agent application is being reviewed.
+                  </p>
+                </div>
+              )}
+              {hasPendingEaBid && (
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                    Evaluation agent application pending
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Your evaluation agent application is being reviewed.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!dataLoading && isEvalAgent && !isServiceAgent && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '16px',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--green-primary)',
+                  backgroundColor: 'color-mix(in srgb, var(--green-primary) 12%, transparent)',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Evaluation Agent
+              </span>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                You are an approved evaluation agent.
+              </span>
             </div>
           )}
 
           {/* Claims list */}
-          {!dataLoading && isAgent && (
+          {!dataLoading && isServiceAgent && (
             <>
               {claims.length === 0 ? (
                 <div
@@ -793,7 +891,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               </p>
             </div>
           )}
-          {(showApplyButton || showNewClaimButton) && (
+          {(showApplySaButton || showApplyEaButton || showNewClaimButton) && (
             <div
               style={{
                 marginTop: '16px',
@@ -802,31 +900,67 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 gap: '8px',
               }}
             >
-              <button
-                onClick={showApplyButton ? handleApplyAsAgent : () => openClaimSurvey(hasDraft)}
-                disabled={isApplying}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: 'var(--accent-color)',
-                  color: '#fff',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: isApplying ? 'default' : 'pointer',
-                  letterSpacing: '-0.2px',
-                  opacity: isApplying ? 0.5 : 1,
-                }}
-              >
-                {showApplyButton
-                  ? isApplying
-                    ? 'Loading...'
-                    : 'Apply as Agent'
-                  : hasDraft
-                  ? 'Continue Claim'
-                  : 'New Claim'}
-              </button>
+              {showNewClaimButton && (
+                <button
+                  onClick={() => openClaimSurvey(hasDraft)}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'var(--accent-color)',
+                    color: '#fff',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    letterSpacing: '-0.2px',
+                  }}
+                >
+                  {hasDraft ? 'Continue Claim' : 'New Claim'}
+                </button>
+              )}
+              {showApplySaButton && (
+                <button
+                  onClick={handleApplyAsAgent}
+                  disabled={isApplying}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'var(--accent-color)',
+                    color: '#fff',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: isApplying ? 'default' : 'pointer',
+                    letterSpacing: '-0.2px',
+                    opacity: isApplying ? 0.5 : 1,
+                  }}
+                >
+                  {isApplying ? 'Loading...' : 'Apply as Service Agent'}
+                </button>
+              )}
+              {showApplyEaButton && (
+                <button
+                  onClick={handleApplyAsEvalAgent}
+                  disabled={isApplying}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--accent-color)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--accent-color)',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: isApplying ? 'default' : 'pointer',
+                    letterSpacing: '-0.2px',
+                    opacity: isApplying ? 0.5 : 1,
+                  }}
+                >
+                  {isApplying ? 'Loading...' : 'Apply as Evaluation Agent'}
+                </button>
+              )}
             </div>
           )}
         </main>
@@ -948,8 +1082,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             >
               {surveyMode === 'view'
                 ? `Claim #${viewClaimId ?? ''}`
-                : surveyMode === 'bid'
-                ? 'Apply as Agent'
+                : surveyMode === 'bco'
+                ? 'Apply as Service Agent'
+                : surveyMode === 'bev'
+                ? 'Apply as Evaluation Agent'
                 : hasDraft
                 ? 'Continue Claim'
                 : 'New Claim'}

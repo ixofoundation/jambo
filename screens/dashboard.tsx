@@ -33,6 +33,8 @@ function readableType(type?: string): string {
   return last.charAt(0).toUpperCase() + last.slice(1);
 }
 
+type RoleStatus = 'agent' | 'pending' | 'none';
+
 export default function Dashboard() {
   const router = useRouter();
   const entityDid = router.query.entityId as string | undefined;
@@ -61,8 +63,8 @@ export default function Dashboard() {
     }
   }, [entityDid, entity?.type, profile?.type, dispatch]);
 
-  // Per-collection authz status: 'agent' | 'pending' | 'unauthorized' | undefined (loading)
-  const [collectionStatus, setCollectionStatus] = useState<Record<string, 'agent' | 'pending' | 'unauthorized'>>({});
+  // Per-collection authz status for SA and EA independently
+  const [collectionStatus, setCollectionStatus] = useState<Record<string, { sa: RoleStatus; ea: RoleStatus }>>({});
   const [statusLoading, setStatusLoading] = useState(true);
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
 
@@ -92,41 +94,48 @@ export default function Dashboard() {
         const { grants } = await queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address });
         const typedGrants = grants as GrantAuthorization[];
 
-        const statuses: Record<string, 'agent' | 'pending' | 'unauthorized'> = {};
+        const statuses: Record<string, { sa: RoleStatus; ea: RoleStatus }> = {};
         const bidClient = getBidBotClient();
         const openIdToken = bidClient ? await getMatrixOpenIdToken() : undefined;
         const registry = createRegistry();
 
+        function grantMatchesCollection(g: GrantAuthorization, typeUrl: string, admin: string, colId: string): boolean {
+          if (g.authorization?.typeUrl !== typeUrl || g.granter !== admin) return false;
+          try {
+            const decoded = registry.decode(g.authorization);
+            const constraints = decoded.constraints ?? [];
+            if (constraints.length === 0) return true;
+            return constraints.some((con: any) => con.collectionId === colId);
+          } catch {
+            return false;
+          }
+        }
+
         await Promise.all(
           protocolCollections.map(async (c) => {
-            const hasSubmit = typedGrants?.find((g) => {
-              if (g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization || g.granter !== c.admin)
-                return false;
-              try {
-                const decoded = registry.decode(g.authorization);
-                const constraints = decoded.constraints ?? [];
-                if (constraints.length === 0) return true;
-                return constraints.some((con: any) => con.collectionId === c.collectionId);
-              } catch {
-                return false;
-              }
-            });
-            if (hasSubmit) {
-              statuses[c.collectionId] = 'agent';
-              return;
-            }
-            if (bidClient) {
+            const hasSubmit = typedGrants?.find((g) =>
+              grantMatchesCollection(g, TRANSACTION_TYPES.SubmitClaimAuthorization, c.admin, c.collectionId),
+            );
+            const hasEval = typedGrants?.find((g) =>
+              grantMatchesCollection(g, TRANSACTION_TYPES.EvaluateClaimAuthorization, c.admin, c.collectionId),
+            );
+
+            let saStatus: RoleStatus = hasSubmit ? 'agent' : 'none';
+            let eaStatus: RoleStatus = hasEval ? 'agent' : 'none';
+
+            // Check bids for pending roles
+            if (bidClient && (saStatus === 'none' || eaStatus === 'none')) {
               try {
                 const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did, openIdToken!, did);
-                if (response.data?.length > 0) {
-                  statuses[c.collectionId] = 'pending';
-                  return;
-                }
+                const bidData = response.data ?? [];
+                if (saStatus === 'none' && bidData.some((b: any) => b.role === 'SA')) saStatus = 'pending';
+                if (eaStatus === 'none' && bidData.some((b: any) => b.role === 'EA')) eaStatus = 'pending';
               } catch (err) {
                 console.warn(`[Dashboard] Bid query failed for collection ${c.collectionId}:`, err);
               }
             }
-            statuses[c.collectionId] = 'unauthorized';
+
+            statuses[c.collectionId] = { sa: saStatus, ea: eaStatus };
           }),
         );
 
@@ -146,28 +155,34 @@ export default function Dashboard() {
     };
   }, [address, did, protocolCollections, collectionsLoading]);
 
-  function statusBadge(status?: 'agent' | 'pending' | 'unauthorized') {
+  function statusBadges(status?: { sa: RoleStatus; ea: RoleStatus }) {
     if (!status) return null;
-    const config = {
-      agent: { label: 'Agent', color: 'var(--green-primary)' },
-      pending: { label: 'Pending', color: 'var(--yellow-primary)' },
-      unauthorized: { label: 'Unauthorized', color: 'var(--text-secondary)' },
-    }[status];
+    const badges: { label: string; color: string }[] = [];
+    if (status.sa === 'agent') badges.push({ label: 'Service Agent', color: 'var(--green-primary)' });
+    else if (status.sa === 'pending') badges.push({ label: 'SA Pending', color: 'var(--yellow-primary)' });
+    if (status.ea === 'agent') badges.push({ label: 'Eval Agent', color: 'var(--green-primary)' });
+    else if (status.ea === 'pending') badges.push({ label: 'EA Pending', color: 'var(--yellow-primary)' });
+    if (badges.length === 0) return null;
     return (
-      <span
-        style={{
-          fontSize: '11px',
-          fontWeight: 600,
-          color: config.color,
-          backgroundColor: `color-mix(in srgb, ${config.color} 12%, transparent)`,
-          padding: '2px 8px',
-          borderRadius: '10px',
-          flexShrink: 0,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {config.label}
-      </span>
+      <>
+        {badges.map((b, i) => (
+          <span
+            key={i}
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: b.color,
+              backgroundColor: `color-mix(in srgb, ${b.color} 12%, transparent)`,
+              padding: '2px 8px',
+              borderRadius: '10px',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {b.label}
+          </span>
+        ))}
+      </>
     );
   }
 
@@ -326,7 +341,7 @@ export default function Dashboard() {
                           })}`
                         : ''}
                     </span>
-                    {!statusLoading && statusBadge(collectionStatus[c.collectionId])}
+                    {!statusLoading && statusBadges(collectionStatus[c.collectionId])}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, marginLeft: '12px' }}>
