@@ -110,3 +110,29 @@ export async function fetchClaimsByCollectionId(collectionId: string, address: s
   // @ts-ignore
   return result.data?.data?.claims?.nodes;
 }
+
+export async function fetchAllClaimsByCollectionId(collectionId: string) {
+  const query = `
+    query getAllClaimsByCollectionId {
+      claims(filter: { collectionId: { equalTo: "${collectionId}" } }) {
+        nodes {
+          claimId
+          collectionId
+          agentAddress
+          agentDid
+          paymentsStatus
+          schemaType
+          submissionDate
+          evaluationByClaimId {
+            status
+            evaluationDate
+            oracle
+          }
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery(BLOCKSYNC_URL, query);
+  // @ts-ignore
+  return result.data?.data?.claims?.nodes;
+}

@@ -6,7 +6,7 @@ import { createMatrixBidBotClient, createMatrixClaimBotClient } from '@ixo/matri
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
-import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
+import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -75,6 +75,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [hasBcoForm, setHasBcoForm] = useState(false);
   const [hasBevForm, setHasBevForm] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [allClaims, setAllClaims] = useState<any[]>([]);
+  const [allClaimsLoading, setAllClaimsLoading] = useState(false);
+  const [activeView, setActiveView] = useState<'my-claims' | 'all-claims'>('my-claims');
 
   const claimCollectionIdRef = useRef<string>(collectionId);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,6 +119,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       checkAuthz();
       fetchBids();
       fetchMyClaims();
+      fetchAllClaims();
     }
     return () => {
       cancelledRef.current = true;
@@ -245,6 +249,18 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       // silent fail
     } finally {
       setClaimsLoading(false);
+    }
+  }
+
+  async function fetchAllClaims() {
+    try {
+      setAllClaimsLoading(true);
+      const result = await fetchAllClaimsByCollectionId(collectionId);
+      setAllClaims(result ?? []);
+    } catch {
+      // silent fail
+    } finally {
+      setAllClaimsLoading(false);
     }
   }
 
@@ -525,6 +541,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           doCloseSurvey();
           fetchBids();
           fetchMyClaims();
+          fetchAllClaims();
         } catch (err) {
           toast.error((err as Error).message);
           console.error('error', err);
@@ -603,6 +620,16 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const showApplyEaButton = !dataLoading && !isEvalAgent && !hasPendingEaBid && isCollectionOpen && hasBevForm;
   const showNewClaimButton = !dataLoading && isServiceAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
+  const showClaimsList = !dataLoading && (isServiceAgent || isEvalAgent);
+  const displayedClaims = activeView === 'all-claims' ? allClaims : claims;
+  const isClaimsListLoading = activeView === 'all-claims' ? allClaimsLoading : claimsLoading;
+
+  // Default to 'all-claims' for EA-only users
+  useEffect(() => {
+    if (!authzLoading && isEvalAgent && !isServiceAgent) {
+      setActiveView('all-claims');
+    }
+  }, [authzLoading, isEvalAgent, isServiceAgent]);
 
   const collectionName = collection?.formName || `Collection ${collectionId}`;
   const submitted = collection?.count ?? 0;
@@ -796,10 +823,69 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             </div>
           )}
 
+          {/* View toggle for SA+EA users */}
+          {!dataLoading && isServiceAgent && isEvalAgent && (
+            <div
+              style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '4px',
+                backgroundColor: 'var(--card-bg-color)',
+                borderRadius: '12px',
+                marginBottom: '8px',
+              }}
+            >
+              <button
+                onClick={() => setActiveView('my-claims')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backgroundColor: activeView === 'my-claims' ? 'var(--accent-color)' : 'transparent',
+                  color: activeView === 'my-claims' ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                My Claims
+              </button>
+              <button
+                onClick={() => setActiveView('all-claims')}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backgroundColor: activeView === 'all-claims' ? 'var(--accent-color)' : 'transparent',
+                  color: activeView === 'all-claims' ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                All Claims
+              </button>
+            </div>
+          )}
+
           {/* Claims list */}
-          {!dataLoading && isServiceAgent && (
+          {showClaimsList && (
             <>
-              {claims.length === 0 ? (
+              {isClaimsListLoading ? (
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border-color)',
+                    padding: '32px 16px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading claims...</p>
+                </div>
+              ) : displayedClaims.length === 0 ? (
                 <div
                   style={{
                     backgroundColor: 'var(--bg-secondary)',
@@ -810,12 +896,12 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                   }}
                 >
                   <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    No claims yet. Submit your first claim to get started.
+                    {activeView === 'all-claims' ? 'No claims submitted yet.' : 'No claims yet. Submit your first claim to get started.'}
                   </p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {claims.map((claim: any) => {
+                  {displayedClaims.map((claim: any) => {
                     const status = statusLabel(claim);
                     return (
                       <div
@@ -832,7 +918,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                           cursor: 'pointer',
                         }}
                       >
-                        <div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                             {claim.claimId?.slice(0, 25)}...
                           </p>
@@ -841,6 +927,11 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                               month: 'short',
                               day: 'numeric',
                             })}
+                            {activeView === 'all-claims' && claim.agentAddress && (
+                              <span style={{ marginLeft: '6px', opacity: 0.7 }}>
+                                {claim.agentAddress.slice(0, 10)}...{claim.agentAddress.slice(-4)}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <span
@@ -852,6 +943,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                             color: status.color,
                             backgroundColor: status.bg,
                             whiteSpace: 'nowrap',
+                            flexShrink: 0,
                           }}
                         >
                           {status.text}
