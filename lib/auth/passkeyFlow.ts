@@ -246,6 +246,7 @@ export async function matrixLoginBackground(params: {
   // Clear backup — login background completed successfully
   secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
   secureReset(cons.secretKey.BACKGROUND_TYPE);
+  secureReset(cons.secretKey.PIN_PROVIDED);
 }
 
 // ─── Matrix Profile Sync ───────────────────────────────────────────────────
@@ -338,9 +339,10 @@ export async function registerBackground(params: {
   did: string;
   wallet?: SecpClient;
   mxMnemonicOverride?: string;
+  encryptedMnemonicOverride?: string;
   callbacks: FlowCallbacks;
 }): Promise<void> {
-  const { address, did, wallet, mxMnemonicOverride, callbacks } = params;
+  const { address, did, wallet, mxMnemonicOverride, encryptedMnemonicOverride, callbacks } = params;
 
   // Step 1: Create DID on-chain (must complete before Matrix room bot needs it)
   callbacks.onStatusUpdate('Creating your digital identity...');
@@ -452,13 +454,18 @@ export async function registerBackground(params: {
     }
   }
 
-  // Request PIN from user
-  callbacks.onStatusUpdate('PIN needed to secure your Data Vault...');
-  const pin = await callbacks.requestPin();
+  // Encrypt mnemonic (skip PIN prompt if already encrypted by auth screen)
+  let encryptedMnemonic: string;
+  if (encryptedMnemonicOverride) {
+    encryptedMnemonic = encryptedMnemonicOverride;
+  } else {
+    callbacks.onStatusUpdate('PIN needed to secure your Data Vault...');
+    const pin = await callbacks.requestPin();
+    encryptedMnemonic = encrypt(mxMnemonic, pin);
+  }
 
-  // Encrypt and store mnemonic
+  // Store encrypted mnemonic in Matrix room
   callbacks.onStatusUpdate('Securing Data Vault...');
-  const encryptedMnemonic = encrypt(mxMnemonic, pin);
   const storeResponse = await fetch(
     cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
     {
@@ -480,4 +487,6 @@ export async function registerBackground(params: {
   // Clear backup — register background completed successfully
   secureReset(cons.secretKey.MNEMONIC_BACKUP);
   secureReset(cons.secretKey.BACKGROUND_TYPE);
+  secureReset(cons.secretKey.PIN_PROVIDED);
+  secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_LOCAL);
 }

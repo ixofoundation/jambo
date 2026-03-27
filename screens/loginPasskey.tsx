@@ -6,6 +6,7 @@ import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 import Loader from '@components/Loader/Loader';
+import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { errorToast } from '@components/Toast/Toast';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
@@ -20,16 +21,18 @@ import { store } from '@store/index';
 import { setSSOSession } from '@store/slices/ssoSlice';
 import { secureSave } from '@utils/storage';
 import authConstants from '@constants/auth';
+import cons from '@constants/matrix';
 
 enum STEPS {
   loading = 0,
   address = 1,
+  pin = 2,
 }
 
 function LoginPasskey() {
   const router = useRouter();
   const auth = useAuth();
-  const { startSetup, getFlowCallbacks } = useBackgroundSetup();
+  const { startSetup } = useBackgroundSetup();
 
   const [step, setStep] = useState<STEPS>(STEPS.loading);
   const [error, setError] = useState('');
@@ -37,11 +40,16 @@ function LoginPasskey() {
   const [assertion, setAssertion] = useState<any>(null);
   const [addresses, setAddresses] = useState<AddressData[]>([]);
   const [selectedAddress, setSelectedAddress] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('Authenticating with passkey...');
 
   const initRef = useRef<boolean>(false);
+  const encryptedMnemonicRef = useRef<string>('');
+  const pinDeferredRef = useRef<{ resolve: (pin: string) => void; promise: Promise<string> } | null>(null);
+  const blockingResultRef = useRef<any>(null);
 
   const stepIsLoading = step === STEPS.loading;
   const stepIsAddress = step === STEPS.address;
+  const stepIsPin = step === STEPS.pin;
 
   useEffect(() => {
     if (!initRef.current) {
@@ -55,7 +63,10 @@ function LoginPasskey() {
     setError('');
 
     try {
-      const callbacks = getFlowCallbacks();
+      const callbacks = {
+        onStatusUpdate: (msg: string) => setLoadingMessage(msg),
+        requestPin: () => Promise.reject(new Error('PIN not expected during blocking phase')),
+      };
       const result = await passkeyLoginBlocking(callbacks);
       if (!result) {
         throw new Error('Passkey authentication failed');
@@ -119,7 +130,10 @@ function LoginPasskey() {
         return;
       }
 
-      const callbacks = getFlowCallbacks();
+      const callbacks = {
+        onStatusUpdate: (msg: string) => setLoadingMessage(msg),
+        requestPin: () => Promise.reject(new Error('PIN not expected during blocking phase')),
+      };
 
       // Blocking phase: verify DID + fetch encrypted mnemonic
       const blockingResult = await passkeyLoginBlockingFinalize({
@@ -131,39 +145,73 @@ function LoginPasskey() {
         callbacks,
       });
 
-      // Login complete (address + DID verified) — enter the app
-      auth.loginWithPasskey({
-        credentialId: blockingResult.credentialId,
-        authenticatorId: blockingResult.authenticatorId,
-        address: blockingResult.address,
-        did: blockingResult.did,
-      });
+      // Store blocking result — auth + SSO promotion deferred to handlePinSuccess
+      // (calling auth.loginWithPasskey now would set isLoggedIn=true → GuestGuard redirects away)
+      blockingResultRef.current = blockingResult;
 
-      // Promote pending SSO data to Redux (persisted) now that blocking is complete
-      const pendingSSO = loadPendingSSO();
-      if (pendingSSO) {
-        store.dispatch(setSSOSession(pendingSSO));
-        secureSave(authConstants.yomaKey.ACCESS_TOKEN, pendingSSO.accessToken);
-        if (pendingSSO.refreshToken) secureSave(authConstants.yomaKey.REFRESH_TOKEN, pendingSSO.refreshToken);
-        secureSave(authConstants.yomaKey.EXPIRES_AT, String(pendingSSO.expiresAt));
-        clearPendingSSO();
-      }
+      // Store encrypted mnemonic for PIN form validation
+      encryptedMnemonicRef.current = blockingResult.encryptedMnemonic;
 
-      // Start background Matrix setup
+      // Create deferred PIN promise for background to await
+      let resolvePin: (pin: string) => void;
+      const pinPromise = new Promise<string>((r) => { resolvePin = r; });
+      pinDeferredRef.current = { resolve: resolvePin!, promise: pinPromise };
+
+      // Start background Matrix setup (will await PIN via deferred promise)
       startSetup(() =>
         matrixLoginBackground({
           address: blockingResult.address,
           encryptedMnemonic: blockingResult.encryptedMnemonic,
-          callbacks: getFlowCallbacks(),
+          callbacks: {
+            onStatusUpdate: (msg: string) => setLoadingMessage(msg),
+            requestPin: () => pinPromise,
+          },
         }),
       );
 
-      // Navigate to app — home page handles multi-project routing
-      router.push('/');
+      // Show PIN input form on auth screen
+      setStep(STEPS.pin);
     } catch (err: any) {
       errorToast(err.message || 'Login failed');
       setTimeout(() => router.push('/auth'), 1500);
     }
+  }
+
+  function handlePinSuccess(pin: string) {
+    // Now safe to mark as logged in (PIN collected, about to navigate)
+    const br = blockingResultRef.current;
+    if (br) {
+      auth.loginWithPasskey({
+        credentialId: br.credentialId,
+        authenticatorId: br.authenticatorId,
+        address: br.address,
+        did: br.did,
+      });
+    }
+
+    // Promote pending SSO data to Redux (persisted)
+    const pendingSSO = loadPendingSSO();
+    if (pendingSSO) {
+      store.dispatch(setSSOSession(pendingSSO));
+      secureSave(authConstants.yomaKey.ACCESS_TOKEN, pendingSSO.accessToken);
+      if (pendingSSO.refreshToken) secureSave(authConstants.yomaKey.REFRESH_TOKEN, pendingSSO.refreshToken);
+      secureSave(authConstants.yomaKey.EXPIRES_AT, String(pendingSSO.expiresAt));
+      clearPendingSSO();
+    }
+
+    // Mark PIN as provided (for recovery if background is interrupted)
+    secureSave(cons.secretKey.PIN_PROVIDED, 'true');
+
+    // Resolve deferred promise so background can proceed
+    pinDeferredRef.current?.resolve(pin);
+
+    // Navigate to app
+    router.push('/');
+  }
+
+  function handlePinError(err: string) {
+    errorToast(err || 'Failed to verify Data Vault PIN.');
+    setTimeout(() => router.push('/auth'), 1500);
   }
 
   return (
@@ -194,15 +242,17 @@ function LoginPasskey() {
             backgroundColor: 'var(--bg-secondary)',
           }}
         >
-          <h1
-            style={{
-              textAlign: 'center',
-              marginBottom: '16px',
-              color: 'var(--text-primary)',
-            }}
-          >
-            Welcome
-          </h1>
+          {!stepIsPin && (
+            <h1
+              style={{
+                textAlign: 'center',
+                marginBottom: '16px',
+                color: 'var(--text-primary)',
+              }}
+            >
+              Welcome
+            </h1>
+          )}
 
           {stepIsLoading ? (
             <div
@@ -217,7 +267,7 @@ function LoginPasskey() {
             >
               {/* @ts-ignore */}
               <Loader />
-              <p style={{ marginLeft: '16px', color: 'var(--text-secondary)' }}>Authenticating with passkey...</p>
+              <p style={{ marginLeft: '16px', color: 'var(--text-secondary)' }}>{loadingMessage}</p>
             </div>
           ) : stepIsAddress ? (
             <>
@@ -286,6 +336,12 @@ function LoginPasskey() {
                 />
               </div>
             </>
+          ) : stepIsPin ? (
+            <MatrixPinForm
+              encryptedMnemonic={encryptedMnemonicRef.current}
+              onSuccess={handlePinSuccess}
+              onError={handlePinError}
+            />
           ) : null}
         </div>
       </div>

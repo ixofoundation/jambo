@@ -2,6 +2,7 @@ import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { BackgroundSetupContext, BackgroundSetupStatus, InputRequest } from '@contexts/backgroundSetup';
 import BackgroundSetupModal from '@components/BackgroundSetupModal/BackgroundSetupModal';
 import { secureLoad } from '@utils/storage';
+import { useAuth } from '@hooks/useAuth';
 import cons from '@constants/matrix';
 import { store, RootState } from '@store/index';
 import { registerBackground, matrixLoginBackground } from 'lib/auth/passkeyFlow';
@@ -11,6 +12,7 @@ interface BackgroundSetupProviderProps {
 }
 
 export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ children }) => {
+  const auth = useAuth();
   const [status, setStatus] = useState<BackgroundSetupStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -113,27 +115,46 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     const account = (store.getState() as RootState).account;
     if (!account?.address || !account?.did) return;
 
+    const pinProvided = secureLoad(cons.secretKey.PIN_PROVIDED);
+
     if (bgType === 'register') {
       const mnemonic = secureLoad(cons.secretKey.MNEMONIC_BACKUP);
       if (!mnemonic) return;
-      void runTask(() =>
-        registerBackground({
-          address: account.address!,
-          did: account.did!,
-          mxMnemonicOverride: mnemonic,
-          callbacks: { onStatusUpdate: setStatusMessage, requestPin },
-        }),
-      );
+
+      if (pinProvided) {
+        // After PIN: use local encrypted copy, skip PIN prompt
+        const encMnemonicLocal = secureLoad(cons.secretKey.ENCRYPTED_MNEMONIC_LOCAL);
+        if (!encMnemonicLocal) return;
+        void runTask(() =>
+          registerBackground({
+            address: account.address!,
+            did: account.did!,
+            mxMnemonicOverride: mnemonic,
+            encryptedMnemonicOverride: encMnemonicLocal,
+            callbacks: { onStatusUpdate: setStatusMessage, requestPin },
+          }),
+        );
+      } else {
+        // Before PIN: plain mnemonic exposed — logout for safety
+        void auth.logout();
+      }
     } else if (bgType === 'login') {
       const encMnemonic = secureLoad(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
       if (!encMnemonic) return;
-      void runTask(() =>
-        matrixLoginBackground({
-          address: account.address!,
-          encryptedMnemonic: encMnemonic,
-          callbacks: { onStatusUpdate: setStatusMessage, requestPin },
-        }),
-      );
+
+      if (pinProvided) {
+        // After PIN: resume with modal requestPin
+        void runTask(() =>
+          matrixLoginBackground({
+            address: account.address!,
+            encryptedMnemonic: encMnemonic,
+            callbacks: { onStatusUpdate: setStatusMessage, requestPin },
+          }),
+        );
+      } else {
+        // Before PIN: logout
+        void auth.logout();
+      }
     }
   }, [runTask, requestPin]);
 
