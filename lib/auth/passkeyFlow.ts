@@ -169,10 +169,21 @@ export async function passkeyLoginBlockingFinalize(params: {
   });
 
   // Fetch encrypted mnemonic from server
-  const { encryptedMnemonic } = await loginPasskey({
-    address,
-    authnResult: parsedAssertion,
-  });
+  let encryptedMnemonic: string;
+  try {
+    const result = await loginPasskey({
+      address,
+      authnResult: parsedAssertion,
+    });
+    encryptedMnemonic = result.encryptedMnemonic;
+  } catch (err: any) {
+    if (err.message === 'MNEMONIC_NOT_FOUND') {
+      throw new Error(
+        'Your account was not fully set up. Your Data Vault credentials were never saved and this account cannot be recovered. Please register a new account.',
+      );
+    }
+    throw err;
+  }
   if (!encryptedMnemonic) {
     throw new Error('Failed to login with passkey.');
   }

@@ -172,8 +172,10 @@ function LoginPasskey() {
       // Show PIN input form on auth screen
       setStep(STEPS.pin);
     } catch (err: any) {
-      errorToast(err.message || 'Login failed');
-      setTimeout(() => router.push('/auth'), 1500);
+      const message = err.message || 'Login failed';
+      const isUnrecoverable = message.includes('cannot be recovered');
+      errorToast(message);
+      setTimeout(() => router.push('/auth'), isUnrecoverable ? 6000 : 1500);
     }
   }
 

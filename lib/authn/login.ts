@@ -23,7 +23,23 @@ export async function loginPasskey({ address, authnResult }: LoginPasskeyParams)
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch encrypted mnemonic');
+    let errorMessage = 'Failed to fetch encrypted mnemonic';
+    try {
+      const errorData = await response.json();
+      if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch {
+      // response body wasn't JSON
+    }
+
+    // Room exists but mnemonic state event was never saved (unrecoverable account)
+    const isRoomAliasNotFound = errorMessage.includes('M_NOT_FOUND') && errorMessage.includes('Room alias');
+    if (response.status === 404 && !isRoomAliasNotFound) {
+      throw new Error('MNEMONIC_NOT_FOUND');
+    }
+
+    throw new Error(errorMessage);
   }
 
   const { encryptedMnemonic, roomId } = await response.json();
