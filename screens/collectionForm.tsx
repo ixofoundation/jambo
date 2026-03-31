@@ -408,7 +408,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             setSubmitting({ active: true, label: 'Waiting for PIN...' });
             const pin = await requestPin('pin-only');
 
-            setSubmitting({ active: true, label: 'Signing credential...' });
+            setSubmitting({ active: true, label: 'Signing transaction...' });
             let signingMnemonic: string;
             if (existingEncrypted) {
               signingMnemonic = decryptSigningMnemonic(existingEncrypted, pin);
