@@ -212,7 +212,7 @@ function LoginPasskey() {
   }
 
   function handlePinError(err: string) {
-    errorToast(err || 'Failed to verify Data Vault PIN.');
+    errorToast(err || 'Failed to verify Data Store PIN.');
     setTimeout(() => router.push('/auth'), 1500);
   }
 

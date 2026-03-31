@@ -84,7 +84,7 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
       // Check if SignX response includes matrix credentials
       if (!signXUser.matrix?.accessToken || !signXUser.matrix?.userId) {
         throw new Error(
-          'Data Vault credentials not found. Please ensure your IXO mobile app is properly configured with a Data Vault account.',
+          'Data Store credentials not found. Please ensure your IXO mobile app is properly configured with a Data Store account.',
         );
       }
 
@@ -180,7 +180,7 @@ function LoginWithSignX({ onLogin, onBack }: LoginWithSignXProps) {
                 >
                   IXO mobile app
                 </a>{' '}
-                to login. Make sure you allow access to your Data Vault.
+                to login. Make sure you allow access to your Data Store.
               </p>
 
               {error && (

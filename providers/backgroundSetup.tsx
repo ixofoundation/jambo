@@ -45,11 +45,11 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const runTask = useCallback(async (task: () => Promise<void>) => {
     setStatus('running');
     setError(null);
-    setStatusMessage('Setting up your Data Vault...');
+    setStatusMessage('Setting up your Data Store...');
     try {
       await task();
       setStatus('success');
-      setStatusMessage('Data Vault setup complete');
+      setStatusMessage('Data Store setup complete');
       setInputRequest(null);
     } catch (err: any) {
       console.error('Background setup error:', err);
@@ -91,7 +91,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
           setInputRequest(null);
           setShowDetails(false);
           setStatus('running');
-          setStatusMessage('Completing Data Vault setup...');
+          setStatusMessage('Completing Data Store setup...');
           resolve(value);
         },
         reject: (reason: any) => {

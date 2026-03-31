@@ -1,4 +1,4 @@
-# Matrix Data Vault
+# Matrix Data Store
 
 The app uses the Matrix protocol as a **secure, decentralized storage layer** rather than a messaging platform. Each user has a private Matrix room that stores encrypted credentials, signing mnemonics, and serves as the interface for interacting with IXO's Matrix bots.
 

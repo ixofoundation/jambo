@@ -179,7 +179,7 @@ export async function passkeyLoginBlockingFinalize(params: {
   } catch (err: any) {
     if (err.message === 'MNEMONIC_NOT_FOUND') {
       throw new Error(
-        'Your account was not fully set up. Your Data Vault credentials were never saved and this account cannot be recovered. Please register a new account.',
+        'Your account was not fully set up. Your Data Store credentials were never saved and this account cannot be recovered. Please register a new account.',
       );
     }
     throw err;
@@ -215,17 +215,17 @@ export async function matrixLoginBackground(params: {
   secureSave(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP, encryptedMnemonic);
   secureSave(cons.secretKey.BACKGROUND_TYPE, 'login');
 
-  callbacks.onStatusUpdate('PIN needed to unlock Data Vault...');
+  callbacks.onStatusUpdate('PIN needed to unlock Data Store...');
   const pin = await callbacks.requestPin(encryptedMnemonic);
 
-  callbacks.onStatusUpdate('Decrypting Data Vault credentials...');
+  callbacks.onStatusUpdate('Decrypting Data Store credentials...');
   const mxMnemonic = decrypt(encryptedMnemonic, pin);
   const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
   const mxUsername = generateUsernameFromAddress(address);
   const mxPassword = generatePasswordFromMnemonic(mxMnemonic);
   const mxPassphrase = generatePassphraseFromMnemonic(mxMnemonic);
 
-  callbacks.onStatusUpdate('Connecting to Data Vault...');
+  callbacks.onStatusUpdate('Connecting to Data Store...');
   await logoutMatrixClient({ baseUrl: homeServerUrl });
   const account = await mxLogin({
     homeServerUrl,
@@ -233,7 +233,7 @@ export async function matrixLoginBackground(params: {
     password: mxPassword,
   });
   if (!account?.accessToken) {
-    throw new Error('Failed to login to Data Vault, please try again later.');
+    throw new Error('Failed to login to Data Store, please try again later.');
   }
 
   callbacks.onStatusUpdate('Setting up encryption...');
@@ -370,7 +370,7 @@ export async function registerBackground(params: {
     }
   }
 
-  callbacks.onStatusUpdate('Generating Vault credentials...');
+  callbacks.onStatusUpdate('Generating Data Store credentials...');
   const mxMnemonic = mxMnemonicOverride || utils.mnemonic.generateMnemonic(12);
 
   // Back up mnemonic so we can resume if the user refreshes
@@ -389,7 +389,7 @@ export async function registerBackground(params: {
   // Clear residual Matrix data
   await logoutMatrixClient({ baseUrl: homeServerUrl });
 
-  callbacks.onStatusUpdate('Creating Vault account...');
+  callbacks.onStatusUpdate('Creating Data Store account...');
   let account;
   if (isUsernameAvailable && wallet) {
     account = await mxRegisterWithSecp(address, mxPassword, wallet);
@@ -399,7 +399,7 @@ export async function registerBackground(params: {
     account = await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
   }
   if (!account?.accessToken) {
-    throw new Error('Failed to register Data Vault account, please try again later.');
+    throw new Error('Failed to register Data Store account, please try again later.');
   }
 
   // Setup Matrix client
@@ -413,7 +413,7 @@ export async function registerBackground(params: {
   await syncMatrixProfileFromSSO(mxClient);
 
   // Setup cross-signing
-  callbacks.onStatusUpdate('Setting up Vault encryption...');
+  callbacks.onStatusUpdate('Setting up Data Store encryption...');
   let hasCrossSigning = hasCrossSigningAccountData(mxClient);
   if (!hasCrossSigning) {
     hasCrossSigning = await setupCrossSigning(mxClient, {
@@ -427,7 +427,7 @@ export async function registerBackground(params: {
   }
 
   // Create/join room
-  callbacks.onStatusUpdate('Creating secure Vault room...');
+  callbacks.onStatusUpdate('Creating secure Data Store room...');
   const mxRoomAlias = generateUserRoomAliasFromAddress(address, account.baseUrl);
   const queryIdResponse = await matrixApiClient.room.v1beta1.queryId(mxRoomAlias).catch(() => undefined);
   let roomId: string = queryIdResponse?.room_id ?? '';
@@ -470,13 +470,13 @@ export async function registerBackground(params: {
   if (encryptedMnemonicOverride) {
     encryptedMnemonic = encryptedMnemonicOverride;
   } else {
-    callbacks.onStatusUpdate('PIN needed to secure your Data Vault...');
+    callbacks.onStatusUpdate('PIN needed to secure your Data Store...');
     const pin = await callbacks.requestPin();
     encryptedMnemonic = encrypt(mxMnemonic, pin);
   }
 
   // Store encrypted mnemonic in Matrix room
-  callbacks.onStatusUpdate('Securing Data Vault...');
+  callbacks.onStatusUpdate('Securing Data Store...');
   const storeResponse = await fetch(
     cleanUrlString(`${homeServerUrl}/_matrix/client/r0/rooms/${roomId}/state/ixo.room.state.secure/encrypted_mnemonic`),
     {

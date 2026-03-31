@@ -125,7 +125,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
         setTimeout(focusHiddenInput, 50);
         return;
       }
-      onError(err.message || 'Failed to verify Data Vault PIN.');
+      onError(err.message || 'Failed to verify Data Store PIN.');
       setConfirmDigits(Array(PIN_LENGTH).fill(''));
       setError('');
       errorCountRef.current = 0;
@@ -223,14 +223,14 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
       <>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ width: '28px' }} />
-          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Data Vault</h1>
+          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Data Store</h1>
           <div style={{ width: '28px' }} />
         </div>
 
         {renderPinBoxes(confirmDigits)}
 
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
-          Enter your Data Vault PIN
+          Enter your Data Store PIN
         </p>
 
         {error && <p style={{ color: 'red', fontSize: '13px', marginBottom: '12px', textAlign: 'center' }}>{error}</p>}
@@ -247,7 +247,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ width: '28px' }} />
           <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>
-            Set up Data Vault
+            Set up Data Store
           </h1>
           <div style={{ width: '28px' }} />
         </div>
@@ -259,7 +259,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
         </p>
 
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          <span style={{ color: 'var(--yellow-primary)', fontWeight: 500 }}>WARNING:</span> Your Data Vault is your
+          <span style={{ color: 'var(--yellow-primary)', fontWeight: 500 }}>WARNING:</span> Your Data Store is your
           personal data storage. There is no way to retrieve your PIN if you lose it, so store it somewhere safely.
         </p>
 
@@ -315,7 +315,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
               </svg>
             )}
           </div>
-          I have stored my Data Vault PIN somewhere safely.
+          I have stored my Data Store PIN somewhere safely.
         </label>
 
         {/* @ts-ignore */}
@@ -352,14 +352,14 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
         >
           &#8592;
         </button>
-        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Set up Data Vault</h1>
+        <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '14px' }}>Set up Data Store</h1>
         <div style={{ width: '28px' }} />
       </div>
 
       {renderPinBoxes(confirmDigits)}
 
       <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'center' }}>
-        Confirm your Data Vault PIN
+        Confirm your Data Store PIN
       </p>
 
       {error && <p style={{ color: 'red', fontSize: '13px', marginBottom: '12px', textAlign: 'center' }}>{error}</p>}

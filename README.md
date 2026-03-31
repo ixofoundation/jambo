@@ -1,6 +1,6 @@
 # JAMBO Passkey Claims
 
-A mobile-first Next.js application for submitting verifiable claims against IXO blockchain claim collections. Users authenticate via Yoma SSO and WebAuthn passkeys, with Matrix serving as a secure, decentralized data vault for credential storage and claim data.
+A mobile-first Next.js application for submitting verifiable claims against IXO blockchain claim collections. Users authenticate via Yoma SSO and WebAuthn passkeys, with Matrix serving as a secure, decentralized data store for credential storage and claim data.
 
 ## Tech Stack
 
@@ -8,7 +8,7 @@ A mobile-first Next.js application for submitting verifiable claims against IXO 
 - **State**: Redux Toolkit + redux-persist
 - **Blockchain**: IXO (Cosmos SDK) via `@ixo/impactxclient-sdk`
 - **Auth**: Yoma SSO (OIDC/Keycloak + PKCE), WebAuthn/FIDO2 passkeys
-- **Data Vault**: Matrix protocol via `matrix-js-sdk` + `@ixo/matrixclient-sdk`
+- **Data Store**: Matrix protocol via `matrix-js-sdk` + `@ixo/matrixclient-sdk`
 - **Forms**: SurveyJS (dynamic claim/application forms)
 - **Credentials**: Veramo (W3C Verifiable Credentials, Ed25519 signing)
 
@@ -43,7 +43,7 @@ A mobile-first Next.js application for submitting verifiable claims against IXO 
    NEXT_PUBLIC_FEEGRANT_URL=""
    FEEGRANT_API_KEY=""
 
-   # Matrix (Data Vault)
+   # Matrix (Data Store)
    NEXT_PUBLIC_MATRIX_HOMESERVER_URL=""
    NEXT_PUBLIC_MATRIX_ROOM_BOT_URL=""
    NEXT_PUBLIC_MATRIX_BID_BOT_URL=""
@@ -100,7 +100,7 @@ styles/             Global SCSS and CSS variables
 Detailed documentation is available in the [`docs/`](docs/) directory:
 
 - [Authentication](docs/authentication.md) -- SSO, passkeys, identity, and auth state
-- [Matrix Data Vault](docs/matrix.md) -- Matrix integration, mnemonics, bots, and encryption
+- [Matrix Data Store](docs/matrix.md) -- Matrix integration, mnemonics, bots, and encryption
 - [Claims and Collections](docs/claims.md) -- Claim submission, collections, drafts, and evaluation
 - [Agent Application](docs/agent-application.md) -- Bid/agent application flow and authorization
 - [Project Structure](docs/project-structure.md) -- Architecture, routing, store, API routes, and environment variables

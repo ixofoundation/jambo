@@ -173,7 +173,7 @@ function RegisterPasskey() {
   }
 
   function handlePinError(err: string) {
-    errorToast(err || 'Failed to set Data Vault PIN.');
+    errorToast(err || 'Failed to set Data Store PIN.');
     router.push('/auth');
   }
 

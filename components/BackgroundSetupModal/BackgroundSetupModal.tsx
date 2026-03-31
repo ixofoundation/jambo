@@ -55,7 +55,7 @@ export default function BackgroundSetupModal() {
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.card}>
           <div className={styles.header}>
-            <h2 className={styles.title}>Data Vault Setup</h2>
+            <h2 className={styles.title}>Data Store Setup</h2>
             <button className={styles.closeButton} onClick={() => setShowDetails(false)}>
               &times;
             </button>
@@ -79,7 +79,7 @@ export default function BackgroundSetupModal() {
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
               </div>
-              <p className={styles.message}>Data Vault setup complete</p>
+              <p className={styles.message}>Data Store setup complete</p>
               {/* @ts-ignore */}
               <Button
                 label="Done"

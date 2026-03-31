@@ -402,7 +402,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             const homeServerUrl = secret.baseUrl as string;
             const accessToken = secret.accessToken as string;
 
-            setSubmitting({ active: true, label: 'Preparing data vault...' });
+            setSubmitting({ active: true, label: 'Preparing data store...' });
             const roomId = await resolveUserMatrixRoomId(address, accessToken, homeServerUrl);
             const existingEncrypted = await fetchEncryptedSigningMnemonic(roomId, accessToken, homeServerUrl);
             setSubmitting({ active: true, label: 'Waiting for PIN...' });
