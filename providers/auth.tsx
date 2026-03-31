@@ -312,17 +312,17 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
               style={{
                 width: 48,
                 height: 48,
-                border: '3px solid rgba(255, 255, 255, 0.15)',
+                border: '3px solid var(--border-color)',
                 borderTopColor: 'var(--accent-color, #3b82f6)',
                 borderRadius: '50%',
                 animation: 'authSpinner 0.8s linear infinite',
               }}
             />
             <div>
-              <p style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>
+              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>
                 Signing Transaction
               </p>
-              <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, margin: '8px 0 0' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>
                 {signingState.label}
               </p>
             </div>

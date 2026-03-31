@@ -174,8 +174,8 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
                   aspectRatio: '1',
                   position: 'relative',
                   borderRadius: '12px',
-                  border: isCurrent ? '2px solid var(--text-primary)' : '1px solid rgba(0,0,0,0.15)',
-                  backgroundColor: isCurrent ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.03)',
+                  border: isCurrent ? '2px solid var(--text-primary)' : '1px solid var(--border-color)',
+                  backgroundColor: 'var(--card-bg-color)',
                   boxSizing: 'border-box',
                 }}
               >
@@ -203,7 +203,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      backgroundColor: 'rgba(0,0,0,0.25)',
+                      backgroundColor: 'var(--text-secondary)',
                     }}
                   />
                 )}
@@ -276,7 +276,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
             color: 'var(--text-primary)',
             padding: '12px',
             borderRadius: '12px',
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: 'var(--card-bg-color)',
             transition: 'border-color 0.2s',
           }}
         >
@@ -292,7 +292,7 @@ export default function MatrixPinForm({ encryptedMnemonic, onSuccess, onError }:
               height: '20px',
               minWidth: '20px',
               borderRadius: '4px',
-              border: storedSafely ? 'none' : '2px solid rgba(0,0,0,0.2)',
+              border: storedSafely ? 'none' : '2px solid var(--border-color)',
               backgroundColor: storedSafely ? 'var(--accent-color)' : 'transparent',
               display: 'flex',
               alignItems: 'center',

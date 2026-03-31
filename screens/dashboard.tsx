@@ -158,9 +158,9 @@ export default function Dashboard() {
   function statusBadges(status?: { sa: RoleStatus; ea: RoleStatus }) {
     if (!status) return null;
     const badges: { label: string; color: string }[] = [];
-    if (status.sa === 'agent') badges.push({ label: 'Service Agent', color: 'var(--green-primary)' });
+    if (status.sa === 'agent') badges.push({ label: 'Contributor', color: 'var(--green-primary)' });
     else if (status.sa === 'pending') badges.push({ label: 'SA Pending', color: 'var(--yellow-primary)' });
-    if (status.ea === 'agent') badges.push({ label: 'Eval Agent', color: 'var(--green-primary)' });
+    if (status.ea === 'agent') badges.push({ label: 'Evaluator', color: 'var(--green-primary)' });
     else if (status.ea === 'pending') badges.push({ label: 'EA Pending', color: 'var(--yellow-primary)' });
     if (badges.length === 0) return null;
     return (
