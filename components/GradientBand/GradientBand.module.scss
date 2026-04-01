@@ -7,6 +7,9 @@
   max-height: 300px;
   z-index: 0;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &.purple {
     background: radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%);

@@ -541,7 +541,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   return (
     <div
-      style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column' }}
+      style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}
     >
       {/* Header bar — always visible */}
       <div

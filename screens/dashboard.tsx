@@ -9,9 +9,7 @@ import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { addProject } from '@store/slices/projectsSlice';
-import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
+import CollapsibleHeader from '@components/CollapsibleHeader/CollapsibleHeader';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
@@ -188,8 +186,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.dashboard} />
-      <Header onGradient />
+      <CollapsibleHeader variant='purple' logo='/images/yoma-impacts-exchange-mono-logo.png' logoAlt='Yoma Impacts Exchange' title={projectName} />
       <main
         style={{
           position: 'relative',
@@ -197,19 +194,13 @@ export default function Dashboard() {
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
-          minHeight: '100vh',
+          paddingTop: 'calc(min(30vh, 300px) + 16px)',
+          paddingBottom: 'calc(var(--footer-height) + 16px)',
+          minHeight: 'calc(100vh + min(30vh, 300px) - var(--header-height))',
         }}
       >
-        {/* Page title section */}
-        <div
-          style={{
-            minHeight: '150px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
+        {/* Back nav + subtitle */}
+        <div style={{ marginBottom: '16px' }}>
           <button
             onClick={() => router.push('/entities')}
             aria-label='Go back to projects'
@@ -222,7 +213,7 @@ export default function Dashboard() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'var(--text-secondary)',
               fontSize: '13px',
               fontWeight: 400,
               lineHeight: 1.2,
@@ -242,20 +233,8 @@ export default function Dashboard() {
             </svg>
             Projects
           </button>
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 600,
-              color: '#fff',
-              letterSpacing: '-0.3px',
-              lineHeight: 1.2,
-            }}
-          >
-            {projectName}
-          </h1>
           {(projectType || projectStatus) && (
-            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
               {projectType}
               {projectType && projectStatus ? ' \u00B7 ' : ''}
               {projectStatus}

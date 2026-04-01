@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
+import CollapsibleHeader from '@components/CollapsibleHeader/CollapsibleHeader';
 import { useAuth } from '@hooks/useAuth';
 import { useRouter } from 'next/router';
 import { useAppSelector } from '@store/hooks';
@@ -89,8 +87,7 @@ export default function ProfileScreen() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.profile} />
-      <Header onGradient />
+      <CollapsibleHeader variant='green' logo='/images/yoma-impacts-exchange-mono-logo.png' logoAlt='Yoma Impacts Exchange' title='Profile' />
       <main
         style={{
           position: 'relative',
@@ -98,8 +95,9 @@ export default function ProfileScreen() {
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '16px',
-          paddingTop: 'calc(var(--header-height) + 20px)',
-          minHeight: '100vh',
+          paddingTop: 'calc(min(30vh, 300px) + 16px)',
+          paddingBottom: 'calc(var(--footer-height) + 16px)',
+          minHeight: 'calc(100vh + min(30vh, 300px) - var(--header-height))',
           display: 'flex',
           flexDirection: 'column' as const,
         }}

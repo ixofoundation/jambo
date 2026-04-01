@@ -175,6 +175,19 @@
   background-color: white;
 }
 
+.elevated {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: none;
+  gap: 10px;
+  font-weight: 500;
+  font-size: 14px;
+  min-height: 48px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
 .disabled {
   opacity: 0.5;
   cursor: not-allowed;

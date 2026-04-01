@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
+import AuthLayout from '@components/AuthLayout/AuthLayout';
+import Loader from '@components/Loader/Loader';
 
 export default function GuestGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, isLoading } = useAuth();
@@ -17,10 +17,10 @@ export default function GuestGuard({ children }: { children: React.ReactNode }) 
 
   if (isLoading) {
     return (
-      <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <GradientBand {...GRADIENT_COLORS.auth} fullScreen />
-        <p style={{ position: 'relative', zIndex: 1 }}>Loading...</p>
-      </div>
+      <AuthLayout>
+        <Loader />
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+      </AuthLayout>
     );
   }
 

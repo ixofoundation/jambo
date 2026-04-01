@@ -7,7 +7,6 @@ class MyDocument extends Document {
     return (
       <Html>
         <Head>
-          <title>JAMBO yoma</title>
           <meta name='description' content={config.siteDescriptionMeta} />
           <link rel='icon' href='/favicon.ico' />
           <link rel='apple-touch-icon' href='/favicon.ico' />

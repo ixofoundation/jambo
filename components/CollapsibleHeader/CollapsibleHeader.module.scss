@@ -1,0 +1,63 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: 30vh;
+  max-height: 300px;
+  overflow: hidden;
+
+  &.purple {
+    background: radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%);
+  }
+  &.blue {
+    background: radial-gradient(ellipse at top right, var(--blue-secondary), var(--blue-primary) 70%);
+  }
+  &.green {
+    background: radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%);
+  }
+  &.yellow {
+    background: radial-gradient(ellipse at top right, var(--yellow-secondary), var(--yellow-primary) 70%);
+  }
+}
+
+.inner {
+  position: relative;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  height: 100%;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  height: var(--header-height);
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.logo {
+  position: absolute;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  will-change: opacity, width, top;
+}
+
+.title {
+  position: absolute;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  will-change: top, left, transform, font-size;
+}

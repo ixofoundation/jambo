@@ -1,24 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 
 import { useAppSelector } from '@store/hooks';
 import { store } from '@store/index';
 import { setProfile } from '@store/slices/profilesSlice';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getServiceEndpoint, getAdditionalInfo } from '@utils/url';
-import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
-
-function readableType(type?: string): string {
-  if (!type) return '';
-  const parts = type.split('/');
-  const last = parts[parts.length - 1] || '';
-  return last.charAt(0).toUpperCase() + last.slice(1);
-}
+import CollapsibleHeader from '@components/CollapsibleHeader/CollapsibleHeader';
+import ProjectSection from '@components/ProjectSection/ProjectSection';
 
 export default function ProjectList() {
-  const router = useRouter();
   const projectIds = useAppSelector((state) => state.projects.ids);
   const profiles = useAppSelector((state) => state.profiles.byEntityDid);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
@@ -53,9 +43,13 @@ export default function ProjectList() {
   }, [projectIds, profiles]);
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.dashboard} />
-      <Header onGradient />
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+      <CollapsibleHeader
+        variant='purple'
+        logo='/images/yoma-impacts-exchange-mono-logo.png'
+        logoAlt='Yoma Impacts Exchange'
+        title='Explore'
+      />
       <main
         style={{
           position: 'relative',
@@ -63,34 +57,11 @@ export default function ProjectList() {
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
-          minHeight: '100vh',
+          paddingTop: 'calc(min(30vh, 300px) + 16px)',
+          paddingBottom: 'calc(var(--footer-height) + 16px)',
+          minHeight: 'calc(100vh + min(30vh, 300px) - var(--header-height))',
         }}
       >
-        {/* Page title section */}
-        <div
-          style={{
-            minHeight: '150px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 600,
-              color: '#fff',
-              letterSpacing: '-0.3px',
-              lineHeight: 1.2,
-            }}
-          >
-            Projects
-          </h1>
-        </div>
-
-        {/* Project list */}
         {projectIds.length === 0 ? (
           <div
             style={{
@@ -106,65 +77,26 @@ export default function ProjectList() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {projectIds.map((id) => {
-              const profile = profiles[id];
-              return (
-                <button
-                  key={id}
-                  onClick={() => router.push(`/entities/${encodeURIComponent(id)}`)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '16px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '15px',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {profile?.name || id}
-                    </p>
-                    {profile?.type && (
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                        {readableType(profile.type)}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ flexShrink: 0, marginLeft: '12px' }}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--text-secondary)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
-                </button>
-              );
-            })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {projectIds
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .concat(projectIds)
+              .map((id, i) => (
+                <ProjectSection key={`${id}-${i}`} entityDid={id} />
+              ))}
           </div>
         )}
       </main>

@@ -55,6 +55,8 @@ export enum BUTTON_SIZE {
 type ButtonProps = {
   label: string;
   rounded?: boolean;
+  elevated?: boolean;
+  fullWidth?: boolean;
   size?: BUTTON_SIZE;
   color?: BUTTON_COLOR;
   bgColor?: BUTTON_BG_COLOR;
@@ -66,6 +68,8 @@ type ButtonProps = {
 const Button = ({
   label,
   rounded,
+  elevated,
+  fullWidth,
   size,
   color,
   bgColor,
@@ -87,6 +91,8 @@ const Button = ({
         styles[bgColor as typeof BUTTON_BG_COLOR.primary],
         styles[borderColor as typeof BUTTON_BORDER_COLOR.primary],
         rounded ? styles.rounded : styles.squared,
+        elevated && styles.elevated,
+        fullWidth && styles.fullWidth,
         !textCentered ? styles.textLeft : styles.textCentered,
         disabled ? styles.disabled : '',
         className,

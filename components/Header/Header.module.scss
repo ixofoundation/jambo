@@ -46,20 +46,6 @@
     justify-content: center;
   }
 
-  .profileButton {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    overflow: hidden;
-  }
-
-  .profileAvatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
   &.onGradient {
     --header-btn-bg: rgba(255, 255, 255, 0.15);
     --header-btn-color: #fff;

@@ -5,9 +5,7 @@ import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
-import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
+import CollapsibleHeader from '@components/CollapsibleHeader/CollapsibleHeader';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
@@ -284,8 +282,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.collectionDetail} />
-      <Header onGradient />
+      <CollapsibleHeader variant='blue' logo='/images/yoma-impacts-exchange-mono-logo.png' logoAlt='Yoma Impacts Exchange' title={collectionName} />
       <main
         style={{
           position: 'relative',
@@ -293,18 +290,13 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
           padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
+          paddingTop: 'calc(min(30vh, 300px) + 16px)',
+          paddingBottom: 'calc(var(--footer-height) + 16px)',
+          minHeight: 'calc(100vh + min(30vh, 300px) - var(--header-height))',
         }}
       >
-        {/* Page title section */}
-        <div
-          style={{
-            minHeight: '150px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
+        {/* Back nav */}
+        <div style={{ marginBottom: '16px' }}>
           <button
             onClick={() => router.push(`/entities/${entityDid}`)}
             aria-label='Go back to claim collections'
@@ -313,11 +305,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               border: 'none',
               cursor: 'pointer',
               padding: 0,
-              margin: '0 0 6px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              color: 'rgba(255,255,255,0.7)',
+              color: 'var(--text-secondary)',
               fontSize: '13px',
               fontWeight: 400,
               lineHeight: 1.2,
@@ -337,18 +328,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             </svg>
             Claim Collections
           </button>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: 600,
-              color: '#fff',
-              letterSpacing: '-0.3px',
-              lineHeight: 1.2,
-            }}
-          >
-            {collectionName}
-          </h1>
         </div>
 
         {/* Loading state */}

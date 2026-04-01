@@ -1,34 +1,34 @@
 :root {
   // ─── Palette: Backgrounds ───
-  --bg-primary: #F3F6FA;
-  --bg-secondary: #FFFFFF;
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F3F6FA;
 
   // ─── Palette: Purple ───
-  --purple-primary: #41204B;
-  --purple-secondary: #5A2B68;
+  --purple-primary: #41204b;
+  --purple-secondary: #5a2b68;
 
   // ─── Palette: Yellow ───
-  --yellow-primary: #F9AB3E;
-  --yellow-secondary: #E49526;
+  --yellow-primary: #f9ab3e;
+  --yellow-secondary: #e49526;
 
   // ─── Palette: Green ───
-  --green-primary: #387F6A;
-  --green-secondary: #2F6A59;
+  --green-primary: #387f6a;
+  --green-secondary: #2f6a59;
 
   // ─── Palette: Blue ───
-  --blue-primary: #4CADE9;
-  --blue-secondary: #2487C5;
+  --blue-primary: #4cade9;
+  --blue-secondary: #2487c5;
 
   // ─── Palette: Text (on light backgrounds) ───
   --text-primary: #020304;
   --text-secondary: #545859;
 
   // ─── Palette: Text (on dark backgrounds) ───
-  --text-primary-light: #FFFFFF;
-  --text-secondary-light: #FFFFFF;
+  --text-primary-light: #ffffff;
+  --text-secondary-light: #ffffff;
 
   // ─── Semantic ───
-  --accent-color: var(--purple-primary);
+  --accent-color: #aa2ea8;
   --error-color: #a11c43;
   --disabled-color: #d1d5db;
 
@@ -56,10 +56,10 @@
     --bg-primary: #111113;
     --bg-secondary: #1c1c1e;
 
-    --purple-primary: #5A2B68;
-    --purple-secondary: #41204B;
+    --purple-primary: #5a2b68;
+    --purple-secondary: #41204b;
 
-    --text-primary: #FFFFFF;
+    --text-primary: #ffffff;
     --text-secondary: #adb5bd;
     --text-primary-light: #020304;
     --text-secondary-light: #020304;
