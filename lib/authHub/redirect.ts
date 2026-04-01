@@ -22,15 +22,10 @@ export function loginViaAuthHub() {
 
 /**
  * Exchange a one-time code for session data.
- * CSRF protection is handled by the auth hub's single-use, time-limited codes
- * and WorkOS's own OAuth state management — no client-side state check needed.
+ * The code is single-use on the auth hub (deleted after first exchange) — callers
+ * must ensure this is only called once per code.
  */
-export async function handleAuthCallback(): Promise<AuthHubSessionData | null> {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-
-  if (!code) return null;
-
+export async function exchangeAuthCode(code: string): Promise<AuthHubSessionData> {
   const res = await fetch(`${AUTH_HUB_URL}/api/auth/exchange?code=${encodeURIComponent(code)}`);
 
   if (!res.ok) {

@@ -7,7 +7,6 @@ import {
   setupCrossSigning,
   generatePasswordFromMnemonic,
   generateRecoveryPhraseFromMnemonic,
-  generateUsernameFromAddress,
 } from '@utils/matrix';
 import { secret } from '@utils/secrets';
 import { secureLoad, secureReset } from '@utils/storage';
@@ -24,32 +23,39 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  const awaitersRef = useRef<Array<() => void>>([]);
+  const awaitersRef = useRef<Array<{ resolve: () => void; reject: (err: Error) => void }>>([]);
   const statusRef = useRef<BackgroundSetupStatus>('idle');
   const setupAttemptedRef = useRef(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     statusRef.current = status;
     if (status === 'success') {
       const pending = awaitersRef.current.splice(0);
-      pending.forEach((resolve) => resolve());
+      pending.forEach(({ resolve }) => resolve());
+    } else if (status === 'error') {
+      const pending = awaitersRef.current.splice(0);
+      pending.forEach(({ reject }) => reject(new Error(error || 'Data Store setup failed')));
     }
-  }, [status]);
+  }, [status, error]);
 
   const awaitCompletion = useCallback((): Promise<void> => {
     const current = statusRef.current;
     if (current === 'success' || current === 'idle') {
       return Promise.resolve();
     }
+    if (current === 'error') {
+      return Promise.reject(new Error('Data Store setup failed'));
+    }
     setShowDetails(true);
-    return new Promise<void>((resolve) => {
-      awaitersRef.current.push(resolve);
+    return new Promise<void>((resolve, reject) => {
+      awaitersRef.current.push({ resolve, reject });
     });
   }, []);
 
   // Auto-setup Matrix when user is authenticated
   useEffect(() => {
-    if (!auth.isLoggedIn || !auth.address) return;
+    if (!auth.isLoggedIn || !auth.address || !auth.matrixUserId) return;
     if (setupAttemptedRef.current) return;
 
     // Skip if Matrix client already connected (mnemonic was already cleared after prior setup)
@@ -78,10 +84,9 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
         const mxPassword = generatePasswordFromMnemonic(mnemonic);
         const securityPhrase = generateRecoveryPhraseFromMnemonic(mnemonic);
-        const mxUsername = generateUsernameFromAddress(auth.address!);
 
         setStatusMessage('Logging in to Data Store...');
-        await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
+        await mxLogin({ homeServerUrl, username: auth.matrixUserId!, password: mxPassword });
 
         setStatusMessage('Initializing Data Store...');
         const mxClient = await createMatrixClient();
@@ -105,7 +110,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         setError(err.message || 'Data Store setup failed');
       }
     }
-  }, [auth.isLoggedIn, auth.address]);
+  }, [auth.isLoggedIn, auth.address, auth.matrixUserId, retryCount]);
 
   return (
     <BackgroundSetupContext.Provider
@@ -187,6 +192,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
               onClick={() => {
                 setupAttemptedRef.current = false;
                 setShowDetails(false);
+                setRetryCount((c) => c + 1);
               }}
               style={{
                 padding: '10px 24px',

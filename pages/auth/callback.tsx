@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAuth } from '@hooks/useAuth';
-import { handleAuthCallback } from 'lib/authHub/redirect';
+import { exchangeAuthCode } from 'lib/authHub/redirect';
 import { isDevBypass, getDevBypassSession } from 'lib/authHub/devBypass';
+import { persistor } from '@store/index';
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -14,26 +15,56 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Read code from URL and immediately strip it — prevents re-use on re-render/reload
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const bypass = params.get('bypass');
+
+    if (code || bypass) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // Guard: if this code was already exchanged (e.g., page reload, bfcache), skip
+    if (code && sessionStorage.getItem('ixo_code_used') === code) {
+      // Code was already exchanged — just navigate home
+      window.location.replace('/');
+      return;
+    }
+
+    if (!code && !bypass) {
+      setError('No authorization code received');
+      return;
+    }
+
+    // Mark code as used before exchanging (survives page reloads within same tab)
+    if (code) {
+      sessionStorage.setItem('ixo_code_used', code);
+    }
+
     (async () => {
       try {
         let sessionData;
 
-        if (isDevBypass() && router.query.bypass === 'true') {
+        if (isDevBypass() && bypass === 'true') {
           sessionData = getDevBypassSession();
         } else {
-          sessionData = await handleAuthCallback();
-        }
-
-        if (!sessionData) {
-          setError('No authorization code received');
-          return;
+          sessionData = await exchangeAuthCode(code!);
         }
 
         auth.loginWithAuthHub(sessionData);
-        router.replace('/');
+
+        // Wait for Redux persist to flush to storage before navigating,
+        // otherwise the home page may see stale auth state and redirect back to /auth
+        await persistor.flush();
+
+        // Use full page navigation (not router.replace) to ensure the home page
+        // re-initializes from persisted state — avoids client-side routing race conditions
+        window.location.replace('/');
       } catch (err) {
         console.error('Auth callback failed:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
+        // Clear the used marker so user can retry with a fresh code
+        sessionStorage.removeItem('ixo_code_used');
       }
     })();
   }, []);
