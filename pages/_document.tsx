@@ -7,18 +7,20 @@ class MyDocument extends Document {
     return (
       <Html>
         <Head>
+          <title>JAMBO yoma</title>
           <meta name='description' content={config.siteDescriptionMeta} />
           <link rel='icon' href='/favicon.ico' />
+          <link rel='apple-touch-icon' href='/favicon.ico' />
 
           {/* social */}
           <link rel='canonical' href={config.siteUrl} />
-          <meta property='og:site_name' content={config.siteName} />
+          <meta property='og:site_name' content='JAMBO yoma' />
           <meta property='og:type' content='website' />
-          <meta property='og:title' content={config.siteTitleMeta} />
+          <meta property='og:title' content='JAMBO yoma' />
           <meta property='og:description' content={config.siteDescriptionMeta} />
           <meta property='og:url' content={config.siteUrl} />
           <meta property='og:image' content={config.siteUrl + '/images/social/social.png'} />
-          <meta name='twitter:title' content={config.siteTitleMeta} />
+          <meta name='twitter:title' content='JAMBO yoma' />
           <meta name='twitter:description' content={config.siteDescriptionMeta} />
           <meta name='twitter:url' content={config.siteUrl} />
           <meta name='twitter:card' content='summary_large_image' />
