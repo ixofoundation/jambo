@@ -79,6 +79,32 @@ export function getServiceEndpoint(url = '', services: EntityService[] = []) {
   return cleanUrlString(endpoint);
 }
 
+/**
+ * Check the Redux store for a cached template at the given resolved URL.
+ * Since CID-based URLs are content-addressed, if the URL hasn't changed
+ * the content is guaranteed to be the same — no need to re-fetch.
+ */
+export function getCachedTemplate(
+  protocolDid: string,
+  type: 'vct' | 'bco' | 'bev',
+  resolvedUrl: string,
+): any | undefined {
+  // Lazy import to avoid circular dependency at module load time
+  const { store } = require('@store/index');
+  const state = store.getState();
+  const cachedUrl = state.protocols?.resolvedUrls?.[protocolDid]?.[type];
+  if (cachedUrl === resolvedUrl) {
+    const templates =
+      type === 'vct'
+        ? state.protocols.vctTemplates
+        : type === 'bco'
+          ? state.protocols.bcoTemplates
+          : state.protocols?.bevTemplates;
+    return templates?.[protocolDid];
+  }
+  return undefined;
+}
+
 export const getAdditionalInfo = async (url: string, tag?: string) => {
   const cleanUrl = cleanUrlString(url);
   const res = await fetch(cleanUrl, {

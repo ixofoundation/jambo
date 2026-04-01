@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { fetchProtocolEntity } from '@utils/entity';
 import { fetchCollectionsByEntityDid } from '@utils/claims';
-import { getServiceEndpoint, getAdditionalInfo } from '@utils/url';
+import { getServiceEndpoint, getAdditionalInfo, getCachedTemplate } from '@utils/url';
 import { setCollectionsLoading } from '../slices/collectionsSlice';
 import { setVctTemplate, setFormName } from '../slices/protocolsSlice';
 import { setProfile } from '../slices/profilesSlice';
@@ -74,9 +74,11 @@ export const fetchAllCollectionData = createAsyncThunk(
             );
             if (!vctResource?.serviceEndpoint) return;
             const url = getServiceEndpoint(vctResource.serviceEndpoint, entity.service);
+            const cached = getCachedTemplate(did, 'vct', url);
+            if (cached) return;
             const formData = await getAdditionalInfo(url);
             if (formData) {
-              dispatch(setVctTemplate({ protocolDid: did, template: formData }));
+              dispatch(setVctTemplate({ protocolDid: did, template: formData, url }));
               const name = formData?.title || formData?.question?.title;
               if (name) {
                 dispatch(setFormName({ protocolDid: did, name }));

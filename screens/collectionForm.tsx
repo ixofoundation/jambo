@@ -12,7 +12,7 @@ import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
-import { getAdditionalInfo, getServiceEndpoint, cleanUrlString } from '@utils/url';
+import { getAdditionalInfo, getServiceEndpoint, cleanUrlString, getCachedTemplate } from '@utils/url';
 import { themeJson } from '@constants/surveyTheme';
 import {
   configureFileQuestions,
@@ -34,6 +34,7 @@ import base58 from 'bs58';
 import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
+import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/protocolsSlice';
 import { toast } from 'react-toastify';
 
 interface CollectionFormProps {
@@ -162,8 +163,14 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         );
         if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-        const formData = await getAdditionalInfo(url);
-        setSurveyTemplate(JSON.stringify(formData));
+        const cached = getCachedTemplate(col.protocol, 'vct', url);
+        if (cached) {
+          setSurveyTemplate(JSON.stringify(cached));
+        } else {
+          const formData = await getAdditionalInfo(url);
+          dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+          setSurveyTemplate(JSON.stringify(formData));
+        }
       } else if (surveyMode === 'claim') {
         // Check for existing draft
         if (hasDraft && draft) {
@@ -177,8 +184,14 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           );
           if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
           const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-          const formData = await getAdditionalInfo(url);
-          setSurveyTemplate(JSON.stringify(formData));
+          const cached = getCachedTemplate(col.protocol, 'vct', url);
+          if (cached) {
+            setSurveyTemplate(JSON.stringify(cached));
+          } else {
+            const formData = await getAdditionalInfo(url);
+            dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+            setSurveyTemplate(JSON.stringify(formData));
+          }
         }
       } else if (surveyMode === 'bco') {
         const col = await fetchCollectionByCollectionId(collectionId);
@@ -186,16 +199,28 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const endpoint = protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#bco'));
         if (!endpoint?.serviceEndpoint) throw new Error('Application form not found');
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-        const formData = await getAdditionalInfo(url);
-        setSurveyTemplate(JSON.stringify(formData));
+        const cached = getCachedTemplate(col.protocol, 'bco', url);
+        if (cached) {
+          setSurveyTemplate(JSON.stringify(cached));
+        } else {
+          const formData = await getAdditionalInfo(url);
+          dispatch(setBcoTemplate({ protocolDid: col.protocol, template: formData, url }));
+          setSurveyTemplate(JSON.stringify(formData));
+        }
       } else if (surveyMode === 'bev') {
         const col = await fetchCollectionByCollectionId(collectionId);
         const protocolEntity = await fetchProtocolEntity(col.protocol);
         const endpoint = protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#bev'));
         if (!endpoint?.serviceEndpoint) throw new Error('Evaluation agent application form not found');
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-        const formData = await getAdditionalInfo(url);
-        setSurveyTemplate(JSON.stringify(formData));
+        const cached = getCachedTemplate(col.protocol, 'bev', url);
+        if (cached) {
+          setSurveyTemplate(JSON.stringify(cached));
+        } else {
+          const formData = await getAdditionalInfo(url);
+          dispatch(setBevTemplate({ protocolDid: col.protocol, template: formData, url }));
+          setSurveyTemplate(JSON.stringify(formData));
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
