@@ -1,20 +1,16 @@
 import { useState, useEffect, useRef, useCallback, HTMLAttributes } from 'react';
-import Long from 'long';
-import { createQueryClient } from '@ixo/impactxclient-sdk';
 
 import { AuthContext } from '@contexts/auth';
 import authConstants from '@constants/auth';
-import { CHAIN_RPC_URL } from '@constants/common';
 import { secureSave, secureLoad, secureReset } from '@utils/storage';
 import { secret } from '@utils/secrets';
 import { logoutMatrixClient } from '@utils/matrix';
 import { cleanUrlString } from '@utils/url';
-import { decodeGrants, isAllowanceExpired, isAllowanceLimitReached, queryAddressAllowances } from '@utils/feegrant';
-import { signAndBroadcastWithPasskey } from 'lib/authn/signAndBroadcast';
-import { store, persistor, RootState } from '@store/index';
+import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
+import { logoutViaAuthHub } from 'lib/authHub/redirect';
+import type { AuthHubSessionData } from 'lib/authHub/redirect';
+import { store, persistor } from '@store/index';
 import { setAccount, clearAccount } from '@store/slices/accountSlice';
-import { clearSSOSession } from '@store/slices/ssoSlice';
-import { ssoConfig } from 'lib/sso/config';
 import { clearEntities } from '@store/slices/entitiesSlice';
 import { clearCollections } from '@store/slices/collectionsSlice';
 import { clearProtocols } from '@store/slices/protocolsSlice';
@@ -22,6 +18,9 @@ import { clearProfiles } from '@store/slices/profilesSlice';
 import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfileSlice';
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
 import { clearProjects } from '@store/slices/projectsSlice';
+
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const AUTH_VERSION = '2'; // Bump to force clean break from passkey-based accounts
 
 function fetchMatrixProfile() {
   try {
@@ -49,55 +48,107 @@ function fetchMatrixProfile() {
   }
 }
 
+function isSessionExpired(): boolean {
+  const createdAt = secureLoad(authConstants.secretKey.SESSION_CREATED_AT);
+  if (!createdAt) return true;
+  return Date.now() - Number(createdAt) > SESSION_MAX_AGE_MS;
+}
+
 export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [credentialId, setCredentialId] = useState('');
   const [address, setAddress] = useState<string | null>(null);
   const [did, setDid] = useState<string | null>(null);
-  const [authenticatorId, setAuthenticatorId] = useState<string | undefined>();
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [sessionAuthenticatorId, setSessionAuthenticatorId] = useState<string | null>(null);
+  const [matrixUserId, setMatrixUserId] = useState<string | null>(null);
+  const [matrixRoomId, setMatrixRoomId] = useState<string | null>(null);
 
-  const signingMethod = credentialId ? 'passkey' as const : undefined;
+  // Refs for stable callback access
+  const stateRef = useRef({ address, sessionAuthenticatorId });
+  stateRef.current = { address, sessionAuthenticatorId };
 
-  // Single ref object for stable callback access to latest state
-  const stateRef = useRef({ credentialId, address, authenticatorId });
-  stateRef.current = { credentialId, address, authenticatorId };
+  function persistAuthState(data: AuthHubSessionData) {
+    secureSave(authConstants.secretKey.ADDRESS, data.address);
+    secureSave(authConstants.secretKey.DID, data.did);
+    if (data.sessionMnemonic) secureSave(authConstants.secretKey.SESSION_MNEMONIC, data.sessionMnemonic);
+    if (data.sessionAuthenticatorId)
+      secureSave(authConstants.secretKey.SESSION_AUTHENTICATOR_ID, data.sessionAuthenticatorId);
+    if (data.edSigningMnemonic) secureSave(authConstants.secretKey.ED_SIGNING_MNEMONIC, data.edSigningMnemonic);
+    if (data.matrixMnemonic) secureSave(authConstants.secretKey.MATRIX_MNEMONIC, data.matrixMnemonic);
+    if (data.matrixUserId) secureSave(authConstants.secretKey.MATRIX_USER_ID, data.matrixUserId);
+    if (data.matrixRoomId) secureSave(authConstants.secretKey.MATRIX_ROOM_ID, data.matrixRoomId);
+    if (data.displayName) secureSave(authConstants.secretKey.DISPLAY_NAME, data.displayName);
+    secureSave(authConstants.secretKey.SESSION_CREATED_AT, String(Date.now()));
+  }
 
-  // Session revival on mount — Redux is the primary source of truth
+  function clearAuthStorage() {
+    Object.values(authConstants.secretKey).forEach((key) => secureReset(key));
+  }
+
+  function clearAllState() {
+    clearAuthStorage();
+    setIsLoggedIn(false);
+    setAddress(null);
+    setDid(null);
+    setDisplayName(null);
+    setSessionAuthenticatorId(null);
+    setMatrixUserId(null);
+    setMatrixRoomId(null);
+    store.dispatch(clearAccount());
+    store.dispatch(clearEntities());
+    store.dispatch(clearCollections());
+    store.dispatch(clearProtocols());
+    store.dispatch(clearProfiles());
+    store.dispatch(clearMatrixProfile());
+    store.dispatch(clearAllDrafts());
+    store.dispatch(clearProjects());
+  }
+
+  // Auth version migration guard + session revival
   useEffect(() => {
     try {
-      const persistedAccount = store.getState().account;
+      // Clean break: wipe old passkey-based state if auth version changed
+      const storedVersion = localStorage.getItem('auth_version');
+      if (storedVersion !== AUTH_VERSION) {
+        console.info('Auth version changed — clearing old auth state');
+        clearAllState();
+        persistor.purge();
+        localStorage.setItem('auth_version', AUTH_VERSION);
+        return;
+      }
 
-      // If Redux has no account, user is not logged in
+      const persistedAccount = store.getState().account;
       if (!persistedAccount?.address) {
-        // Clear any stale secure storage
         clearAuthStorage();
         return;
       }
 
-      // Redux says logged in — validate against secure storage
+      // Validate secure storage matches Redux
       const storedAddress = secureLoad(authConstants.secretKey.ADDRESS);
       const storedDid = secureLoad(authConstants.secretKey.DID);
-      const storedCredentialId = secureLoad(authConstants.secretKey.CREDENTIAL_ID);
-      const storedAuthenticatorId = secureLoad(authConstants.secretKey.AUTHENTICATOR_ID);
+      const storedSessionMnemonic = secureLoad(authConstants.secretKey.SESSION_MNEMONIC);
 
-      if (persistedAccount.address !== storedAddress || persistedAccount.did !== storedDid || !storedCredentialId) {
+      if (persistedAccount.address !== storedAddress || persistedAccount.did !== storedDid || !storedSessionMnemonic) {
         console.warn('Secure storage does not match Redux account — logging out');
-        clearAuthStorage();
-        store.dispatch(clearAccount());
-        store.dispatch(clearEntities());
-        store.dispatch(clearCollections());
-        store.dispatch(clearProtocols());
-        store.dispatch(clearProfiles());
-        store.dispatch(clearAllDrafts());
+        clearAllState();
         return;
       }
 
-      // Both sources agree — restore React state
+      // Check session expiry
+      if (isSessionExpired()) {
+        console.info('Session expired — logging out');
+        clearAllState();
+        return;
+      }
+
+      // Restore React state
       setAddress(persistedAccount.address);
       setDid(persistedAccount.did);
-      setCredentialId(storedCredentialId);
-      if (storedAuthenticatorId) setAuthenticatorId(storedAuthenticatorId);
+      setDisplayName(persistedAccount.displayName ?? null);
+      setSessionAuthenticatorId(persistedAccount.sessionAuthenticatorId ?? null);
+      setMatrixUserId(persistedAccount.matrixUserId ?? null);
+      setMatrixRoomId(persistedAccount.matrixRoomId ?? null);
       setIsLoggedIn(true);
       fetchMatrixProfile();
     } catch (error) {
@@ -107,47 +158,28 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     }
   }, []);
 
-  function persistAuthState(cId: string, addr: string, d: string, authId?: string) {
-    secureSave(authConstants.secretKey.CREDENTIAL_ID, cId);
-    secureSave(authConstants.secretKey.ADDRESS, addr);
-    secureSave(authConstants.secretKey.DID, d);
-    if (authId) secureSave(authConstants.secretKey.AUTHENTICATOR_ID, authId);
-  }
-
-  function clearAuthStorage() {
-    secureReset(authConstants.secretKey.CREDENTIAL_ID);
-    secureReset(authConstants.secretKey.ADDRESS);
-    secureReset(authConstants.secretKey.DID);
-    secureReset(authConstants.secretKey.AUTHENTICATOR_ID);
-  }
-
-  const loginWithPasskey = useCallback(
-    (data: { credentialId: string; authenticatorId?: string; address: string; did: string }) => {
-      setCredentialId(data.credentialId);
-      setAuthenticatorId(data.authenticatorId);
-      setAddress(data.address);
-      setDid(data.did);
-      persistAuthState(data.credentialId, data.address, data.did, data.authenticatorId);
-      setIsLoggedIn(true);
-      store.dispatch(setAccount({ address: data.address, did: data.did, signingMethod: 'passkey' }));
-      fetchMatrixProfile();
-    },
-    [],
-  );
-
-  const registerWithPasskey = useCallback(
-    (data: { address: string; did: string; credentialId: string; authenticatorId?: string }) => {
-      setCredentialId(data.credentialId);
-      if (data.authenticatorId) setAuthenticatorId(data.authenticatorId);
-      setAddress(data.address);
-      setDid(data.did);
-      persistAuthState(data.credentialId, data.address, data.did, data.authenticatorId);
-      setIsLoggedIn(true);
-      store.dispatch(setAccount({ address: data.address, did: data.did, signingMethod: 'passkey' }));
-      fetchMatrixProfile();
-    },
-    [],
-  );
+  const loginWithAuthHub = useCallback((data: AuthHubSessionData) => {
+    setAddress(data.address);
+    setDid(data.did);
+    setDisplayName(data.displayName);
+    setSessionAuthenticatorId(data.sessionAuthenticatorId);
+    setMatrixUserId(data.matrixUserId);
+    setMatrixRoomId(data.matrixRoomId);
+    persistAuthState(data);
+    setIsLoggedIn(true);
+    store.dispatch(
+      setAccount({
+        address: data.address,
+        did: data.did,
+        signingMethod: 'session_key',
+        sessionAuthenticatorId: data.sessionAuthenticatorId,
+        displayName: data.displayName,
+        matrixUserId: data.matrixUserId,
+        matrixRoomId: data.matrixRoomId,
+      }),
+    );
+    fetchMatrixProfile();
+  }, []);
 
   const [signingState, setSigningState] = useState<{ visible: boolean; label: string }>({ visible: false, label: '' });
 
@@ -169,37 +201,33 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }
 
   const onSign = useCallback(async (messages: any[]) => {
-    const { address: addr, credentialId: cId, authenticatorId: authId } = stateRef.current;
+    const { address: addr, sessionAuthenticatorId: authId } = stateRef.current;
 
-    if (!cId) {
+    if (!addr || !authId) {
       throw new Error('Not authenticated');
+    }
+
+    // Check session expiry before signing
+    if (isSessionExpired()) {
+      clearAllState();
+      window.location.href = '/auth';
+      throw new Error('Session expired — please sign in again');
+    }
+
+    const sessionMnemonic = secureLoad(authConstants.secretKey.SESSION_MNEMONIC);
+    if (!sessionMnemonic) {
+      throw new Error('Session key not found — please sign in again');
     }
 
     const label = getTxLabel(messages);
     setSigningState({ visible: true, label });
 
     try {
-      let feegrantGranter: string | undefined;
-      try {
-        const allowances = await queryAddressAllowances(addr!);
-        feegrantGranter = allowances?.length
-          ? decodeGrants(allowances)?.find(
-              (allowance) =>
-                !!allowance &&
-                !isAllowanceExpired(allowance.expiration as number) &&
-                !isAllowanceLimitReached(allowance.limit),
-            )?.granter
-          : undefined;
-      } catch (error) {
-        console.error(error);
-      }
-
-      const result = await signAndBroadcastWithPasskey({
-        address: addr!,
+      const result = await signAndBroadcastWithSessionKey({
+        address: addr,
         messages,
-        credentialId: cId,
-        authenticatorId: authId,
-        feegrantGranter,
+        sessionMnemonic,
+        sessionAuthenticatorId: authId,
       });
 
       setSigningState({ visible: false, label: '' });
@@ -210,70 +238,34 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     }
   }, []);
 
-  const onAuthenticate = useCallback(async () => {
-    const { address: addr, authenticatorId: authId } = stateRef.current;
-
-    const authenticatorType = 'AuthnVerification';
-    const queryClient = await createQueryClient(CHAIN_RPC_URL);
-    const response = await queryClient.ixo.smartaccount.v1beta1.getAuthenticator({
-      account: addr!,
-      authenticatorId: Long.fromString(authId!),
-    });
-    if (!response.accountAuthenticator?.config) {
-      throw new Error('Unable to get authenticator data');
-    }
-    const authenticatorData = Buffer.from(response.accountAuthenticator?.config).toString('hex');
-    return {
-      type: authenticatorType,
-      data: authenticatorData,
-    };
-  }, []);
-
   const logout = useCallback(async () => {
-    // Capture SSO id_token before clearing state (needed for Keycloak logout)
-    const ssoState = (store.getState() as RootState).sso;
-    const idToken = ssoState?.idToken;
-
-    await logoutMatrixClient({ baseUrl: secret.baseUrl });
-    clearAuthStorage();
-    secureReset(authConstants.yomaKey.ACCESS_TOKEN);
-    secureReset(authConstants.yomaKey.REFRESH_TOKEN);
-    secureReset(authConstants.yomaKey.EXPIRES_AT);
-    setIsLoggedIn(false);
-    setCredentialId('');
-    setAddress(null);
-    setDid(null);
-    setAuthenticatorId(undefined);
-    store.dispatch(clearAccount());
-    store.dispatch(clearEntities());
-    store.dispatch(clearCollections());
-    store.dispatch(clearProtocols());
-    store.dispatch(clearProfiles());
-    store.dispatch(clearMatrixProfile());
-    store.dispatch(clearAllDrafts());
-    store.dispatch(clearSSOSession());
-    store.dispatch(clearProjects());
+    try {
+      await logoutMatrixClient({ baseUrl: secret.baseUrl });
+    } catch {
+      // Matrix logout may fail if not connected — continue
+    }
+    clearAllState();
     await persistor.purge();
 
-    // Redirect to Keycloak logout (navigates away from app, which triggers full re-auth on return)
-    const appUrl = window.location.origin + '/auth';
-    const logoutParams = new URLSearchParams({ post_logout_redirect_uri: appUrl });
-    if (idToken) logoutParams.set('id_token_hint', idToken);
-    window.location.href = `${ssoConfig.logoutEndpoint}?${logoutParams.toString()}`;
+    // Redirect to auth hub logout
+    try {
+      logoutViaAuthHub();
+    } catch {
+      window.location.href = '/auth';
+    }
   }, []);
 
   const value = {
     isLoggedIn,
     isLoading,
-    credentialId,
     address,
     did,
-    authenticatorId,
-    signingMethod,
-    loginWithPasskey,
-    registerWithPasskey,
+    displayName,
+    sessionAuthenticatorId,
+    matrixUserId,
+    matrixRoomId,
+    loginWithAuthHub,
     onSign,
-    onAuthenticate,
     logout,
   };
 
@@ -322,9 +314,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
               <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>
                 Signing Transaction
               </p>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>
-                {signingState.label}
-              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>{signingState.label}</p>
             </div>
           </div>
           <style>{`

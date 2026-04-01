@@ -1,14 +1,15 @@
 const authConstants = {
   secretKey: {
-    CREDENTIAL_ID: 'auth_ixo_credential_id',
     ADDRESS: 'auth_ixo_address',
     DID: 'auth_ixo_did',
-    AUTHENTICATOR_ID: 'auth_ixo_authenticator_id',
-  },
-  yomaKey: {
-    ACCESS_TOKEN: 'yoma_access_token',
-    REFRESH_TOKEN: 'yoma_refresh_token',
-    EXPIRES_AT: 'yoma_expires_at',
+    SESSION_MNEMONIC: 'auth_ixo_session_mnemonic',
+    SESSION_AUTHENTICATOR_ID: 'auth_ixo_session_authenticator_id',
+    ED_SIGNING_MNEMONIC: 'auth_ixo_ed_signing_mnemonic',
+    MATRIX_MNEMONIC: 'auth_ixo_matrix_mnemonic',
+    MATRIX_USER_ID: 'auth_ixo_matrix_user_id',
+    MATRIX_ROOM_ID: 'auth_ixo_matrix_room_id',
+    DISPLAY_NAME: 'auth_ixo_display_name',
+    SESSION_CREATED_AT: 'auth_ixo_session_created_at',
   },
 };
 

@@ -20,18 +20,12 @@ import {
   createAttachDownloadHandler,
 } from '@constants/surveyDefaultConfig';
 import { secret } from '@utils/secrets';
+import { secureLoad } from '@utils/storage';
+import authConstants from '@constants/auth';
 import { getMatrixOpenIdToken } from '@utils/matrix';
-import {
-  resolveUserMatrixRoomId,
-  fetchEncryptedSigningMnemonic,
-  storeEncryptedSigningMnemonic,
-  decryptSigningMnemonic,
-  generateSigningMnemonic,
-} from '@utils/signingMnemonic';
 import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
 import base58 from 'bs58';
-import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
 import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/protocolsSlice';
@@ -63,8 +57,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const [viewClaimId, setViewClaimId] = useState<string | null>(claimId ?? null);
   const [formLoading, setFormLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
-  const [pinMode, setPinMode] = useState<'hidden' | 'prompt'>('hidden');
-  const [pinEncryptedMnemonic, setPinEncryptedMnemonic] = useState<string | undefined>();
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [submitting, setSubmitting] = useState<{ active: boolean; label: string }>({ active: false, label: '' });
@@ -79,7 +71,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
   const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
-  const pinHandlerRef = useRef<{ resolve?: (pin: string) => void; reject?: (err: any) => void }>({});
   const surveyHasChangesRef = useRef(false);
 
   const collectionUrl = `/entities/${entityDid}/claimCollections/${collectionId}`;
@@ -257,14 +248,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     return claimBotClientRef.current;
   }
 
-  function requestPin(encryptedMnemonic?: string): Promise<string> {
-    setPinEncryptedMnemonic(encryptedMnemonic);
-    return new Promise((resolve, reject) => {
-      pinHandlerRef.current = { resolve, reject };
-      setPinMode('prompt');
-    });
-  }
-
   function toDisplayAmount(amount: string, denom: string): { display: string; displayDenom: string } {
     if (denom === 'uixo') {
       return { display: (Number(amount) / 1_000_000).toString(), displayDenom: 'IXO' };
@@ -424,26 +407,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             );
             if (!response.id) throw new Error('Failed to submit application');
           } else {
-            const homeServerUrl = secret.baseUrl as string;
-            const accessToken = secret.accessToken as string;
+            setSubmitting({ active: true, label: 'Preparing signing key...' });
+            const edMnemonic = secureLoad(authConstants.secretKey.ED_SIGNING_MNEMONIC);
+            if (!edMnemonic) throw new Error('Ed25519 signing mnemonic not available — please sign in again');
 
-            setSubmitting({ active: true, label: 'Preparing data store...' });
-            const roomId = await resolveUserMatrixRoomId(address, accessToken, homeServerUrl);
-            const existingEncrypted = await fetchEncryptedSigningMnemonic(roomId, accessToken, homeServerUrl);
-            setSubmitting({ active: true, label: 'Waiting for PIN...' });
-            const pin = await requestPin('pin-only');
-
-            setSubmitting({ active: true, label: 'Signing transaction...' });
-            let signingMnemonic: string;
-            if (existingEncrypted) {
-              signingMnemonic = decryptSigningMnemonic(existingEncrypted, pin);
-              if (!signingMnemonic) throw new Error('Failed to decrypt signing mnemonic - incorrect PIN');
-            } else {
-              signingMnemonic = generateSigningMnemonic();
-              await storeEncryptedSigningMnemonic(roomId, signingMnemonic, pin, accessToken, homeServerUrl);
-            }
-
-            const keyPair = deriveEd25519KeyPairFromMnemonic(signingMnemonic);
+            const keyPair = deriveEd25519KeyPairFromMnemonic(edMnemonic);
             const pubKeyBase58 = base58.encode(keyPair.publicKey);
 
             const hasVm = await hasEd25519VerificationMethod(did, pubKeyBase58);
@@ -810,47 +778,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
               to { transform: rotate(360deg); }
             }
           `}</style>
-        </div>
-      )}
-
-      {/* PIN prompt overlay */}
-      {pinMode === 'prompt' && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '340px',
-              margin: '0 20px',
-              borderRadius: '12px',
-              padding: '28px 24px',
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-            }}
-          >
-            {/* @ts-ignore */}
-            <MatrixPinForm
-              encryptedMnemonic={pinEncryptedMnemonic}
-              onSuccess={(pin: string) => {
-                pinHandlerRef.current.resolve?.(pin);
-                setPinMode('hidden');
-              }}
-              onError={(err: string) => {
-                pinHandlerRef.current.reject?.(new Error(err));
-                setPinMode('hidden');
-              }}
-            />
-          </div>
         </div>
       )}
 

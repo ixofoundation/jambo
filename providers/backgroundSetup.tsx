@@ -1,11 +1,17 @@
 import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { BackgroundSetupContext, BackgroundSetupStatus, InputRequest } from '@contexts/backgroundSetup';
-import BackgroundSetupModal from '@components/BackgroundSetupModal/BackgroundSetupModal';
-import { secureLoad } from '@utils/storage';
+import { BackgroundSetupContext, BackgroundSetupStatus } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
-import cons from '@constants/matrix';
-import { store, RootState } from '@store/index';
-import { registerBackground, matrixLoginBackground } from 'lib/auth/passkeyFlow';
+import {
+  mxLogin,
+  createMatrixClient,
+  setupCrossSigning,
+  generatePasswordFromMnemonic,
+  generateRecoveryPhraseFromMnemonic,
+  generateUsernameFromAddress,
+} from '@utils/matrix';
+import { secret } from '@utils/secrets';
+import { secureLoad, secureReset } from '@utils/storage';
+import authConstants from '@constants/auth';
 
 interface BackgroundSetupProviderProps {
   children: ReactNode;
@@ -16,12 +22,11 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const [status, setStatus] = useState<BackgroundSetupStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [inputRequest, setInputRequest] = useState<InputRequest | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  const taskRef = useRef<(() => Promise<void>) | null>(null);
-  const statusRef = useRef<BackgroundSetupStatus>('idle');
   const awaitersRef = useRef<Array<() => void>>([]);
+  const statusRef = useRef<BackgroundSetupStatus>('idle');
+  const setupAttemptedRef = useRef(false);
 
   useEffect(() => {
     statusRef.current = status;
@@ -42,129 +47,65 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     });
   }, []);
 
-  const runTask = useCallback(async (task: () => Promise<void>) => {
-    setStatus('running');
-    setError(null);
-    setStatusMessage('Setting up your Data Store...');
-    try {
-      await task();
-      setStatus('success');
-      setStatusMessage('Data Store setup complete');
-      setInputRequest(null);
-    } catch (err: any) {
-      console.error('Background setup error:', err);
-      setStatus('error');
-      setError(err.message || 'Setup failed');
-      setInputRequest(null);
-    }
-  }, []);
-
-  const startSetup = useCallback(
-    (task: () => Promise<void>) => {
-      taskRef.current = task;
-      void runTask(task);
-    },
-    [runTask],
-  );
-
-  const retry = useCallback(() => {
-    if (taskRef.current) {
-      void runTask(taskRef.current);
-    }
-  }, [runTask]);
-
-  const dismiss = useCallback(() => {
-    if (status === 'success') {
-      setStatus('idle');
-      setStatusMessage('');
-      setError(null);
-    }
-    setShowDetails(false);
-  }, [status]);
-
-  const requestPin = useCallback((encryptedMnemonic?: string): Promise<string> => {
-    return new Promise<string>((resolve, reject) => {
-      setInputRequest({
-        type: 'pin',
-        encryptedMnemonic,
-        resolve: (value: string) => {
-          setInputRequest(null);
-          setShowDetails(false);
-          setStatus('running');
-          setStatusMessage('Completing Data Store setup...');
-          resolve(value);
-        },
-        reject: (reason: any) => {
-          setInputRequest(null);
-          reject(reason);
-        },
-      });
-      setStatus('needs_input');
-    });
-  }, []);
-
-  // Resume backed-up background setup on mount (e.g. after page refresh)
-  const resumeAttemptedRef = useRef(false);
+  // Auto-setup Matrix when user is authenticated
   useEffect(() => {
-    if (resumeAttemptedRef.current) return;
-    resumeAttemptedRef.current = true;
+    if (!auth.isLoggedIn || !auth.address) return;
+    if (setupAttemptedRef.current) return;
 
-    const bgType = secureLoad(cons.secretKey.BACKGROUND_TYPE);
-    if (!bgType) return;
+    // Skip if Matrix client already connected (mnemonic was already cleared after prior setup)
+    if (secret.accessToken && secret.userId) {
+      setStatus('success');
+      return;
+    }
 
-    const account = (store.getState() as RootState).account;
-    if (!account?.address || !account?.did) return;
+    // Fetch mnemonic from secure storage (not React state)
+    const matrixMnemonic = secureLoad(authConstants.secretKey.MATRIX_MNEMONIC);
+    if (!matrixMnemonic) {
+      // No mnemonic and no active session — can't set up Matrix
+      console.warn('Matrix mnemonic not available in secure storage');
+      return;
+    }
 
-    const pinProvided = secureLoad(cons.secretKey.PIN_PROVIDED);
+    setupAttemptedRef.current = true;
+    void setupMatrix(matrixMnemonic);
 
-    if (bgType === 'register') {
-      const mnemonic = secureLoad(cons.secretKey.MNEMONIC_BACKUP);
-      if (!mnemonic) return;
+    async function setupMatrix(mnemonic: string) {
+      setStatus('running');
+      setStatusMessage('Connecting to Data Store...');
+      setError(null);
 
-      if (pinProvided) {
-        // After PIN: use local encrypted copy, skip PIN prompt
-        const encMnemonicLocal = secureLoad(cons.secretKey.ENCRYPTED_MNEMONIC_LOCAL);
-        if (!encMnemonicLocal) return;
-        void runTask(() =>
-          registerBackground({
-            address: account.address!,
-            did: account.did!,
-            mxMnemonicOverride: mnemonic,
-            encryptedMnemonicOverride: encMnemonicLocal,
-            callbacks: { onStatusUpdate: setStatusMessage, requestPin },
-          }),
-        );
-      } else {
-        // Before PIN: plain mnemonic exposed — logout for safety
-        void auth.logout();
-      }
-    } else if (bgType === 'login') {
-      const encMnemonic = secureLoad(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
-      if (!encMnemonic) return;
+      try {
+        const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
+        const mxPassword = generatePasswordFromMnemonic(mnemonic);
+        const securityPhrase = generateRecoveryPhraseFromMnemonic(mnemonic);
+        const mxUsername = generateUsernameFromAddress(auth.address!);
 
-      if (pinProvided) {
-        // After PIN: resume with modal requestPin
-        void runTask(() =>
-          matrixLoginBackground({
-            address: account.address!,
-            encryptedMnemonic: encMnemonic,
-            callbacks: { onStatusUpdate: setStatusMessage, requestPin },
-          }),
-        );
-      } else {
-        // Before PIN: logout
-        void auth.logout();
+        setStatusMessage('Logging in to Data Store...');
+        await mxLogin({ homeServerUrl, username: mxUsername, password: mxPassword });
+
+        setStatusMessage('Initializing Data Store...');
+        const mxClient = await createMatrixClient();
+
+        try {
+          setStatusMessage('Setting up encryption...');
+          await setupCrossSigning(mxClient, { securityPhrase, password: mxPassword });
+        } catch (err) {
+          // Cross-signing may fail if already set up — non-fatal
+          console.warn('Cross-signing setup:', err);
+        }
+
+        // Matrix is ready — clear the mnemonic from secure storage (fetch-use-drop)
+        secureReset(authConstants.secretKey.MATRIX_MNEMONIC);
+
+        setStatus('success');
+        setStatusMessage('Data Store ready');
+      } catch (err: any) {
+        console.error('Matrix setup error:', err);
+        setStatus('error');
+        setError(err.message || 'Data Store setup failed');
       }
     }
-  }, [runTask, requestPin]);
-
-  const getFlowCallbacks = useCallback(
-    () => ({
-      onStatusUpdate: setStatusMessage,
-      requestPin,
-    }),
-    [requestPin],
-  );
+  }, [auth.isLoggedIn, auth.address]);
 
   return (
     <BackgroundSetupContext.Provider
@@ -172,19 +113,96 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         status,
         statusMessage,
         error,
-        inputRequest,
-        startSetup,
-        retry,
-        dismiss,
         showDetails,
         setShowDetails,
-        getFlowCallbacks,
         awaitCompletion,
       }}
     >
       {children}
-      <BackgroundSetupModal />
+      {/* Show a minimal status indicator when details are requested */}
+      {showDetails && status === 'running' && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 16,
+              padding: '32px 28px',
+              maxWidth: 340,
+              width: '90%',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                border: '3px solid var(--border-color)',
+                borderTopColor: 'var(--accent-color, #3b82f6)',
+                borderRadius: '50%',
+                animation: 'bgSetupSpin 0.8s linear infinite',
+                margin: '0 auto 16px',
+              }}
+            />
+            <p style={{ color: 'var(--text-primary)', margin: 0, fontSize: 15 }}>{statusMessage}</p>
+            <style>{`@keyframes bgSetupSpin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        </div>
+      )}
+      {showDetails && status === 'error' && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1500,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 16,
+              padding: '28px 24px',
+              maxWidth: 340,
+              width: '90%',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ color: 'var(--error-color)', margin: '0 0 16px', fontSize: 14 }}>{error}</p>
+            <button
+              onClick={() => {
+                setupAttemptedRef.current = false;
+                setShowDetails(false);
+              }}
+              style={{
+                padding: '10px 24px',
+                borderRadius: 8,
+                border: 'none',
+                backgroundColor: 'var(--accent-color, #3b82f6)',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: 14,
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
     </BackgroundSetupContext.Provider>
   );
 };
-
