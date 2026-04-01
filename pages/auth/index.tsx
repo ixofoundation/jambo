@@ -5,7 +5,8 @@ import GuestGuard from '@components/GuestGuard';
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
-import { redirectToSSO } from 'lib/sso/redirect';
+import { loginViaAuthHub } from 'lib/authHub/redirect';
+import { isDevBypass } from 'lib/authHub/devBypass';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -13,7 +14,11 @@ export default function AuthPage() {
 
   function handleSignIn() {
     setIsRedirecting(true);
-    void redirectToSSO();
+    loginViaAuthHub();
+  }
+
+  function handleDevLogin() {
+    router.push('/auth/callback?bypass=true');
   }
 
   return (
@@ -82,7 +87,6 @@ export default function AuthPage() {
                     transition: 'opacity 0.2s',
                   }}
                 >
-                  <img src='/images/yoma_icon.png' alt='Yoma' width={22} height={22} />
                   {isRedirecting ? 'Redirecting...' : 'Try Again'}
                 </button>
               </>
@@ -94,7 +98,7 @@ export default function AuthPage() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'center',
                     gap: '10px',
                     width: '100%',
                     padding: '12px 20px',
@@ -109,12 +113,26 @@ export default function AuthPage() {
                     transition: 'opacity 0.2s',
                   }}
                 >
-                  <div style={{ width: '24px', height: '24px' }}>
-                    <img src='/images/yoma_icon.png' alt='Yoma' width={'100%'} height={'100%'} />
-                  </div>
-                  {isRedirecting ? 'Redirecting...' : 'Sign in with Yoma'}
-                  <div />
+                  {isRedirecting ? 'Redirecting...' : 'Sign in'}
                 </button>
+
+                {isDevBypass() && (
+                  <button
+                    onClick={handleDevLogin}
+                    style={{
+                      width: '100%',
+                      padding: '12px 20px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Dev Login (bypass)
+                  </button>
+                )}
               </div>
             )}
           </div>

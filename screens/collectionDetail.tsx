@@ -1,37 +1,22 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { GrantAuthorization } from '@ixo/impactxclient-sdk/types/codegen/cosmos/authz/v1beta1/authz';
-import { createQueryClient, createRegistry, cosmos, ixo } from '@ixo/impactxclient-sdk';
-import { createMatrixBidBotClient, createMatrixClaimBotClient } from '@ixo/matrixclient-sdk';
-import { Model } from 'survey-core';
-import { Survey } from 'survey-react-ui';
+import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
+import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
-import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
+import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
-import MatrixPinForm from '@components/MatrixPinForm/MatrixPinForm';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
-import { getAdditionalInfo, getServiceEndpoint, cleanUrlString } from '@utils/url';
-import { themeJson } from '@constants/surveyTheme';
 import { secret } from '@utils/secrets';
-import {
-  resolveUserMatrixRoomId,
-  fetchEncryptedSigningMnemonic,
-  storeEncryptedSigningMnemonic,
-  decryptSigningMnemonic,
-  generateSigningMnemonic,
-} from '@utils/signingMnemonic';
-import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
-import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
-import base58 from 'bs58';
-import { useAppSelector, useAppDispatch } from '@store/hooks';
-import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
+import { getMatrixOpenIdToken } from '@utils/matrix';
+import { useAppSelector } from '@store/hooks';
 import { toast } from 'react-toastify';
 
 interface CollectionDetailProps {
@@ -41,12 +26,10 @@ interface CollectionDetailProps {
 
 export default function CollectionDetail({ entityDid, collectionId }: CollectionDetailProps) {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const authContext = useAuth();
   const { awaitCompletion } = useBackgroundSetup();
   const address = authContext.address!;
   const did = authContext.did!;
-  const onSign = authContext.onSign;
 
   const draft = useAppSelector((state) => state.claimDrafts.byCollectionId[collectionId]);
 
@@ -56,27 +39,34 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [bidsLoading, setBidsLoading] = useState(true);
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(true);
-  const [surveyTemplate, setSurveyTemplate] = useState<string | undefined>();
-  const [surveyMode, setSurveyMode] = useState<'bid' | 'claim' | 'view' | null>(null);
-  const [surveyVisible, setSurveyVisible] = useState(false);
-  const [surveyClosing, setSurveyClosing] = useState(false);
-  const [viewClaimData, setViewClaimData] = useState<Record<string, any> | null>(null);
-  const [viewClaimId, setViewClaimId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [pinMode, setPinMode] = useState<'hidden' | 'prompt'>('hidden');
-  const [pinEncryptedMnemonic, setPinEncryptedMnemonic] = useState<string | undefined>();
-  const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const [hasBcoForm, setHasBcoForm] = useState(false);
+  const [hasBevForm, setHasBevForm] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [allClaims, setAllClaims] = useState<any[]>([]);
+  const [allClaimsLoading, setAllClaimsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'contributor' | 'evaluator' | 'controller'>('contributor');
+  const [allBids, setAllBids] = useState<any[]>([]);
+  const [allBidsLoading, setAllBidsLoading] = useState(false);
+  const [viewingBid, setViewingBid] = useState<any | null>(null);
 
   const claimCollectionIdRef = useRef<string>(collectionId);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const authsRef = useRef<string[]>([]);
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
-  const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
-  const pinHandlerRef = useRef<{ resolve?: (pin: string) => void; reject?: (err: any) => void }>({});
-  const surveyHasChangesRef = useRef(false);
 
   const { collections: protocolCollections } = useProtocolCollections(entityDid);
   const collection = protocolCollections.find((c) => c.collectionId === collectionId);
+
+  const isExpired =
+    !!collection?.endDate &&
+    new Date(collection.endDate).getFullYear() > 1970 &&
+    new Date(collection.endDate) < new Date();
+  const hasStarted =
+    !collection?.startDate ||
+    new Date(collection.startDate).getFullYear() <= 1970 ||
+    new Date(collection.startDate) <= new Date();
+  const isCollectionOpen = hasStarted && !isExpired;
 
   function addAuth(auth: string) {
     if (authsRef.current.includes(auth)) return;
@@ -97,19 +87,13 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       checkAuthz();
       fetchBids();
       fetchMyClaims();
+      fetchAllClaims();
     }
     return () => {
       cancelledRef.current = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [address, collectionId]);
-
-  useEffect(() => {
-    if (surveyTemplate) {
-      import('survey-core/defaultV2.min.css');
-      import('survey-core/themes/borderless-dark');
-    }
-  }, [surveyTemplate]);
 
   async function checkAuthz() {
     try {
@@ -118,13 +102,17 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       if (col.admin === address) addAuth('admin');
       else removeAuth('admin');
       const queryClient = await createQueryClient(CHAIN_RPC_URL);
-      const [granteeGrants, entity] = await Promise.all([
+      const [granteeGrants, entity, protocolEntity] = await Promise.all([
         queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address }),
         fetchProtocolEntity(col.entity),
+        fetchProtocolEntity(col.protocol),
       ]);
       if (cancelledRef.current) return;
       if (entity?.owner === address) addAuth('owner');
       else removeAuth('owner');
+      const linkedResources = protocolEntity?.linkedResource ?? [];
+      setHasBcoForm(linkedResources.some((r: any) => r?.id?.includes('#bco')));
+      setHasBevForm(linkedResources.some((r: any) => r?.id?.includes('#bev')));
       const grants = granteeGrants.grants as GrantAuthorization[];
       const registry = createRegistry();
       const targetCollectionId = claimCollectionIdRef.current;
@@ -158,41 +146,52 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   }
 
   function getBidBotClient() {
-    if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
+    const token = secret.accessToken as string;
+    if (bidBotClientRef.current?.bid && token) return bidBotClientRef.current;
+    bidBotClientRef.current = undefined;
+    if (!token) return null;
     bidBotClientRef.current = createMatrixBidBotClient({
+      homeServerUrl: process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL!,
       botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
-      accessToken: secret.accessToken as string,
+      accessToken: token,
     });
     return bidBotClientRef.current;
-  }
-
-  function getClaimBotClient() {
-    if (claimBotClientRef.current?.claim) return claimBotClientRef.current;
-    claimBotClientRef.current = createMatrixClaimBotClient({
-      botUrl: process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!,
-      accessToken: secret.accessToken as string,
-    });
-    return claimBotClientRef.current;
-  }
-
-  function requestPin(encryptedMnemonic?: string): Promise<string> {
-    setPinEncryptedMnemonic(encryptedMnemonic);
-    return new Promise((resolve, reject) => {
-      pinHandlerRef.current = { resolve, reject };
-      setPinMode('prompt');
-    });
   }
 
   async function fetchBids() {
     try {
       setBidsLoading(true);
+      await awaitCompletion();
+      if (cancelledRef.current) return;
       const client = getBidBotClient();
-      const response = await client.bid.v1beta1.queryBidsByDid(collectionId, did);
+      if (!client) {
+        console.warn('[CollectionDetail] No Matrix access token available; skipping bid fetch');
+        return;
+      }
+      const openIdToken = await getMatrixOpenIdToken();
+      const response = await client.bid.v1beta1.queryBidsByDid(collectionId, did, openIdToken, did);
       setBids(response.data ?? []);
-    } catch {
-      // silent fail
+    } catch (err) {
+      console.warn('[CollectionDetail] fetchBids error:', err);
     } finally {
       setBidsLoading(false);
+    }
+  }
+
+  async function fetchAllBids() {
+    try {
+      setAllBidsLoading(true);
+      await awaitCompletion();
+      if (cancelledRef.current) return;
+      const client = getBidBotClient();
+      if (!client) return;
+      const openIdToken = await getMatrixOpenIdToken();
+      const response = await client.bid.v1beta1.queryBids(collectionId, openIdToken, did);
+      setAllBids(response.data ?? []);
+    } catch (err) {
+      console.warn('[CollectionDetail] fetchAllBids error:', err);
+    } finally {
+      setAllBidsLoading(false);
     }
   }
 
@@ -208,299 +207,67 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     }
   }
 
-  async function handleApplyAsAgent() {
+  async function fetchAllClaims() {
     try {
-      setFormError(null);
-      const col = await fetchCollectionByCollectionId(collectionId);
-      const protocolEntity = await fetchProtocolEntity(col.protocol);
-      const entities = ([] as any[]).concat(protocolEntity);
-      const endpoint = entities
-        .map((e: any) =>
-          e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#bco')),
-        )
-        .find((r: any) => r?.serviceEndpoint);
-      if (!endpoint?.serviceEndpoint) throw new Error('Application form not found');
-      const entity = entities.find((e: any) =>
-        e?.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#bco')),
-      );
-      const url = getServiceEndpoint(endpoint.serviceEndpoint, entity?.service);
-      const formData = await getAdditionalInfo(url);
-      setSurveyTemplate(JSON.stringify(formData));
-      setSurveyMode('bid');
-      surveyHasChangesRef.current = false;
-      requestAnimationFrame(() => setSurveyVisible(true));
-    } catch (err) {
-      setFormError((err as Error).message);
+      setAllClaimsLoading(true);
+      const result = await fetchAllClaimsByCollectionId(collectionId);
+      setAllClaims(result ?? []);
+    } catch {
+      // silent fail
+    } finally {
+      setAllClaimsLoading(false);
     }
   }
 
-  async function viewClaim(claim: any) {
-    try {
-      setFormError(null);
-      const client = getClaimBotClient();
-      const response = await client.claim.v1beta1.queryClaim(collectionId, claim.claimId);
-      let claimData: Record<string, any> = {};
-      if (response) {
-        let parsed = typeof response === 'string' ? JSON.parse(response) : response;
-        // Unwrap .data if present (some SDK versions wrap the response)
-        if (parsed?.data && !parsed?.credentialSubject)
-          parsed = typeof parsed.data === 'string' ? JSON.parse(parsed.data) : parsed.data;
-        // If the claim is a signed VerifiableCredential, extract the credentialSubject survey data
-        if (parsed?.credentialSubject) {
-          const { id, type, ...rest } = parsed.credentialSubject;
-          claimData = rest;
-        } else {
-          claimData = parsed;
-        }
-      }
-      const col = await fetchCollectionByCollectionId(collectionId);
-      const protocolEntity = await fetchProtocolEntity(col.protocol);
-      const endpoint = protocolEntity?.linkedResource?.find(
-        (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'),
-      );
-      if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
-      const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-      const formData = await getAdditionalInfo(url);
-      const template = JSON.stringify(formData);
-
-      setViewClaimId(claim.claimId);
-      setViewClaimData(claimData);
-      setSurveyTemplate(template);
-      setSurveyMode('view');
-      surveyHasChangesRef.current = false;
-      requestAnimationFrame(() => setSurveyVisible(true));
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
+  // Navigation helpers — open forms on separate page
+  function navigateToForm(formType: string, claimId?: string) {
+    const base = `/entities/${entityDid}/claimCollections/${collectionId}/${formType}`;
+    router.push(claimId ? `${base}?claimId=${claimId}` : base);
   }
 
-  async function openClaimSurvey(resumeDraft?: boolean) {
-    try {
-      setFormError(null);
-
-      if (resumeDraft && draft) {
-        setSurveyTemplate(draft.surveyTemplate);
-        setSurveyMode(draft.surveyMode);
-        surveyHasChangesRef.current = true;
-        requestAnimationFrame(() => setSurveyVisible(true));
-        return;
-      }
-
-      const col = await fetchCollectionByCollectionId(collectionId);
-      const protocolEntity = await fetchProtocolEntity(col.protocol);
-      const endpoint = protocolEntity?.linkedResource?.find(
-        (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'),
-      );
-      if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
-      const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-      const formData = await getAdditionalInfo(url);
-      const template = JSON.stringify(formData);
-      setSurveyTemplate(template);
-      setSurveyMode('claim');
-      surveyHasChangesRef.current = false;
-      requestAnimationFrame(() => setSurveyVisible(true));
-    } catch (err) {
-      setFormError((err as Error).message);
-    }
-  }
-
-  const handleSurveyValueChanged = useCallback(
-    (sender: any) => {
-      surveyHasChangesRef.current = true;
-      if (surveyTemplate && surveyMode) {
-        dispatch(
-          saveDraft({
-            collectionId,
-            draft: {
-              surveyMode,
-              surveyTemplate,
-              surveyData: { ...sender.data },
-              updatedAt: Date.now(),
-            },
-          }),
-        );
-      }
-    },
-    [collectionId, surveyTemplate, surveyMode, dispatch],
-  );
-
-  const survey = useMemo(() => {
-    if (!surveyTemplate || !surveyMode) return undefined;
-    const parsed = JSON.parse(surveyTemplate);
-    const model = new Model(parsed?.question ?? parsed);
-    model.applyTheme(themeJson);
-    model.allowCompleteSurveyAutomatic = false;
-
-    // View mode — read-only with pre-filled data
-    if (surveyMode === 'view') {
-      if (viewClaimData) model.data = viewClaimData;
-      model.mode = 'display';
-      model.showNavigationButtons = 'none' as any;
-      return model;
-    }
-
-    // Restore draft data if available
-    if (draft?.surveyData && draft.surveyMode === surveyMode) {
-      model.data = draft.surveyData;
-    }
-
-    function preventComplete(sender: any, options: any) {
-      options.allowComplete = false;
-      submitForm(sender);
-    }
-
-    async function submitForm(sender: any) {
-      model.onCompleting.remove(preventComplete);
-      model.completeText = 'Submitting...';
-      try {
-        await awaitCompletion();
-        if (surveyMode === 'bid') {
-          const client = getBidBotClient();
-          const response = await client.bid.v1beta1.submitBid(collectionId, JSON.stringify(sender.data), 'SA');
-          if (!response.id) throw new Error('Failed to submit application');
-        } else {
-          const homeServerUrl = secret.baseUrl as string;
-          const accessToken = secret.accessToken as string;
-
-          // 1. Resolve Matrix room
-          const roomId = await resolveUserMatrixRoomId(address, accessToken, homeServerUrl);
-
-          // 2. Fetch encrypted signing mnemonic from room state
-          const existingEncrypted = await fetchEncryptedSigningMnemonic(roomId, accessToken, homeServerUrl);
-
-          // 3. Prompt for PIN
-          const pin = await requestPin('pin-only');
-
-          // 4. Decrypt or generate signing mnemonic
-          let signingMnemonic: string;
-          if (existingEncrypted) {
-            signingMnemonic = decryptSigningMnemonic(existingEncrypted, pin);
-            if (!signingMnemonic) throw new Error('Failed to decrypt signing mnemonic - incorrect PIN');
-          } else {
-            signingMnemonic = generateSigningMnemonic();
-            await storeEncryptedSigningMnemonic(roomId, signingMnemonic, pin, accessToken, homeServerUrl);
-          }
-
-          // 5. Derive Ed25519 key pair
-          const keyPair = deriveEd25519KeyPairFromMnemonic(signingMnemonic);
-          const pubKeyBase58 = base58.encode(keyPair.publicKey);
-
-          // 6. Register Ed25519 VM on IID if needed
-          const hasVm = await hasEd25519VerificationMethod(did, pubKeyBase58);
-          if (!hasVm) {
-            const addVmMsg = buildAddEd25519VerificationMsg(did, keyPair.publicKey, address);
-            await onSign([addVmMsg]);
-          }
-
-          // 7-8. Create Veramo agent and sign VC
-          const agent = await createVeramoAgent(keyPair, did);
-          const signedVC = await signClaimCredential(agent, did, sender.data);
-
-          // 9. Save signed VC to claim bot
-          const client = getClaimBotClient();
-          const col = await fetchCollectionByCollectionId(collectionId);
-          const response = await client.claim.v1beta1.saveClaim(collectionId, JSON.stringify(signedVC));
-          if (!response.data.cid) throw new Error('Failed to submit claim');
-
-          // 10-11. Submit claim to blockchain
-          const message = {
-            typeUrl: '/cosmos.authz.v1beta1.MsgExec',
-            value: cosmos.authz.v1beta1.MsgExec.fromPartial({
-              grantee: address,
-              msgs: [
-                {
-                  typeUrl: '/ixo.claims.v1beta1.MsgSubmitClaim',
-                  value: ixo.claims.v1beta1.MsgSubmitClaim.encode({
-                    adminAddress: col.admin as string,
-                    agentAddress: address,
-                    agentDid: did,
-                    claimId: response.data.cid as string,
-                    collectionId: collectionId,
-                    useIntent: false,
-                    amount: [],
-                    cw20Payment: [],
-                  }).finish(),
-                },
-              ] as any[],
-            }),
-          };
-          await onSign([message]);
-        }
-        // Success — clear draft and close
-        dispatch(clearDraft(collectionId));
-        sender.doComplete();
-        doCloseSurvey();
-        fetchBids();
-        fetchMyClaims();
-      } catch (err) {
-        toast.error((err as Error).message);
-        console.error('error', err);
-        model.completeText = 'Try again';
-        model.onCompleting.add(preventComplete);
-      }
-    }
-
-    model.onCompleting.add(preventComplete);
-    model.completeText = 'Submit';
-
-    // Track value changes for draft saving
-    model.onValueChanged.add(handleSurveyValueChanged);
-
-    return model;
-  }, [surveyTemplate, surveyMode, viewClaimData]);
-
-  // Clean up value change listener when survey is destroyed
-  useEffect(() => {
-    return () => {
-      if (survey) {
-        survey.onValueChanged.remove(handleSurveyValueChanged);
-      }
-    };
-  }, [survey, handleSurveyValueChanged]);
-
-  function doCloseSurvey() {
-    setSurveyClosing(true);
-    setSurveyVisible(false);
-    surveyHasChangesRef.current = false;
-    setTimeout(() => {
-      setSurveyTemplate(undefined);
-      setSurveyMode(null);
-      setViewClaimData(null);
-      setViewClaimId(null);
-      setSurveyClosing(false);
-    }, 350);
-  }
-
-  function handleCloseSurvey() {
-    if (surveyMode === 'view') {
-      doCloseSurvey();
-      return;
-    }
-    if (surveyHasChangesRef.current) {
-      setCloseConfirmVisible(true);
-    } else {
-      doCloseSurvey();
-    }
-  }
-
-  function handleConfirmSave() {
-    // Draft is already saved via onValueChanged — just close
-    setCloseConfirmVisible(false);
-    doCloseSurvey();
-  }
-
-  function handleConfirmDiscard() {
-    setCloseConfirmVisible(false);
-    dispatch(clearDraft(collectionId));
-    doCloseSurvey();
-  }
-
-  const isAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
-  const hasPendingBid = !isAgent && bids.length > 0;
+  const isServiceAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
+  const isEvalAgent = auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization);
+  const isController = auths.includes('admin') || auths.includes('owner');
+  const saBids = bids.filter((b: any) => b.role === 'SA');
+  const eaBids = bids.filter((b: any) => b.role === 'EA');
+  const hasPendingSaBid = !isServiceAgent && saBids.length > 0;
+  const hasPendingEaBid = !isEvalAgent && eaBids.length > 0;
   const dataLoading = authzLoading || bidsLoading || claimsLoading;
-  const showApplyButton = !dataLoading && !isAgent && !hasPendingBid;
-  const showNewClaimButton = !dataLoading && isAgent;
+  const showApplySaButton = !dataLoading && !isServiceAgent && !hasPendingSaBid && isCollectionOpen && hasBcoForm;
+  const showApplyEaButton = !dataLoading && !isEvalAgent && !hasPendingEaBid && isCollectionOpen && hasBevForm;
+  const showNewClaimButton = !dataLoading && isServiceAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
+  const displayedClaims = useMemo(() => {
+    const list = activeTab === 'evaluator' ? allClaims : claims;
+    return [...list].sort((a, b) => {
+      if (activeTab === 'evaluator' && isEvalAgent) {
+        const aStatus = a.evaluationByClaimId?.status ?? 0;
+        const bStatus = b.evaluationByClaimId?.status ?? 0;
+        if (aStatus === 0 && bStatus !== 0) return -1;
+        if (aStatus !== 0 && bStatus === 0) return 1;
+      }
+      return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();
+    });
+  }, [activeTab, allClaims, claims, isEvalAgent]);
+  const isClaimsListLoading = activeTab === 'evaluator' ? allClaimsLoading : claimsLoading;
+
+  // Default tab based on user roles
+  useEffect(() => {
+    if (!authzLoading) {
+      if (isEvalAgent && !isServiceAgent) {
+        setActiveTab('evaluator');
+      } else if (isController && !isServiceAgent && !isEvalAgent) {
+        setActiveTab('controller');
+      }
+    }
+  }, [authzLoading, isEvalAgent, isServiceAgent, isController]);
+
+  // Lazy fetch all bids when controller tab is selected
+  useEffect(() => {
+    if (activeTab === 'controller' && isController && allBids.length === 0 && !allBidsLoading) {
+      fetchAllBids();
+    }
+  }, [activeTab, isController]);
 
   const collectionName = collection?.formName || `Collection ${collectionId}`;
   const submitted = collection?.count ?? 0;
@@ -517,463 +284,672 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
-      <div
+      <GradientBand {...GRADIENT_COLORS.collectionDetail} />
+      <Header onGradient />
+      <main
         style={{
           position: 'relative',
-          transform: surveyVisible ? 'translateX(-100%)' : 'translateX(0)',
-          transition: 'transform 0.35s ease-in-out',
-          minHeight: '100vh',
+          zIndex: 1,
+          maxWidth: 'var(--max-width)',
+          margin: '0 auto',
+          padding: '0 16px 16px',
+          paddingTop: 'calc(var(--header-height) + 8px)',
         }}
       >
-        <GradientBand {...GRADIENT_COLORS.collectionDetail} />
-        <Header onGradient />
-        <main
+        {/* Page title section */}
+        <div
           style={{
-            position: 'relative',
-            zIndex: 1,
-            maxWidth: 'var(--max-width)',
-            margin: '0 auto',
-            padding: '0 16px 16px',
-            paddingTop: 'calc(var(--header-height) + 8px)',
-            paddingBottom: showApplyButton || showNewClaimButton ? '80px' : '16px',
-            minHeight: '100vh',
+            minHeight: '150px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
           }}
         >
-          {/* Page title section */}
-          <div
+          <button
+            onClick={() => router.push(`/entities/${entityDid}`)}
+            aria-label='Go back to claim collections'
             style={{
-              minHeight: '150px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              margin: '0 0 6px',
               display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '4px',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '13px',
+              fontWeight: 400,
+              lineHeight: 1.2,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 4px' }}>
+            <svg
+              width='14'
+              height='14'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <polyline points='15 18 9 12 15 6' />
+            </svg>
+            Claim Collections
+          </button>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 600,
+              color: '#fff',
+              letterSpacing: '-0.3px',
+              lineHeight: 1.2,
+            }}
+          >
+            {collectionName}
+          </h1>
+        </div>
+
+        {/* Loading state */}
+        {dataLoading && (
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              padding: '32px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading...</p>
+          </div>
+        )}
+
+        {/* Role chips */}
+        {!dataLoading && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <button
+              onClick={() => setActiveTab('contributor')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '8px 14px',
+                borderRadius: '20px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: activeTab === 'contributor' ? 'var(--accent-color)' : 'var(--card-bg-color)',
+                color: activeTab === 'contributor' ? '#fff' : 'var(--text-secondary)',
+              }}
+            >
+              <svg width='20' height='20' fill='none' viewBox='0 0 24 24'>
+                <path
+                  d='M12 3.75C9.1084 3.75 6.75 6.1084 6.75 9C6.75 10.8076 7.67285 12.4131 9.07031 13.3594C6.39551 14.5078 4.5 17.1621 4.5 20.25H6C6 16.9277 8.67773 14.25 12 14.25C15.3223 14.25 18 16.9277 18 20.25H19.5C19.5 17.1621 17.6045 14.5078 14.9297 13.3594C16.3271 12.4131 17.25 10.8076 17.25 9C17.25 6.1084 14.8916 3.75 12 3.75ZM12 5.25C14.0801 5.25 15.75 6.91992 15.75 9C15.75 11.0801 14.0801 12.75 12 12.75C9.91992 12.75 8.25 11.0801 8.25 9C8.25 6.91992 9.91992 5.25 12 5.25Z'
+                  fill='currentColor'
+                ></path>
+              </svg>
+              Contributor
+            </button>
+            {(hasBevForm || isEvalAgent) && (
               <button
-                onClick={() => router.push(`/entities/${entityDid}`)}
-                aria-label='Go back'
+                onClick={() => setActiveTab('evaluator')}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  color: '#fff',
                   display: 'flex',
                   alignItems: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width='20'
-                  height='20'
-                  viewBox='0 0 24 24'
-                  fill='none'
-                  stroke='currentColor'
-                  strokeWidth='2'
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                >
-                  <polyline points='15 18 9 12 15 6' />
-                </svg>
-              </button>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: '20px',
+                  gap: '5px',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '13px',
                   fontWeight: 600,
-                  color: '#fff',
-                  letterSpacing: '-0.3px',
-                  lineHeight: 1.2,
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'evaluator' ? 'var(--accent-color)' : 'var(--card-bg-color)',
+                  color: activeTab === 'evaluator' ? '#fff' : 'var(--text-secondary)',
                 }}
               >
-                {collectionName}
-              </h1>
-            </div>
-            {collection && (
-              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-                {quota ? `${submitted}/${quota}` : submitted} submitted
-              </p>
+                <svg width='20' height='20' fill='none' viewBox='0 0 24 24'>
+                  <path
+                    d='M9 1.5C6.1084 1.5 3.75 3.8584 3.75 6.75C3.75 8.55762 4.67285 10.1631 6.07031 11.1094C3.39551 12.2578 1.5 14.9121 1.5 18H3C3 14.6777 5.67773 12 9 12C10.0312 12 10.9922 12.2695 11.8359 12.7266C11.0039 13.7578 10.5 15.0762 10.5 16.5C10.5 19.8047 13.1953 22.5 16.5 22.5C19.8047 22.5 22.5 19.8047 22.5 16.5C22.5 13.1953 19.8047 10.5 16.5 10.5C15.1904 10.5 13.9717 10.9307 12.9844 11.6484C12.6533 11.4404 12.293 11.2646 11.9297 11.1094C13.3271 10.1631 14.25 8.55762 14.25 6.75C14.25 3.8584 11.8916 1.5 9 1.5ZM9 3C11.0801 3 12.75 4.66992 12.75 6.75C12.75 8.83008 11.0801 10.5 9 10.5C6.91992 10.5 5.25 8.83008 5.25 6.75C5.25 4.66992 6.91992 3 9 3ZM16.5 12C18.9932 12 21 14.0068 21 16.5C21 18.9932 18.9932 21 16.5 21C14.0068 21 12 18.9932 12 16.5C12 14.0068 14.0068 12 16.5 12ZM18.9609 14.4609L16.5 16.9219L14.7891 15.2109L13.7109 16.2891L15.9609 18.5391L16.5 19.0547L17.0391 18.5391L20.0391 15.5391L18.9609 14.4609Z'
+                    fill='currentColor'
+                  ></path>
+                </svg>
+                Evaluator
+              </button>
+            )}
+            {isController && (
+              <button
+                onClick={() => setActiveTab('controller')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'controller' ? 'var(--accent-color)' : 'var(--card-bg-color)',
+                  color: activeTab === 'controller' ? '#fff' : 'var(--text-secondary)',
+                }}
+              >
+                <svg width='20' height='20' fill='none' viewBox='0 0 24 24'>
+                  <path
+                    d='M12 3.75C9.075 3.75 6.75 6.075 6.75 9C6.75 10.8281 7.65747 12.4211 9.05273 13.3594C6.38251 14.5105 4.5 17.1702 4.5 20.25H6C6 16.95 8.7 14.25 12 14.25C12.2559 14.25 12.5045 14.2258 12.75 14.1914V17.625C12.75 21.525 17.8497 23.7756 18.0747 23.8506L18.375 24L18.6753 23.8506C18.9003 23.7756 24 21.525 24 17.625V13.5H23.3247C21.8997 13.5 21.0744 12.9756 20.3994 12.6006C19.7244 12.3006 19.125 12 18.375 12C17.625 12 17.025 12.3006 16.5 12.6006C16.1203 12.8115 15.6648 13.0667 15.0894 13.2524C16.4011 12.3031 17.25 10.7631 17.25 9C17.25 6.075 14.925 3.75 12 3.75ZM12 5.25C14.1 5.25 15.75 6.9 15.75 9C15.75 11.1 14.1 12.75 12 12.75C9.9 12.75 8.25 11.1 8.25 9C8.25 6.9 9.9 5.25 12 5.25ZM18.375 13.5C18.75 13.5 19.0494 13.6497 19.6494 13.9497L19.875 14.0244C20.475 14.3244 21.3 14.7753 22.5 14.9253V17.5503C22.5 20.0253 19.275 21.8244 18.375 22.2744C17.475 21.8244 14.25 20.0253 14.25 17.5503V14.9253C15.525 14.7753 16.3497 14.3244 16.9497 14.0244L17.1753 13.9497H17.25H17.3247C17.7747 13.5747 18 13.5 18.375 13.5Z'
+                    fill='currentColor'
+                  ></path>
+                </svg>
+                Controller
+              </button>
             )}
           </div>
+        )}
 
-          {/* Status banner for non-agents */}
-          {dataLoading && (
-            <div
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '16px',
-                border: '1px solid var(--border-color)',
-                padding: '32px 16px',
-                textAlign: 'center',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading...</p>
-            </div>
-          )}
+        {/* ── Contributor tab ── */}
+        {!dataLoading && activeTab === 'contributor' && (
+          <>
+            {hasPendingSaBid && (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  textAlign: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                  Service agent application pending
+                </p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  Your service agent application is being reviewed.
+                </p>
+              </div>
+            )}
 
-          {!dataLoading && !isAgent && !hasPendingBid && (
-            <div
-              style={{
-                padding: '20px',
-                borderRadius: '16px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-color)',
-                textAlign: 'center',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                Apply as a service agent to start submitting claims.
-              </p>
-            </div>
-          )}
+            {!isServiceAgent && !hasPendingSaBid && showApplySaButton && (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  textAlign: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  Apply as a service agent to start submitting claims.
+                </p>
+              </div>
+            )}
 
-          {!dataLoading && hasPendingBid && (
-            <div
-              style={{
-                padding: '20px',
-                borderRadius: '16px',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-color)',
-                textAlign: 'center',
-              }}
-            >
-              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                Application pending
-              </p>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Your agent application is being reviewed.
-              </p>
-            </div>
-          )}
+            {isServiceAgent && (
+              <>
+                {claimsLoading ? (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--border-color)',
+                      padding: '32px 16px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading claims...</p>
+                  </div>
+                ) : claims.length === 0 ? (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--border-color)',
+                      padding: '32px 16px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                      No claims yet. Submit your first claim to get started.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {claims.map((claim: any) => {
+                      const status = statusLabel(claim);
+                      return (
+                        <div
+                          key={claim.claimId}
+                          onClick={() => navigateToForm('view', claim.claimId)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '14px 16px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '16px',
+                            backgroundColor: 'var(--bg-secondary)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {claim.claimId?.slice(0, 25)}...
+                            </p>
+                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              {new Date(claim.submissionDate).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 9999,
+                              color: status.color,
+                              backgroundColor: status.bg,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {status.text}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
 
-          {/* Claims list */}
-          {!dataLoading && isAgent && (
-            <>
-              {claims.length === 0 ? (
-                <div
+            {!isCollectionOpen && (
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                  {isExpired ? 'Collection has ended' : 'Collection has not started yet'}
+                </p>
+              </div>
+            )}
+
+            {(showNewClaimButton || showApplySaButton) && (
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {showNewClaimButton && (
+                  <button
+                    onClick={() => navigateToForm('vct')}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: 'var(--accent-color)',
+                      color: '#fff',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      letterSpacing: '-0.2px',
+                    }}
+                  >
+                    {hasDraft ? 'Continue Claim' : 'New Claim'}
+                  </button>
+                )}
+                {showApplySaButton && (
+                  <button
+                    onClick={() => navigateToForm('bco')}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: 'var(--accent-color)',
+                      color: '#fff',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      letterSpacing: '-0.2px',
+                    }}
+                  >
+                    Apply as Contributor
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Evaluator tab ── */}
+        {!dataLoading && activeTab === 'evaluator' && (
+          <>
+            {hasPendingEaBid && (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  textAlign: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                  Evaluation agent application pending
+                </p>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  Your evaluation agent application is being reviewed.
+                </p>
+              </div>
+            )}
+
+            {!isEvalAgent && !hasPendingEaBid && showApplyEaButton && (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  textAlign: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  Apply as an evaluation agent to start reviewing claims.
+                </p>
+              </div>
+            )}
+
+            {isEvalAgent && (
+              <>
+                {allClaimsLoading ? (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--border-color)',
+                      padding: '32px 16px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading claims...</p>
+                  </div>
+                ) : displayedClaims.length === 0 ? (
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '16px',
+                      border: '1px solid var(--border-color)',
+                      padding: '32px 16px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                      No claims submitted yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {displayedClaims.map((claim: any) => {
+                      const status = statusLabel(claim);
+                      return (
+                        <div
+                          key={claim.claimId}
+                          onClick={() => navigateToForm('view', claim.claimId)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '14px 16px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '16px',
+                            backgroundColor: 'var(--bg-secondary)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {claim.claimId?.slice(0, 25)}...
+                            </p>
+                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              {new Date(claim.submissionDate).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                              {claim.agentAddress && (
+                                <span style={{ marginLeft: '6px', opacity: 0.7 }}>
+                                  {claim.agentAddress.slice(0, 10)}...{claim.agentAddress.slice(-4)}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 9999,
+                              color: status.color,
+                              backgroundColor: status.bg,
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {status.text}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            {showApplyEaButton && (
+              <div style={{ marginTop: '16px' }}>
+                <button
+                  onClick={() => navigateToForm('bev')}
                   style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    borderRadius: '16px',
-                    border: '1px solid var(--border-color)',
-                    padding: '32px 16px',
-                    textAlign: 'center',
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'var(--accent-color)',
+                    color: '#fff',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    letterSpacing: '-0.2px',
                   }}
                 >
-                  <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    No claims yet. Submit your first claim to get started.
-                  </p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {claims.map((claim: any) => {
-                    const status = statusLabel(claim);
-                    return (
-                      <div
-                        key={claim.claimId}
-                        onClick={() => viewClaim(claim)}
+                  Apply as Evaluation Agent
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Controller tab ── */}
+        {!dataLoading && activeTab === 'controller' && isController && (
+          <>
+            {allBidsLoading ? (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color)',
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading applications...</p>
+              </div>
+            ) : allBids.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color)',
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  No pending applications.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {allBids.map((bid: any) => (
+                  <div
+                    key={bid.id}
+                    style={{
+                      padding: '14px 16px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-secondary)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                          {bid.did?.slice(0, 25)}...
+                        </p>
+                        <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {new Date(bid.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <span
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '14px 16px',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '16px',
-                          backgroundColor: 'var(--bg-secondary)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '2px 8px',
+                          borderRadius: 9999,
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          color: bid.role === 'EA' ? '#1e40af' : 'var(--green-secondary)',
+                          backgroundColor: bid.role === 'EA' ? '#dbeafe' : '#dcfce7',
+                        }}
+                      >
+                        {bid.role === 'EA' ? 'Evaluator' : 'Service Agent'}
+                      </span>
+                    </div>
+
+                    {/* Bid data preview */}
+                    {viewingBid?.id === bid.id ? (
+                      <div style={{ marginBottom: '8px' }}>
+                        <div
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            backgroundColor: 'var(--card-bg-color)',
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                          }}
+                        >
+                          {(() => {
+                            try {
+                              const data = JSON.parse(bid.data);
+                              return Object.entries(data).map(([key, value]) => (
+                                <div key={key} style={{ marginBottom: '4px' }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{key}:</span>{' '}
+                                  {String(value)}
+                                </div>
+                              ));
+                            } catch {
+                              return <span>{bid.data}</span>;
+                            }
+                          })()}
+                        </div>
+                        <button
+                          onClick={() => setViewingBid(null)}
+                          style={{
+                            marginTop: '6px',
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '12px',
+                            color: 'var(--accent-color)',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                        >
+                          Hide details
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setViewingBid(bid)}
+                        style={{
+                          marginBottom: '8px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '12px',
+                          color: 'var(--accent-color)',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        View details
+                      </button>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => toast.info('Approve functionality coming soon')}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          backgroundColor: 'var(--green-primary)',
+                          color: '#fff',
+                          fontSize: '13px',
+                          fontWeight: 600,
                           cursor: 'pointer',
                         }}
                       >
-                        <div>
-                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                            {claim.claimId?.slice(0, 25)}...
-                          </p>
-                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            {new Date(claim.submissionDate).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '2px 8px',
-                            borderRadius: 9999,
-                            color: status.color,
-                            backgroundColor: status.bg,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {status.text}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {formError && (
-            <p style={{ margin: '16px 0 0', fontSize: '13px', color: 'var(--error-color)', textAlign: 'center' }}>
-              {formError}
-            </p>
-          )}
-        </main>
-
-        {/* Bottom action */}
-        {(showApplyButton || showNewClaimButton) && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '12px 16px',
-              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <button
-              onClick={showApplyButton ? handleApplyAsAgent : () => openClaimSurvey(hasDraft)}
-              style={{
-                width: '100%',
-                maxWidth: 'var(--max-width)',
-                padding: '14px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: 'var(--accent-color)',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                letterSpacing: '-0.2px',
-              }}
-            >
-              {showApplyButton ? 'Apply as Agent' : hasDraft ? 'Continue Claim' : 'New Claim'}
-            </button>
-          </div>
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => toast.info('Reject functionality coming soon')}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--error-color)',
+                          backgroundColor: 'transparent',
+                          color: 'var(--error-color)',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
-      </div>
 
-      {/* PIN prompt overlay */}
-      {pinMode === 'prompt' && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '340px',
-              margin: '0 20px',
-              borderRadius: '12px',
-              padding: '28px 24px',
-              backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            }}
-          >
-            {/* @ts-ignore */}
-            <MatrixPinForm
-              encryptedMnemonic={pinEncryptedMnemonic}
-              onSuccess={(pin: string) => {
-                pinHandlerRef.current.resolve?.(pin);
-                setPinMode('hidden');
-              }}
-              onError={(err: string) => {
-                pinHandlerRef.current.reject?.(new Error(err));
-                setPinMode('hidden');
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Survey slide-in */}
-      {(surveyTemplate || surveyClosing) && survey && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '100%',
-            backgroundColor: 'var(--bg-secondary)',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            transform: surveyVisible ? 'translateX(0)' : 'translateX(100%)',
-            transition: 'transform 0.35s ease-in-out',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '0 16px',
-              height: 'var(--header-height)',
-              gap: '4px',
-            }}
-          >
-            <button
-              onClick={handleCloseSurvey}
-              aria-label='Close'
-              style={{
-                background: 'var(--card-bg-color)',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                padding: '6px',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg
-                width='20'
-                height='20'
-                viewBox='0 0 24 24'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='2'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              >
-                <line x1='18' y1='6' x2='6' y2='18' />
-                <line x1='6' y1='6' x2='18' y2='18' />
-              </svg>
-            </button>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '14px',
-                fontWeight: 600,
-                background: 'var(--card-bg-color)',
-                borderRadius: '8px',
-                padding: '0 12px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                color: 'var(--text-primary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                minWidth: 0,
-                flex: 1,
-              }}
-            >
-              {surveyMode === 'view'
-                ? `Claim #${viewClaimId ?? ''}`
-                : surveyMode === 'bid'
-                ? 'Apply as Agent'
-                : hasDraft
-                ? 'Continue Claim'
-                : 'New Claim'}
-            </h3>
-          </div>
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            {/* @ts-ignore */}
-            <Survey model={survey} />
-          </div>
-        </div>
-      )}
-
-      {/* Close confirmation dialog */}
-      {closeConfirmVisible && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1200,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            backdropFilter: 'blur(4px)',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setCloseConfirmVisible(false);
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '300px',
-              margin: '0 20px',
-              borderRadius: '14px',
-              backgroundColor: 'var(--bg-secondary)',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ padding: '20px 20px 16px', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Unsaved changes
-              </p>
-              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                Your progress has been saved as a draft. What would you like to do?
-              </p>
-            </div>
-            <div style={{ borderTop: '1px solid var(--border-color)' }}>
-              <button
-                onClick={handleConfirmSave}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  border: 'none',
-                  borderBottom: '1px solid var(--border-color)',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  fontWeight: 500,
-                  color: 'var(--accent-color)',
-                }}
-              >
-                Save & close
-              </button>
-              <button
-                onClick={handleConfirmDiscard}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  border: 'none',
-                  borderBottom: '1px solid var(--border-color)',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  color: 'var(--error-color)',
-                }}
-              >
-                Discard & close
-              </button>
-              <button
-                onClick={() => setCloseConfirmVisible(false)}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {formError && (
+          <p style={{ margin: '16px 0 0', fontSize: '13px', color: 'var(--error-color)', textAlign: 'center' }}>
+            {formError}
+          </p>
+        )}
+      </main>
     </div>
   );
 }

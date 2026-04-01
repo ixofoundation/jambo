@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
-import config from '@constants/config.json';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 
@@ -11,8 +10,7 @@ export default function GuestGuard({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
-      const entityId: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_ENTITY || (config as any).entity;
-      router.replace(entityId ? `/entities/${encodeURIComponent(entityId)}` : '/');
+      router.replace('/');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading, isLoggedIn]);

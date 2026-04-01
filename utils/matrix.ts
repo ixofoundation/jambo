@@ -712,7 +712,10 @@ export function generatePassphraseFromMnemonic(mnemonic: string): string {
  * @returns {string} cleaned homeserver URL
  */
 export function cleanMatrixHomeServerUrl(homeServer: string): string {
-  return homeServer.replace(/^(https?:\/\/)/, '').replace(/^matrix\./, '').replace(/\/$/, '');
+  return homeServer
+    .replace(/^(https?:\/\/)/, '')
+    .replace(/^matrix\./, '')
+    .replace(/\/$/, '');
 }
 
 /**
@@ -787,4 +790,41 @@ export function getAuthId({ userId, password }: { userId: string; password: stri
       user: userId,
     },
   };
+}
+
+// =================================================================================================
+// OPENID TOKEN
+// =================================================================================================
+let openIdCache: { token: string; expiresAt: number } | null = null;
+
+/**
+ * Fetches a Matrix OpenID token for the current user, caching it until
+ * 10 seconds before expiry to avoid using a token that's about to expire.
+ * @returns {Promise<string>} The OpenID access token
+ */
+export async function getMatrixOpenIdToken(): Promise<string> {
+  if (openIdCache && Date.now() < openIdCache.expiresAt) {
+    return openIdCache.token;
+  }
+  const baseUrl = secret.baseUrl;
+  const accessToken = secret.accessToken;
+  const userId = secret.userId;
+  if (!baseUrl || !accessToken || !userId) {
+    throw new Error('Matrix credentials not available');
+  }
+  const url = cleanUrlString(
+    `${baseUrl}/_matrix/client/v3/user/${encodeURIComponent(userId)}/openid/request_token`,
+  );
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) throw new Error(`Failed to fetch OpenID token: ${res.statusText}`);
+  const data = await res.json();
+  openIdCache = {
+    token: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000 - 10_000,
+  };
+  return openIdCache.token;
 }

@@ -49,7 +49,7 @@ export default function ProfileScreen() {
           cleanUrlString(`${homeServerUrl}/_matrix/client/v3/directory/room/${encodeURIComponent(roomAlias)}`),
           { headers: { Authorization: `Bearer ${accessToken}` } },
         );
-        if (!aliasRes.ok) throw new Error('Could not find your data vault room');
+        if (!aliasRes.ok) throw new Error('Could not find your data store room');
         const { room_id } = await aliasRes.json();
 
         const stateRes = await fetch(
@@ -534,7 +534,7 @@ function PinModal({ onSuccess, onCancel }: { onSuccess: (pin: string) => Promise
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ width: '28px' }} />
-          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>Data Vault</h1>
+          <h1 style={{ flex: 1, textAlign: 'center', margin: 0, color: 'white', fontSize: '14px' }}>Data Store</h1>
           <button
             onClick={onCancel}
             style={{
@@ -642,7 +642,7 @@ function PinModal({ onSuccess, onCancel }: { onSuccess: (pin: string) => Promise
         </div>
 
         <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', textAlign: 'center' }}>
-          Enter your Data Vault PIN
+          Enter your Data Store PIN
         </p>
 
         {error && <p style={{ color: 'red', fontSize: '13px', marginBottom: '12px', textAlign: 'center' }}>{error}</p>}

@@ -5,14 +5,17 @@ import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { useAuth } from '@hooks/useAuth';
+import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
-import { useAppSelector } from '@store/hooks';
+import { useAppSelector, useAppDispatch } from '@store/hooks';
+import { addProject } from '@store/slices/projectsSlice';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
+import { getMatrixOpenIdToken } from '@utils/matrix';
 
 function readableStatus(status?: number): string {
   if (status === 0) return 'Created';
@@ -30,19 +33,20 @@ function readableType(type?: string): string {
   return last.charAt(0).toUpperCase() + last.slice(1);
 }
 
+type RoleStatus = 'agent' | 'pending' | 'none';
+
 export default function Dashboard() {
   const router = useRouter();
   const entityDid = router.query.entityId as string | undefined;
 
   const authContext = useAuth();
+  const { awaitCompletion } = useBackgroundSetup();
   const did = authContext.did!;
   const address = authContext.address!;
 
-  const {
-    collections: protocolCollections,
-    loading: collectionsLoading,
-  } = useProtocolCollections(entityDid);
+  const { collections: protocolCollections, loading: collectionsLoading } = useProtocolCollections(entityDid);
 
+  const dispatch = useAppDispatch();
   const profile = useAppSelector((state) => (entityDid ? state.profiles.byEntityDid[entityDid] : undefined));
   const entity = useAppSelector((state) => (entityDid ? state.entities.byId[entityDid] : undefined));
 
@@ -50,16 +54,29 @@ export default function Dashboard() {
   const projectType = readableType(profile?.type || entity?.type);
   const projectStatus = readableStatus(entity?.status);
 
-  // Per-collection authz status: 'agent' | 'pending' | 'unauthorized' | undefined (loading)
-  const [collectionStatus, setCollectionStatus] = useState<Record<string, 'agent' | 'pending' | 'unauthorized'>>({});
+  // Auto-add this entity to the projects list if it's a project type
+  useEffect(() => {
+    if (!entityDid) return;
+    const type = (entity?.type || profile?.type || '').toLowerCase();
+    if (type.includes('project')) {
+      dispatch(addProject(entityDid));
+    }
+  }, [entityDid, entity?.type, profile?.type, dispatch]);
+
+  // Per-collection authz status for SA and EA independently
+  const [collectionStatus, setCollectionStatus] = useState<Record<string, { sa: RoleStatus; ea: RoleStatus }>>({});
   const [statusLoading, setStatusLoading] = useState(true);
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
 
   function getBidBotClient() {
-    if (bidBotClientRef.current?.bid) return bidBotClientRef.current;
+    const token = secret.accessToken as string;
+    if (bidBotClientRef.current?.bid && token) return bidBotClientRef.current;
+    bidBotClientRef.current = undefined;
+    if (!token) return null;
     bidBotClientRef.current = createMatrixBidBotClient({
+      homeServerUrl: process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL!,
       botUrl: process.env.NEXT_PUBLIC_MATRIX_BID_BOT_URL!,
-      accessToken: secret.accessToken as string,
+      accessToken: token,
     });
     return bidBotClientRef.current;
   }
@@ -70,39 +87,55 @@ export default function Dashboard() {
     let cancelled = false;
     async function checkStatuses() {
       try {
+        await awaitCompletion();
+        if (cancelled) return;
+
         const queryClient = await createQueryClient(CHAIN_RPC_URL);
         const { grants } = await queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address });
         const typedGrants = grants as GrantAuthorization[];
 
-        const statuses: Record<string, 'agent' | 'pending' | 'unauthorized'> = {};
+        const statuses: Record<string, { sa: RoleStatus; ea: RoleStatus }> = {};
         const bidClient = getBidBotClient();
+        const openIdToken = bidClient ? await getMatrixOpenIdToken() : undefined;
         const registry = createRegistry();
+
+        function grantMatchesCollection(g: GrantAuthorization, typeUrl: string, admin: string, colId: string): boolean {
+          if (g.authorization?.typeUrl !== typeUrl || g.granter !== admin) return false;
+          try {
+            const decoded = registry.decode(g.authorization);
+            const constraints = decoded.constraints ?? [];
+            if (constraints.length === 0) return true;
+            return constraints.some((con: any) => con.collectionId === colId);
+          } catch {
+            return false;
+          }
+        }
 
         await Promise.all(
           protocolCollections.map(async (c) => {
-            const hasSubmit = typedGrants?.find((g) => {
-              if (g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization || g.granter !== c.admin) return false;
+            const hasSubmit = typedGrants?.find((g) =>
+              grantMatchesCollection(g, TRANSACTION_TYPES.SubmitClaimAuthorization, c.admin, c.collectionId),
+            );
+            const hasEval = typedGrants?.find((g) =>
+              grantMatchesCollection(g, TRANSACTION_TYPES.EvaluateClaimAuthorization, c.admin, c.collectionId),
+            );
+
+            let saStatus: RoleStatus = hasSubmit ? 'agent' : 'none';
+            let eaStatus: RoleStatus = hasEval ? 'agent' : 'none';
+
+            // Check bids for pending roles
+            if (bidClient && (saStatus === 'none' || eaStatus === 'none')) {
               try {
-                const decoded = registry.decode(g.authorization);
-                const constraints = decoded.constraints ?? [];
-                if (constraints.length === 0) return true;
-                return constraints.some((con: any) => con.collectionId === c.collectionId);
-              } catch {
-                return false;
+                const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did, openIdToken!, did);
+                const bidData = response.data ?? [];
+                if (saStatus === 'none' && bidData.some((b: any) => b.role === 'SA')) saStatus = 'pending';
+                if (eaStatus === 'none' && bidData.some((b: any) => b.role === 'EA')) eaStatus = 'pending';
+              } catch (err) {
+                console.warn(`[Dashboard] Bid query failed for collection ${c.collectionId}:`, err);
               }
-            });
-            if (hasSubmit) {
-              statuses[c.collectionId] = 'agent';
-              return;
             }
-            try {
-              const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did);
-              if (response.data?.length > 0) {
-                statuses[c.collectionId] = 'pending';
-                return;
-              }
-            } catch {}
-            statuses[c.collectionId] = 'unauthorized';
+
+            statuses[c.collectionId] = { sa: saStatus, ea: eaStatus };
           }),
         );
 
@@ -110,37 +143,46 @@ export default function Dashboard() {
           setCollectionStatus(statuses);
           setStatusLoading(false);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[Dashboard] checkStatuses error:', err);
         if (!cancelled) setStatusLoading(false);
       }
     }
 
     checkStatuses();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [address, did, protocolCollections, collectionsLoading]);
 
-  function statusBadge(status?: 'agent' | 'pending' | 'unauthorized') {
+  function statusBadges(status?: { sa: RoleStatus; ea: RoleStatus }) {
     if (!status) return null;
-    const config = {
-      agent: { label: 'Agent', color: 'var(--green-primary)' },
-      pending: { label: 'Pending', color: 'var(--yellow-primary)' },
-      unauthorized: { label: 'Unauthorized', color: 'var(--text-secondary)' },
-    }[status];
+    const badges: { label: string; color: string }[] = [];
+    if (status.sa === 'agent') badges.push({ label: 'Contributor', color: 'var(--green-primary)' });
+    else if (status.sa === 'pending') badges.push({ label: 'SA Pending', color: 'var(--yellow-primary)' });
+    if (status.ea === 'agent') badges.push({ label: 'Evaluator', color: 'var(--green-primary)' });
+    else if (status.ea === 'pending') badges.push({ label: 'EA Pending', color: 'var(--yellow-primary)' });
+    if (badges.length === 0) return null;
     return (
-      <span
-        style={{
-          fontSize: '11px',
-          fontWeight: 600,
-          color: config.color,
-          backgroundColor: `color-mix(in srgb, ${config.color} 12%, transparent)`,
-          padding: '2px 8px',
-          borderRadius: '10px',
-          flexShrink: 0,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {config.label}
-      </span>
+      <>
+        {badges.map((b, i) => (
+          <span
+            key={i}
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: b.color,
+              backgroundColor: `color-mix(in srgb, ${b.color} 12%, transparent)`,
+              padding: '2px 8px',
+              borderRadius: '10px',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {b.label}
+          </span>
+        ))}
+      </>
     );
   }
 
@@ -168,6 +210,38 @@ export default function Dashboard() {
             justifyContent: 'center',
           }}
         >
+          <button
+            onClick={() => router.push('/entities')}
+            aria-label='Go back to projects'
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              margin: '0 0 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '13px',
+              fontWeight: 400,
+              lineHeight: 1.2,
+            }}
+          >
+            <svg
+              width='14'
+              height='14'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2.5'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <polyline points='15 18 9 12 15 6' />
+            </svg>
+            Projects
+          </button>
           <h1
             style={{
               margin: '0 0 4px',
@@ -182,7 +256,9 @@ export default function Dashboard() {
           </h1>
           {(projectType || projectStatus) && (
             <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-              {projectType}{projectType && projectStatus ? ' \u00B7 ' : ''}{projectStatus}
+              {projectType}
+              {projectType && projectStatus ? ' \u00B7 ' : ''}
+              {projectStatus}
             </p>
           )}
         </div>
@@ -217,7 +293,9 @@ export default function Dashboard() {
             {protocolCollections.map((c) => (
               <button
                 key={c.collectionId}
-                onClick={() => router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)}
+                onClick={() =>
+                  router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)
+                }
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -249,27 +327,35 @@ export default function Dashboard() {
                   </p>
                   <div style={{ margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {c.endDate && new Date(c.endDate) < new Date()
-                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+                      {c.endDate && new Date(c.endDate).getFullYear() > 1970 && new Date(c.endDate) < new Date()
+                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}`
                         : c.startDate
-                          ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
-                          : ''}
+                        ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}`
+                        : ''}
                     </span>
-                    {!statusLoading && statusBadge(collectionStatus[c.collectionId])}
+                    {!statusLoading && statusBadges(collectionStatus[c.collectionId])}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, marginLeft: '12px' }}>
                   <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--text-secondary)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    width='16'
+                    height='16'
+                    viewBox='0 0 24 24'
+                    fill='none'
+                    stroke='var(--text-secondary)'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
                   >
-                    <polyline points="9 18 15 12 9 6" />
+                    <polyline points='9 18 15 12 9 6' />
                   </svg>
                 </div>
               </button>

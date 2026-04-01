@@ -28,11 +28,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ message: errorData.message || 'Failed to grant feegrant' });
+      const errorText = await response.text();
+      let errorMessage = 'Failed to grant feegrant';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        if (errorText) errorMessage = errorText;
+      }
+      return res.status(response.status).json({ message: errorMessage });
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Upstream returned 200 but with non-JSON body (e.g. plain text error)
+      return res.status(500).json({ message: text || 'Feegrant service returned invalid response' });
+    }
     res.json(data);
   } catch (error: any) {
     console.error('Feegrant grant error:', error);

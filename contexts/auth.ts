@@ -1,44 +1,31 @@
 import { createContext } from 'react';
 import { DeliverTxResponse } from '@cosmjs/stargate';
-
-export type SigningMethod = 'passkey' | undefined;
+import type { AuthHubSessionData } from 'lib/authHub/redirect';
 
 export interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
-  credentialId: string;
   address: string | null;
   did: string | null;
-  authenticatorId: string | undefined;
-  signingMethod: SigningMethod;
-  loginWithPasskey: (data: {
-    credentialId: string;
-    authenticatorId?: string;
-    address: string;
-    did: string;
-  }) => void;
-  registerWithPasskey: (data: {
-    address: string;
-    did: string;
-    credentialId: string;
-    authenticatorId?: string;
-  }) => void;
+  displayName: string | null;
+  sessionAuthenticatorId: string | null;
+  matrixUserId: string | null;
+  matrixRoomId: string | null;
+  loginWithAuthHub: (data: AuthHubSessionData) => void;
   onSign: (messages: any[]) => Promise<DeliverTxResponse>;
-  onAuthenticate: () => Promise<{ type: string; data: any }>;
   logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   isLoading: true,
-  credentialId: '',
   address: null,
   did: null,
-  authenticatorId: undefined,
-  signingMethod: undefined,
-  loginWithPasskey: () => {},
-  registerWithPasskey: () => {},
+  displayName: null,
+  sessionAuthenticatorId: null,
+  matrixUserId: null,
+  matrixRoomId: null,
+  loginWithAuthHub: () => {},
   onSign: () => Promise.reject(new Error('AuthProvider not mounted')),
-  onAuthenticate: () => Promise.reject(new Error('AuthProvider not mounted')),
   logout: () => Promise.reject(new Error('AuthProvider not mounted')),
 });
