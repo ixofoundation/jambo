@@ -358,7 +358,15 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     if (!surveyTemplate || !surveyMode) return undefined;
     try {
       const parsed = JSON.parse(surveyTemplate);
-      const model = new Model(parsed?.question ?? parsed);
+      const templateData = parsed?.question ?? parsed;
+      console.log('[SurveyJS] Form template:', templateData);
+      // SurveyJS expects showProgressBar as a string, but templates may provide a boolean
+      if (typeof templateData.showProgressBar === 'boolean') {
+        templateData.showProgressBar = templateData.showProgressBar
+          ? (templateData.progressBarLocation || 'top')
+          : 'off';
+      }
+      const model = new Model(templateData);
       model.applyTheme(themeJson);
       model.allowCompleteSurveyAutomatic = false;
 
