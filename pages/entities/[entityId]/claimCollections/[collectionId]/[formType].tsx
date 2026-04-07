@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import AuthGuard from '@components/AuthGuard';
 import CollectionForm from 'screens/collectionForm';
+import { BLACKLISTED_COLLECTION_IDS } from '@constants/common';
 
 export default function FormPage() {
   const router = useRouter();
@@ -9,8 +11,16 @@ export default function FormPage() {
   const formType = router.query.formType as string | undefined;
   const claimId = router.query.claimId as string | undefined;
 
+  const isBlacklisted = collectionId && BLACKLISTED_COLLECTION_IDS.includes(collectionId);
+
+  useEffect(() => {
+    if (isBlacklisted && entityDid) {
+      router.replace(`/entities/${entityDid}`);
+    }
+  }, [isBlacklisted, entityDid, router]);
+
   const validTypes = ['vct', 'bco', 'bev', 'view'];
-  if (!entityDid || !collectionId || !formType || !validTypes.includes(formType)) return null;
+  if (isBlacklisted || !entityDid || !collectionId || !formType || !validTypes.includes(formType)) return null;
 
   return (
     <AuthGuard>

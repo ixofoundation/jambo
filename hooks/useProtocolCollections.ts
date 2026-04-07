@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { fetchAllCollectionData } from '@store/thunks/dataThunks';
+import { BLACKLISTED_COLLECTION_IDS } from '@constants/common';
 
 export interface ProtocolCollection {
   collectionId: string;
@@ -54,6 +55,7 @@ export function useProtocolCollections(entityDid?: string) {
   const fetchedEntityRef = useRef<string | undefined>();
 
   const collections = useMemo(() => {
+    let result: ProtocolCollection[];
     // If entityDid is provided, only return collections belonging to that entity
     if (entityDid) {
       const ids = collectionIdsByEntity[entityDid] ?? [];
@@ -61,9 +63,14 @@ export function useProtocolCollections(entityDid?: string) {
       for (const id of ids) {
         if (collectionsById[id]) filtered[id] = collectionsById[id];
       }
-      return selectAllProtocolCollections({ collections: { byId: filtered }, protocols: { formNames } });
+      result = selectAllProtocolCollections({ collections: { byId: filtered }, protocols: { formNames } });
+    } else {
+      result = selectAllProtocolCollections({ collections: { byId: collectionsById }, protocols: { formNames } });
     }
-    return selectAllProtocolCollections({ collections: { byId: collectionsById }, protocols: { formNames } });
+    if (BLACKLISTED_COLLECTION_IDS.length > 0) {
+      result = result.filter((c) => !BLACKLISTED_COLLECTION_IDS.includes(c.collectionId));
+    }
+    return result;
   }, [collectionsById, collectionIdsByEntity, formNames, entityDid]);
 
   const protocolEntities = useMemo(() => {
