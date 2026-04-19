@@ -182,6 +182,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const [signingState, setSigningState] = useState<{ visible: boolean; label: string }>({ visible: false, label: '' });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   function getTxLabel(messages: any[]): string {
     if (!messages?.length) return 'Transaction';
@@ -239,6 +240,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const logout = useCallback(async () => {
+    setIsLoggingOut(true);
     try {
       await logoutMatrixClient({ baseUrl: secret.baseUrl });
     } catch {
@@ -315,6 +317,58 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
                 Signing Transaction
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>{signingState.label}</p>
+            </div>
+          </div>
+          <style>{`
+            @keyframes authSpinner {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+      {isLoggingOut && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-primary, #1a1a2e)',
+              borderRadius: 16,
+              padding: '32px 28px',
+              maxWidth: 340,
+              width: '90%',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 20,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                border: '3px solid var(--border-color)',
+                borderTopColor: 'var(--accent-color, #3b82f6)',
+                borderRadius: '50%',
+                animation: 'authSpinner 0.8s linear infinite',
+              }}
+            />
+            <div>
+              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>Signing out…</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>
+                Please wait while we log you out.
+              </p>
             </div>
           </div>
           <style>{`
