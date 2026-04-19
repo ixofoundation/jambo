@@ -5,12 +5,16 @@ export type IRequestResult<ReturnType> = Promise<{
   error?: Error | unknown;
 }>;
 
-export default async function gqlQuery<TReturn>(url: string, query: string): IRequestResult<TReturn> {
+export default async function gqlQuery<TReturn>(
+  url: string,
+  query: string,
+  variables?: Record<string, unknown>,
+): IRequestResult<TReturn> {
   try {
     const response = await fetch(cleanUrlString(url + '/graphql'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify(variables ? { query, variables } : { query }),
     });
     const data = (await response.json()) as TReturn;
 

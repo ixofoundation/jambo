@@ -7,7 +7,6 @@ import { secret } from '@utils/secrets';
 import { logoutMatrixClient } from '@utils/matrix';
 import { cleanUrlString } from '@utils/url';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
-import { logoutViaAuthHub } from 'lib/authHub/redirect';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 import { store, persistor } from '@store/index';
 import { setAccount, clearAccount } from '@store/slices/accountSlice';
@@ -18,6 +17,7 @@ import { clearProfiles } from '@store/slices/profilesSlice';
 import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfileSlice';
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
 import { clearProjects } from '@store/slices/projectsSlice';
+import { clearKycData } from '@store/slices/kycSlice';
 
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH_VERSION = '2'; // Bump to force clean break from passkey-based accounts
@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     store.dispatch(clearMatrixProfile());
     store.dispatch(clearAllDrafts());
     store.dispatch(clearProjects());
+    store.dispatch(clearKycData());
   }
 
   // Auth version migration guard + session revival
@@ -249,12 +250,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     clearAllState();
     await persistor.purge();
 
-    // Redirect to auth hub logout
-    try {
-      logoutViaAuthHub();
-    } catch {
-      window.location.href = '/auth';
-    }
+    window.location.href = '/auth';
   }, []);
 
   const value = {

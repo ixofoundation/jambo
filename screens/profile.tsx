@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
+import KycCredentialsCard from '@components/Credentials/KycCredentialsCard';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { useAuth } from '@hooks/useAuth';
 import { useRouter } from 'next/router';
@@ -174,7 +175,10 @@ export default function ProfileScreen() {
           </section>
         </div>
 
-        {/* Credentials */}
+        <KycCredentialsCard />
+
+        {/* TODO: matrix credentials hidden for now — re-enable when needed */}
+        {/*
         <div
           style={{
             backgroundColor: 'var(--bg-secondary)',
@@ -297,6 +301,7 @@ export default function ProfileScreen() {
             </div>
           )}
         </div>
+        */}
 
         {/* Spacer to push logout to bottom */}
         <div style={{ flex: 1 }} />
@@ -321,10 +326,12 @@ export default function ProfileScreen() {
         </button>
       </main>
 
-      {/* PIN Modal */}
+      {/* TODO: PIN Modal hidden while matrix credentials section is disabled */}
+      {/*
       {credentialsState === 'pin' && (
         <PinModal onSuccess={handlePinSuccess} onCancel={() => setCredentialsState('hidden')} />
       )}
+      */}
     </div>
   );
 }
