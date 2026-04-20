@@ -426,7 +426,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             const { url } = await fetchKycRedirect(did, protocolId);
             dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
             dispatch(clearDraft(collectionId));
-            window.location.href = url;
+            window.open(url, '_blank', 'noopener,noreferrer');
+            router.push('/profile');
             return;
           }
           if (surveyMode === 'bco' || surveyMode === 'bev') {

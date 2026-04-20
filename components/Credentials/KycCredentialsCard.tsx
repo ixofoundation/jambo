@@ -31,9 +31,9 @@ const primaryButtonStyle = {
   width: '100%',
   padding: '14px 16px',
   borderRadius: '10px',
-  border: '1px solid var(--accent-color, #34d399)',
-  backgroundColor: 'var(--accent-color, #d1fae5)',
-  color: 'var(--text-primary)',
+  border: '1px solid var(--accent-color)',
+  backgroundColor: 'var(--accent-color)',
+  color: 'var(--text-primary-light)',
   cursor: 'pointer',
   fontSize: '14px',
   fontWeight: 500,
@@ -52,9 +52,9 @@ const secondaryButtonStyle = {
 
 const solidAccentButtonStyle = {
   ...primaryButtonStyle,
-  backgroundColor: 'var(--accent-color, #6B1787)',
-  border: '1px solid var(--accent-color, #6B1787)',
-  color: 'var(--text-primary-light, #FFFFFF)',
+  backgroundColor: 'var(--accent-color)',
+  border: '1px solid var(--accent-color)',
+  color: 'var(--text-primary-light)',
 };
 
 function statusLabel(status?: KycStatus): string {
@@ -124,7 +124,8 @@ export default function KycCredentialsCard() {
     try {
       const { url } = await fetchKycRedirect(did, protocolId);
       dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
-      window.location.href = url;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setRedirectBusy(false);
     } catch (err) {
       setRedirectBusy(false);
       const message = err instanceof Error ? err.message : String(err);
@@ -228,9 +229,9 @@ export default function KycCredentialsCard() {
           style={{
             padding: '12px',
             borderRadius: '10px',
-            border: '1px solid var(--accent-color, #34d399)',
-            backgroundColor: 'var(--accent-color, #d1fae5)',
-            color: 'var(--text-primary)',
+            border: '1px solid var(--accent-color)',
+            backgroundColor: 'var(--accent-color)',
+            color: 'var(--text-primary-light)',
             fontSize: '14px',
             textAlign: 'center',
           }}
@@ -244,7 +245,7 @@ export default function KycCredentialsCard() {
           style={{
             marginTop: '12px',
             fontSize: '12px',
-            color: 'var(--error-color, #dc2626)',
+            color: 'var(--error-color)',
           }}
         >
           {error}
