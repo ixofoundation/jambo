@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import Cross from '@icons/cross.svg';
+import PdfCanvas from './PdfCanvas';
 import styles from './PdfPreview.module.scss';
 
 type PdfPreviewProps = {
@@ -38,7 +39,9 @@ export default function PdfPreview({ blobUrl, fileName, compact, onOpen }: PdfPr
         onKeyDown={handleKey}
       >
         <span className={styles.thumbnailHint}>PDF</span>
-        <iframe className={styles.thumbnailIframe} src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`} title={fileName || 'PDF preview'} />
+        <div className={styles.thumbnailBody}>
+          <PdfCanvas blobUrl={blobUrl} compact width={158} />
+        </div>
         {fileName && <span className={styles.thumbnailLabel}>{fileName}</span>}
       </div>
     );
@@ -92,7 +95,9 @@ function PdfFullViewer({ blobUrl, fileName, onClose }: PdfFullViewerProps) {
             <Cross color='black' />
           </a>
         </div>
-        <iframe className={styles.fullIframe} src={blobUrl} title={fileName || 'PDF'} />
+        <div className={styles.fullBody}>
+          <PdfCanvas blobUrl={blobUrl} />
+        </div>
       </div>
     </div>
   );
