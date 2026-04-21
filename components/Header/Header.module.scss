@@ -60,6 +60,17 @@
     object-fit: cover;
   }
 
+  .title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--header-btn-color, var(--text-primary));
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   &.onGradient {
     --header-btn-bg: rgba(255, 255, 255, 0.15);
     --header-btn-color: #fff;

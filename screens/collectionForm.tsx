@@ -7,6 +7,7 @@ import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
+import Header from '@components/Header/Header';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { CHAIN_RPC_URL } from '@constants/common';
@@ -582,69 +583,15 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   return (
     <div
-      style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column' }}
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-secondary)',
+        display: 'flex',
+        flexDirection: 'column',
+        paddingTop: 'var(--header-height)',
+      }}
     >
-      {/* Header bar — always visible */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          height: 'var(--header-height)',
-          gap: '4px',
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={handleClose}
-          aria-label='Back'
-          style={{
-            background: 'var(--card-bg-color)',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            padding: '6px',
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <svg
-            width='20'
-            height='20'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <polyline points='15 18 9 12 15 6' />
-          </svg>
-        </button>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: '14px',
-            fontWeight: 600,
-            background: 'var(--card-bg-color)',
-            borderRadius: '8px',
-            padding: '0 12px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          {title}
-        </h3>
-      </div>
+      <Header title={title} onClose={handleClose} />
 
       {/* Content area */}
       {formLoading ? (

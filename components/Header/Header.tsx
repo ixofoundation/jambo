@@ -7,9 +7,11 @@ import { useAppSelector } from '@store/hooks';
 
 type HeaderProps = {
   onGradient?: boolean;
+  title?: string;
+  onClose?: () => void;
 };
 
-const Header: FC<HeaderProps> = ({ onGradient }) => {
+const Header: FC<HeaderProps> = ({ onGradient, title, onClose }) => {
   const router = useRouter();
   const avatarUrl = useAppSelector((state) => state.matrixProfile.avatarUrl);
   const isProfile = router.pathname === '/profile';
@@ -18,17 +20,39 @@ const Header: FC<HeaderProps> = ({ onGradient }) => {
   return (
     <nav className={`${styles.nav}${onGradient ? ` ${styles.onGradient}` : ''}`}>
       <div className={styles.inner}>
-        {isSettings ? (
-          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</span>
+        {title ? (
+          <span className={styles.title}>{title}</span>
         ) : (
-          <Link href='/' className={styles.logo} aria-label='Home'>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src='/images/logo.png' alt='Jambo' className={styles.logoImg} />
-          </Link>
+          <>
+            {isSettings ? (
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</span>
+            ) : (
+              <Link href='/' className={styles.logo} aria-label='Home'>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src='/images/logo.png' alt='Jambo' className={styles.logoImg} />
+              </Link>
+            )}
+            <div className={styles.spacer} />
+            <HeaderStatusIndicator />
+          </>
         )}
-        <div className={styles.spacer} />
-        <HeaderStatusIndicator />
-        {isProfile ? (
+        {onClose ? (
+          <button className={styles.iconButton} onClick={onClose} aria-label='Close'>
+            <svg
+              width='20'
+              height='20'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <line x1='18' y1='6' x2='6' y2='18' />
+              <line x1='6' y1='6' x2='18' y2='18' />
+            </svg>
+          </button>
+        ) : isProfile ? (
           <button
             className={styles.iconButton}
             onClick={() => router.push('/settings')}
