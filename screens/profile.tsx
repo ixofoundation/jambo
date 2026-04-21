@@ -69,6 +69,10 @@ export default function ProfileScreen() {
               fontSize: '1.2rem',
               fontWeight: 700,
               color: 'var(--text-primary-light)',
+              maxWidth: '100%',
+              textAlign: 'center',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
             }}
           >
             {displayName || 'Unknown'}
