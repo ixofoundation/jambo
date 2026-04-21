@@ -136,7 +136,7 @@ Users can view their past claims in read-only mode:
 2. Claim data is fetched from the Claim Bot (`queryClaim()`)
 3. If the claim is a signed Verifiable Credential, the `credentialSubject` is extracted
 4. The same SurveyJS template is loaded in `display` mode with the data pre-filled
-5. Navigation buttons are hidden (`showNavigationButtons: 'none'`)
+5. The Complete button is hidden (`showCompleteButton: false`); page navigation remains enabled so users can review multi-page claims.
 
 ## Claim Evaluation
 

@@ -426,7 +426,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         (model as any).__disposePdfPreview = disposePdfPreview;
         if (viewClaimData) model.data = viewClaimData;
         model.mode = 'display';
-        model.showNavigationButtons = 'none' as any;
+        model.showCompleteButton = false;
         return model;
       }
 
