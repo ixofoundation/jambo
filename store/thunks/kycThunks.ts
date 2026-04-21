@@ -98,8 +98,7 @@ export const loadKycForm = createAsyncThunk<LoadKycFormResult, LoadKycFormArgs |
 
     const resource =
       offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
-      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate')) ??
-      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
+      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate'));
     if (!resource?.serviceEndpoint) throw new Error('KYC form template not found');
     const url = getServiceEndpoint(resource.serviceEndpoint, offerEntity.service);
     console.log('url', url);
