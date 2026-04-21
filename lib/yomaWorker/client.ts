@@ -1,4 +1,4 @@
-import { IS_JAMBO_WORKER_ENABLED, JAMBO_WORKER_URL } from './config';
+import { IS_JAMBO_WORKER_ENABLED, JAMBO_WORKER_API_BASE } from './config';
 import type {
   AllowedSubcollectionsResponse,
   CollectionClaimsResponse,
@@ -11,7 +11,7 @@ const LOG_PREFIX = '[yomaWorker]';
 async function safeFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
   if (!IS_JAMBO_WORKER_ENABLED) return null;
   try {
-    const res = await fetch(`${JAMBO_WORKER_URL}${path}`, init);
+    const res = await fetch(`${JAMBO_WORKER_API_BASE}${path}`, init);
     const text = await res.text();
     let body: WorkerEnvelope<T> | null = null;
     if (text) {
@@ -51,7 +51,7 @@ export async function registerSubclaimLinkage(input: RegisterSubclaimLinkageInpu
     parentClaimId,
   )}`;
   try {
-    const res = await fetch(`${JAMBO_WORKER_URL}${path}`, {
+    const res = await fetch(`${JAMBO_WORKER_API_BASE}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,5 +80,5 @@ export async function registerSubclaimLinkage(input: RegisterSubclaimLinkageInpu
 export function refreshClaimStatus(parentClaimId: string): void {
   if (!IS_JAMBO_WORKER_ENABLED) return;
   const path = `/v1/claimonclaim/claims/${encodeURIComponent(parentClaimId)}`;
-  fetch(`${JAMBO_WORKER_URL}${path}`).catch((err) => console.warn(`${LOG_PREFIX} GET ${path} threw`, err));
+  fetch(`${JAMBO_WORKER_API_BASE}${path}`).catch((err) => console.warn(`${LOG_PREFIX} GET ${path} threw`, err));
 }
