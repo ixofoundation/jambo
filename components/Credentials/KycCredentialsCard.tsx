@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 
+import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { KYC_ENTITY_ID, KycStatus, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
 import { useAuth } from '@hooks/useAuth';
 import { useKycStatus } from '@hooks/useKycStatus';
@@ -27,35 +28,14 @@ const headerStyle = {
   letterSpacing: '0.5px',
 };
 
-const primaryButtonStyle = {
+const actionButtonStyle = {
   width: '100%',
   padding: '14px 16px',
   borderRadius: '10px',
-  border: '1px solid var(--accent-color)',
-  backgroundColor: 'var(--accent-color)',
-  color: 'var(--text-primary-light)',
-  cursor: 'pointer',
   fontSize: '14px',
   fontWeight: 500,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
   gap: '8px',
-};
-
-const secondaryButtonStyle = {
-  ...primaryButtonStyle,
-  backgroundColor: 'transparent',
-  border: '1px solid var(--border-color)',
-  color: 'var(--text-primary)',
-};
-
-const solidAccentButtonStyle = {
-  ...primaryButtonStyle,
-  backgroundColor: 'var(--accent-color)',
-  border: '1px solid var(--accent-color)',
-  color: 'var(--text-primary-light)',
-};
+} as const;
 
 function statusLabel(status?: KycStatus): string {
   switch (status) {
@@ -95,19 +75,24 @@ export default function KycCredentialsCard() {
   const protocolId = KYC_ENTITY_ID || null;
   const [redirectBusy, setRedirectBusy] = useState(false);
 
-  const entry = useAppSelector((state) =>
-    protocolId ? state.kyc.byProtocolId[protocolId] : undefined,
-  );
+  const entry = useAppSelector((state) => (protocolId ? state.kyc.byProtocolId[protocolId] : undefined));
 
   const status = entry?.status;
-  const terminal = !!entry?.credentialSaved;
+  const stopPolling = isTerminalSuccess(status) || isTerminalFailure(status);
 
-  const { loading, error, refresh } = useKycStatus({
+  const { loading, saving, saved, error, refresh, saveCredential } = useKycStatus({
     did,
     protocolId,
     address,
-    enabled: !!did && !!protocolId && !terminal,
+    enabled: !!did && !!protocolId && !stopPolling,
   });
+
+  const onSaveClick = useCallback(() => {
+    saveCredential().catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(`Could not save credential: ${message}`);
+    });
+  }, [saveCredential]);
 
   useEffect(() => {
     if (!did || !protocolId) return;
@@ -120,16 +105,26 @@ export default function KycCredentialsCard() {
 
   const redirectToWebview = useCallback(async () => {
     if (!did || !protocolId) return;
+    // Open the tab synchronously within the user gesture so Safari doesn't
+    // block it. We can't use 'noopener' here because then window.open returns
+    // null and we lose the handle we need to navigate it once the URL arrives.
+    const newTab = window.open('about:blank', '_blank');
     setRedirectBusy(true);
     try {
       const { url } = await fetchKycRedirect(did, protocolId);
       dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setRedirectBusy(false);
+      if (newTab && !newTab.closed) {
+        newTab.opener = null;
+        newTab.location.replace(url);
+      } else {
+        window.location.href = url;
+      }
     } catch (err) {
-      setRedirectBusy(false);
+      newTab?.close();
       const message = err instanceof Error ? err.message : String(err);
       toast.error(`Could not open verification: ${message}`);
+    } finally {
+      setRedirectBusy(false);
     }
   }, [did, dispatch, protocolId]);
 
@@ -138,28 +133,38 @@ export default function KycCredentialsCard() {
   }, [router]);
 
   const view = useMemo(() => {
-    if (isTerminalSuccess(status) && entry?.credentialSaved) {
+    if (isTerminalSuccess(status) && saved) {
       return {
         variant: 'success' as const,
         message: 'Your KYC Credential has been issued and saved.',
       };
     }
 
+    if (isTerminalSuccess(status)) {
+      return {
+        variant: 'ready-to-save' as const,
+        message: 'Your KYC Credential is ready. Save it to your secure data store.',
+      };
+    }
+
     if (isTerminalFailure(status)) {
+      const baseMessage = statusLabel(status) || 'Your KYC verification could not be completed.';
       return {
         variant: 'failure' as const,
-        message: statusLabel(status) || 'Your KYC verification could not be completed.',
+        message: `${baseMessage} Please contact support to review the issue.`,
       };
     }
 
-    if (status === KycStatus.Verify && entry?.lastRedirectAt) {
+    if (status === KycStatus.Verify) {
       return {
         variant: 'verify-retry' as const,
-        message: 'It looks like you haven’t finished verification yet.',
+        message: entry?.lastRedirectAt
+          ? 'It looks like you haven’t finished verification yet.'
+          : 'Next step: complete your document scan & liveness check.',
       };
     }
 
-    if (status && status !== KycStatus.Verify && status !== KycStatus.Unknown) {
+    if (status && status !== KycStatus.Unknown) {
       return {
         variant: 'in-progress' as const,
         message: statusLabel(status) || 'KYC verification in progress…',
@@ -170,7 +175,7 @@ export default function KycCredentialsCard() {
       variant: 'idle' as const,
       message: 'Some features require a KYC Credential',
     };
-  }, [entry?.credentialSaved, entry?.lastRedirectAt, status]);
+  }, [entry?.lastRedirectAt, saved, status]);
 
   if (!KYC_ENTITY_ID) return null;
   if (!did) return null;
@@ -191,53 +196,80 @@ export default function KycCredentialsCard() {
       </p>
 
       {view.variant === 'idle' && (
-        <button onClick={onAcquireClick} style={solidAccentButtonStyle}>
-          <span>→</span>
-          <span>Acquire Credential</span>
-        </button>
+        <Button
+          label='Acquire Credential'
+          prefixIcon={<span>→</span>}
+          onClick={onAcquireClick}
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
       )}
 
       {view.variant === 'verify-retry' && (
-        <button
+        <Button
+          label={redirectBusy ? 'Opening…' : 'Continue verification'}
+          prefixIcon={<span>→</span>}
           onClick={() => void redirectToWebview()}
           disabled={redirectBusy}
-          style={{ ...primaryButtonStyle, opacity: redirectBusy ? 0.6 : 1 }}
-        >
-          <span>→</span>
-          <span>{redirectBusy ? 'Opening…' : 'Continue verification'}</span>
-        </button>
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
       )}
 
       {view.variant === 'in-progress' && (
-        <button
+        <Button
+          label={loading ? 'Checking…' : 'Refresh status'}
           onClick={() => void refresh()}
           disabled={loading}
-          style={{ ...secondaryButtonStyle, opacity: loading ? 0.6 : 1 }}
-        >
-          <span>{loading ? 'Checking…' : 'Refresh status'}</span>
-        </button>
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
       )}
 
       {view.variant === 'failure' && (
-        <button onClick={onAcquireClick} style={secondaryButtonStyle}>
-          <span>Start over</span>
-        </button>
+        <Button
+          label={loading ? 'Checking…' : 'Refresh'}
+          onClick={() => void refresh()}
+          disabled={loading}
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
+      )}
+
+      {view.variant === 'ready-to-save' && (
+        <Button
+          label={saving ? 'Saving…' : 'Save Credential'}
+          onClick={onSaveClick}
+          disabled={saving}
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
       )}
 
       {view.variant === 'success' && (
-        <div
-          style={{
-            padding: '12px',
-            borderRadius: '10px',
-            border: '1px solid var(--accent-color)',
-            backgroundColor: 'var(--accent-color)',
-            color: 'var(--text-primary-light)',
-            fontSize: '14px',
-            textAlign: 'center',
-          }}
-        >
-          ✓ Verified
-        </div>
+        <Button
+          label='✓ Verified'
+          disabled
+          color={BUTTON_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
       )}
 
       {error && view.variant !== 'idle' && (

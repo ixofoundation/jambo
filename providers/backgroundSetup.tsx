@@ -1,4 +1,5 @@
 import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import type { MatrixClient } from 'matrix-js-sdk';
 import { BackgroundSetupContext, BackgroundSetupStatus } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import {
@@ -26,7 +27,10 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const awaitersRef = useRef<Array<{ resolve: () => void; reject: (err: Error) => void }>>([]);
   const statusRef = useRef<BackgroundSetupStatus>('idle');
   const setupAttemptedRef = useRef(false);
+  const mxClientRef = useRef<MatrixClient | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+
+  const getMatrixClient = useCallback(() => mxClientRef.current, []);
 
   useEffect(() => {
     statusRef.current = status;
@@ -58,9 +62,11 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     if (!auth.isLoggedIn || !auth.address || !auth.matrixUserId) return;
     if (setupAttemptedRef.current) return;
 
-    // Skip if Matrix client already connected (mnemonic was already cleared after prior setup)
+    // If tokens already exist from a prior session, reattach by creating a client
+    // without re-running login or cross-signing setup.
     if (secret.accessToken && secret.userId) {
-      setStatus('success');
+      setupAttemptedRef.current = true;
+      void reattachMatrix();
       return;
     }
 
@@ -74,6 +80,23 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
 
     setupAttemptedRef.current = true;
     void setupMatrix(matrixMnemonic);
+
+    async function reattachMatrix() {
+      setStatus('running');
+      setStatusMessage('Reconnecting to Data Store...');
+      setError(null);
+
+      try {
+        const mxClient = await createMatrixClient();
+        mxClientRef.current = mxClient;
+        setStatus('success');
+        setStatusMessage('Data Store ready');
+      } catch (err: any) {
+        console.error('Matrix reattach error:', err);
+        setStatus('error');
+        setError(err.message || 'Data Store reattach failed');
+      }
+    }
 
     async function setupMatrix(mnemonic: string) {
       setStatus('running');
@@ -90,6 +113,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
 
         setStatusMessage('Initializing Data Store...');
         const mxClient = await createMatrixClient();
+        mxClientRef.current = mxClient;
 
         try {
           setStatusMessage('Setting up encryption...');
@@ -112,6 +136,20 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     }
   }, [auth.isLoggedIn, auth.address, auth.matrixUserId, retryCount]);
 
+  // Stop the retained Matrix client on retry (stale client) and on unmount.
+  useEffect(() => {
+    return () => {
+      if (mxClientRef.current) {
+        try {
+          mxClientRef.current.stopClient();
+        } catch (err) {
+          console.warn('Matrix stopClient error:', err);
+        }
+        mxClientRef.current = null;
+      }
+    };
+  }, [retryCount]);
+
   return (
     <BackgroundSetupContext.Provider
       value={{
@@ -121,6 +159,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         showDetails,
         setShowDetails,
         awaitCompletion,
+        getMatrixClient,
       }}
     >
       {children}

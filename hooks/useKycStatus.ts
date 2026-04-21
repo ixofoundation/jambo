@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { KycStatus, isTerminalSuccess } from '@constants/kyc';
+import { KycStatus, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
+import { BackgroundSetupContext } from '@contexts/backgroundSetup';
+import { useAuth } from '@hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { markCredentialSaved, setKycError, setKycStatus } from '@store/slices/kycSlice';
 import { fetchKycCredential, fetchKycStatus } from '@utils/kycServer';
-import { saveCredentialToMatrix } from '@utils/matrixState';
-import { secret } from '@utils/secrets';
+import { computeCredentialCid, storeMatrixCredential } from '@utils/matrixCredential';
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -19,89 +20,110 @@ export interface UseKycStatusArgs {
 export interface UseKycStatusResult {
   status?: KycStatus;
   loading: boolean;
+  saving: boolean;
+  saved: boolean;
   error?: string;
   refresh: () => Promise<void>;
+  saveCredential: () => Promise<void>;
 }
 
 export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatusArgs): UseKycStatusResult {
   const dispatch = useAppDispatch();
   const entry = useAppSelector((state) => (protocolId ? state.kyc.byProtocolId[protocolId] : undefined));
+  const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
+  const auth = useAuth();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
   const cancelledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savingRef = useRef(false);
 
-  const savedRef = useRef(!!entry?.credentialSaved);
+  const saved = !!entry?.credentialSaved;
+  const statusRef = useRef<KycStatus | undefined>(entry?.status);
   useEffect(() => {
-    savedRef.current = !!entry?.credentialSaved;
-  }, [entry?.credentialSaved]);
+    statusRef.current = entry?.status;
+  }, [entry?.status]);
 
-  const maybeSaveCredential = useCallback(
-    async (status: KycStatus) => {
-      if (!isTerminalSuccess(status)) return;
-      if (savedRef.current || savingRef.current) return;
-      if (!did || !protocolId || !address) return;
+  const saveCredential = useCallback(async () => {
+    if (saving) return;
+    if (!protocolId) throw new Error('KYC protocol id missing');
+    if (!did || !address) throw new Error('User identity missing');
+    if (!isTerminalSuccess(statusRef.current)) {
+      throw new Error('KYC credential is not ready yet');
+    }
 
-      const accessToken = secret.accessToken as string | null;
-      const homeServerUrl = secret.baseUrl as string | null;
-      if (!accessToken || !homeServerUrl) return;
+    setSaving(true);
+    setError(undefined);
+    try {
+      await awaitCompletion();
+      const mxClient = getMatrixClient();
+      if (!mxClient) throw new Error('Matrix client not ready');
+      const roomId = auth.matrixRoomId;
+      if (!roomId) throw new Error('User matrix room id missing');
 
-      savingRef.current = true;
-      try {
-        const credentials = await fetchKycCredential(did, protocolId);
-        const entries = Object.entries(credentials);
-        if (entries.length === 0) throw new Error('KYC credential payload was empty');
+      const credentials = await fetchKycCredential(did, protocolId);
+      const entries = Object.entries(credentials);
+      if (entries.length === 0) throw new Error('KYC credential payload was empty');
 
-        for (const [credentialType, credential] of entries) {
-          await saveCredentialToMatrix({
-            address,
-            did,
-            accessToken,
-            homeServerUrl,
-            credentialType,
-            credential,
-          });
-        }
-        dispatch(markCredentialSaved({ protocolId, credentialType: entries[0][0] }));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        dispatch(setKycError({ protocolId, message }));
-        setError(message);
-      } finally {
-        savingRef.current = false;
+      for (const [credentialType, credential] of entries) {
+        const cid = computeCredentialCid(credential);
+        await storeMatrixCredential({
+          mxClient,
+          roomId,
+          credentialKey: credentialType,
+          credential: credential as Record<string, any>,
+          cid,
+        });
+        dispatch(markCredentialSaved({ protocolId, credentialType }));
       }
-    },
-    [address, did, dispatch, protocolId],
-  );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      dispatch(setKycError({ protocolId, message }));
+      setError(message);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    address,
+    auth.matrixRoomId,
+    awaitCompletion,
+    did,
+    dispatch,
+    getMatrixClient,
+    protocolId,
+    saving,
+  ]);
 
-  const poll = useCallback(async () => {
-    if (!enabled || !did || !protocolId) return;
+  const fetchOnce = useCallback(async (): Promise<{ reachedTerminal: boolean }> => {
+    if (!did || !protocolId) return { reachedTerminal: true };
     setLoading(true);
+    let reachedTerminal = false;
     try {
       const status = await fetchKycStatus(did, protocolId);
-      if (cancelledRef.current) return;
+      if (cancelledRef.current) return { reachedTerminal: true };
       dispatch(setKycStatus({ protocolId, status }));
       setError(undefined);
-
-      if (isTerminalSuccess(status) && !savedRef.current) {
-        await maybeSaveCredential(status);
-      }
-
-      if (savedRef.current) return;
+      reachedTerminal = isTerminalSuccess(status) || isTerminalFailure(status);
     } catch (err) {
-      if (cancelledRef.current) return;
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
+      if (!cancelledRef.current) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
+      }
     } finally {
       if (!cancelledRef.current) setLoading(false);
     }
+    return { reachedTerminal };
+  }, [dispatch, did, protocolId]);
 
-    if (!cancelledRef.current && enabled) {
+  const poll = useCallback(async () => {
+    if (!enabled) return;
+    const { reachedTerminal } = await fetchOnce();
+    if (!cancelledRef.current && enabled && !reachedTerminal) {
       timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
     }
-  }, [dispatch, did, enabled, maybeSaveCredential, protocolId]);
+  }, [enabled, fetchOnce]);
 
   useEffect(() => {
     cancelledRef.current = false;
@@ -121,13 +143,16 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    await poll();
-  }, [poll]);
+    await fetchOnce();
+  }, [fetchOnce]);
 
   return {
     status: entry?.status,
     loading,
+    saving,
+    saved,
     error: error ?? entry?.lastError,
     refresh,
+    saveCredential,
   };
 }

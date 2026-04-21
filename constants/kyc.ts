@@ -1,5 +1,4 @@
 export const KYC_ENTITY_ID = (process.env.NEXT_PUBLIC_KYC_ENTITY_ID || '').trim();
-export const MATRIX_STATE_BOT_URL = (process.env.NEXT_PUBLIC_MATRIX_STATE_BOT_URL || '').trim().replace(/\/$/, '');
 
 // Client-side requests go through the Next.js API proxy (pages/api/kyc/[...path].ts)
 // to avoid CORS + untrusted-cert issues when talking to the KYC server directly.
