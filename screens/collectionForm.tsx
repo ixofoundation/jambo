@@ -475,6 +475,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             setSubmitting({ active: true, label: 'Redirecting to verification...' });
             const { url } = await fetchKycRedirect(did, protocolId);
             dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
+            model.onValueChanged.remove(handleSurveyValueChanged);
             dispatch(clearDraft(collectionId));
             window.open(url, '_blank', 'noopener,noreferrer');
             router.push('/profile');
@@ -564,6 +565,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           }
           // Success — clear draft and navigate back
           setSubmitting({ active: false, label: '' });
+          // Detach auto-save before clearing so doComplete() can't re-save the draft we just cleared.
+          model.onValueChanged.remove(handleSurveyValueChanged);
           dispatch(clearDraft(collectionId));
           sender.doComplete();
           router.push(collectionUrl);
@@ -738,8 +741,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       ) : (
         <>
           <div style={{ flex: 1, overflow: 'auto', paddingBottom: isSubcollection ? 104 : undefined }}>
-            {/* @ts-ignore */}
-            <Survey model={survey} />
+            <div style={{ maxWidth: 'var(--max-width)', margin: '0 auto', width: '100%' }}>
+              {/* @ts-ignore */}
+              <Survey model={survey} />
+            </div>
           </div>
         </>
       )}
