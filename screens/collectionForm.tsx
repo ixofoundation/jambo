@@ -33,6 +33,11 @@ import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/pr
 import { setRedirectedAt } from '@store/slices/kycSlice';
 import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
+import SubclaimSheet from '@components/SubclaimSheet/SubclaimSheet';
+import { selectParentOfSubcollection } from '@store/selectors/subclaims';
+import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
+
+const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
 
 interface CollectionFormProps {
   entityDid: string;
@@ -76,9 +81,36 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const [isEvalAgent, setIsEvalAgent] = useState(false);
   const [allClaims, setAllClaims] = useState<any[]>([]);
 
+  // Subclaim sheet state — only active when surveyMode === 'claim' and this collection is a subcollection
+  const parentCollectionId = useAppSelector((s) =>
+    surveyMode === 'claim' ? selectParentOfSubcollection(s, collectionId) : null,
+  );
+  const isSubcollection = !!parentCollectionId && surveyMode === 'claim';
+  const [baseClaimCID, setBaseClaimCID] = useState<string | null>(null);
+  const [subclaimBlockReason, setSubclaimBlockReason] = useState<
+    'parent-not-tracked' | 'sub-not-allowed' | 'no-eval-authz' | 'no-worker' | null
+  >(null);
+
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
   const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
   const surveyHasChangesRef = useRef(false);
+  const baseClaimCIDRef = useRef<string | null>(null);
+  const subclaimBlockReasonRef = useRef<typeof subclaimBlockReason>(null);
+  const isSubcollectionRef = useRef(false);
+  const parentCollectionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    baseClaimCIDRef.current = baseClaimCID;
+  }, [baseClaimCID]);
+  useEffect(() => {
+    subclaimBlockReasonRef.current = subclaimBlockReason;
+  }, [subclaimBlockReason]);
+  useEffect(() => {
+    isSubcollectionRef.current = isSubcollection;
+  }, [isSubcollection]);
+  useEffect(() => {
+    parentCollectionIdRef.current = parentCollectionId ?? null;
+  }, [parentCollectionId]);
 
   const collectionUrl = closeUrl ?? `/entities/${entityDid}/claimCollections/${collectionId}`;
 
@@ -401,8 +433,22 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         model.data = draft.surveyData;
       }
 
+      // For subclaim flows, seed/overwrite the baseClaimCID field so it's present in the VC
+      if (isSubcollectionRef.current) {
+        model.data = { ...model.data, [BASE_CLAIM_CID_FIELD]: baseClaimCIDRef.current ?? '' };
+      }
+
       function preventComplete(sender: any, options: any) {
         options.allowComplete = false;
+        if (isSubcollectionRef.current && (subclaimBlockReasonRef.current || !baseClaimCIDRef.current)) {
+          // Submission gated until user picks a base claim and pre-flight passes
+          toast.error(
+            subclaimBlockReasonRef.current
+              ? 'This subcollection cannot be submitted (see message in the base-claim sheet).'
+              : 'Please select a base claim before submitting.',
+          );
+          return;
+        }
         submitForm(sender);
       }
 
@@ -412,6 +458,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         setSubmitting({ active: true, label: 'Preparing submission...' });
         try {
           await awaitCompletion();
+          console.log('data', sender.data);
+          throw new Error('Stop');
           if (surveyMode === 'kyc') {
             setSubmitting({ active: true, label: 'Initiating verification...' });
             const protocolId = entityDid;
@@ -474,6 +522,16 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             );
             if (!response.data.cid) throw new Error('Failed to submit claim');
 
+            if (isSubcollectionRef.current && parentCollectionIdRef.current && baseClaimCIDRef.current) {
+              await registerSubclaimLinkage({
+                parentCollectionId: parentCollectionIdRef.current,
+                parentClaimId: baseClaimCIDRef.current,
+                subClaimCollectionId: collectionId,
+                subClaimId: response.data.cid as string,
+                agentDid: did,
+              });
+            }
+
             setSubmitting({ active: true, label: 'Submitting to blockchain...' });
             const message = {
               typeUrl: '/cosmos.authz.v1beta1.MsgExec',
@@ -498,6 +556,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
               }),
             };
             await onSign([message]);
+            if (isSubcollectionRef.current && baseClaimCIDRef.current) {
+              // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
+              refreshClaimStatus(baseClaimCIDRef.current);
+            }
           }
           // Success — clear draft and navigate back
           setSubmitting({ active: false, label: '' });
@@ -533,6 +595,21 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
     };
   }, [survey, handleSurveyValueChanged]);
+
+  // Keep ixo:baseClaimCID in sync with the underlying survey model when the user picks a parent
+  useEffect(() => {
+    if (!survey || !isSubcollection) return;
+    try {
+      survey.setValue(BASE_CLAIM_CID_FIELD, baseClaimCID ?? '');
+    } catch {
+      // survey model may not accept a colon-named key via setValue; fall back to mutating data
+      try {
+        survey.data = { ...survey.data, [BASE_CLAIM_CID_FIELD]: baseClaimCID ?? '' };
+      } catch {
+        // ignore
+      }
+    }
+  }, [survey, isSubcollection, baseClaimCID]);
 
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
@@ -588,10 +665,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         backgroundColor: 'var(--bg-secondary)',
         display: 'flex',
         flexDirection: 'column',
-        paddingTop: 'var(--header-height)',
       }}
     >
-      <Header title={title} onClose={handleClose} />
+      <Header title={title} onClose={handleClose} static />
 
       {/* Content area */}
       {formLoading ? (
@@ -659,11 +735,24 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         </div>
       ) : (
         <>
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          <div style={{ flex: 1, overflow: 'auto', paddingBottom: isSubcollection ? 104 : undefined }}>
             {/* @ts-ignore */}
             <Survey model={survey} />
           </div>
         </>
+      )}
+
+      {isSubcollection && !formLoading && !formError && (
+        <SubclaimSheet
+          open={true}
+          parentCollectionId={parentCollectionId}
+          subCollectionId={collectionId}
+          address={address}
+          did={did}
+          selectedParentClaimId={baseClaimCID}
+          onSelect={(claimId) => setBaseClaimCID(claimId)}
+          onBlockedChange={setSubclaimBlockReason}
+        />
       )}
 
       {/* Evaluate buttons for view mode */}

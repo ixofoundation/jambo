@@ -5,6 +5,7 @@ import { getServiceEndpoint, getAdditionalInfo, getCachedTemplate } from '@utils
 import { setCollectionsLoading } from '../slices/collectionsSlice';
 import { setVctTemplate, setFormName } from '../slices/protocolsSlice';
 import { setProfile } from '../slices/profilesSlice';
+import { fetchAllowedSubcollectionsForTrackedCollections } from './subclaimsThunks';
 
 interface FetchCollectionDataArgs {
   entityDid: string;
@@ -63,6 +64,9 @@ export const fetchAllCollectionData = createAsyncThunk(
           entityMap.set(protocolDids[i], result.value);
         }
       });
+
+      // Non-blocking: seed the allowed-subcollections map once collections are loaded
+      (dispatch as any)(fetchAllowedSubcollectionsForTrackedCollections({ force: !!force }));
 
       // Step 4: Resolve VCT templates and form names
       await Promise.allSettled(

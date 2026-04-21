@@ -8,9 +8,11 @@ import collectionsReducer from './slices/collectionsSlice';
 import protocolsReducer from './slices/protocolsSlice';
 import profilesReducer from './slices/profilesSlice';
 import matrixProfileReducer from './slices/matrixProfileSlice';
+import matrixProfilesReducer from './slices/matrixProfilesSlice';
 import claimDraftsReducer from './slices/claimDraftsSlice';
 import projectsReducer from './slices/projectsSlice';
 import kycReducer from './slices/kycSlice';
+import subclaimsReducer from './slices/subclaimsSlice';
 
 const rootReducer = combineReducers({
   account: accountReducer,
@@ -19,9 +21,11 @@ const rootReducer = combineReducers({
   protocols: protocolsReducer,
   profiles: profilesReducer,
   matrixProfile: matrixProfileReducer,
+  matrixProfiles: matrixProfilesReducer,
   claimDrafts: claimDraftsReducer,
   projects: projectsReducer,
   kyc: kycReducer,
+  subclaims: subclaimsReducer,
 });
 
 const persistConfig = {

@@ -237,6 +237,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const showApplyEaButton = !dataLoading && !isEvalAgent && !hasPendingEaBid && isCollectionOpen && hasBevForm;
   const showNewClaimButton = !dataLoading && isServiceAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
+  const contributorBarVisible = activeTab === 'contributor' && (showNewClaimButton || showApplySaButton);
+  const evaluatorBarVisible = activeTab === 'evaluator' && showApplyEaButton;
+  const showBottomBar = contributorBarVisible || evaluatorBarVisible;
+  const stackedContributorButtons = activeTab === 'contributor' && showNewClaimButton && showApplySaButton;
   const displayedClaims = useMemo(() => {
     const list = activeTab === 'evaluator' ? allClaims : claims;
     return [...list].sort((a, b) => {
@@ -294,6 +298,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           margin: '0 auto',
           padding: '0 16px 16px',
           paddingTop: 'calc(var(--header-height) + 8px)',
+          paddingBottom: showBottomBar ? (stackedContributorButtons ? '140px' : '88px') : '16px',
         }}
       >
         {/* Page title section */}
@@ -576,48 +581,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               </div>
             )}
 
-            {(showNewClaimButton || showApplySaButton) && (
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {showNewClaimButton && (
-                  <button
-                    onClick={() => navigateToForm('vct')}
-                    style={{
-                      width: '100%',
-                      padding: '14px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: 'var(--accent-color)',
-                      color: '#fff',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      letterSpacing: '-0.2px',
-                    }}
-                  >
-                    {hasDraft ? 'Continue Claim' : 'New Claim'}
-                  </button>
-                )}
-                {showApplySaButton && (
-                  <button
-                    onClick={() => navigateToForm('bco')}
-                    style={{
-                      width: '100%',
-                      padding: '14px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: 'var(--accent-color)',
-                      color: '#fff',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      letterSpacing: '-0.2px',
-                    }}
-                  >
-                    Apply as Contributor
-                  </button>
-                )}
-              </div>
-            )}
           </>
         )}
 
@@ -746,27 +709,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               </>
             )}
 
-            {showApplyEaButton && (
-              <div style={{ marginTop: '16px' }}>
-                <button
-                  onClick={() => navigateToForm('bev')}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: 'var(--accent-color)',
-                    color: '#fff',
-                    fontSize: '15px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    letterSpacing: '-0.2px',
-                  }}
-                >
-                  Apply as Evaluation Agent
-                </button>
-              </div>
-            )}
           </>
         )}
 
@@ -795,9 +737,7 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                   textAlign: 'center',
                 }}
               >
-                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  No pending applications.
-                </p>
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>No pending applications.</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -950,6 +890,90 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           </p>
         )}
       </main>
+
+      {showBottomBar && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 5,
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '12px 16px',
+            backgroundColor: 'var(--bg-primary)',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 'var(--max-width)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            {activeTab === 'contributor' && showNewClaimButton && (
+              <button
+                onClick={() => navigateToForm('vct')}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-color)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  letterSpacing: '-0.2px',
+                }}
+              >
+                {hasDraft ? 'Continue Claim' : 'New Claim'}
+              </button>
+            )}
+            {activeTab === 'contributor' && showApplySaButton && (
+              <button
+                onClick={() => navigateToForm('bco')}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-color)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  letterSpacing: '-0.2px',
+                }}
+              >
+                Apply as Contributor
+              </button>
+            )}
+            {activeTab === 'evaluator' && showApplyEaButton && (
+              <button
+                onClick={() => navigateToForm('bev')}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-color)',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  letterSpacing: '-0.2px',
+                }}
+              >
+                Apply as Evaluation Agent
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
