@@ -1,0 +1,115 @@
+.thumbnail {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 160px;
+  height: 200px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  margin: 8px 8px 8px 0;
+
+  &:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px);
+  }
+}
+
+.thumbnailIframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  pointer-events: none;
+  background: #fff;
+}
+
+.thumbnailLabel {
+  padding: 6px 8px;
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thumbnailHint {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  padding: 16px;
+}
+
+.fullModal {
+  width: 100%;
+  max-width: var(--max-width);
+  height: 92vh;
+  background: var(--bg-secondary);
+  border-radius: var(--card-border-radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fullHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.fullTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.fullClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fullIframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
+  display: block;
+}

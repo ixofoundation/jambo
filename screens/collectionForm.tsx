@@ -20,6 +20,7 @@ import {
   createAttachUploadHandler,
   createAttachDownloadHandler,
 } from '@constants/surveyDefaultConfig';
+import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
@@ -421,6 +422,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       // View mode — read-only with pre-filled data
       if (surveyMode === 'view') {
         createAttachDownloadHandler(did)(model);
+        const disposePdfPreview = createAttachPdfPreviewHandler(did)(model);
+        (model as any).__disposePdfPreview = disposePdfPreview;
         if (viewClaimData) model.data = viewClaimData;
         model.mode = 'display';
         model.showNavigationButtons = 'none' as any;
@@ -596,6 +599,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     return () => {
       if (survey) {
         survey.onValueChanged.remove(handleSurveyValueChanged);
+        const disposePdfPreview = (survey as any).__disposePdfPreview as (() => void) | undefined;
+        if (disposePdfPreview) {
+          disposePdfPreview();
+          (survey as any).__disposePdfPreview = undefined;
+        }
       }
     };
   }, [survey, handleSurveyValueChanged]);

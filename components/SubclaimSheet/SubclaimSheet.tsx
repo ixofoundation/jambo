@@ -22,6 +22,7 @@ import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { themeJson } from '@constants/surveyTheme';
 import { configureFileQuestions, createAttachDownloadHandler } from '@constants/surveyDefaultConfig';
+import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 
 import styles from './SubclaimSheet.module.scss';
 
@@ -90,7 +91,7 @@ function ClaimRow({
   if (disabled) classes.push(styles.rowDisabled);
   if (asHeader) classes.push(styles.rowHeader);
 
-  const interactive = !asHeader && !!onClick;
+  const interactive = !asHeader && !disabled && !!onClick;
 
   return (
     <div
@@ -351,6 +352,8 @@ export default function SubclaimSheet({
       model.applyTheme(themeJson);
       configureFileQuestions(model);
       createAttachDownloadHandler(did)(model);
+      const disposePdfPreview = createAttachPdfPreviewHandler(did)(model);
+      (model as any).__disposePdfPreview = disposePdfPreview;
       model.data = viewedClaimData;
       model.mode = 'display';
       model.showCompleteButton = false;
@@ -360,6 +363,18 @@ export default function SubclaimSheet({
       return undefined;
     }
   }, [parentTemplate, viewedClaimData, did]);
+
+  useEffect(() => {
+    return () => {
+      if (parentSurvey) {
+        const disposePdfPreview = (parentSurvey as any).__disposePdfPreview as (() => void) | undefined;
+        if (disposePdfPreview) {
+          disposePdfPreview();
+          (parentSurvey as any).__disposePdfPreview = undefined;
+        }
+      }
+    };
+  }, [parentSurvey]);
 
   const { available, disabled } = useMemo(() => {
     const approvedClaims = claims.filter((c) => c?.evaluationByClaimId?.status === 1);
@@ -470,7 +485,6 @@ export default function SubclaimSheet({
                             claim={claim}
                             selected={claim.claimId === selectedParentClaimId}
                             disabled={true}
-                            onClick={() => handleSelectClaim(claim.claimId)}
                           />
                         ))}
                       </div>

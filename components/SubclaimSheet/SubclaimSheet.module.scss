@@ -100,6 +100,12 @@
 
 .rowDisabled {
   opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.rowDisabled:hover {
+  border-color: var(--border-color);
 }
 
 .rowHeader {
