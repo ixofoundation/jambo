@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { GrantAuthorization } from '@ixo/impactxclient-sdk/types/codegen/cosmos/authz/v1beta1/authz';
 import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
-import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
+import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -41,11 +41,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   const [claimsLoading, setClaimsLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [hasBcoForm, setHasBcoForm] = useState(false);
-  const [hasBevForm, setHasBevForm] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
-  const [allClaims, setAllClaims] = useState<any[]>([]);
-  const [allClaimsLoading, setAllClaimsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'contributor' | 'evaluator' | 'controller'>('contributor');
+  const [activeTab, setActiveTab] = useState<'contributor' | 'controller'>('contributor');
   const [allBids, setAllBids] = useState<any[]>([]);
   const [allBidsLoading, setAllBidsLoading] = useState(false);
   const [viewingBid, setViewingBid] = useState<any | null>(null);
@@ -87,7 +84,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       checkAuthz();
       fetchBids();
       fetchMyClaims();
-      fetchAllClaims();
     }
     return () => {
       cancelledRef.current = true;
@@ -112,7 +108,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       else removeAuth('owner');
       const linkedResources = protocolEntity?.linkedResource ?? [];
       setHasBcoForm(linkedResources.some((r: any) => r?.id?.includes('#bco')));
-      setHasBevForm(linkedResources.some((r: any) => r?.id?.includes('#bev')));
       const grants = granteeGrants.grants as GrantAuthorization[];
       const registry = createRegistry();
       const targetCollectionId = claimCollectionIdRef.current;
@@ -129,9 +124,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
         }
       }
 
-      const hasEval = grants?.find((g) => grantMatchesCollection(g, TRANSACTION_TYPES.EvaluateClaimAuthorization));
-      if (hasEval) addAuth(TRANSACTION_TYPES.EvaluateClaimAuthorization);
-      else removeAuth(TRANSACTION_TYPES.EvaluateClaimAuthorization);
       const hasSubmit = grants?.find((g) => grantMatchesCollection(g, TRANSACTION_TYPES.SubmitClaimAuthorization));
       if (hasSubmit) addAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
       else removeAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
@@ -207,18 +199,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     }
   }
 
-  async function fetchAllClaims() {
-    try {
-      setAllClaimsLoading(true);
-      const result = await fetchAllClaimsByCollectionId(collectionId);
-      setAllClaims(result ?? []);
-    } catch {
-      // silent fail
-    } finally {
-      setAllClaimsLoading(false);
-    }
-  }
-
   // Navigation helpers — open forms on separate page
   function navigateToForm(formType: string, claimId?: string) {
     const base = `/entities/${entityDid}/claimCollections/${collectionId}/${formType}`;
@@ -226,45 +206,25 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   }
 
   const isServiceAgent = auths.includes(TRANSACTION_TYPES.SubmitClaimAuthorization);
-  const isEvalAgent = auths.includes(TRANSACTION_TYPES.EvaluateClaimAuthorization);
   const isController = auths.includes('admin') || auths.includes('owner');
   const saBids = bids.filter((b: any) => b.role === 'SA');
-  const eaBids = bids.filter((b: any) => b.role === 'EA');
   const hasPendingSaBid = !isServiceAgent && saBids.length > 0;
-  const hasPendingEaBid = !isEvalAgent && eaBids.length > 0;
   const dataLoading = authzLoading || bidsLoading || claimsLoading;
   const showApplySaButton = !dataLoading && !isServiceAgent && !hasPendingSaBid && isCollectionOpen && hasBcoForm;
-  const showApplyEaButton = !dataLoading && !isEvalAgent && !hasPendingEaBid && isCollectionOpen && hasBevForm;
   const showNewClaimButton = !dataLoading && isServiceAgent && isCollectionOpen;
   const hasDraft = !!draft && draft.surveyMode === 'claim';
   const contributorBarVisible = activeTab === 'contributor' && (showNewClaimButton || showApplySaButton);
-  const evaluatorBarVisible = activeTab === 'evaluator' && showApplyEaButton;
-  const showBottomBar = contributorBarVisible || evaluatorBarVisible;
+  const showBottomBar = contributorBarVisible;
   const stackedContributorButtons = activeTab === 'contributor' && showNewClaimButton && showApplySaButton;
-  const displayedClaims = useMemo(() => {
-    const list = activeTab === 'evaluator' ? allClaims : claims;
-    return [...list].sort((a, b) => {
-      if (activeTab === 'evaluator' && isEvalAgent) {
-        const aStatus = a.evaluationByClaimId?.status ?? 0;
-        const bStatus = b.evaluationByClaimId?.status ?? 0;
-        if (aStatus === 0 && bStatus !== 0) return -1;
-        if (aStatus !== 0 && bStatus === 0) return 1;
-      }
-      return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();
-    });
-  }, [activeTab, allClaims, claims, isEvalAgent]);
-  const isClaimsListLoading = activeTab === 'evaluator' ? allClaimsLoading : claimsLoading;
 
   // Default tab based on user roles
   useEffect(() => {
     if (!authzLoading) {
-      if (isEvalAgent && !isServiceAgent) {
-        setActiveTab('evaluator');
-      } else if (isController && !isServiceAgent && !isEvalAgent) {
+      if (isController && !isServiceAgent) {
         setActiveTab('controller');
       }
     }
-  }, [authzLoading, isEvalAgent, isServiceAgent, isController]);
+  }, [authzLoading, isServiceAgent, isController]);
 
   // Lazy fetch all bids when controller tab is selected
   useEffect(() => {
@@ -371,8 +331,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           </div>
         )}
 
-        {/* Role chips */}
-        {!dataLoading && (
+        {/* Role chips — only shown when the user has access to multiple tabs */}
+        {!dataLoading && isController && (
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <button
               onClick={() => setActiveTab('contributor')}
@@ -398,32 +358,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               </svg>
               Contributor
             </button>
-            {(hasBevForm || isEvalAgent) && (
-              <button
-                onClick={() => setActiveTab('evaluator')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '8px 14px',
-                  borderRadius: '20px',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  backgroundColor: activeTab === 'evaluator' ? 'var(--accent-color)' : 'var(--card-bg-color)',
-                  color: activeTab === 'evaluator' ? '#fff' : 'var(--text-secondary)',
-                }}
-              >
-                <svg width='20' height='20' fill='none' viewBox='0 0 24 24'>
-                  <path
-                    d='M9 1.5C6.1084 1.5 3.75 3.8584 3.75 6.75C3.75 8.55762 4.67285 10.1631 6.07031 11.1094C3.39551 12.2578 1.5 14.9121 1.5 18H3C3 14.6777 5.67773 12 9 12C10.0312 12 10.9922 12.2695 11.8359 12.7266C11.0039 13.7578 10.5 15.0762 10.5 16.5C10.5 19.8047 13.1953 22.5 16.5 22.5C19.8047 22.5 22.5 19.8047 22.5 16.5C22.5 13.1953 19.8047 10.5 16.5 10.5C15.1904 10.5 13.9717 10.9307 12.9844 11.6484C12.6533 11.4404 12.293 11.2646 11.9297 11.1094C13.3271 10.1631 14.25 8.55762 14.25 6.75C14.25 3.8584 11.8916 1.5 9 1.5ZM9 3C11.0801 3 12.75 4.66992 12.75 6.75C12.75 8.83008 11.0801 10.5 9 10.5C6.91992 10.5 5.25 8.83008 5.25 6.75C5.25 4.66992 6.91992 3 9 3ZM16.5 12C18.9932 12 21 14.0068 21 16.5C21 18.9932 18.9932 21 16.5 21C14.0068 21 12 18.9932 12 16.5C12 14.0068 14.0068 12 16.5 12ZM18.9609 14.4609L16.5 16.9219L14.7891 15.2109L13.7109 16.2891L15.9609 18.5391L16.5 19.0547L17.0391 18.5391L20.0391 15.5391L18.9609 14.4609Z'
-                    fill='currentColor'
-                  ></path>
-                </svg>
-                Evaluator
-              </button>
-            )}
             {isController && (
               <button
                 onClick={() => setActiveTab('controller')}
@@ -579,134 +513,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                   {isExpired ? 'Collection has ended' : 'Collection has not started yet'}
                 </p>
               </div>
-            )}
-
-          </>
-        )}
-
-        {/* ── Evaluator tab ── */}
-        {!dataLoading && activeTab === 'evaluator' && (
-          <>
-            {hasPendingEaBid && (
-              <div
-                style={{
-                  padding: '20px',
-                  borderRadius: '16px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  textAlign: 'center',
-                  marginBottom: '8px',
-                }}
-              >
-                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                  Evaluation agent application pending
-                </p>
-                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  Your evaluation agent application is being reviewed.
-                </p>
-              </div>
-            )}
-
-            {!isEvalAgent && !hasPendingEaBid && showApplyEaButton && (
-              <div
-                style={{
-                  padding: '20px',
-                  borderRadius: '16px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  textAlign: 'center',
-                  marginBottom: '8px',
-                }}
-              >
-                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  Apply as an evaluation agent to start reviewing claims.
-                </p>
-              </div>
-            )}
-
-            {isEvalAgent && (
-              <>
-                {allClaimsLoading ? (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: '16px',
-                      border: '1px solid var(--border-color)',
-                      padding: '32px 16px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading claims...</p>
-                  </div>
-                ) : displayedClaims.length === 0 ? (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--bg-secondary)',
-                      borderRadius: '16px',
-                      border: '1px solid var(--border-color)',
-                      padding: '32px 16px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-                      No claims submitted yet.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {displayedClaims.map((claim: any) => {
-                      const status = statusLabel(claim);
-                      return (
-                        <div
-                          key={claim.claimId}
-                          onClick={() => navigateToForm('view', claim.claimId)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '14px 16px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '16px',
-                            backgroundColor: 'var(--bg-secondary)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <p style={{ margin: 0, fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                              {claim.claimId?.slice(0, 25)}...
-                            </p>
-                            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                              {new Date(claim.submissionDate).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                              })}
-                              {claim.agentAddress && (
-                                <span style={{ marginLeft: '6px', opacity: 0.7 }}>
-                                  {claim.agentAddress.slice(0, 10)}...{claim.agentAddress.slice(-4)}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              padding: '2px 8px',
-                              borderRadius: 9999,
-                              color: status.color,
-                              backgroundColor: status.bg,
-                              whiteSpace: 'nowrap',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {status.text}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
             )}
 
           </>
@@ -950,25 +756,6 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 }}
               >
                 Apply as Contributor
-              </button>
-            )}
-            {activeTab === 'evaluator' && showApplyEaButton && (
-              <button
-                onClick={() => navigateToForm('bev')}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: 'var(--accent-color)',
-                  color: '#fff',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  letterSpacing: '-0.2px',
-                }}
-              >
-                Apply as Evaluation Agent
               </button>
             )}
           </div>

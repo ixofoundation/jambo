@@ -127,6 +127,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   // Check eval agent authz for view mode
   useEffect(() => {
     if (surveyMode !== 'view') return;
+    // Evaluation flow disabled for now — skip the authz / all-claims fetch.
+    return;
+    // eslint-disable-next-line no-unreachable
     (async () => {
       try {
         const col = await fetchCollectionByCollectionId(collectionId);
@@ -458,8 +461,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         setSubmitting({ active: true, label: 'Preparing submission...' });
         try {
           await awaitCompletion();
-          console.log('data', sender.data);
-          throw new Error('Stop');
           if (surveyMode === 'kyc') {
             setSubmitting({ active: true, label: 'Initiating verification...' });
             const protocolId = entityDid;
@@ -614,7 +615,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
   const viewedClaimIsPending = viewedClaim && !viewedClaim.evaluationByClaimId?.status;
-  const canEvaluate = isEvalAgent && surveyMode === 'view' && viewedClaimIsPending;
+  // Evaluation flow disabled for now — re-enable by restoring the original expression.
+  const canEvaluate = false && isEvalAgent && surveyMode === 'view' && viewedClaimIsPending;
 
   function handleClose() {
     if (surveyMode === 'view') {
