@@ -4,12 +4,7 @@ import { BLOCKSYNC_URL } from '@constants/common';
 import { KYC_ENTITY_ID } from '@constants/kyc';
 import gqlQuery from '@utils/graphql';
 import { getAdditionalInfo, getServiceEndpoint } from '@utils/url';
-import {
-  setKycCollectionId,
-  setKycDeedOfferId,
-  setKycProtocolId,
-  setKycSurveyTemplate,
-} from '../slices/kycSlice';
+import { setKycCollectionId, setKycDeedOfferId, setKycProtocolId, setKycSurveyTemplate } from '../slices/kycSlice';
 import type { RootState } from '../index';
 
 const STALENESS_THRESHOLD = 5 * 60 * 1000;
@@ -103,10 +98,13 @@ export const loadKycForm = createAsyncThunk<LoadKycFormResult, LoadKycFormArgs |
 
     const resource =
       offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
-      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate'));
+      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('#surveyTemplate')) ??
+      offerEntity.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
     if (!resource?.serviceEndpoint) throw new Error('KYC form template not found');
     const url = getServiceEndpoint(resource.serviceEndpoint, offerEntity.service);
+    console.log('url', url);
     const template = await getAdditionalInfo(url);
+    console.log('template', template);
     dispatch(setKycSurveyTemplate({ template, url }));
 
     return { protocolId, claimCollectionId, deedOfferId: offerEntity.id };
