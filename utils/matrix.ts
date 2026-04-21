@@ -452,11 +452,61 @@ export function clearLocalStore() {
   secureReset(cons.secretKey.MNEMONIC_BACKUP);
   secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
   secureReset(cons.secretKey.BACKGROUND_TYPE);
+
+  // Sweep any stray matrix-js-sdk localStorage entries
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key) continue;
+      if (key.startsWith('mx_') || key.startsWith('matrix-js-sdk')) toRemove.push(key);
+    }
+    toRemove.forEach((key) => window.localStorage.removeItem(key));
+  }
+}
+
+async function deleteMatrixIndexedDBs() {
+  if (typeof indexedDB === 'undefined') return;
+
+  const names = new Set<string>(['matrix-sync-store', 'matrix-js-sdk::matrix-sdk-crypto']);
+
+  // Enumerate all databases when the browser supports it (Chrome/Edge/Safari 15+).
+  try {
+    const anyIndexedDB = indexedDB as any;
+    if (typeof anyIndexedDB.databases === 'function') {
+      const dbs: Array<{ name?: string }> = await anyIndexedDB.databases();
+      for (const db of dbs) {
+        if (db?.name && (db.name.startsWith('matrix-') || db.name.startsWith('matrix-js-sdk'))) {
+          names.add(db.name);
+        }
+      }
+    }
+  } catch {
+    // best-effort — fall back to the known names
+  }
+
+  await Promise.all(
+    Array.from(names).map(
+      (name) =>
+        new Promise<void>((resolve) => {
+          try {
+            const req = indexedDB.deleteDatabase(name);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            req.onblocked = () => resolve();
+          } catch {
+            resolve();
+          }
+        }),
+    ),
+  );
 }
 
 // =================================================================================================
 // CLIENT
 // =================================================================================================
+let activeMatrixClient: MatrixClient | null = null;
+
 /**
  * Creates a temporary matrix client, used for matrix login or registration to get access tokens
  * @param homeServerUrl - the home server url to instantiate the matrix client
@@ -560,29 +610,47 @@ export async function createMatrixClient() {
       sync[state]();
     });
   });
+  activeMatrixClient = mxClient;
   return mxClient;
 }
 
 export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: MatrixClient; baseUrl?: string }) {
-  let client = mxClient;
+  let client = mxClient ?? activeMatrixClient;
+
+  // Fall back to a bare client so we can still revoke the access token server-side
   if (!client) {
     const homeServerUrl = secret.baseUrl;
     const accessToken = secret.accessToken;
     const userId = secret.userId;
     const deviceId = secret.deviceId;
-    client = createClient({
-      baseUrl: cleanUrlString((homeServerUrl ?? baseUrl) || ''),
-      accessToken,
-      userId,
-      deviceId,
-    });
+    if ((homeServerUrl ?? baseUrl) && accessToken) {
+      client = createClient({
+        baseUrl: cleanUrlString((homeServerUrl ?? baseUrl) || ''),
+        accessToken,
+        userId,
+        deviceId,
+      });
+    }
   }
+
   if (client) {
-    client.stopClient();
+    try {
+      client.stopClient();
+    } catch (err) {
+      console.warn('Matrix stopClient error:', err);
+    }
     await client.logout().catch(console.error);
-    client.clearStores();
-    clearLocalStore();
+    try {
+      await client.clearStores();
+    } catch (err) {
+      console.warn('Matrix clearStores error:', err);
+    }
   }
+
+  activeMatrixClient = null;
+
+  await deleteMatrixIndexedDBs();
+  clearLocalStore();
 }
 
 // =================================================================================================

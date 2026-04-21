@@ -51,6 +51,15 @@ A second mnemonic is used specifically for **Ed25519 claim signing** (W3C Verifi
 - **Used for**: Deriving an Ed25519 keypair (`deriveEd25519KeyPairFromMnemonic()` in `utils/veramo.ts`), creating a Veramo agent, and signing claim VCs
 - **Key files**: `utils/signingMnemonic.ts` (generation, fetch, store, decrypt)
 
+## Credential Storage
+
+Issued credentials (e.g. KYC) are stored in the user's personal room using a two-event split that mirrors the impacts-x-web app, so credentials written here are readable from there:
+
+- **Timeline event** `ixo.credential` — content `{ credential: JSON.stringify(credential) }` (double-stringified to sidestep Matrix's float restrictions). Auto-encrypted by Megolm because the room has E2EE enabled, so credential PII never leaves the encrypted timeline.
+- **State event** `ixo.credential.index` (state key = credential type) — content `{ entries: IndexEntry[] }` where each entry is `{ eventId, cid, storedAt, issuerDid, holderDid, credentialType, format }`. Plaintext, no PII; used for discovery and duplicate detection by CID.
+
+Implementation: `utils/matrixCredential.ts` (`storeMatrixCredential`, `computeCredentialCid`). Called from `hooks/useKycStatus.ts` after KYC reaches a terminal success state.
+
 ## Cross-Signing
 
 Cross-signing is set up during registration and login to enable Matrix E2E encryption:

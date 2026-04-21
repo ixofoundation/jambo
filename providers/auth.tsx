@@ -7,7 +7,6 @@ import { secret } from '@utils/secrets';
 import { logoutMatrixClient } from '@utils/matrix';
 import { cleanUrlString } from '@utils/url';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
-import { logoutViaAuthHub } from 'lib/authHub/redirect';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 import { store, persistor } from '@store/index';
 import { setAccount, clearAccount } from '@store/slices/accountSlice';
@@ -18,6 +17,7 @@ import { clearProfiles } from '@store/slices/profilesSlice';
 import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfileSlice';
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
 import { clearProjects } from '@store/slices/projectsSlice';
+import { clearKycData } from '@store/slices/kycSlice';
 
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH_VERSION = '2'; // Bump to force clean break from passkey-based accounts
@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     store.dispatch(clearMatrixProfile());
     store.dispatch(clearAllDrafts());
     store.dispatch(clearProjects());
+    store.dispatch(clearKycData());
   }
 
   // Auth version migration guard + session revival
@@ -182,6 +183,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const [signingState, setSigningState] = useState<{ visible: boolean; label: string }>({ visible: false, label: '' });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   function getTxLabel(messages: any[]): string {
     if (!messages?.length) return 'Transaction';
@@ -239,6 +241,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const logout = useCallback(async () => {
+    setIsLoggingOut(true);
     try {
       await logoutMatrixClient({ baseUrl: secret.baseUrl });
     } catch {
@@ -247,12 +250,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     clearAllState();
     await persistor.purge();
 
-    // Redirect to auth hub logout
-    try {
-      logoutViaAuthHub();
-    } catch {
-      window.location.href = '/auth';
-    }
+    window.location.href = '/auth';
   }, []);
 
   const value = {
@@ -315,6 +313,58 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
                 Signing Transaction
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>{signingState.label}</p>
+            </div>
+          </div>
+          <style>{`
+            @keyframes authSpinner {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+      {isLoggingOut && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--bg-primary, #1a1a2e)',
+              borderRadius: 16,
+              padding: '32px 28px',
+              maxWidth: 340,
+              width: '90%',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 20,
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                border: '3px solid var(--border-color)',
+                borderTopColor: 'var(--accent-color, #3b82f6)',
+                borderRadius: '50%',
+                animation: 'authSpinner 0.8s linear infinite',
+              }}
+            />
+            <div>
+              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>Signing out…</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>
+                Please wait while we log you out.
+              </p>
             </div>
           </div>
           <style>{`

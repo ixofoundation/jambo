@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { MatrixClient } from 'matrix-js-sdk';
 
 export type BackgroundSetupStatus = 'idle' | 'running' | 'success' | 'error';
 
@@ -9,6 +10,7 @@ export interface BackgroundSetupContextType {
   showDetails: boolean;
   setShowDetails: (show: boolean) => void;
   awaitCompletion: () => Promise<void>;
+  getMatrixClient: () => MatrixClient | null;
 }
 
 export const BackgroundSetupContext = createContext<BackgroundSetupContextType>({
@@ -18,4 +20,5 @@ export const BackgroundSetupContext = createContext<BackgroundSetupContextType>(
   showDetails: false,
   setShowDetails: () => {},
   awaitCompletion: () => Promise.resolve(),
+  getMatrixClient: () => null,
 });

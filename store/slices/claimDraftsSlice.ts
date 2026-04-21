@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface ClaimDraft {
-  surveyMode: 'bco' | 'bev' | 'claim' | 'view';
+  surveyMode: 'bco' | 'bev' | 'claim' | 'view' | 'kyc';
   surveyTemplate: string;
   surveyData: Record<string, any>;
   updatedAt: number;

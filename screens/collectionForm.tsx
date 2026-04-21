@@ -7,6 +7,7 @@ import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
+import Header from '@components/Header/Header';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { CHAIN_RPC_URL } from '@constants/common';
@@ -29,16 +30,19 @@ import base58 from 'bs58';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
 import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/protocolsSlice';
+import { setRedirectedAt } from '@store/slices/kycSlice';
+import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
 
 interface CollectionFormProps {
   entityDid: string;
   collectionId: string;
-  formType: 'vct' | 'bco' | 'bev' | 'view';
+  formType: 'vct' | 'bco' | 'bev' | 'view' | 'kyc';
   claimId?: string;
+  closeUrl?: string;
 }
 
-export default function CollectionForm({ entityDid, collectionId, formType, claimId }: CollectionFormProps) {
+export default function CollectionForm({ entityDid, collectionId, formType, claimId, closeUrl }: CollectionFormProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const authContext = useAuth();
@@ -48,6 +52,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const onSign = authContext.onSign;
 
   const draft = useAppSelector((state) => state.claimDrafts.byCollectionId[collectionId]);
+  const kycSurveyTemplate = useAppSelector((state) => state.kyc.surveyTemplate);
+  const kycDeedOfferId = useAppSelector((state) => state.kyc.deedOfferId);
+  const kycClaimCollectionId = useAppSelector((state) => state.kyc.claimCollectionId);
 
   // Map formType to surveyMode
   const surveyMode = formType === 'vct' ? 'claim' : formType === 'view' ? 'view' : formType;
@@ -73,7 +80,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
   const surveyHasChangesRef = useRef(false);
 
-  const collectionUrl = `/entities/${entityDid}/claimCollections/${collectionId}`;
+  const collectionUrl = closeUrl ?? `/entities/${entityDid}/claimCollections/${collectionId}`;
 
   const hasDraft = !!draft && draft.surveyMode === surveyMode;
 
@@ -149,9 +156,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
         const col = await fetchCollectionByCollectionId(collectionId);
         const protocolEntity = await fetchProtocolEntity(col.protocol);
-        const endpoint = protocolEntity?.linkedResource?.find(
-          (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'),
-        );
+        const endpoint =
+          protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
+          protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
         if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'vct', url);
@@ -162,25 +169,32 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
           setSurveyTemplate(JSON.stringify(formData));
         }
-      } else if (surveyMode === 'claim') {
-        // Check for existing draft
+      } else if (surveyMode === 'kyc') {
         if (hasDraft && draft) {
           setSurveyTemplate(draft.surveyTemplate);
           surveyHasChangesRef.current = true;
         } else {
-          const col = await fetchCollectionByCollectionId(collectionId);
-          const protocolEntity = await fetchProtocolEntity(col.protocol);
-          const endpoint = protocolEntity?.linkedResource?.find(
-            (r: any) => r?.id?.includes('#surveyTemplate') || r?.id?.includes('#vct'),
-          );
+          if (!kycSurveyTemplate) throw new Error('KYC form not loaded');
+          setSurveyTemplate(JSON.stringify(kycSurveyTemplate));
+        }
+      } else if (surveyMode === 'claim') {
+        if (hasDraft && draft) {
+          setSurveyTemplate(draft.surveyTemplate);
+          surveyHasChangesRef.current = true;
+        } else {
+          const protocolDid = (await fetchCollectionByCollectionId(collectionId)).protocol;
+          const protocolEntity = await fetchProtocolEntity(protocolDid);
+          const endpoint =
+            protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
+            protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
           if (!endpoint?.serviceEndpoint) throw new Error('Claim form not found');
           const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
-          const cached = getCachedTemplate(col.protocol, 'vct', url);
+          const cached = getCachedTemplate(protocolDid, 'vct', url);
           if (cached) {
             setSurveyTemplate(JSON.stringify(cached));
           } else {
             const formData = await getAdditionalInfo(url);
-            dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+            dispatch(setVctTemplate({ protocolDid, template: formData, url }));
             setSurveyTemplate(JSON.stringify(formData));
           }
         }
@@ -359,12 +373,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     try {
       const parsed = JSON.parse(surveyTemplate);
       const templateData = parsed?.question ?? parsed;
-      console.log('[SurveyJS] Form template:', templateData);
       // SurveyJS expects showProgressBar as a string, but templates may provide a boolean
       if (typeof templateData.showProgressBar === 'boolean') {
-        templateData.showProgressBar = templateData.showProgressBar
-          ? (templateData.progressBarLocation || 'top')
-          : 'off';
+        templateData.showProgressBar = templateData.showProgressBar ? templateData.progressBarLocation || 'top' : 'off';
       }
       const model = new Model(templateData);
       model.applyTheme(themeJson);
@@ -401,6 +412,25 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         setSubmitting({ active: true, label: 'Preparing submission...' });
         try {
           await awaitCompletion();
+          if (surveyMode === 'kyc') {
+            setSubmitting({ active: true, label: 'Initiating verification...' });
+            const protocolId = entityDid;
+            await initiateKyc(did, {
+              protocolId,
+              claimCollectionId: kycClaimCollectionId ?? undefined,
+              deedOfferId: kycDeedOfferId ?? undefined,
+              address,
+              data: sender.data,
+            });
+
+            setSubmitting({ active: true, label: 'Redirecting to verification...' });
+            const { url } = await fetchKycRedirect(did, protocolId);
+            dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
+            dispatch(clearDraft(collectionId));
+            window.open(url, '_blank', 'noopener,noreferrer');
+            router.push('/profile');
+            return;
+          }
           if (surveyMode === 'bco' || surveyMode === 'bev') {
             setSubmitting({ active: true, label: 'Submitting application...' });
             const client = getBidBotClient();
@@ -543,75 +573,25 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     ? 'Apply as Service Agent'
     : surveyMode === 'bev'
     ? 'Apply as Evaluation Agent'
+    : surveyMode === 'kyc'
+    ? hasDraft
+      ? 'Continue KYC Verification'
+      : 'KYC Verification'
     : hasDraft
     ? 'Continue Claim'
     : 'New Claim';
 
   return (
     <div
-      style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column' }}
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-secondary)',
+        display: 'flex',
+        flexDirection: 'column',
+        paddingTop: 'var(--header-height)',
+      }}
     >
-      {/* Header bar — always visible */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          height: 'var(--header-height)',
-          gap: '4px',
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={handleClose}
-          aria-label='Back'
-          style={{
-            background: 'var(--card-bg-color)',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            padding: '6px',
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <svg
-            width='20'
-            height='20'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <polyline points='15 18 9 12 15 6' />
-          </svg>
-        </button>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: '14px',
-            fontWeight: 600,
-            background: 'var(--card-bg-color)',
-            borderRadius: '8px',
-            padding: '0 12px',
-            height: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            color: 'var(--text-primary)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            minWidth: 0,
-            flex: 1,
-          }}
-        >
-          {title}
-        </h3>
-      </div>
+      <Header title={title} onClose={handleClose} />
 
       {/* Content area */}
       {formLoading ? (
