@@ -5,7 +5,7 @@
   "author": "ixo",
   "license": "MIT",
   "scripts": {
-    "postinstall": "node scripts/dedupe-react-types.js",
+    "postinstall": "node scripts/dedupe-react-types.js && node scripts/copy-pdf-worker.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -47,6 +47,7 @@
     "react": "18.1.0",
     "react-device-detect": "2.2.3",
     "react-dom": "18.1.0",
+    "react-pdf": "^7.7.3",
     "react-qr-code": "2.0.8",
     "react-redux": "9.2.0",
     "react-toastify": "^11.0.5",

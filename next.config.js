@@ -8,6 +8,8 @@ const withTM = require('next-transpile-modules')([
   '@veramo/credential-ld',
   '@veramo/utils',
   '@veramo/core-types',
+  'react-pdf',
+  'pdfjs-dist',
 ]);
 
 /** @type {import('next').NextConfig} */
@@ -30,6 +32,12 @@ const nextConfig = {
         crypto: false,
         stream: false,
         buffer: false,
+      };
+      // pdfjs-dist has an optional dependency on node-canvas that webpack
+      // otherwise tries to resolve for browser builds.
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        canvas: false,
       };
     }
 

@@ -9,16 +9,21 @@ type HeaderProps = {
   onGradient?: boolean;
   title?: string;
   onClose?: () => void;
+  static?: boolean;
 };
 
-const Header: FC<HeaderProps> = ({ onGradient, title, onClose }) => {
+const Header: FC<HeaderProps> = ({ onGradient, title, onClose, static: isStatic }) => {
   const router = useRouter();
   const avatarUrl = useAppSelector((state) => state.matrixProfile.avatarUrl);
   const isProfile = router.pathname === '/profile';
   const isSettings = router.pathname === '/settings';
 
   return (
-    <nav className={`${styles.nav}${onGradient ? ` ${styles.onGradient}` : ''}`}>
+    <nav
+      className={`${styles.nav}${onGradient ? ` ${styles.onGradient}` : ''}${
+        isStatic ? ` ${styles.static}` : ''
+      }`}
+    >
       <div className={styles.inner}>
         {title ? (
           <span className={styles.title}>{title}</span>

@@ -75,3 +75,35 @@ export async function getSurveyFilePreview(rawContent: string, did: string): Pro
     return '';
   }
 }
+
+/**
+ * Downloads a file from its serviceEndpoint and returns the raw Blob + metadata.
+ * Used for previews (e.g. PDFs) that need a blob URL rather than a data URL.
+ */
+export async function getSurveyFileBlob(
+  rawContent: unknown,
+  did: string,
+): Promise<{ blob: Blob; mediaType: string } | null> {
+  try {
+    const attachment = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+    const url: string | undefined = attachment?.serviceEndpoint;
+    if (!url) return null;
+
+    const openIdToken = await getMatrixOpenIdToken();
+    const res = await fetch(url, {
+      headers: {
+        'x-openid-token': openIdToken,
+        'x-did': did,
+      },
+    });
+
+    if (!res.ok) return null;
+
+    const blob = await res.blob();
+    const mediaType = attachment?.mediaType || blob.type || 'application/octet-stream';
+    return { blob, mediaType };
+  } catch (err) {
+    console.warn('[matrixClaims] getSurveyFileBlob error:', err);
+    return null;
+  }
+}
