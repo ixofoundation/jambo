@@ -34,7 +34,7 @@ import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/pr
 import { setRedirectedAt } from '@store/slices/kycSlice';
 import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
-import SubclaimSheet from '@components/SubclaimSheet/SubclaimSheet';
+import SubclaimModal from '@components/SubclaimModal/SubclaimModal';
 import { selectParentOfSubcollection } from '@store/selectors/subclaims';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 
@@ -748,7 +748,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         </div>
       ) : (
         <>
-          <div style={{ flex: 1, overflow: 'auto', paddingBottom: isSubcollection ? 104 : undefined }}>
+          <div style={{ flex: 1, overflow: 'auto' }}>
             <div style={{ maxWidth: 'var(--max-width)', margin: '0 auto', width: '100%' }}>
               {/* @ts-ignore */}
               <Survey model={survey} />
@@ -758,7 +758,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       )}
 
       {isSubcollection && !formLoading && !formError && (
-        <SubclaimSheet
+        <SubclaimModal
           open={true}
           parentCollectionId={parentCollectionId}
           subCollectionId={collectionId}

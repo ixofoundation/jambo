@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { useRouter } from 'next/router';
 import cls from 'classnames';
 import { createQueryClient, createRegistry } from '@ixo/impactxclient-sdk';
 import { GrantAuthorization } from '@ixo/impactxclient-sdk/types/codegen/cosmos/authz/v1beta1/authz';
@@ -7,7 +8,7 @@ import { createMatrixClaimBotClient } from '@ixo/matrixclient-sdk';
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
-import ChevronDown from '@icons/chevron_down.svg';
+import Cross from '@icons/cross.svg';
 import { fetchAllClaimsByCollectionId, fetchCollectionByCollectionId } from '@utils/claims';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getCachedTemplate, getServiceEndpoint } from '@utils/url';
@@ -24,11 +25,13 @@ import { themeJson } from '@constants/surveyTheme';
 import { configureFileQuestions, createAttachDownloadHandler } from '@constants/surveyDefaultConfig';
 import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 
-import styles from './SubclaimSheet.module.scss';
+import FloatingClaimButton from './FloatingClaimButton';
+import { ShrinkIcon } from './icons';
+import styles from './SubclaimModal.module.scss';
 
 type BlockReason = null | 'parent-not-tracked' | 'sub-not-allowed' | 'no-eval-authz' | 'no-worker';
 
-interface SubclaimSheetProps {
+interface SubclaimModalProps {
   open: boolean;
   parentCollectionId: string | null;
   subCollectionId: string;
@@ -62,14 +65,12 @@ function ClaimRow({
   disabled,
   onClick,
   rightSlot,
-  asHeader,
 }: {
   claim: any;
   selected: boolean;
   disabled: boolean;
   onClick?: () => void;
   rightSlot?: ReactNode;
-  asHeader?: boolean;
 }) {
   const address = (claim.agentAddress as string) || '';
   const userId = address ? matrixUserIdForAddress(address) : null;
@@ -89,9 +90,8 @@ function ClaimRow({
   const classes = [styles.row];
   if (selected) classes.push(styles.rowSelected);
   if (disabled) classes.push(styles.rowDisabled);
-  if (asHeader) classes.push(styles.rowHeader);
 
-  const interactive = !asHeader && !disabled && !!onClick;
+  const interactive = !disabled && !!onClick;
 
   return (
     <div
@@ -118,7 +118,7 @@ function ClaimRow({
   );
 }
 
-export default function SubclaimSheet({
+export default function SubclaimModal({
   open,
   parentCollectionId,
   subCollectionId,
@@ -127,7 +127,8 @@ export default function SubclaimSheet({
   selectedParentClaimId,
   onSelect,
   onBlockedChange,
-}: SubclaimSheetProps) {
+}: SubclaimModalProps) {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const allowedForParent = useAppSelector((s) =>
     parentCollectionId ? s.subclaims.allowedSubcollectionsByParent[parentCollectionId] : undefined,
@@ -138,8 +139,8 @@ export default function SubclaimSheet({
   );
 
   const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<'list' | 'form'>('list');
-  const [expanded, setExpanded] = useState(true);
+  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [minimized, setMinimized] = useState(false);
   const [loadingClaims, setLoadingClaims] = useState(false);
   const [claims, setClaims] = useState<any[]>([]);
   const [blockReason, setBlockReason] = useState<BlockReason>(null);
@@ -151,6 +152,8 @@ export default function SubclaimSheet({
   const [viewedClaimData, setViewedClaimData] = useState<Record<string, any> | null>(null);
   const [viewedClaimLoading, setViewedClaimLoading] = useState(false);
   const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
+
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -210,7 +213,7 @@ export default function SubclaimSheet({
         setAuthzChecked(true);
       } catch (err) {
         if (cancelled) return;
-        console.warn('[SubclaimSheet] authz check failed', err);
+        console.warn('[SubclaimModal] authz check failed', err);
         setHasEvalAuthz(false);
         setAuthzChecked(true);
       }
@@ -232,7 +235,7 @@ export default function SubclaimSheet({
         ]);
         if (!cancelled) setClaims(list ?? []);
       } catch (err) {
-        console.warn('[SubclaimSheet] fetch parent claims failed', err);
+        console.warn('[SubclaimModal] fetch parent claims failed', err);
         if (!cancelled) setClaims([]);
       } finally {
         if (!cancelled) setLoadingClaims(false);
@@ -245,7 +248,7 @@ export default function SubclaimSheet({
 
   useEffect(() => {
     if (!parentCollectionId || !hasEvalAuthz || parentTemplate) return;
-    if (view !== 'form') return;
+    if (view !== 'detail') return;
     let cancelled = false;
     (async () => {
       try {
@@ -268,7 +271,7 @@ export default function SubclaimSheet({
           setParentTemplate(JSON.stringify(formData));
         }
       } catch (err) {
-        console.warn('[SubclaimSheet] load parent template failed', err);
+        console.warn('[SubclaimModal] load parent template failed', err);
       }
     })();
     return () => {
@@ -320,7 +323,7 @@ export default function SubclaimSheet({
       claimDataCacheRef.current[claimId] = data;
       setViewedClaimData(data);
     } catch (err) {
-      console.warn('[SubclaimSheet] load claim data failed', err);
+      console.warn('[SubclaimModal] load claim data failed', err);
       setViewedClaimData({});
     } finally {
       setViewedClaimLoading(false);
@@ -331,13 +334,11 @@ export default function SubclaimSheet({
     onSelect(claimId);
     setViewedClaimData(null);
     loadParentClaimData(claimId);
-    setView('form');
-    setExpanded(true);
+    setView('detail');
   }
 
   function handleBackToList() {
     setView('list');
-    setExpanded(true);
   }
 
   const parentSurvey = useMemo(() => {
@@ -359,7 +360,7 @@ export default function SubclaimSheet({
       model.showCompleteButton = false;
       return model;
     } catch (err) {
-      console.warn('[SubclaimSheet] build parent survey failed', err);
+      console.warn('[SubclaimModal] build parent survey failed', err);
       return undefined;
     }
   }, [parentTemplate, viewedClaimData, did]);
@@ -388,132 +389,153 @@ export default function SubclaimSheet({
     return { available: avail, disabled: dis };
   }, [claims, claimsWithSubclaims, selectedParentClaimId]);
 
+  const hasSelection = !!selectedParentClaimId;
+
+  function handleClose() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  }
+
+  function handleMinimize() {
+    setMinimized(true);
+  }
+
+  function handleExpand() {
+    setMinimized(false);
+    if (selectedParentClaimId) setView('detail');
+  }
+
+  function dismiss() {
+    if (hasSelection) handleMinimize();
+    else handleClose();
+  }
+
+  useEffect(() => {
+    if (minimized) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minimized, hasSelection]);
+
+  function handleBackdropClick(e: MouseEvent<HTMLDivElement>) {
+    if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+      dismiss();
+    }
+  }
+
   if (!open || !mounted) return null;
   const portalRoot = typeof document !== 'undefined' ? document.getElementById('modal-root') : null;
   if (!portalRoot) return null;
 
-  const isCollapsed = view === 'form' && !expanded;
+  if (minimized) {
+    return ReactDOM.createPortal(<FloatingClaimButton onExpand={handleExpand} />, portalRoot);
+  }
 
-  const headerActions = (
-    <div className={styles.headerActions}>
-      <button
-        type='button'
-        className={styles.iconBtn}
-        onClick={() => setExpanded((prev) => !prev)}
-        aria-label={expanded ? 'Collapse panel' : 'Expand panel'}
-      >
-        <ChevronDown className={cls(styles.chevronIcon, { [styles.chevronUp]: !expanded })} />
-      </button>
-    </div>
-  );
+  const title = view === 'list' ? 'Select a base claim' : 'Base claim';
+
+  const headerIcon = hasSelection ? <ShrinkIcon /> : <Cross color='currentColor' />;
+  const headerLabel = hasSelection ? 'Minimize' : 'Close';
 
   return ReactDOM.createPortal(
-    <div className={cls(styles.container, { [styles.collapsed]: isCollapsed })} role='dialog' aria-modal='true'>
-      {view === 'list' ? (
+    <div className={styles.overlay} role='dialog' aria-modal='true' onClick={handleBackdropClick}>
+      <div className={styles.modal} ref={modalRef}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Select a base claim</h2>
+          <h2 className={styles.title}>{title}</h2>
+          <div className={styles.headerActions}>
+            <button type='button' className={styles.iconBtn} onClick={dismiss} aria-label={headerLabel}>
+              {headerIcon}
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className={styles.headerRowWrap}>
-          {(() => {
-            const selectedClaim = claims.find((c) => c.claimId === selectedParentClaimId);
-            if (selectedClaim) {
-              return <ClaimRow claim={selectedClaim} selected disabled={false} asHeader rightSlot={headerActions} />;
-            }
-            return (
-              <div className={cls(styles.row, styles.rowHeader)}>
-                <div className={styles.rowMain}>
-                  <div className={styles.rowClaimId}>{selectedParentClaimId ?? 'Base claim'}</div>
-                </div>
-                {headerActions}
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
-      {view === 'list' ? (
-        <div className={styles.content}>
-          {blockReason === 'parent-not-tracked' && (
-            <div className={styles.warningCard}>
-              This subcollection is linked to a base collection that isn&apos;t tracked in this app. Submission is
-              disabled.
-            </div>
-          )}
-          {blockReason === 'sub-not-allowed' && (
-            <div className={styles.warningCard}>
-              This collection isn&apos;t registered as a subcollection of its linked parent. Submission is disabled.
-            </div>
-          )}
-          {blockReason === 'no-eval-authz' && (
-            <div className={styles.warningCard}>
-              You don&apos;t have evaluation authorization on the base collection, so claim data cannot be loaded.
-              Submission is disabled.
-            </div>
-          )}
-
-          {!blockReason && (
+        <div className={`${styles.body} ${view === 'list' ? styles.listBody : styles.detailBody}`}>
+          {view === 'list' ? (
             <>
-              {loadingClaims ? (
-                <div className={styles.spinner}>
-                  <div className={styles.spinnerInner} />
+              {blockReason === 'parent-not-tracked' && (
+                <div className={styles.warningCard}>
+                  This subcollection is linked to a base collection that isn&apos;t tracked in this app. Submission is
+                  disabled.
                 </div>
-              ) : available.length === 0 && disabled.length === 0 ? (
-                <div className={styles.emptyMessage}>No approved base claims found in this collection yet.</div>
-              ) : (
-                <>
-                  {available.length > 0 && (
-                    <div className={styles.list}>
-                      {available.map((claim) => (
-                        <ClaimRow
-                          key={claim.claimId}
-                          claim={claim}
-                          selected={claim.claimId === selectedParentClaimId}
-                          disabled={false}
-                          onClick={() => handleSelectClaim(claim.claimId)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {disabled.length > 0 && (
-                    <>
-                      <div className={styles.sectionLabel}>Already has subclaims</div>
+              )}
+              {blockReason === 'sub-not-allowed' && (
+                <div className={styles.warningCard}>
+                  This collection isn&apos;t registered as a subcollection of its linked parent. Submission is disabled.
+                </div>
+              )}
+              {blockReason === 'no-eval-authz' && (
+                <div className={styles.warningCard}>
+                  You don&apos;t have evaluation authorization on the base collection, so claim data cannot be loaded.
+                  Submission is disabled.
+                </div>
+              )}
+
+              {!blockReason &&
+                (loadingClaims ? (
+                  <div className={styles.spinner}>
+                    <div className={styles.spinnerInner} />
+                  </div>
+                ) : available.length === 0 && disabled.length === 0 ? (
+                  <div className={styles.emptyMessage}>No approved base claims found in this collection yet.</div>
+                ) : (
+                  <>
+                    {available.length > 0 && (
                       <div className={styles.list}>
-                        {disabled.map((claim) => (
+                        {available.map((claim) => (
                           <ClaimRow
                             key={claim.claimId}
                             claim={claim}
                             selected={claim.claimId === selectedParentClaimId}
-                            disabled={true}
+                            disabled={false}
+                            onClick={() => handleSelectClaim(claim.claimId)}
                           />
                         ))}
                       </div>
-                    </>
-                  )}
-                </>
+                    )}
+                    {disabled.length > 0 && (
+                      <>
+                        <div className={styles.sectionLabel}>Already has subclaims</div>
+                        <div className={styles.list}>
+                          {disabled.map((claim) => (
+                            <ClaimRow
+                              key={claim.claimId}
+                              claim={claim}
+                              selected={claim.claimId === selectedParentClaimId}
+                              disabled={true}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ))}
+            </>
+          ) : (
+            <>
+              <div className={styles.infoNote}>
+                Reference data from this base claim while completing your claim. Got the wrong base claim? Change{' '}
+                <button type='button' className={styles.inlineLink} onClick={handleBackToList}>
+                  here
+                </button>
+                .
+              </div>
+              {viewedClaimLoading || !parentSurvey ? (
+                <div className={styles.spinner}>
+                  <div className={styles.spinnerInner} />
+                </div>
+              ) : (
+                // @ts-ignore
+                <Survey model={parentSurvey} />
               )}
             </>
           )}
         </div>
-      ) : (
-        <div className={styles.inlineFormWrapper}>
-          <div className={styles.infoNote}>
-            Reference data from this base claim while completing your claim. Got the wrong base claim? Change{' '}
-            <button type='button' className={styles.inlineLink} onClick={handleBackToList}>
-              here
-            </button>
-            .
-          </div>
-          {viewedClaimLoading || !parentSurvey ? (
-            <div className={styles.spinner}>
-              <div className={styles.spinnerInner} />
-            </div>
-          ) : (
-            // @ts-ignore
-            <Survey model={parentSurvey} />
-          )}
-        </div>
-      )}
+      </div>
     </div>,
     portalRoot,
   );
