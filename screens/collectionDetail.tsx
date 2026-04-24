@@ -15,7 +15,7 @@ import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
 import { secret } from '@utils/secrets';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { useAppSelector } from '@store/hooks';
 import { toast } from 'react-toastify';
 
@@ -160,8 +160,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
         console.warn('[CollectionDetail] No Matrix access token available; skipping bid fetch');
         return;
       }
-      const openIdToken = await getMatrixOpenIdToken();
-      const response = await client.bid.v1beta1.queryBidsByDid(collectionId, did, openIdToken, did);
+      const response = await withMatrixOpenIdRetry((token) =>
+        client.bid.v1beta1.queryBidsByDid(collectionId, did, token, did),
+      );
       setBids(response.data ?? []);
     } catch (err) {
       console.warn('[CollectionDetail] fetchBids error:', err);
@@ -177,8 +178,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       if (cancelledRef.current) return;
       const client = getBidBotClient();
       if (!client) return;
-      const openIdToken = await getMatrixOpenIdToken();
-      const response = await client.bid.v1beta1.queryBids(collectionId, openIdToken, did);
+      const response = await withMatrixOpenIdRetry((token) =>
+        client.bid.v1beta1.queryBids(collectionId, token, did),
+      );
       setAllBids(response.data ?? []);
     } catch (err) {
       console.warn('[CollectionDetail] fetchAllBids error:', err);

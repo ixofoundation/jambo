@@ -16,7 +16,7 @@ import { setVctTemplate } from '@store/slices/protocolsSlice';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchClaimsWithSubclaims } from '@store/thunks/subclaimsThunks';
 import { selectClaimsWithSubclaims } from '@store/selectors/subclaims';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { fetchMatrixProfileForAddress, matrixUserIdForAddress } from '@utils/matrixProfile';
 import { secret } from '@utils/secrets';
 import { CHAIN_RPC_URL } from '@constants/common';
@@ -306,8 +306,9 @@ export default function SubclaimModal({
         setViewedClaimData({});
         return;
       }
-      const openIdToken = await getMatrixOpenIdToken();
-      const response = await client.claim.v1beta1.queryClaim(parentCollectionId, claimId, openIdToken, did);
+      const response = await withMatrixOpenIdRetry((token) =>
+        client.claim.v1beta1.queryClaim(parentCollectionId, claimId, token, did),
+      );
       let data: Record<string, any> = {};
       if (response) {
         let parsed: any = typeof response === 'string' ? JSON.parse(response) : response;

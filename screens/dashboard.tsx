@@ -15,7 +15,7 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 
 function readableStatus(status?: number): string {
   if (status === 0) return 'Created';
@@ -96,7 +96,6 @@ export default function Dashboard() {
 
         const statuses: Record<string, { sa: RoleStatus; ea: RoleStatus }> = {};
         const bidClient = getBidBotClient();
-        const openIdToken = bidClient ? await getMatrixOpenIdToken() : undefined;
         const registry = createRegistry();
 
         function grantMatchesCollection(g: GrantAuthorization, typeUrl: string, admin: string, colId: string): boolean {
@@ -126,7 +125,9 @@ export default function Dashboard() {
             // Check bids for pending roles
             if (bidClient && (saStatus === 'none' || eaStatus === 'none')) {
               try {
-                const response = await bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did, openIdToken!, did);
+                const response = await withMatrixOpenIdRetry((token) =>
+                  bidClient.bid.v1beta1.queryBidsByDid(c.collectionId, did, token, did),
+                );
                 const bidData = response.data ?? [];
                 if (saStatus === 'none' && bidData.some((b: any) => b.role === 'SA')) saStatus = 'pending';
                 if (eaStatus === 'none' && bidData.some((b: any) => b.role === 'EA')) eaStatus = 'pending';

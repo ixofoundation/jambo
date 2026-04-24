@@ -24,7 +24,7 @@ import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
 import base58 from 'bs58';
@@ -174,8 +174,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       if (surveyMode === 'view' && claimId) {
         // View mode — load claim data + survey template
         const client = getClaimBotClient();
-        const openIdToken = await getMatrixOpenIdToken();
-        const response = await client!?.claim.v1beta1.queryClaim(collectionId, claimId, openIdToken, did);
+        const response = await withMatrixOpenIdRetry((token) =>
+          client!?.claim.v1beta1.queryClaim(collectionId, claimId, token, did),
+        );
         let claimData: Record<string, any> = {};
         if (response) {
           let parsed = typeof response === 'string' ? JSON.parse(response) : response;
@@ -487,14 +488,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           if (surveyMode === 'bco' || surveyMode === 'bev') {
             setSubmitting({ active: true, label: 'Submitting application...' });
             const client = getBidBotClient();
-            const openIdToken = await getMatrixOpenIdToken();
             const role = surveyMode === 'bev' ? 'EA' : 'SA';
-            const response = await client!?.bid.v1beta1.submitBid(
-              collectionId,
-              JSON.stringify(sender.data),
-              role,
-              openIdToken,
-              did,
+            const response = await withMatrixOpenIdRetry((token) =>
+              client!?.bid.v1beta1.submitBid(collectionId, JSON.stringify(sender.data), role, token, did),
             );
             if (!response.id) throw new Error('Failed to submit application');
           } else {
@@ -517,13 +513,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
             setSubmitting({ active: true, label: 'Uploading claim...' });
             const client = getClaimBotClient();
-            const openIdToken = await getMatrixOpenIdToken();
             const col = await fetchCollectionByCollectionId(collectionId);
-            const response = await client!?.claim.v1beta1.saveClaim(
-              collectionId,
-              JSON.stringify(signedVC),
-              openIdToken,
-              did,
+            const response = await withMatrixOpenIdRetry((token) =>
+              client!?.claim.v1beta1.saveClaim(collectionId, JSON.stringify(signedVC), token, did),
             );
             if (!response.data.cid) throw new Error('Failed to submit claim');
 
