@@ -35,7 +35,7 @@ import { setRedirectedAt } from '@store/slices/kycSlice';
 import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
 import SubclaimModal from '@components/SubclaimModal/SubclaimModal';
-import { selectParentOfSubcollection } from '@store/selectors/subclaims';
+import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 
 const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
@@ -82,14 +82,18 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const [isEvalAgent, setIsEvalAgent] = useState(false);
   const [allClaims, setAllClaims] = useState<any[]>([]);
 
-  // Subclaim sheet state — only active when surveyMode === 'claim' and this collection is a subcollection
-  const parentCollectionId = useAppSelector((s) =>
-    surveyMode === 'claim' ? selectParentOfSubcollection(s, collectionId) : null,
-  );
-  const isSubcollection = !!parentCollectionId && surveyMode === 'claim';
+  // Subclaim sheet state — activated by the surveyjs template itself (question named ixo:baseClaimCID)
+  const requiresBaseClaim = useMemo(() => {
+    if (!surveyTemplate || surveyMode !== 'claim') return false;
+    try {
+      return templateRequiresBaseClaim(JSON.parse(surveyTemplate));
+    } catch {
+      return false;
+    }
+  }, [surveyTemplate, surveyMode]);
   const [baseClaimCID, setBaseClaimCID] = useState<string | null>(null);
   const [subclaimBlockReason, setSubclaimBlockReason] = useState<
-    'parent-not-tracked' | 'sub-not-allowed' | 'no-eval-authz' | 'no-worker' | null
+    'not-configured' | 'worker-unreachable' | 'no-eval-authz' | null
   >(null);
 
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
@@ -97,7 +101,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const surveyHasChangesRef = useRef(false);
   const baseClaimCIDRef = useRef<string | null>(null);
   const subclaimBlockReasonRef = useRef<typeof subclaimBlockReason>(null);
-  const isSubcollectionRef = useRef(false);
+  const requiresBaseClaimRef = useRef(false);
   const parentCollectionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -107,11 +111,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     subclaimBlockReasonRef.current = subclaimBlockReason;
   }, [subclaimBlockReason]);
   useEffect(() => {
-    isSubcollectionRef.current = isSubcollection;
-  }, [isSubcollection]);
-  useEffect(() => {
-    parentCollectionIdRef.current = parentCollectionId ?? null;
-  }, [parentCollectionId]);
+    requiresBaseClaimRef.current = requiresBaseClaim;
+  }, [requiresBaseClaim]);
 
   const collectionUrl = closeUrl ?? `/entities/${entityDid}/claimCollections/${collectionId}`;
 
@@ -441,13 +442,13 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
 
       // For subclaim flows, seed/overwrite the baseClaimCID field so it's present in the VC
-      if (isSubcollectionRef.current) {
+      if (requiresBaseClaimRef.current) {
         model.data = { ...model.data, [BASE_CLAIM_CID_FIELD]: baseClaimCIDRef.current ?? '' };
       }
 
       function preventComplete(sender: any, options: any) {
         options.allowComplete = false;
-        if (isSubcollectionRef.current && (subclaimBlockReasonRef.current || !baseClaimCIDRef.current)) {
+        if (requiresBaseClaimRef.current && (subclaimBlockReasonRef.current || !baseClaimCIDRef.current)) {
           // Submission gated until user picks a base claim and pre-flight passes
           toast.error(
             subclaimBlockReasonRef.current
@@ -519,7 +520,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             );
             if (!response.data.cid) throw new Error('Failed to submit claim');
 
-            if (isSubcollectionRef.current && parentCollectionIdRef.current && baseClaimCIDRef.current) {
+            if (requiresBaseClaimRef.current && parentCollectionIdRef.current && baseClaimCIDRef.current) {
               await registerSubclaimLinkage({
                 parentCollectionId: parentCollectionIdRef.current,
                 parentClaimId: baseClaimCIDRef.current,
@@ -553,7 +554,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
               }),
             };
             await onSign([message]);
-            if (isSubcollectionRef.current && baseClaimCIDRef.current) {
+            if (requiresBaseClaimRef.current && baseClaimCIDRef.current) {
               // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
               refreshClaimStatus(baseClaimCIDRef.current);
             }
@@ -602,7 +603,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   // Keep ixo:baseClaimCID in sync with the underlying survey model when the user picks a parent
   useEffect(() => {
-    if (!survey || !isSubcollection) return;
+    if (!survey || !requiresBaseClaim) return;
     try {
       survey.setValue(BASE_CLAIM_CID_FIELD, baseClaimCID ?? '');
     } catch {
@@ -613,7 +614,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         // ignore
       }
     }
-  }, [survey, isSubcollection, baseClaimCID]);
+  }, [survey, requiresBaseClaim, baseClaimCID]);
 
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
@@ -749,16 +750,18 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         </>
       )}
 
-      {isSubcollection && !formLoading && !formError && (
+      {requiresBaseClaim && !formLoading && !formError && (
         <SubclaimModal
           open={true}
-          parentCollectionId={parentCollectionId}
-          subCollectionId={collectionId}
+          subclaimCollectionId={collectionId}
           address={address}
           did={did}
           selectedParentClaimId={baseClaimCID}
           onSelect={(claimId) => setBaseClaimCID(claimId)}
           onBlockedChange={setSubclaimBlockReason}
+          onParentResolved={(pid) => {
+            parentCollectionIdRef.current = pid;
+          }}
         />
       )}
 
