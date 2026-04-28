@@ -21,6 +21,7 @@ import {
   createAttachDownloadHandler,
 } from '@constants/surveyDefaultConfig';
 import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
+import '../lib/unl'; // registers the `map-grid-selector` SurveyJS question type
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
@@ -201,22 +202,27 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'vct', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       } else if (surveyMode === 'kyc') {
         if (hasDraft && draft) {
+          console.log({ surveyTemplate: draft.surveyTemplate });
           setSurveyTemplate(draft.surveyTemplate);
           surveyHasChangesRef.current = true;
         } else {
           if (!kycSurveyTemplate) throw new Error('KYC form not loaded');
+          console.log({ surveyTemplate: kycSurveyTemplate });
           setSurveyTemplate(JSON.stringify(kycSurveyTemplate));
         }
       } else if (surveyMode === 'claim') {
         if (hasDraft && draft) {
+          console.log({ surveyTemplate: draft.surveyTemplate });
           setSurveyTemplate(draft.surveyTemplate);
           surveyHasChangesRef.current = true;
         } else {
@@ -229,10 +235,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
           const cached = getCachedTemplate(protocolDid, 'vct', url);
           if (cached) {
+            console.log({ surveyTemplate: cached });
             setSurveyTemplate(JSON.stringify(cached));
           } else {
             const formData = await getAdditionalInfo(url);
             dispatch(setVctTemplate({ protocolDid, template: formData, url }));
+            console.log({ surveyTemplate: formData });
             setSurveyTemplate(JSON.stringify(formData));
           }
         }
@@ -244,10 +252,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'bco', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setBcoTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       } else if (surveyMode === 'bev') {
@@ -258,10 +268,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'bev', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setBevTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       }
