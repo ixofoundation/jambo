@@ -192,11 +192,22 @@ export default function UnlMap({
 
   if (isGeolocationLoading) {
     return (
-      <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         Loading map…
       </div>
     );
   }
 
-  return <div id={mapId} style={{ width: '100%', height: 280 }} />;
+  return (
+    <div
+      id={mapId}
+      style={{
+        width: '100%',
+        height: 360,
+        borderTopLeftRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+        borderTopRightRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+        overflow: 'hidden',
+      }}
+    />
+  );
 }

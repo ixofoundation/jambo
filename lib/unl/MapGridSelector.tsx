@@ -386,7 +386,6 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
       border: '1px solid var(--sjs-border-default, #e0e0e0)',
       borderRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
       position: 'relative',
-      overflow: 'hidden',
       width: '100%',
     };
     if (this.question.getPropertyValue('readOnly') || (this.question as any).isDesignMode) {
