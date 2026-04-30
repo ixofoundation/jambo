@@ -10951,7 +10951,7 @@ unl-core@3.0.1:
     "@turf/invariant" "^6.5.0"
     "@turf/meta" "^6.5.0"
 
-"unl-core@github:u-n-l/core-js#do-not-merge-web-fix":
+unl-core@u-n-l/core-js#do-not-merge-web-fix:
   version "3.0.1"
   resolved "https://codeload.github.com/u-n-l/core-js/tar.gz/59e4e48c97c6d0a907da9bf0c0c597eb78abe19f"
   dependencies:
