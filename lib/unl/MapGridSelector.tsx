@@ -402,7 +402,7 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
     return (
       <div
         style={{
-          marginTop: 8,
+          marginTop: 12,
           padding: '8px 12px',
           backgroundColor: 'var(--sjs-general-backcolor-dim-light, var(--bg-secondary, #f4f4f4))',
           borderRadius: 4,
@@ -476,7 +476,7 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
 
         <div
           style={{
-            marginTop: 8,
+            marginTop: 12,
             fontSize: 12,
             color: 'var(--sjs-general-forecolor-light, var(--text-primary, #555))',
             textAlign: 'center',

@@ -199,15 +199,19 @@ export default function UnlMap({
   }
 
   return (
-    <div
-      id={mapId}
-      style={{
-        width: '100%',
-        height: 360,
-        borderTopLeftRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
-        borderTopRightRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
-        overflow: 'hidden',
-      }}
-    />
+    <>
+      {/* unl-map-js cell popup ships with no z-index, so corner controls (z-index 2) paint over it */}
+      <style>{`.mapbox-control-cell-popup{z-index:3;pointer-events:none;}`}</style>
+      <div
+        id={mapId}
+        style={{
+          width: '100%',
+          height: 360,
+          borderTopLeftRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+          borderTopRightRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+          overflow: 'hidden',
+        }}
+      />
+    </>
   );
 }
