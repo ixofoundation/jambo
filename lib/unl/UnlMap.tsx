@@ -117,9 +117,7 @@ export default function UnlMap({
       });
 
       if (position) {
-        new UnlSdk.Marker()
-          .setLngLat([position.coords.longitude, position.coords.latitude])
-          .addTo(map);
+        new UnlSdk.Marker().setLngLat([position.coords.longitude, position.coords.latitude]).addTo(map);
       }
 
       if (getFeatureCollectionOnClick && precision) {
@@ -184,34 +182,28 @@ export default function UnlMap({
           borderRadius: 8,
         }}
       >
-        Map unavailable — UNL credentials are not configured. Set <code>NEXT_PUBLIC_UNL_MAP_API_KEY</code>{' '}
-        and <code>NEXT_PUBLIC_UNL_MAP_VPM_ID</code> to enable location capture.
+        Map unavailable — UNL credentials are not configured. Set <code>NEXT_PUBLIC_UNL_MAP_API_KEY</code> and{' '}
+        <code>NEXT_PUBLIC_UNL_MAP_VPM_ID</code> to enable location capture.
       </div>
     );
   }
 
   if (isGeolocationLoading) {
     return (
-      <div style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        Loading map…
-      </div>
+      <div style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading map…</div>
     );
   }
 
   return (
-    <>
-      {/* unl-map-js cell popup ships with no z-index, so corner controls (z-index 2) paint over it */}
-      <style>{`.mapbox-control-cell-popup{z-index:3;pointer-events:none;}`}</style>
-      <div
-        id={mapId}
-        style={{
-          width: '100%',
-          height: 360,
-          borderTopLeftRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
-          borderTopRightRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
-          overflow: 'hidden',
-        }}
-      />
-    </>
+    <div
+      id={mapId}
+      style={{
+        width: '100%',
+        height: 360,
+        borderTopLeftRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+        borderTopRightRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
+        // overflow: 'hidden',
+      }}
+    />
   );
 }
