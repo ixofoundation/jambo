@@ -1,4 +1,4 @@
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { fetchWithMatrixOpenIdRetry } from '@utils/matrix';
 import { blobToDataURL } from '@utils/encoding';
 
 const CLAIM_BOT_URL = process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!;
@@ -12,19 +12,20 @@ export async function uploadFile(
   collectionId: string,
   did: string,
 ): Promise<{ file: File | Blob; content: string }> {
-  const openIdToken = await getMatrixOpenIdToken();
   const formData = new FormData();
   formData.append('collection', collectionId);
   formData.append('file', file);
 
-  const res = await fetch(`${CLAIM_BOT_URL}/media/upload`, {
-    method: 'POST',
-    headers: {
-      'x-openid-token': openIdToken,
-      'x-did': did,
-    },
-    body: formData,
-  });
+  const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
+    fetch(`${CLAIM_BOT_URL}/media/upload`, {
+      method: 'POST',
+      headers: {
+        'x-openid-token': openIdToken,
+        'x-did': did,
+      },
+      body: formData,
+    }),
+  );
 
   if (!res.ok) {
     const data = await res.json().catch(() => null);
@@ -58,13 +59,14 @@ export async function getSurveyFilePreview(rawContent: string, did: string): Pro
     const url: string | undefined = attachment?.serviceEndpoint;
     if (!url) return '';
 
-    const openIdToken = await getMatrixOpenIdToken();
-    const res = await fetch(url, {
-      headers: {
-        'x-openid-token': openIdToken,
-        'x-did': did,
-      },
-    });
+    const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
+      fetch(url, {
+        headers: {
+          'x-openid-token': openIdToken,
+          'x-did': did,
+        },
+      }),
+    );
 
     if (!res.ok) return '';
 
@@ -89,13 +91,14 @@ export async function getSurveyFileBlob(
     const url: string | undefined = attachment?.serviceEndpoint;
     if (!url) return null;
 
-    const openIdToken = await getMatrixOpenIdToken();
-    const res = await fetch(url, {
-      headers: {
-        'x-openid-token': openIdToken,
-        'x-did': did,
-      },
-    });
+    const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
+      fetch(url, {
+        headers: {
+          'x-openid-token': openIdToken,
+          'x-did': did,
+        },
+      }),
+    );
 
     if (!res.ok) return null;
 

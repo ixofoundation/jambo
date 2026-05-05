@@ -21,10 +21,11 @@ import {
   createAttachDownloadHandler,
 } from '@constants/surveyDefaultConfig';
 import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
+import '../lib/unl'; // registers the `map-grid-selector` SurveyJS question type
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
 import base58 from 'bs58';
@@ -35,7 +36,7 @@ import { setRedirectedAt } from '@store/slices/kycSlice';
 import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
 import SubclaimModal from '@components/SubclaimModal/SubclaimModal';
-import { selectParentOfSubcollection } from '@store/selectors/subclaims';
+import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 
 const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
@@ -82,14 +83,18 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const [isEvalAgent, setIsEvalAgent] = useState(false);
   const [allClaims, setAllClaims] = useState<any[]>([]);
 
-  // Subclaim sheet state — only active when surveyMode === 'claim' and this collection is a subcollection
-  const parentCollectionId = useAppSelector((s) =>
-    surveyMode === 'claim' ? selectParentOfSubcollection(s, collectionId) : null,
-  );
-  const isSubcollection = !!parentCollectionId && surveyMode === 'claim';
+  // Subclaim sheet state — activated by the surveyjs template itself (question named ixo:baseClaimCID)
+  const requiresBaseClaim = useMemo(() => {
+    if (!surveyTemplate || surveyMode !== 'claim') return false;
+    try {
+      return templateRequiresBaseClaim(JSON.parse(surveyTemplate));
+    } catch {
+      return false;
+    }
+  }, [surveyTemplate, surveyMode]);
   const [baseClaimCID, setBaseClaimCID] = useState<string | null>(null);
   const [subclaimBlockReason, setSubclaimBlockReason] = useState<
-    'parent-not-tracked' | 'sub-not-allowed' | 'no-eval-authz' | 'no-worker' | null
+    'not-configured' | 'worker-unreachable' | 'no-eval-authz' | null
   >(null);
 
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
@@ -97,7 +102,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const surveyHasChangesRef = useRef(false);
   const baseClaimCIDRef = useRef<string | null>(null);
   const subclaimBlockReasonRef = useRef<typeof subclaimBlockReason>(null);
-  const isSubcollectionRef = useRef(false);
+  const requiresBaseClaimRef = useRef(false);
   const parentCollectionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -107,11 +112,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     subclaimBlockReasonRef.current = subclaimBlockReason;
   }, [subclaimBlockReason]);
   useEffect(() => {
-    isSubcollectionRef.current = isSubcollection;
-  }, [isSubcollection]);
-  useEffect(() => {
-    parentCollectionIdRef.current = parentCollectionId ?? null;
-  }, [parentCollectionId]);
+    requiresBaseClaimRef.current = requiresBaseClaim;
+  }, [requiresBaseClaim]);
 
   const collectionUrl = closeUrl ?? `/entities/${entityDid}/claimCollections/${collectionId}`;
 
@@ -174,8 +176,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       if (surveyMode === 'view' && claimId) {
         // View mode — load claim data + survey template
         const client = getClaimBotClient();
-        const openIdToken = await getMatrixOpenIdToken();
-        const response = await client!?.claim.v1beta1.queryClaim(collectionId, claimId, openIdToken, did);
+        const response = await withMatrixOpenIdRetry((token) =>
+          client!?.claim.v1beta1.queryClaim(collectionId, claimId, token, did),
+        );
         let claimData: Record<string, any> = {};
         if (response) {
           let parsed = typeof response === 'string' ? JSON.parse(response) : response;
@@ -199,22 +202,27 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'vct', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       } else if (surveyMode === 'kyc') {
         if (hasDraft && draft) {
+          console.log({ surveyTemplate: draft.surveyTemplate });
           setSurveyTemplate(draft.surveyTemplate);
           surveyHasChangesRef.current = true;
         } else {
           if (!kycSurveyTemplate) throw new Error('KYC form not loaded');
+          console.log({ surveyTemplate: kycSurveyTemplate });
           setSurveyTemplate(JSON.stringify(kycSurveyTemplate));
         }
       } else if (surveyMode === 'claim') {
         if (hasDraft && draft) {
+          console.log({ surveyTemplate: draft.surveyTemplate });
           setSurveyTemplate(draft.surveyTemplate);
           surveyHasChangesRef.current = true;
         } else {
@@ -227,10 +235,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
           const cached = getCachedTemplate(protocolDid, 'vct', url);
           if (cached) {
+            console.log({ surveyTemplate: cached });
             setSurveyTemplate(JSON.stringify(cached));
           } else {
             const formData = await getAdditionalInfo(url);
             dispatch(setVctTemplate({ protocolDid, template: formData, url }));
+            console.log({ surveyTemplate: formData });
             setSurveyTemplate(JSON.stringify(formData));
           }
         }
@@ -242,10 +252,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'bco', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setBcoTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       } else if (surveyMode === 'bev') {
@@ -256,10 +268,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(col.protocol, 'bev', url);
         if (cached) {
+          console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
         } else {
           const formData = await getAdditionalInfo(url);
           dispatch(setBevTemplate({ protocolDid: col.protocol, template: formData, url }));
+          console.log({ surveyTemplate: formData });
           setSurveyTemplate(JSON.stringify(formData));
         }
       }
@@ -440,13 +454,13 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
 
       // For subclaim flows, seed/overwrite the baseClaimCID field so it's present in the VC
-      if (isSubcollectionRef.current) {
+      if (requiresBaseClaimRef.current) {
         model.data = { ...model.data, [BASE_CLAIM_CID_FIELD]: baseClaimCIDRef.current ?? '' };
       }
 
       function preventComplete(sender: any, options: any) {
         options.allowComplete = false;
-        if (isSubcollectionRef.current && (subclaimBlockReasonRef.current || !baseClaimCIDRef.current)) {
+        if (requiresBaseClaimRef.current && (subclaimBlockReasonRef.current || !baseClaimCIDRef.current)) {
           // Submission gated until user picks a base claim and pre-flight passes
           toast.error(
             subclaimBlockReasonRef.current
@@ -487,14 +501,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           if (surveyMode === 'bco' || surveyMode === 'bev') {
             setSubmitting({ active: true, label: 'Submitting application...' });
             const client = getBidBotClient();
-            const openIdToken = await getMatrixOpenIdToken();
             const role = surveyMode === 'bev' ? 'EA' : 'SA';
-            const response = await client!?.bid.v1beta1.submitBid(
-              collectionId,
-              JSON.stringify(sender.data),
-              role,
-              openIdToken,
-              did,
+            const response = await withMatrixOpenIdRetry((token) =>
+              client!?.bid.v1beta1.submitBid(collectionId, JSON.stringify(sender.data), role, token, did),
             );
             if (!response.id) throw new Error('Failed to submit application');
           } else {
@@ -517,17 +526,13 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
             setSubmitting({ active: true, label: 'Uploading claim...' });
             const client = getClaimBotClient();
-            const openIdToken = await getMatrixOpenIdToken();
             const col = await fetchCollectionByCollectionId(collectionId);
-            const response = await client!?.claim.v1beta1.saveClaim(
-              collectionId,
-              JSON.stringify(signedVC),
-              openIdToken,
-              did,
+            const response = await withMatrixOpenIdRetry((token) =>
+              client!?.claim.v1beta1.saveClaim(collectionId, JSON.stringify(signedVC), token, did),
             );
             if (!response.data.cid) throw new Error('Failed to submit claim');
 
-            if (isSubcollectionRef.current && parentCollectionIdRef.current && baseClaimCIDRef.current) {
+            if (requiresBaseClaimRef.current && parentCollectionIdRef.current && baseClaimCIDRef.current) {
               await registerSubclaimLinkage({
                 parentCollectionId: parentCollectionIdRef.current,
                 parentClaimId: baseClaimCIDRef.current,
@@ -561,7 +566,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
               }),
             };
             await onSign([message]);
-            if (isSubcollectionRef.current && baseClaimCIDRef.current) {
+            if (requiresBaseClaimRef.current && baseClaimCIDRef.current) {
               // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
               refreshClaimStatus(baseClaimCIDRef.current);
             }
@@ -610,7 +615,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   // Keep ixo:baseClaimCID in sync with the underlying survey model when the user picks a parent
   useEffect(() => {
-    if (!survey || !isSubcollection) return;
+    if (!survey || !requiresBaseClaim) return;
     try {
       survey.setValue(BASE_CLAIM_CID_FIELD, baseClaimCID ?? '');
     } catch {
@@ -621,7 +626,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         // ignore
       }
     }
-  }, [survey, isSubcollection, baseClaimCID]);
+  }, [survey, requiresBaseClaim, baseClaimCID]);
 
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
@@ -757,16 +762,18 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         </>
       )}
 
-      {isSubcollection && !formLoading && !formError && (
+      {requiresBaseClaim && !formLoading && !formError && (
         <SubclaimModal
           open={true}
-          parentCollectionId={parentCollectionId}
-          subCollectionId={collectionId}
+          subclaimCollectionId={collectionId}
           address={address}
           did={did}
           selectedParentClaimId={baseClaimCID}
           onSelect={(claimId) => setBaseClaimCID(claimId)}
           onBlockedChange={setSubclaimBlockReason}
+          onParentResolved={(pid) => {
+            parentCollectionIdRef.current = pid;
+          }}
         />
       )}
 

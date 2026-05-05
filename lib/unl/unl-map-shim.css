@@ -1,0 +1,125 @@
+/*
+ * unl-map-js ships its controls with legacy `mapboxgl-ctrl*` class names, but
+ * the project uses maplibre-gl, whose stylesheet only styles `maplibregl-ctrl*`.
+ * Without these aliases the maplibre-gl control container's `pointer-events:
+ * none` makes clicks pass straight through the unstyled buttons to the map
+ * canvas, which fires `map.on('click')` and selects the grid cell underneath.
+ * The buttons also render unstyled (no size/background/cursor).
+ */
+
+.mapboxgl-ctrl {
+  clear: both;
+  pointer-events: auto;
+  transform: translate(0);
+}
+
+.mapboxgl-ctrl-group {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 10%);
+}
+
+.mapboxgl-ctrl-group button {
+  background-color: transparent;
+  border: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: block;
+  height: 29px;
+  outline: none;
+  padding: 0;
+  width: 29px;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mapboxgl-ctrl-group button + button {
+  border-top: 1px solid #ddd;
+}
+
+.maplibregl-ctrl-top-left .mapboxgl-ctrl {
+  float: left;
+  margin: 10px 0 0 10px;
+}
+.maplibregl-ctrl-top-right .mapboxgl-ctrl {
+  float: right;
+  margin: 10px 10px 0 0;
+}
+.maplibregl-ctrl-bottom-left .mapboxgl-ctrl {
+  float: left;
+  margin: 0 0 10px 10px;
+}
+.maplibregl-ctrl-bottom-right .mapboxgl-ctrl {
+  float: right;
+  margin: 0 10px 10px 0;
+}
+
+/*
+ * Grid-selector modal overrides. The library ships with desktop-only
+ * dimensions: `width: 46%`, fixed `margin-right: 78px` on every title, and
+ * `padding-top: 100px` on the overlay. On phone-sized screens the modal
+ * shrinks below the width its own paddings demand, so titles and selects spill
+ * past the right edge.
+ */
+.mapbox-control-grid-selector-modal-root {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  z-index: 1000;
+}
+
+.mapbox-control-grid-selector-modal-content {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.mapbox-control-grid-selector-modal-header {
+  padding: 12px 20px;
+}
+
+.mapbox-control-grid-selector-modal-header-title {
+  font-size: 22px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.mapbox-control-grid-selector-modal-body {
+  padding: 20px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.mapbox-control-grid-selector-modal-body > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mapbox-control-grid-selector-modal-title,
+.mapbox-control-grid-selector-modal-size {
+  margin: 0;
+  font-size: 15px;
+}
+
+.mapbox-control-grid-selector-modal-select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mapbox-control-grid-selector-modal-buttons-container {
+  padding: 16px 20px 20px;
+  gap: 12px;
+}
+
+.mapbox-control-grid-selector-modal-cancel-button,
+.mapbox-control-grid-selector-modal-select-button {
+  padding: 10px 20px;
+  font-size: 14px;
+  flex: 1;
+  white-space: nowrap;
+}

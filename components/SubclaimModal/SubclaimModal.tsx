@@ -16,7 +16,8 @@ import { setVctTemplate } from '@store/slices/protocolsSlice';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchClaimsWithSubclaims } from '@store/thunks/subclaimsThunks';
 import { selectClaimsWithSubclaims } from '@store/selectors/subclaims';
-import { getMatrixOpenIdToken } from '@utils/matrix';
+import { getCollectionLinks } from '../../lib/yomaWorker/client';
+import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { fetchMatrixProfileForAddress, matrixUserIdForAddress } from '@utils/matrixProfile';
 import { secret } from '@utils/secrets';
 import { CHAIN_RPC_URL } from '@constants/common';
@@ -29,17 +30,19 @@ import FloatingClaimButton from './FloatingClaimButton';
 import { ShrinkIcon } from './icons';
 import styles from './SubclaimModal.module.scss';
 
-type BlockReason = null | 'parent-not-tracked' | 'sub-not-allowed' | 'no-eval-authz' | 'no-worker';
+type BlockReason = null | 'not-configured' | 'worker-unreachable' | 'no-eval-authz';
+
+const FATAL_REASONS: Exclude<BlockReason, null>[] = ['not-configured', 'worker-unreachable'];
 
 interface SubclaimModalProps {
   open: boolean;
-  parentCollectionId: string | null;
-  subCollectionId: string;
+  subclaimCollectionId: string;
   address: string;
   did: string;
   selectedParentClaimId: string | null;
   onSelect: (claimId: string | null) => void;
   onBlockedChange: (reason: BlockReason) => void;
+  onParentResolved?: (parentCollectionId: string) => void;
 }
 
 function formatDate(ts: number | string | undefined): string {
@@ -96,7 +99,8 @@ function ClaimRow({
   return (
     <div
       className={classes.join(' ')}
-      onClick={interactive ? onClick : undefined}
+      // onClick={interactive ? onClick : undefined}
+      onClick={onClick}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
     >
@@ -120,20 +124,18 @@ function ClaimRow({
 
 export default function SubclaimModal({
   open,
-  parentCollectionId,
-  subCollectionId,
+  subclaimCollectionId,
   address,
   did,
   selectedParentClaimId,
   onSelect,
   onBlockedChange,
+  onParentResolved,
 }: SubclaimModalProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const allowedForParent = useAppSelector((s) =>
-    parentCollectionId ? s.subclaims.allowedSubcollectionsByParent[parentCollectionId] : undefined,
-  );
-  const parentTracked = useAppSelector((s) => (parentCollectionId ? !!s.collections.byId[parentCollectionId] : false));
+  const [parentCollectionId, setParentCollectionId] = useState<string | null>(null);
+  const [discovering, setDiscovering] = useState(true);
   const claimsWithSubclaims = useAppSelector((s) =>
     parentCollectionId ? selectClaimsWithSubclaims(s, parentCollectionId) : undefined,
   );
@@ -146,6 +148,7 @@ export default function SubclaimModal({
   const [blockReason, setBlockReason] = useState<BlockReason>(null);
   const [authzChecked, setAuthzChecked] = useState(false);
   const [hasEvalAuthz, setHasEvalAuthz] = useState(false);
+  const [discoveryNonce, setDiscoveryNonce] = useState(0);
 
   const [parentTemplate, setParentTemplate] = useState<string | null>(null);
   const claimDataCacheRef = useRef<Record<string, Record<string, any>>>({});
@@ -160,31 +163,57 @@ export default function SubclaimModal({
   }, []);
 
   useEffect(() => {
-    if (!parentCollectionId) {
-      setBlockReason('parent-not-tracked');
-      return;
-    }
-    if (!parentTracked) {
-      setBlockReason('parent-not-tracked');
-      return;
-    }
-    if (allowedForParent && !allowedForParent.includes(subCollectionId)) {
-      setBlockReason('sub-not-allowed');
-      return;
-    }
+    let cancelled = false;
+    setDiscovering(true);
+    (async () => {
+      const res = await getCollectionLinks(subclaimCollectionId);
+      if (cancelled) return;
+      if (res.ok) {
+        const parent = res.data.base?.[0];
+        if (parent) {
+          if (res.data.base.length > 1) {
+            console.warn(
+              '[SubclaimModal] collection has multiple base collections; using first',
+              subclaimCollectionId,
+              res.data.base,
+            );
+          }
+          setParentCollectionId(parent);
+          onParentResolved?.(parent);
+          setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
+        } else {
+          setParentCollectionId(null);
+          setBlockReason('not-configured');
+        }
+      } else if (res.reason === 'not-found' || res.reason === 'disabled') {
+        setParentCollectionId(null);
+        setBlockReason('not-configured');
+      } else {
+        setParentCollectionId(null);
+        setBlockReason('worker-unreachable');
+      }
+      setDiscovering(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [subclaimCollectionId, discoveryNonce, onParentResolved]);
+
+  useEffect(() => {
+    if (discovering || !parentCollectionId) return;
     if (authzChecked && !hasEvalAuthz) {
       setBlockReason('no-eval-authz');
       return;
     }
-    setBlockReason(null);
-  }, [parentCollectionId, parentTracked, allowedForParent, subCollectionId, authzChecked, hasEvalAuthz]);
+    setBlockReason((prev) => (prev === 'no-eval-authz' ? null : prev));
+  }, [discovering, parentCollectionId, authzChecked, hasEvalAuthz]);
 
   useEffect(() => {
     onBlockedChange(blockReason);
   }, [blockReason, onBlockedChange]);
 
   useEffect(() => {
-    if (!parentCollectionId || !parentTracked) return;
+    if (!parentCollectionId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -221,10 +250,10 @@ export default function SubclaimModal({
     return () => {
       cancelled = true;
     };
-  }, [parentCollectionId, parentTracked, address]);
+  }, [parentCollectionId, address]);
 
   useEffect(() => {
-    if (!parentCollectionId || !parentTracked || !hasEvalAuthz) return;
+    if (!parentCollectionId || !hasEvalAuthz) return;
     let cancelled = false;
     (async () => {
       setLoadingClaims(true);
@@ -244,7 +273,7 @@ export default function SubclaimModal({
     return () => {
       cancelled = true;
     };
-  }, [parentCollectionId, parentTracked, hasEvalAuthz, dispatch]);
+  }, [parentCollectionId, hasEvalAuthz, dispatch]);
 
   useEffect(() => {
     if (!parentCollectionId || !hasEvalAuthz || parentTemplate) return;
@@ -306,8 +335,9 @@ export default function SubclaimModal({
         setViewedClaimData({});
         return;
       }
-      const openIdToken = await getMatrixOpenIdToken();
-      const response = await client.claim.v1beta1.queryClaim(parentCollectionId, claimId, openIdToken, did);
+      const response = await withMatrixOpenIdRetry((token) =>
+        client.claim.v1beta1.queryClaim(parentCollectionId, claimId, token, did),
+      );
       let data: Record<string, any> = {};
       if (response) {
         let parsed: any = typeof response === 'string' ? JSON.parse(response) : response;
@@ -390,6 +420,7 @@ export default function SubclaimModal({
   }, [claims, claimsWithSubclaims, selectedParentClaimId]);
 
   const hasSelection = !!selectedParentClaimId;
+  const isFatal = blockReason != null && (FATAL_REASONS as BlockReason[]).includes(blockReason);
 
   function handleClose() {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -409,7 +440,8 @@ export default function SubclaimModal({
   }
 
   function dismiss() {
-    if (hasSelection) handleMinimize();
+    if (isFatal) handleClose();
+    else if (hasSelection) handleMinimize();
     else handleClose();
   }
 
@@ -421,7 +453,7 @@ export default function SubclaimModal({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minimized, hasSelection]);
+  }, [minimized, hasSelection, isFatal]);
 
   function handleBackdropClick(e: MouseEvent<HTMLDivElement>) {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -438,9 +470,9 @@ export default function SubclaimModal({
   }
 
   const title = view === 'list' ? 'Select a base claim' : 'Base claim';
-
-  const headerIcon = hasSelection ? <ShrinkIcon /> : <Cross color='currentColor' />;
-  const headerLabel = hasSelection ? 'Minimize' : 'Close';
+  const showMinimizeIcon = hasSelection && !isFatal;
+  const headerIcon = showMinimizeIcon ? <ShrinkIcon /> : <Cross color='currentColor' />;
+  const headerLabel = showMinimizeIcon ? 'Minimize' : 'Close';
 
   return ReactDOM.createPortal(
     <div className={styles.overlay} role='dialog' aria-modal='true' onClick={handleBackdropClick}>
@@ -457,15 +489,18 @@ export default function SubclaimModal({
         <div className={`${styles.body} ${view === 'list' ? styles.listBody : styles.detailBody}`}>
           {view === 'list' ? (
             <>
-              {blockReason === 'parent-not-tracked' && (
+              {blockReason === 'not-configured' && (
                 <div className={styles.warningCard}>
-                  This subcollection is linked to a base collection that isn&apos;t tracked in this app. Submission is
-                  disabled.
+                  This subclaim collection isn&apos;t linked to a base collection on the worker. Please contact support
+                  — claim submission is disabled.
                 </div>
               )}
-              {blockReason === 'sub-not-allowed' && (
+              {blockReason === 'worker-unreachable' && (
                 <div className={styles.warningCard}>
-                  This collection isn&apos;t registered as a subcollection of its linked parent. Submission is disabled.
+                  Can&apos;t reach the base-claim service right now.{' '}
+                  <button type='button' className={styles.inlineLink} onClick={() => setDiscoveryNonce((n) => n + 1)}>
+                    Retry
+                  </button>
                 </div>
               )}
               {blockReason === 'no-eval-authz' && (
@@ -475,7 +510,14 @@ export default function SubclaimModal({
                 </div>
               )}
 
+              {!blockReason && discovering && (
+                <div className={styles.spinner}>
+                  <div className={styles.spinnerInner} />
+                </div>
+              )}
+
               {!blockReason &&
+                !discovering &&
                 (loadingClaims ? (
                   <div className={styles.spinner}>
                     <div className={styles.spinnerInner} />
@@ -506,7 +548,8 @@ export default function SubclaimModal({
                               key={claim.claimId}
                               claim={claim}
                               selected={claim.claimId === selectedParentClaimId}
-                              disabled={true}
+                              disabled={false}
+                              onClick={() => handleSelectClaim(claim.claimId)}
                             />
                           ))}
                         </div>

@@ -1,15 +1,19 @@
 import { IS_JAMBO_WORKER_ENABLED, JAMBO_WORKER_API_BASE } from './config';
 import type {
-  AllowedSubcollectionsResponse,
   CollectionClaimsResponse,
+  CollectionLinksResponse,
   RegisterSubclaimLinkageInput,
   WorkerEnvelope,
 } from './types';
 
 const LOG_PREFIX = '[yomaWorker]';
 
-async function safeFetch<T>(path: string, init?: RequestInit): Promise<T | null> {
-  if (!IS_JAMBO_WORKER_ENABLED) return null;
+export type WorkerResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; reason: 'not-found' | 'network' | 'disabled'; status?: number; message?: string };
+
+async function safeFetch<T>(path: string, init?: RequestInit): Promise<WorkerResult<T>> {
+  if (!IS_JAMBO_WORKER_ENABLED) return { ok: false, reason: 'disabled' };
   try {
     const res = await fetch(`${JAMBO_WORKER_API_BASE}${path}`, init);
     const text = await res.text();
@@ -23,22 +27,24 @@ async function safeFetch<T>(path: string, init?: RequestInit): Promise<T | null>
     }
     if (!res.ok) {
       console.warn(`${LOG_PREFIX} ${init?.method || 'GET'} ${path} failed`, res.status, body?.message);
-      return null;
+      if (res.status === 404) return { ok: false, reason: 'not-found', status: 404, message: body?.message };
+      return { ok: false, reason: 'network', status: res.status, message: body?.message };
     }
-    return (body?.data ?? null) as T | null;
+    if (body?.data == null) return { ok: false, reason: 'not-found', status: res.status };
+    return { ok: true, data: body.data };
   } catch (err) {
     console.warn(`${LOG_PREFIX} ${init?.method || 'GET'} ${path} threw`, err);
-    return null;
+    return { ok: false, reason: 'network', message: err instanceof Error ? err.message : String(err) };
   }
 }
 
-export function getAllowedSubcollections(parentCollectionId: string): Promise<AllowedSubcollectionsResponse | null> {
-  return safeFetch<AllowedSubcollectionsResponse>(
-    `/v1/collectiononcollection/collections/${encodeURIComponent(parentCollectionId)}`,
-  );
+export function getCollectionLinks(collectionId: string): Promise<WorkerResult<CollectionLinksResponse>> {
+  return safeFetch<CollectionLinksResponse>(`/v1/collectiononcollection/${encodeURIComponent(collectionId)}`);
 }
 
-export function getClaimsWithSubclaims(parentCollectionId: string): Promise<CollectionClaimsResponse | null> {
+export function getClaimsWithSubclaims(
+  parentCollectionId: string,
+): Promise<WorkerResult<CollectionClaimsResponse>> {
   return safeFetch<CollectionClaimsResponse>(
     `/v1/claimonclaim/collections/${encodeURIComponent(parentCollectionId)}`,
   );

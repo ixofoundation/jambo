@@ -896,3 +896,50 @@ export async function getMatrixOpenIdToken(): Promise<string> {
   };
   return openIdCache.token;
 }
+
+export function invalidateMatrixOpenIdToken(): void {
+  openIdCache = null;
+}
+
+function isUnauthorizedBotError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { name?: string; errcode?: string; message?: string };
+  if (e.name !== 'MatrixBotError') return false;
+  const code = e.errcode?.toUpperCase();
+  if (code === 'M_UNAUTHORIZED' || code === 'M_UNKNOWN_TOKEN') return true;
+  return typeof e.message === 'string' && /unauthori[sz]ed/i.test(e.message);
+}
+
+/**
+ * Calls a bot SDK method with the current Matrix OpenID token. If the call
+ * fails with an Unauthorized error, invalidates the cached token, fetches a
+ * fresh one, and retries exactly once. All other errors propagate immediately.
+ */
+export async function withMatrixOpenIdRetry<T>(
+  call: (openIdToken: string) => Promise<T>,
+): Promise<T> {
+  const token = await getMatrixOpenIdToken();
+  try {
+    return await call(token);
+  } catch (err) {
+    if (!isUnauthorizedBotError(err)) throw err;
+    invalidateMatrixOpenIdToken();
+    const fresh = await getMatrixOpenIdToken();
+    return await call(fresh);
+  }
+}
+
+/**
+ * Same as withMatrixOpenIdRetry but for raw fetch() calls against bot endpoints
+ * that don't go through the SDK. Retries once if the response status is 401.
+ */
+export async function fetchWithMatrixOpenIdRetry(
+  call: (openIdToken: string) => Promise<Response>,
+): Promise<Response> {
+  const token = await getMatrixOpenIdToken();
+  const res = await call(token);
+  if (res.status !== 401) return res;
+  invalidateMatrixOpenIdToken();
+  const fresh = await getMatrixOpenIdToken();
+  return await call(fresh);
+}

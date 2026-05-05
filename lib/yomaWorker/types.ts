@@ -11,9 +11,10 @@ export interface ClaimWithSubclaims {
   subClaims: SubClaimView[];
 }
 
-export interface AllowedSubcollectionsResponse {
-  collectionId: string;
-  allowedSubcollections: string[];
+export interface CollectionLinksResponse {
+  collection: string;
+  sub: string[];
+  base: string[];
 }
 
 export interface CollectionClaimsResponse {
