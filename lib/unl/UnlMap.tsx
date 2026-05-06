@@ -26,6 +26,50 @@ type Feature = {
 type FeatureCollection = { type: 'FeatureCollection'; features: Feature[] };
 type MapCenter = [number, number];
 
+class RecenterControl {
+  private _container?: HTMLDivElement;
+  private _button?: HTMLButtonElement;
+
+  constructor(private getCenter: () => MapCenter | null, private zoom: number) {}
+
+  onAdd(map: any) {
+    this._container = document.createElement('div');
+    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+    // Sit above the cell popup (z-index:3, see commit 8446552).
+    this._container.style.zIndex = '4';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.title = 'Center on my location';
+    button.setAttribute('aria-label', 'Center on my location');
+    button.className = 'maplibregl-ctrl-icon';
+    button.style.display = 'flex';
+    button.style.alignItems = 'center';
+    button.style.justifyContent = 'center';
+    button.style.cursor = 'pointer';
+    button.innerHTML =
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>' +
+      '</svg>';
+    button.onclick = () => {
+      const center = this.getCenter();
+      if (!center) return;
+      map.flyTo({ center, zoom: this.zoom });
+    };
+
+    this._container.appendChild(button);
+    this._button = button;
+    return this._container;
+  }
+
+  onRemove() {
+    if (this._button) this._button.onclick = null;
+    this._container?.parentNode?.removeChild(this._container);
+    this._container = undefined;
+    this._button = undefined;
+  }
+}
+
 interface Props {
   latitude?: string | number;
   longitude?: string | number;
@@ -65,7 +109,9 @@ function useGeolocation(enabled: boolean) {
 
 function useMapCenter(props: Pick<Props, 'latitude' | 'longitude' | 'center' | 'focusOnUser'>) {
   const { latitude, longitude, center, focusOnUser } = props;
-  const { position, loading } = useGeolocation(focusOnUser || false);
+  // Always run geolocation: even when `focusOnUser` is false we want to cache the user's
+  // location so the recenter button can fly the map back on demand.
+  const { position, loading } = useGeolocation(true);
 
   const mapCenter: MapCenter = useMemo(() => {
     if (focusOnUser && position) {
@@ -98,6 +144,9 @@ export default function UnlMap({
   const { mapCenter, isGeolocationLoading, position } = useMapCenter({ latitude, longitude, center, focusOnUser });
   const mapRef = useRef<any>(null);
   const isInitializedRef = useRef(false);
+  const cachedCenterRef = useRef<MapCenter | null>(null);
+  const userMarkerRef = useRef<any>(null);
+  const [hasCachedCenter, setHasCachedCenter] = useState(false);
 
   const initializeMap = useCallback(() => {
     if (!configured) return;
@@ -115,10 +164,6 @@ export default function UnlMap({
         zoom: zoomLevel,
         tilesSelectorControl: true,
       });
-
-      if (position) {
-        new UnlSdk.Marker().setLngLat([position.coords.longitude, position.coords.latitude]).addTo(map);
-      }
 
       if (getFeatureCollectionOnClick && precision) {
         map.on('click', async (e: any) => {
@@ -145,11 +190,53 @@ export default function UnlMap({
     } catch (err) {
       console.error('[unl] map init failed:', err);
     }
-  }, [configured, mapId, mapCenter, zoomLevel, getFeatureCollectionOnClick, precision, position]);
+  }, [configured, mapId, mapCenter, zoomLevel, getFeatureCollectionOnClick, precision]);
 
   useEffect(() => {
-    if (!isGeolocationLoading) initializeMap();
-  }, [initializeMap, isGeolocationLoading]);
+    // Block init only when the caller explicitly wants the map centered on the user;
+    // otherwise render immediately so unrelated forms aren't held up by geolocation.
+    if (focusOnUser && isGeolocationLoading) return;
+    initializeMap();
+  }, [initializeMap, isGeolocationLoading, focusOnUser]);
+
+  useEffect(() => {
+    if (!position) return;
+    if (!cachedCenterRef.current) {
+      cachedCenterRef.current = [position.coords.longitude, position.coords.latitude];
+      setHasCachedCenter(true);
+    }
+  }, [position]);
+
+  // Drop a marker at the user's location once we have both a map and a position.
+  useEffect(() => {
+    if (!mapRef.current || !position || userMarkerRef.current) return;
+    try {
+      userMarkerRef.current = new UnlSdk.Marker()
+        .setLngLat([position.coords.longitude, position.coords.latitude])
+        .addTo(mapRef.current);
+    } catch (err) {
+      console.error('[unl] user marker add failed:', err);
+    }
+  }, [position, hasCachedCenter]);
+
+  // Mount the recenter control once a location is cached. Hidden entirely otherwise.
+  useEffect(() => {
+    if (!mapRef.current || !hasCachedCenter) return;
+    const ctrl = new RecenterControl(() => cachedCenterRef.current, zoomLevel);
+    try {
+      mapRef.current.addControl(ctrl, 'bottom-right');
+    } catch (err) {
+      console.error('[unl] recenter control add failed:', err);
+      return;
+    }
+    return () => {
+      try {
+        mapRef.current?.removeControl?.(ctrl);
+      } catch {
+        /* map already destroyed */
+      }
+    };
+  }, [hasCachedCenter, zoomLevel]);
 
   useEffect(
     () => () => {
@@ -161,6 +248,7 @@ export default function UnlMap({
         }
         mapRef.current = null;
         isInitializedRef.current = false;
+        userMarkerRef.current = null;
       }
     },
     [],
@@ -188,7 +276,7 @@ export default function UnlMap({
     );
   }
 
-  if (isGeolocationLoading) {
+  if (focusOnUser && isGeolocationLoading) {
     return (
       <div style={{ height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading map…</div>
     );
