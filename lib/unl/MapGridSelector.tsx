@@ -387,6 +387,9 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
       borderRadius: 'var(--sjs-questionpanel-cornerRadius, 8px)',
       position: 'relative',
       width: '100%',
+      minWidth: 0,
+      maxWidth: '100%',
+      boxSizing: 'border-box',
     };
     if (this.question.getPropertyValue('readOnly') || (this.question as any).isDesignMode) {
       return { ...baseStyle, pointerEvents: 'none', opacity: 0.7 };
@@ -477,9 +480,16 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
         <div
           style={{
             marginTop: 12,
+            padding: '0 12px 12px',
             fontSize: 12,
             color: 'var(--sjs-general-forecolor-light, var(--text-primary, #555))',
             textAlign: 'center',
+            whiteSpace: 'normal',
+            overflowWrap: 'anywhere',
+            wordBreak: 'break-word',
+            minWidth: 0,
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}
         >
           {this.question.focusOnUser && 'Zoom to your location and '}
