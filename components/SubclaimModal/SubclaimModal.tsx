@@ -9,6 +9,9 @@ import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
 import Cross from '@icons/cross.svg';
+import WarningTriangle from '@icons/warning_triangle.svg';
+import Reload from '@icons/reload.svg';
+import ArrowLeft from '@icons/arrow_left.svg';
 import { fetchAllClaimsByCollectionId, fetchCollectionByCollectionId } from '@utils/claims';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getCachedTemplate, getServiceEndpoint } from '@utils/url';
@@ -154,6 +157,7 @@ export default function SubclaimModal({
   const claimDataCacheRef = useRef<Record<string, Record<string, any>>>({});
   const [viewedClaimData, setViewedClaimData] = useState<Record<string, any> | null>(null);
   const [viewedClaimLoading, setViewedClaimLoading] = useState(false);
+  const [viewedClaimError, setViewedClaimError] = useState<string | null>(null);
   const claimBotClientRef = useRef<ReturnType<typeof createMatrixClaimBotClient>>();
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -325,14 +329,17 @@ export default function SubclaimModal({
     if (!parentCollectionId) return;
     const cached = claimDataCacheRef.current[claimId];
     if (cached) {
+      setViewedClaimError(null);
       setViewedClaimData(cached);
       return;
     }
+    setViewedClaimError(null);
     setViewedClaimLoading(true);
     try {
       const client = getClaimBotClient();
       if (!client) {
-        setViewedClaimData({});
+        setViewedClaimData(null);
+        setViewedClaimError('The base-claim service is unavailable right now.');
         return;
       }
       const response = await withMatrixOpenIdRetry((token) =>
@@ -354,7 +361,8 @@ export default function SubclaimModal({
       setViewedClaimData(data);
     } catch (err) {
       console.warn('[SubclaimModal] load claim data failed', err);
-      setViewedClaimData({});
+      setViewedClaimData(null);
+      setViewedClaimError('Couldn’t load this base claim’s data. Please try again.');
     } finally {
       setViewedClaimLoading(false);
     }
@@ -363,11 +371,13 @@ export default function SubclaimModal({
   function handleSelectClaim(claimId: string) {
     onSelect(claimId);
     setViewedClaimData(null);
+    setViewedClaimError(null);
     loadParentClaimData(claimId);
     setView('detail');
   }
 
   function handleBackToList() {
+    setViewedClaimError(null);
     setView('list');
   }
 
@@ -421,6 +431,8 @@ export default function SubclaimModal({
 
   const hasSelection = !!selectedParentClaimId;
   const isFatal = blockReason != null && (FATAL_REASONS as BlockReason[]).includes(blockReason);
+  const detailReady = view === 'detail' && !viewedClaimError && !viewedClaimLoading && !!parentSurvey;
+  const dismissBlocked = view === 'detail' && !detailReady;
 
   function handleClose() {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -440,6 +452,7 @@ export default function SubclaimModal({
   }
 
   function dismiss() {
+    if (dismissBlocked) return;
     if (isFatal) handleClose();
     else if (hasSelection) handleMinimize();
     else handleClose();
@@ -453,9 +466,10 @@ export default function SubclaimModal({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minimized, hasSelection, isFatal]);
+  }, [minimized, hasSelection, isFatal, dismissBlocked]);
 
   function handleBackdropClick(e: MouseEvent<HTMLDivElement>) {
+    if (dismissBlocked) return;
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
       dismiss();
     }
@@ -480,7 +494,13 @@ export default function SubclaimModal({
         <div className={styles.header}>
           <h2 className={styles.title}>{title}</h2>
           <div className={styles.headerActions}>
-            <button type='button' className={styles.iconBtn} onClick={dismiss} aria-label={headerLabel}>
+            <button
+              type='button'
+              className={styles.iconBtn}
+              onClick={dismiss}
+              aria-label={headerLabel}
+              disabled={dismissBlocked}
+            >
               {headerIcon}
             </button>
           </div>
@@ -558,6 +578,29 @@ export default function SubclaimModal({
                   </>
                 ))}
             </>
+          ) : viewedClaimError ? (
+            <div className={styles.errorCard}>
+              <div className={styles.errorMessageRow}>
+                <span className={styles.errorIcon} aria-hidden='true'>
+                  <WarningTriangle />
+                </span>
+                <span className={styles.errorMessage}>{viewedClaimError}</span>
+              </div>
+              <div className={styles.errorActions}>
+                <button type='button' className={styles.errorActionBtn} onClick={handleBackToList}>
+                  <ArrowLeft />
+                  <span>Back to list</span>
+                </button>
+                <button
+                  type='button'
+                  className={styles.errorActionBtn}
+                  onClick={() => selectedParentClaimId && loadParentClaimData(selectedParentClaimId)}
+                >
+                  <Reload />
+                  <span>Try again</span>
+                </button>
+              </div>
+            </div>
           ) : (
             <>
               <div className={styles.infoNote}>

@@ -66,8 +66,13 @@
   transition: background-color 120ms ease;
 }
 
-.iconBtn:hover {
+.iconBtn:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--accent-color) 10%, transparent);
+}
+
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .iconBtn svg {
@@ -265,6 +270,85 @@
 
 .inlineLink:hover {
   text-decoration: none;
+}
+
+.errorCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  margin: 0 16px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--error-color) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error-color) 40%, transparent);
+  color: var(--error-color);
+}
+
+.errorMessageRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--error-color);
+  margin-top: 2px;
+}
+
+.errorIcon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.errorMessage {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.errorActions {
+  display: flex;
+  gap: 8px;
+}
+
+.errorActionBtn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.errorActionBtn:hover {
+  background-color: var(--bg-secondary);
+}
+
+.errorActionBtn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.errorActionBtn svg path {
+  fill: currentColor;
 }
 
 .floatingButton {
