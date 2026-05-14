@@ -9,7 +9,6 @@ import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
 import Cross from '@icons/cross.svg';
-import WarningTriangle from '@icons/warning_triangle.svg';
 import Reload from '@icons/reload.svg';
 import ArrowLeft from '@icons/arrow_left.svg';
 import { fetchAllClaimsByCollectionId, fetchCollectionByCollectionId } from '@utils/claims';
@@ -30,12 +29,13 @@ import { configureFileQuestions, createAttachDownloadHandler } from '@constants/
 import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 
 import FloatingClaimButton from './FloatingClaimButton';
+import SubclaimModalErrorCard from './SubclaimModalErrorCard';
 import { ShrinkIcon } from './icons';
 import styles from './SubclaimModal.module.scss';
 
-type BlockReason = null | 'not-configured' | 'worker-unreachable' | 'no-eval-authz';
+type BlockReason = null | 'not-configured' | 'worker-unreachable' | 'no-eval-authz' | 'no-submit-authz';
 
-const FATAL_REASONS: Exclude<BlockReason, null>[] = ['not-configured', 'worker-unreachable'];
+const FATAL_REASONS: Exclude<BlockReason, null>[] = ['not-configured', 'worker-unreachable', 'no-submit-authz'];
 
 interface SubclaimModalProps {
   open: boolean;
@@ -151,9 +151,13 @@ export default function SubclaimModal({
   const [blockReason, setBlockReason] = useState<BlockReason>(null);
   const [authzChecked, setAuthzChecked] = useState(false);
   const [hasEvalAuthz, setHasEvalAuthz] = useState(false);
+  const [submitAuthzChecked, setSubmitAuthzChecked] = useState(false);
+  const [hasSubmitAuthz, setHasSubmitAuthz] = useState(false);
   const [discoveryNonce, setDiscoveryNonce] = useState(0);
 
   const [parentTemplate, setParentTemplate] = useState<string | null>(null);
+  const [parentTemplateError, setParentTemplateError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [parentTemplateNonce, setParentTemplateNonce] = useState(0);
   const claimDataCacheRef = useRef<Record<string, Record<string, any>>>({});
   const [viewedClaimData, setViewedClaimData] = useState<Record<string, any> | null>(null);
   const [viewedClaimLoading, setViewedClaimLoading] = useState(false);
@@ -187,14 +191,14 @@ export default function SubclaimModal({
           setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
         } else {
           setParentCollectionId(null);
-          setBlockReason('not-configured');
+          setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'not-configured'));
         }
       } else if (res.reason === 'not-found' || res.reason === 'disabled') {
         setParentCollectionId(null);
-        setBlockReason('not-configured');
+        setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'not-configured'));
       } else {
         setParentCollectionId(null);
-        setBlockReason('worker-unreachable');
+        setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'worker-unreachable'));
       }
       setDiscovering(false);
     })();
@@ -206,15 +210,64 @@ export default function SubclaimModal({
   useEffect(() => {
     if (discovering || !parentCollectionId) return;
     if (authzChecked && !hasEvalAuthz) {
-      setBlockReason('no-eval-authz');
+      setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'no-eval-authz'));
       return;
     }
     setBlockReason((prev) => (prev === 'no-eval-authz' ? null : prev));
   }, [discovering, parentCollectionId, authzChecked, hasEvalAuthz]);
 
   useEffect(() => {
+    if (!submitAuthzChecked) return;
+    if (!hasSubmitAuthz) {
+      setBlockReason('no-submit-authz');
+    } else {
+      setBlockReason((prev) => (prev === 'no-submit-authz' ? null : prev));
+    }
+  }, [submitAuthzChecked, hasSubmitAuthz]);
+
+  useEffect(() => {
     onBlockedChange(blockReason);
   }, [blockReason, onBlockedChange]);
+
+  useEffect(() => {
+    if (!subclaimCollectionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const subclaimCol = await fetchCollectionByCollectionId(subclaimCollectionId);
+        const queryClient = await createQueryClient(CHAIN_RPC_URL);
+        const granteeGrants = await queryClient.cosmos.authz.v1beta1.granteeGrants({ grantee: address });
+        const registry = createRegistry();
+        const grants = granteeGrants.grants as GrantAuthorization[];
+        const hasSubmit = grants?.some((g) => {
+          if (
+            g.authorization?.typeUrl !== TRANSACTION_TYPES.SubmitClaimAuthorization ||
+            g.granter !== subclaimCol.admin
+          )
+            return false;
+          try {
+            const decoded = registry.decode(g.authorization);
+            const constraints = decoded.constraints ?? [];
+            if (constraints.length === 0) return true;
+            return constraints.some((c: any) => c.collectionId === subclaimCollectionId);
+          } catch {
+            return false;
+          }
+        });
+        if (cancelled) return;
+        setHasSubmitAuthz(!!hasSubmit);
+        setSubmitAuthzChecked(true);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('[SubclaimModal] submit authz check failed', err);
+        setHasSubmitAuthz(false);
+        setSubmitAuthzChecked(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [subclaimCollectionId, address]);
 
   useEffect(() => {
     if (!parentCollectionId) return;
@@ -284,6 +337,7 @@ export default function SubclaimModal({
     if (view !== 'detail') return;
     let cancelled = false;
     (async () => {
+      setParentTemplateError(null);
       try {
         const parentCol = await fetchCollectionByCollectionId(parentCollectionId);
         const protocolDid = parentCol.protocol;
@@ -291,7 +345,14 @@ export default function SubclaimModal({
         const endpoint =
           protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
           protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
-        if (!endpoint?.serviceEndpoint) return;
+        if (!endpoint?.serviceEndpoint) {
+          if (cancelled) return;
+          setParentTemplateError({
+            message: 'The base claim form template is not configured. Please contact support.',
+            retryable: false,
+          });
+          return;
+        }
         const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
         const cached = getCachedTemplate(protocolDid, 'vct', url);
         if (cancelled) return;
@@ -304,13 +365,21 @@ export default function SubclaimModal({
           setParentTemplate(JSON.stringify(formData));
         }
       } catch (err) {
+        if (cancelled) return;
         console.warn('[SubclaimModal] load parent template failed', err);
+        const reason = err instanceof Error ? err.message : String(err);
+        setParentTemplateError({
+          message: `Unable to load the base claim form template — ${
+            reason || 'unknown error'
+          }. Please check your connection and try again or contact support.`,
+          retryable: true,
+        });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [parentCollectionId, hasEvalAuthz, view, parentTemplate, dispatch]);
+  }, [parentCollectionId, hasEvalAuthz, view, parentTemplate, parentTemplateNonce, dispatch]);
 
   function getClaimBotClient() {
     const token = secret.accessToken as string | null;
@@ -361,8 +430,11 @@ export default function SubclaimModal({
       setViewedClaimData(data);
     } catch (err) {
       console.warn('[SubclaimModal] load claim data failed', err);
+      const reason = err instanceof Error ? err.message : String(err);
       setViewedClaimData(null);
-      setViewedClaimError('Couldn’t load this base claim’s data. Please try again.');
+      setViewedClaimError(
+        `The selected claim's data failed to fetch — ${reason || 'unknown error'}. Please try again.`,
+      );
     } finally {
       setViewedClaimLoading(false);
     }
@@ -510,24 +582,51 @@ export default function SubclaimModal({
           {view === 'list' ? (
             <>
               {blockReason === 'not-configured' && (
-                <div className={styles.warningCard}>
-                  This subclaim collection isn&apos;t linked to a base collection on the worker. Please contact support
-                  — claim submission is disabled.
-                </div>
+                <SubclaimModalErrorCard
+                  message={
+                    <>
+                      This claim collection needs to be linked to a base claim collection. Please contact support —
+                      claim submission is disabled.
+                    </>
+                  }
+                  actions={[{ label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose }]}
+                />
               )}
               {blockReason === 'worker-unreachable' && (
-                <div className={styles.warningCard}>
-                  Can&apos;t reach the base-claim service right now.{' '}
-                  <button type='button' className={styles.inlineLink} onClick={() => setDiscoveryNonce((n) => n + 1)}>
-                    Retry
-                  </button>
-                </div>
+                <SubclaimModalErrorCard
+                  message={
+                    <>
+                      Unable to connect or determine the base claim collection. Please verify the connection and try
+                      again - claim submission is disabled.
+                    </>
+                  }
+                  actions={[
+                    { label: 'Retry', icon: <Reload />, onClick: () => setDiscoveryNonce((n) => n + 1) },
+                    { label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose },
+                  ]}
+                />
               )}
               {blockReason === 'no-eval-authz' && (
-                <div className={styles.warningCard}>
-                  You don&apos;t have evaluation authorization on the base collection, so claim data cannot be loaded.
-                  Submission is disabled.
-                </div>
+                <SubclaimModalErrorCard
+                  message={
+                    <>
+                      You require evaluation authorization on the base claim collection to proceed. Please contact the
+                      collection administrator to request access.
+                    </>
+                  }
+                  actions={[{ label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose }]}
+                />
+              )}
+              {blockReason === 'no-submit-authz' && (
+                <SubclaimModalErrorCard
+                  message={
+                    <>
+                      You require authorization to submit claims for this claim collection. Please contact the
+                      collection administrator to request access.
+                    </>
+                  }
+                  actions={[{ label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose }]}
+                />
               )}
 
               {!blockReason && discovering && (
@@ -579,28 +678,35 @@ export default function SubclaimModal({
                 ))}
             </>
           ) : viewedClaimError ? (
-            <div className={styles.errorCard}>
-              <div className={styles.errorMessageRow}>
-                <span className={styles.errorIcon} aria-hidden='true'>
-                  <WarningTriangle />
-                </span>
-                <span className={styles.errorMessage}>{viewedClaimError}</span>
-              </div>
-              <div className={styles.errorActions}>
-                <button type='button' className={styles.errorActionBtn} onClick={handleBackToList}>
-                  <ArrowLeft />
-                  <span>Back to list</span>
-                </button>
-                <button
-                  type='button'
-                  className={styles.errorActionBtn}
-                  onClick={() => selectedParentClaimId && loadParentClaimData(selectedParentClaimId)}
-                >
-                  <Reload />
-                  <span>Try again</span>
-                </button>
-              </div>
-            </div>
+            <SubclaimModalErrorCard
+              className={styles.errorCardDetailInset}
+              message={viewedClaimError}
+              actions={[
+                { label: 'Back to list', icon: <ArrowLeft />, onClick: handleBackToList },
+                {
+                  label: 'Try again',
+                  icon: <Reload />,
+                  onClick: () => selectedParentClaimId && loadParentClaimData(selectedParentClaimId),
+                },
+              ]}
+            />
+          ) : parentTemplateError ? (
+            <SubclaimModalErrorCard
+              className={styles.errorCardDetailInset}
+              message={parentTemplateError.message}
+              actions={[
+                { label: 'Back to list', icon: <ArrowLeft />, onClick: handleBackToList },
+                ...(parentTemplateError.retryable
+                  ? [
+                      {
+                        label: 'Try again',
+                        icon: <Reload />,
+                        onClick: () => setParentTemplateNonce((n) => n + 1),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           ) : (
             <>
               <div className={styles.infoNote}>

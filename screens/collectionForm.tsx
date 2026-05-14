@@ -94,7 +94,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   }, [surveyTemplate, surveyMode]);
   const [baseClaimCID, setBaseClaimCID] = useState<string | null>(null);
   const [subclaimBlockReason, setSubclaimBlockReason] = useState<
-    'not-configured' | 'worker-unreachable' | 'no-eval-authz' | null
+    'not-configured' | 'worker-unreachable' | 'no-eval-authz' | 'no-submit-authz' | null
   >(null);
 
   const bidBotClientRef = useRef<ReturnType<typeof createMatrixBidBotClient>>();
