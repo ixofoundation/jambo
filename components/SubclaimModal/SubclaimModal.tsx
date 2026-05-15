@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useRouter } from 'next/router';
 import cls from 'classnames';
@@ -14,6 +14,7 @@ import ArrowLeft from '@icons/arrow_left.svg';
 import { fetchAllClaimsByCollectionId, fetchCollectionByCollectionId } from '@utils/claims';
 import { fetchProtocolEntity } from '@utils/entity';
 import { getAdditionalInfo, getCachedTemplate, getServiceEndpoint } from '@utils/url';
+import { convertTimestampObjectToTimestamp } from '@utils/timestamp';
 import { setVctTemplate } from '@store/slices/protocolsSlice';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchClaimsWithSubclaims } from '@store/thunks/subclaimsThunks';
@@ -37,6 +38,22 @@ type BlockReason = null | 'not-configured' | 'worker-unreachable' | 'no-eval-aut
 
 const FATAL_REASONS: Exclude<BlockReason, null>[] = ['not-configured', 'worker-unreachable', 'no-submit-authz'];
 
+type CollectionMetaEntry =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | {
+      status: 'ready';
+      name: string | null;
+      state: number;
+      startDate: number | null;
+      endDate: number | null;
+      count: number;
+      quota: number;
+    };
+
+// ixo CollectionState enum: OPEN = 0 (active), PAUSED = 1, CLOSED = 2.
+const COLLECTION_STATE_OPEN = 0;
+
 interface SubclaimModalProps {
   open: boolean;
   subclaimCollectionId: string;
@@ -48,7 +65,7 @@ interface SubclaimModalProps {
   onParentResolved?: (parentCollectionId: string) => void;
 }
 
-function formatDate(ts: number | string | undefined): string {
+function formatDate(ts: number | string | null | undefined): string {
   if (!ts) return '';
   try {
     return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -57,12 +74,124 @@ function formatDate(ts: number | string | undefined): string {
   }
 }
 
-function statusLabel(claim: any): { text: string; color: string; bg: string } {
+function formatDateY(ms: number | null): string {
+  if (!ms) return '';
+  try {
+    return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+// On-chain quota/count come back as proto Long; normalise to a plain number.
+function toNum(v: any): number {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'bigint') return Number(v);
+  if (typeof v === 'object' && typeof v.toNumber === 'function') {
+    try {
+      return v.toNumber();
+    } catch {
+      return 0;
+    }
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// On-chain start/end dates are proto Timestamp objects; epoch / pre-1970 means "unset".
+function tsToMs(ts: any): number | null {
+  if (!ts) return null;
+  let ms: number | undefined;
+  if (typeof ts === 'object' && ('seconds' in ts || 'nanos' in ts)) {
+    ms = convertTimestampObjectToTimestamp(ts);
+  } else if (typeof ts === 'number') {
+    ms = ts;
+  } else if (typeof ts === 'string') {
+    const parsed = Date.parse(ts);
+    ms = Number.isNaN(parsed) ? undefined : parsed;
+  }
+  if (ms == null || !Number.isFinite(ms)) return null;
+  if (new Date(ms).getFullYear() <= 1970) return null;
+  return ms;
+}
+
+function collectionStatusLabel(meta: {
+  startDate: number | null;
+  endDate: number | null;
+  count: number;
+  quota: number;
+}): string {
+  const now = Date.now();
+  const { startDate, endDate, count, quota } = meta;
+  if (startDate && startDate > now) return `Starts ${formatDateY(startDate)}`;
+  if (endDate && endDate < now) return `Expired ${formatDateY(endDate)}`;
+  if (quota > 0 && count >= quota) return `Quota reached (${count}/${quota})`;
+  if (startDate && endDate) return `${formatDateY(startDate)} – ${formatDateY(endDate)}`;
+  if (startDate) return `Started ${formatDateY(startDate)}`;
+  if (endDate) return `Open until ${formatDateY(endDate)}`;
+  return 'Open';
+}
+
+// A base collection is "active" only when it is OPEN, currently within its date
+// window, and has not reached its quota.
+function isCollectionActive(meta: {
+  state: number;
+  startDate: number | null;
+  endDate: number | null;
+  count: number;
+  quota: number;
+}): boolean {
+  const now = Date.now();
+  const { state, startDate, endDate, count, quota } = meta;
+  if (state !== COLLECTION_STATE_OPEN) return false;
+  if (startDate && startDate > now) return false;
+  if (endDate && endDate < now) return false;
+  if (quota > 0 && count >= quota) return false;
+  return true;
+}
+
+// Best-effort human-readable name for a base claim collection, resolved from its
+// protocol's survey template title. Returns null on any failure (caller falls back).
+async function resolveCollectionName(col: any): Promise<string | null> {
+  const protocolDid = col?.protocol;
+  if (!protocolDid) return null;
+  const protocolEntity = await fetchProtocolEntity(protocolDid);
+  const endpoint =
+    protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('#vct')) ??
+    protocolEntity?.linkedResource?.find((r: any) => r?.id?.includes('surveyTemplate'));
+  if (!endpoint?.serviceEndpoint) return null;
+  const url = getServiceEndpoint(endpoint.serviceEndpoint, protocolEntity?.service);
+  let template = getCachedTemplate(protocolDid, 'vct', url);
+  if (!template) {
+    template = await getAdditionalInfo(url);
+  }
+  const templateData = template?.question ?? template;
+  const title = templateData?.title;
+  return typeof title === 'string' && title.trim() ? title.trim() : null;
+}
+
+function statusLabel(claim: any): string {
   const s = claim?.evaluationByClaimId?.status;
-  if (s === 1) return { text: 'Approved', color: '#2F6A59', bg: '#dcfce7' };
-  if (s === 2) return { text: 'Rejected', color: '#991b1b', bg: '#fee2e2' };
-  if (s === 3) return { text: 'Disputed', color: '#E49526', bg: '#fef3c7' };
-  return { text: 'Pending', color: '#545859', bg: '#F3F6FA' };
+  if (s === 1) return 'Approved';
+  if (s === 2) return 'Rejected';
+  if (s === 3) return 'Disputed';
+  return 'Pending';
+}
+
+// Shorten a claim id to "first7...last5".
+function shortenId(id: string): string {
+  if (!id) return '';
+  return id.length > 15 ? `${id.slice(0, 7)}...${id.slice(-5)}` : id;
+}
+
+// Status text colour class keyed off the claim's evaluation status.
+function claimStatusTextClass(claim: any): string {
+  const s = claim?.evaluationByClaimId?.status;
+  if (s === 1) return styles.statusApproved;
+  if (s === 2) return styles.statusRejected;
+  if (s === 3) return styles.statusDisputed;
+  return styles.statusPending;
 }
 
 function ClaimRow({
@@ -70,13 +199,11 @@ function ClaimRow({
   selected,
   disabled,
   onClick,
-  rightSlot,
 }: {
   claim: any;
   selected: boolean;
   disabled: boolean;
   onClick?: () => void;
-  rightSlot?: ReactNode;
 }) {
   const address = (claim.agentAddress as string) || '';
   const userId = address ? matrixUserIdForAddress(address) : null;
@@ -102,25 +229,70 @@ function ClaimRow({
   return (
     <div
       className={classes.join(' ')}
-      // onClick={interactive ? onClick : undefined}
       onClick={onClick}
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
     >
       <div className={styles.avatar}>{profile?.avatarUrl ? <img src={profile.avatarUrl} alt='' /> : initial}</div>
       <div className={styles.rowMain}>
-        <div className={styles.rowName}>{displayName}</div>
-        <div className={styles.rowClaimId}>{claim.claimId}</div>
-        <div className={styles.rowMeta}>
-          {formatDate(claim.submissionDate)}
-          {disabled ? ' · already has subclaim' : ''}
+        <div className={styles.rowNameRow}>
+          <span className={styles.rowName}>{displayName}</span>
+          <span className={`${styles.rowMeta} ${styles.rowMetaEnd}`}>
+            {formatDate(claim.submissionDate)}
+            {disabled ? ' · already has subclaim' : ''}
+          </span>
+        </div>
+        <div className={styles.rowIdRow}>
+          <span className={styles.rowClaimId}>{shortenId(claim.claimId)}</span>
+          <span className={`${styles.rowMeta} ${styles.rowMetaEnd} ${claimStatusTextClass(claim)}`}>
+            {status}
+          </span>
         </div>
       </div>
-      {rightSlot ?? (
-        <span className={styles.pill} style={{ color: status.color, backgroundColor: status.bg }}>
-          {status.text}
-        </span>
-      )}
+    </div>
+  );
+}
+
+function CollectionCard({
+  collectionId,
+  meta,
+  selected,
+  onClick,
+}: {
+  collectionId: string;
+  meta: CollectionMetaEntry | undefined;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const shortId = collectionId.length > 12 ? `${collectionId.slice(0, 6)}…${collectionId.slice(-4)}` : collectionId;
+  const name = meta?.status === 'ready' && meta.name ? meta.name : `Collection ${shortId}`;
+
+  const classes = [styles.row];
+  if (selected) classes.push(styles.rowSelected);
+
+  const active = meta?.status === 'ready' ? isCollectionActive(meta) : null;
+  const idClasses = [styles.cardId];
+  if (active === true) idClasses.push(styles.cardIdActive);
+  else if (active === false) idClasses.push(styles.cardIdInactive);
+
+  return (
+    <div className={classes.join(' ')} onClick={onClick} role='button' tabIndex={0}>
+      <div className={styles.rowMain}>
+        <div className={idClasses.join(' ')}>{collectionId}</div>
+        <div className={styles.cardName}>{name}</div>
+        {meta?.status === 'ready' ? (
+          <div className={styles.cardFooter}>
+            <span className={styles.cardFooterText}>{collectionStatusLabel(meta)}</span>
+            <span className={`${styles.cardFooterText} ${styles.cardCount}`}>
+              {meta.quota > 0 ? `${meta.count}/${meta.quota}` : meta.count}
+            </span>
+          </div>
+        ) : meta?.status === 'error' ? (
+          <div className={styles.cardMetaMuted}>Couldn’t load collection details</div>
+        ) : (
+          <div className={styles.cardMetaMuted}>Loading details…</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -138,13 +310,15 @@ export default function SubclaimModal({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [parentCollectionId, setParentCollectionId] = useState<string | null>(null);
+  const [baseCollections, setBaseCollections] = useState<string[]>([]);
+  const [collectionMeta, setCollectionMeta] = useState<Record<string, CollectionMetaEntry>>({});
   const [discovering, setDiscovering] = useState(true);
   const claimsWithSubclaims = useAppSelector((s) =>
     parentCollectionId ? selectClaimsWithSubclaims(s, parentCollectionId) : undefined,
   );
 
   const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<'list' | 'detail'>('list');
+  const [view, setView] = useState<'collections' | 'list' | 'detail'>('list');
   const [minimized, setMinimized] = useState(false);
   const [loadingClaims, setLoadingClaims] = useState(false);
   const [claims, setClaims] = useState<any[]>([]);
@@ -177,26 +351,27 @@ export default function SubclaimModal({
       const res = await getCollectionLinks(subclaimCollectionId);
       if (cancelled) return;
       if (res.ok) {
-        const parent = res.data.base?.[0];
-        if (parent) {
-          if (res.data.base.length > 1) {
-            console.warn(
-              '[SubclaimModal] collection has multiple base collections; using first',
-              subclaimCollectionId,
-              res.data.base,
-            );
-          }
-          setParentCollectionId(parent);
-          onParentResolved?.(parent);
-          setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
-        } else {
+        const bases = res.data.base ?? [];
+        setBaseCollections(bases);
+        if (bases.length === 0) {
           setParentCollectionId(null);
           setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'not-configured'));
+        } else if (bases.length === 1) {
+          setParentCollectionId(bases[0]);
+          onParentResolved?.(bases[0]);
+          setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
+          setView((v) => (v === 'collections' ? 'list' : v));
+        } else {
+          setParentCollectionId(null);
+          setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
+          setView('collections');
         }
       } else if (res.reason === 'not-found' || res.reason === 'disabled') {
+        setBaseCollections([]);
         setParentCollectionId(null);
         setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'not-configured'));
       } else {
+        setBaseCollections([]);
         setParentCollectionId(null);
         setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'worker-unreachable'));
       }
@@ -206,6 +381,50 @@ export default function SubclaimModal({
       cancelled = true;
     };
   }, [subclaimCollectionId, discoveryNonce, onParentResolved]);
+
+  // Load display metadata (name, quota, start/end) for each base collection when there
+  // is more than one to choose between.
+  useEffect(() => {
+    if (baseCollections.length <= 1) return;
+    let cancelled = false;
+    setCollectionMeta((prev) => {
+      const next = { ...prev };
+      for (const id of baseCollections) {
+        if (!next[id] || next[id].status === 'error') next[id] = { status: 'loading' };
+      }
+      return next;
+    });
+    baseCollections.forEach((id) => {
+      (async () => {
+        try {
+          const col = await fetchCollectionByCollectionId(id);
+          const startDate = tsToMs((col as any).startDate);
+          const endDate = tsToMs((col as any).endDate);
+          const count = toNum((col as any).count);
+          const quota = toNum((col as any).quota);
+          const state = toNum((col as any).state);
+          let name: string | null = null;
+          try {
+            name = await resolveCollectionName(col);
+          } catch {
+            name = null;
+          }
+          if (cancelled) return;
+          setCollectionMeta((prev) => ({
+            ...prev,
+            [id]: { status: 'ready', name, state, startDate, endDate, count, quota },
+          }));
+        } catch (err) {
+          console.warn('[SubclaimModal] load base collection meta failed', id, err);
+          if (cancelled) return;
+          setCollectionMeta((prev) => ({ ...prev, [id]: { status: 'error' } }));
+        }
+      })();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseCollections]);
 
   useEffect(() => {
     if (discovering || !parentCollectionId) return;
@@ -453,6 +672,41 @@ export default function SubclaimModal({
     setView('list');
   }
 
+  // Clears everything derived from the currently selected base collection so a different
+  // collection (or no collection) can be loaded cleanly.
+  function resetParentState() {
+    setClaims([]);
+    setLoadingClaims(false);
+    setAuthzChecked(false);
+    setHasEvalAuthz(false);
+    setParentTemplate(null);
+    setParentTemplateError(null);
+    setViewedClaimData(null);
+    setViewedClaimError(null);
+    claimDataCacheRef.current = {};
+    setBlockReason((prev) => (prev === 'no-eval-authz' ? null : prev));
+  }
+
+  function handleSelectCollection(id: string) {
+    if (id === parentCollectionId) {
+      setView('list');
+      return;
+    }
+    onSelect(null);
+    resetParentState();
+    setParentCollectionId(id);
+    onParentResolved?.(id);
+    setView('list');
+  }
+
+  function handleBackToCollections() {
+    if (baseCollections.length <= 1) return;
+    onSelect(null);
+    resetParentState();
+    setParentCollectionId(null);
+    setView('collections');
+  }
+
   const parentSurvey = useMemo(() => {
     if (!parentTemplate || !viewedClaimData) return undefined;
     try {
@@ -555,7 +809,10 @@ export default function SubclaimModal({
     return ReactDOM.createPortal(<FloatingClaimButton onExpand={handleExpand} />, portalRoot);
   }
 
-  const title = view === 'list' ? 'Select a base claim' : 'Base claim';
+  const title =
+    view === 'collections' ? 'Select a base claim collection' : view === 'list' ? 'Select a base claim' : 'Base claim';
+  const multipleBase = baseCollections.length > 1;
+  const showBackToCollections = view === 'list' && multipleBase;
   const showMinimizeIcon = hasSelection && !isFatal;
   const headerIcon = showMinimizeIcon ? <ShrinkIcon /> : <Cross color='currentColor' />;
   const headerLabel = showMinimizeIcon ? 'Minimize' : 'Close';
@@ -564,6 +821,16 @@ export default function SubclaimModal({
     <div className={styles.overlay} role='dialog' aria-modal='true' onClick={handleBackdropClick}>
       <div className={styles.modal} ref={modalRef}>
         <div className={styles.header}>
+          {showBackToCollections && (
+            <button
+              type='button'
+              className={styles.iconBtn}
+              onClick={handleBackToCollections}
+              aria-label='Back to base claim collections'
+            >
+              <ArrowLeft />
+            </button>
+          )}
           <h2 className={styles.title}>{title}</h2>
           <div className={styles.headerActions}>
             <button
@@ -578,8 +845,8 @@ export default function SubclaimModal({
           </div>
         </div>
 
-        <div className={`${styles.body} ${view === 'list' ? styles.listBody : styles.detailBody}`}>
-          {view === 'list' ? (
+        <div className={`${styles.body} ${view === 'detail' ? styles.detailBody : styles.listBody}`}>
+          {view !== 'detail' && (
             <>
               {blockReason === 'not-configured' && (
                 <SubclaimModalErrorCard
@@ -614,7 +881,18 @@ export default function SubclaimModal({
                       collection administrator to request access.
                     </>
                   }
-                  actions={[{ label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose }]}
+                  actions={[
+                    ...(multipleBase
+                      ? [
+                          {
+                            label: 'Change collection',
+                            icon: <ArrowLeft />,
+                            onClick: handleBackToCollections,
+                          },
+                        ]
+                      : []),
+                    { label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose },
+                  ]}
                 />
               )}
               {blockReason === 'no-submit-authz' && (
@@ -628,7 +906,31 @@ export default function SubclaimModal({
                   actions={[{ label: 'Close', icon: <Cross color='currentColor' />, onClick: handleClose }]}
                 />
               )}
-
+            </>
+          )}
+          {view === 'collections' ? (
+            <>
+              {!blockReason && discovering && (
+                <div className={styles.spinner}>
+                  <div className={styles.spinnerInner} />
+                </div>
+              )}
+              {!blockReason && !discovering && (
+                <div className={styles.list}>
+                  {baseCollections.map((id) => (
+                    <CollectionCard
+                      key={id}
+                      collectionId={id}
+                      meta={collectionMeta[id]}
+                      selected={id === parentCollectionId}
+                      onClick={() => handleSelectCollection(id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : view === 'list' ? (
+            <>
               {!blockReason && discovering && (
                 <div className={styles.spinner}>
                   <div className={styles.spinnerInner} />
