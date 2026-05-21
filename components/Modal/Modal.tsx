@@ -10,9 +10,10 @@ type ModalProps = {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  leftAction?: ReactNode;
 } & HTMLAttributes<HTMLDivElement>;
 
-function Modal({ onClose, children, title, className, ...other }: ModalProps) {
+function Modal({ onClose, children, title, className, leftAction, ...other }: ModalProps) {
   const [isBrowser, setIsBrowser] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +40,7 @@ function Modal({ onClose, children, title, className, ...other }: ModalProps) {
     <div className={styles.modalOverlay}>
       <div className={cls(styles.modal, className)} ref={modalRef} {...other}>
         <div className={styles.modalHeader}>
+          {leftAction && <span className={styles.leftAction}>{leftAction}</span>}
           {title && <h1 className={styles.modalTitle}>{title}</h1>}
           <a href='#' onClick={handleCloseClick} className={styles.closeCross}>
             <Cross color='black' />
