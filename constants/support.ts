@@ -1,8 +1,15 @@
-export const KYC_SUPPORT_QUICK_MESSAGES = [
-  'My verification was rejected — could you help me understand why?',
-  "My documents weren't accepted. What format should I retry with?",
-  "I can't complete the liveness check on this device.",
-] as const;
+export type SupportPromptKey = 'kyc';
+
+// Curated quick-message sets keyed by a short identifier passed through the URL
+// (`?prompts=<key>`). Unknown / missing keys → no quick options, only the free-form
+// "write your own message" path renders.
+export const SUPPORT_QUICK_MESSAGES_BY_PROMPT: Record<SupportPromptKey, readonly string[]> = {
+  kyc: [
+    'My verification was rejected — could you help me understand why?',
+    "My documents weren't accepted. What format should I retry with?",
+    "I can't complete the liveness check on this device.",
+  ],
+};
 
 export const SUPPORT_PRIVACY_NOTICE =
   'This room is public — anyone on the homeserver can read it. Do not share personal information (ID numbers, addresses, document contents) here. For anything private, ask a support agent to start a direct message.';

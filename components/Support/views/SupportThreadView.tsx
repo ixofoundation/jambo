@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import type { MatrixClient, MatrixEvent, Room } from 'matrix-js-sdk';
 
@@ -13,13 +13,9 @@ import {
 } from 'lib/matrix/support';
 
 import ChatInput from '../parts/ChatInput';
-import MessageMetaRow from '../parts/MessageMetaRow';
-import {
-  messageBodyStyle,
-  messageBottomDividerStyle,
-  messageRowStyle,
-  threadRepliesContainerStyle,
-} from '../styles';
+import DateDivider from '../parts/DateDivider';
+import MessageRow from '../parts/MessageRow';
+import { formatShortDate, isSameDay } from '../format';
 
 type SupportThreadViewProps = {
   mxClient: MatrixClient;
@@ -27,6 +23,8 @@ type SupportThreadViewProps = {
   rootId: string;
   ownerUserId: string;
   profilesById: Record<string, MatrixUserProfile>;
+  /** Users with elevated power level in the support room — render an "Admin" badge on their messages. */
+  adminUserIds: Set<string>;
   /** Optional optimistic seed used until the canonical fetch resolves. */
   seedRoot?: RawThreadEvent | null;
   /** Invoked when the root 404s during load — caller cleans up persisted ids + returns to selector. */
@@ -43,6 +41,7 @@ export default function SupportThreadView({
   rootId,
   ownerUserId,
   profilesById,
+  adminUserIds,
   seedRoot,
   onStaleRoot,
   onObserveSenders,
@@ -142,55 +141,66 @@ export default function SupportThreadView({
     }
   }, [mxClient, replies, replyText, root?.event_id, rootId, supportRoomId]);
 
-  const renderMessage = (msg: RawThreadEvent, isRoot: boolean, showBottomDivider: boolean) => {
-    const isMine = msg.sender === ownerUserId;
-    const cachedProfile = profilesById[msg.sender];
-    const senderLabel = isMine ? 'You' : cachedProfile?.displayName || msg.sender;
-    const body = msg.content?.body ?? '';
-    return (
-      <div
-        style={{
-          ...messageRowStyle,
-          ...(showBottomDivider ? messageBottomDividerStyle : {}),
-        }}
-      >
-        <MessageMetaRow
-          senderLabel={senderLabel}
-          timestamp={msg.origin_server_ts}
-          trailing={isRoot ? '• Thread start' : undefined}
-        />
-        <div style={messageBodyStyle}>{body}</div>
-      </div>
-    );
-  };
+  // Flatten root + replies into a single ascending-by-ts list for unified rendering.
+  const allMessages = useMemo(() => {
+    return root ? [root, ...replies] : [];
+  }, [replies, root]);
 
   return (
-    <div style={{ padding: '16px' }}>
-      <div style={{ marginBottom: '12px' }}>
-        {root ? (
-          renderMessage(root, true, replies.length > 0)
-        ) : (
-          <div style={{ ...messageRowStyle, color: 'var(--text-secondary, #777)' }}>Loading conversation…</div>
-        )}
-        {replies.length > 0 && (
-          <div style={threadRepliesContainerStyle}>
-            {replies.map((r, idx) => (
-              <Fragment key={r.event_id}>{renderMessage(r, false, idx < replies.length - 1)}</Fragment>
-            ))}
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '12px' }}>
+        {root && (
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 12px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-secondary, #777)',
+                fontSize: '11px',
+                lineHeight: 1.2,
+              }}
+            >
+              Started on {formatShortDate(root.origin_server_ts)}
+            </span>
           </div>
         )}
+        {!root && <div style={{ color: 'var(--text-secondary, #777)', padding: '8px 0' }}>Loading conversation…</div>}
+        {allMessages.map((msg, idx) => {
+          const prev = idx > 0 ? allMessages[idx - 1] : null;
+          // The "Started on …" chip above already labels the first day, so skip the divider before
+          // the very first message. Subsequent days still get their own divider.
+          const showDayDivider = !!prev && !isSameDay(prev.origin_server_ts, msg.origin_server_ts);
+          const isMine = msg.sender === ownerUserId;
+          const cachedProfile = profilesById[msg.sender];
+          const senderLabel = isMine ? 'You' : cachedProfile?.displayName || msg.sender;
+          const avatarUrl = isMine ? null : cachedProfile?.avatarUrl ?? null;
+          const isAdmin = !isMine && adminUserIds.has(msg.sender);
+          return (
+            <Fragment key={msg.event_id}>
+              {showDayDivider && <DateDivider timestamp={msg.origin_server_ts} />}
+              <MessageRow
+                senderUserId={msg.sender}
+                senderLabel={senderLabel}
+                avatarUrl={avatarUrl}
+                timestamp={msg.origin_server_ts}
+                isAdmin={isAdmin}
+                body={msg.content?.body ?? ''}
+              />
+            </Fragment>
+          );
+        })}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-        <ChatInput
-          value={replyText}
-          onChange={setReplyText}
-          onSend={() => void sendReply()}
-          placeholder='Reply…'
-          sendAriaLabel='Send reply'
-          sending={sending}
-        />
-      </div>
+      <ChatInput
+        value={replyText}
+        onChange={setReplyText}
+        onSend={() => void sendReply()}
+        placeholder='Reply…'
+        sendAriaLabel='Send reply'
+        sending={sending}
+      />
     </div>
   );
 }

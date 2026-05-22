@@ -5,6 +5,7 @@
   display: flex;
   align-items: center;
   flex-direction: row;
+  gap: 8px;
 }
 
 /* Button uses display:flex; text-align does not center flex children — use justify-content */

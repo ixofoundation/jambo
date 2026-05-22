@@ -8,6 +8,8 @@ import { Survey } from 'survey-react-ui';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
+import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { CHAIN_RPC_URL } from '@constants/common';
@@ -677,17 +679,22 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     : 'New Claim';
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--bg-secondary)',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Header title={title} onClose={handleClose} static />
+    <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
+      <GradientBand {...GRADIENT_COLORS.collectionDetail} />
+      <Header onGradient title={title} onBack={handleClose} hideEndAction />
 
-      {/* Content area */}
+      {/* Content area — main provides the header-clearance padding; the inner card holds the solid bg so the gradient stays visible behind the header */}
+      <main
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          minHeight: '100vh',
+          paddingTop: 'var(--header-height)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-secondary)' }}>
       {formLoading ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
@@ -826,6 +833,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           </button>
         </div>
       )}
+      </div>
+      </main>
 
       {/* Submission overlay */}
       {submitting.active && (

@@ -71,6 +71,36 @@
     white-space: nowrap;
   }
 
+  .backTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    margin-left: -6px; // optical alignment with the left edge of the inner container
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--header-btn-color, var(--text-primary));
+    font-size: 1.2rem;
+    font-weight: 500;
+    line-height: 1;
+    min-width: 0;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2.5;
+      flex-shrink: 0;
+    }
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &.onGradient {
     --header-btn-bg: rgba(255, 255, 255, 0.15);
     --header-btn-color: #fff;

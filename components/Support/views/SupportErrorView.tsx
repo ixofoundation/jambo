@@ -7,7 +7,7 @@ type SupportErrorViewProps = {
 
 export default function SupportErrorView({ message, onClose }: SupportErrorViewProps) {
   return (
-    <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+    <div style={{ padding: '24px 0', textAlign: 'center' }}>
       <p style={{ marginTop: 0, color: 'var(--error-color)', fontSize: '14px' }}>{message}</p>
       <Button
         label='Close'

@@ -106,8 +106,14 @@ export default function ProjectList() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {projectIds.map((id) => {
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+            }}
+          >
+            {projectIds.map((id, idx) => {
               const profile = profiles[id];
               return (
                 <button
@@ -117,14 +123,15 @@ export default function ProjectList() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: '12px',
+                    width: '100%',
                     padding: '14px 16px',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '16px',
-                    backgroundColor: 'var(--bg-secondary)',
+                    border: 'none',
+                    borderBottom: idx === projectIds.length - 1 ? 'none' : '1px solid var(--border-color)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    width: '100%',
-                    color: 'var(--text-primary)',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>

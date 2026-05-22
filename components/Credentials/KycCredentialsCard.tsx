@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import { KYC_ENTITY_ID, KycStatus, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
+import { KYC_ENTITY_ID, KycStatus, isReadyToSave, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
 import { useAuth } from '@hooks/useAuth';
 import { useKycStatus } from '@hooks/useKycStatus';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
@@ -16,11 +16,51 @@ import { useKycSupportEntityDid } from '@hooks/useKycSupportEntityDid';
 
 const cardStyle = {
   backgroundColor: 'var(--bg-secondary)',
-  borderRadius: '16px',
-  border: '1px solid var(--border-color)',
+  borderRadius: '12px',
   padding: '16px',
   marginBottom: '12px',
 } as const;
+
+const iconBoxStyle = {
+  width: '32px',
+  height: '32px',
+  borderRadius: '50%',
+  backgroundColor: 'var(--bg-primary)',
+  color: 'var(--text-primary)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: '0 0 auto',
+} as const;
+
+// Maps each KYC AML server status to a short user-facing description. Includes whether the user
+// needs to do anything next. `undefined` is treated as "no KYC started yet".
+function prettyStatus(status?: KycStatus | null): string {
+  switch (status) {
+    case KycStatus.Verify:
+      return 'Verification pending';
+    case KycStatus.Review:
+      return 'Under review';
+    case KycStatus.Clear:
+      return 'Approved';
+    case KycStatus.Rejected:
+      return 'Rejected';
+    case KycStatus.Attention:
+      return 'Manual review';
+    case KycStatus.Issuing:
+      return 'Issuing credential';
+    case KycStatus.Issued:
+      return 'Credential issued';
+    case KycStatus.Error:
+      return 'Verification error';
+    case KycStatus.Complete:
+      return 'Verified';
+    case KycStatus.Unknown:
+      return 'Status unavailable';
+    default:
+      return 'Get started';
+  }
+}
 
 const actionButtonStyle = {
   width: '100%',
@@ -34,28 +74,25 @@ const actionButtonStyle = {
 function statusLabel(status?: KycStatus): string {
   switch (status) {
     case KycStatus.Verify:
-      return 'Awaiting document scan & liveness check';
+      return 'Awaiting document scan & liveness check. Press the button below to begin verification in your browser. \nFor best results, ensure you are in good lighting, your camera lens is clean, and follow the verification instructions carefully.';
     case KycStatus.Review:
-      return 'Reviewing your submission…';
+      return 'Your verification review is in progress. Reviews are usually completed within a few minutes. \nIf you experience unusual delays, please contact support.';
     case KycStatus.Clear:
-      return 'Checks cleared — preparing your credential…';
-    case KycStatus.Authorizing:
-      return 'Authorizing credential issuance…';
-    case KycStatus.Authorized:
-      return 'Authorized — issuing credential…';
+      return 'Your verification checks have been approved. Your credential is now being issued and will be available shortly. \nIf you experience unusual delays, please contact support.';
     case KycStatus.Issuing:
-      return 'Issuing your KYC credential…';
+      return 'Your identity credential is being issued and will be shared with you shortly. \nIf you experience unusual delays, please contact support.';
     case KycStatus.Issued:
+      return 'Your credential has been issued and is ready to save. Press the button below to securely store it. \nIf you experience any problems, please contact support.';
     case KycStatus.Complete:
-      return 'KYC Credential verified';
+      return 'Your credential has been successfully issued and securely saved. \nYour verification is complete and no further action is required.';
     case KycStatus.Rejected:
-      return 'Verification was rejected';
+      return 'One or more of your verification checks could not be completed successfully. \nPlease contact support for assistance resolving this issue.';
     case KycStatus.Attention:
-      return 'Verification needs manual review';
-    case KycStatus.Unauthorized:
-      return 'Credential authorization failed';
+      return 'One or more of your verification checks require manual review. Our team will review your submission in due course. \nIf you experience unusual delays, please contact support.';
     case KycStatus.Error:
-      return 'Something went wrong during verification';
+      return 'We encountered an issue during your verification process and are working to resolve it. \nIf you experience unusual delays, please contact support.';
+    case KycStatus.Unknown:
+      return 'Verification status unavailable';
     default:
       return '';
   }
@@ -68,11 +105,7 @@ export default function KycCredentialsCard() {
 
   const protocolId = KYC_ENTITY_ID || null;
   const [redirectBusy, setRedirectBusy] = useState(false);
-  const {
-    entityDid: supportEntityDid,
-    loading: supportLoading,
-    error: supportError,
-  } = useKycSupportEntityDid();
+  const { entityDid: supportEntityDid, loading: supportLoading, error: supportError } = useKycSupportEntityDid();
 
   const onSupportClickFallback = useCallback(() => {
     if (supportLoading) {
@@ -140,34 +173,34 @@ export default function KycCredentialsCard() {
   }, [router]);
 
   const view = useMemo(() => {
-    if (isTerminalSuccess(status) && saved) {
+    if (isTerminalSuccess(status)) {
       return {
         variant: 'success' as const,
-        message: 'Your KYC Credential has been issued and saved.',
+        message: statusLabel(KycStatus.Complete),
       };
     }
 
-    if (isTerminalSuccess(status)) {
+    if (isReadyToSave(status) || (saved && status === KycStatus.Issued)) {
+      // Server has issued the credential; the client still has to save it to the matrix room.
+      // Once saved, the server transitions to Complete on its next poll. Keep showing
+      // ready-to-save here even if local `saved` flipped, in case the next poll hasn't landed.
       return {
-        variant: 'ready-to-save' as const,
-        message: 'Your KYC Credential is ready. Save it to your secure data store.',
+        variant: saved ? ('success' as const) : ('ready-to-save' as const),
+        message: saved ? statusLabel(KycStatus.Complete) : statusLabel(KycStatus.Issued),
       };
     }
 
     if (isTerminalFailure(status)) {
-      const baseMessage = statusLabel(status) || 'Your KYC verification could not be completed.';
       return {
         variant: 'failure' as const,
-        message: `${baseMessage} Please contact support to review the issue.`,
+        message: statusLabel(status) || 'Your KYC verification could not be completed.',
       };
     }
 
     if (status === KycStatus.Verify) {
       return {
         variant: 'verify-retry' as const,
-        message: entry?.lastRedirectAt
-          ? 'It looks like you haven’t finished verification yet.'
-          : 'Next step: complete your document scan & liveness check.',
+        message: statusLabel(KycStatus.Verify),
       };
     }
 
@@ -180,9 +213,9 @@ export default function KycCredentialsCard() {
 
     return {
       variant: 'idle' as const,
-      message: 'Some features require a KYC Credential',
+      message: 'Some features require a KYC Credential. Press the button below to begin verification.',
     };
-  }, [entry?.lastRedirectAt, saved, status]);
+  }, [saved, status]);
 
   if (!KYC_ENTITY_ID) return null;
   if (!did) return null;
@@ -193,27 +226,32 @@ export default function KycCredentialsCard() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
+          gap: '12px',
           margin: '0 0 16px',
           color: 'var(--text-primary)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <div style={iconBoxStyle}>
           <svg
-            width='18'
-            height='18'
+            width='16'
+            height='16'
             viewBox='0 0 24 24'
             fill='none'
             stroke='currentColor'
             strokeWidth='2'
             strokeLinecap='round'
             strokeLinejoin='round'
+            aria-hidden='true'
           >
             <circle cx='12' cy='8' r='4' />
             <path d='M20 21a8 8 0 1 0-16 0' />
           </svg>
-          <span style={{ fontSize: '14px', fontWeight: 600, lineHeight: 1.5 }}>Identity Credential</span>
+        </div>
+        <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '15px', fontWeight: 500, lineHeight: 1.25 }}>Identity Credential</span>
+          <span style={{ fontSize: '12px', color: 'var(--text-secondary, #777)', lineHeight: 1.25, marginTop: '2px' }}>
+            {prettyStatus(status)}
+          </span>
         </div>
         {protocolId &&
           view.variant !== 'idle' &&
@@ -231,6 +269,7 @@ export default function KycCredentialsCard() {
           fontSize: '14px',
           lineHeight: 1.5,
           color: 'var(--text-primary)',
+          whiteSpace: 'pre-line',
         }}
       >
         {view.message}
@@ -324,7 +363,6 @@ export default function KycCredentialsCard() {
           {error}
         </p>
       )}
-
     </div>
   );
 }

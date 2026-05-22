@@ -8,12 +8,12 @@ import {
   SupportLastSeen,
   SupportRoomNotProvisionedError,
   SupportThreadEntry,
-  acceptPendingDmInvitesFromAdmins,
   buildSupportRoomAlias,
   ensureJoined,
   fetchSupportAdminUserIds,
   fetchSupportThreadSummaries,
   findJoinedDmsWithAdmins,
+  findPendingDmInvitesFromAdmins,
   readSupportLastSeen,
   readSupportThreadIds,
   removeSupportThreadId,
@@ -29,7 +29,10 @@ export type SupportInitStatus =
       userRoomId: string;
       initialThreads: SupportThreadEntry[];
       initialDmRooms: SupportDmRoom[];
+      /** Pending DM invites from support admins; not auto-accepted. */
+      initialDmInvites: SupportDmRoom[];
       initialLastSeen: SupportLastSeen;
+      adminUserIds: Set<string>;
     }
   | { kind: 'error'; message: string };
 
@@ -96,13 +99,12 @@ export function useSupportInit(entityDid: string): SupportInitStatus {
           void removeSupportThreadId(mxClient, userRoomId, roomId, id).catch(() => undefined);
         }
 
-        // DM discovery: find support-room admins, auto-accept any pending invites from them,
-        // and surface the resulting DM rooms.
+        // DM discovery: find support-room admins, surface any joined DMs, and list any pending
+        // invites from those admins (the user must explicitly approve before joining).
         const adminIds = await fetchSupportAdminUserIds(mxClient, roomId);
         if (cancelled) return;
-        await acceptPendingDmInvitesFromAdmins(mxClient, adminIds);
-        if (cancelled) return;
         const dms = findJoinedDmsWithAdmins(mxClient, adminIds);
+        const invites = findPendingDmInvitesFromAdmins(mxClient, adminIds);
         if (cancelled) return;
 
         const lastSeen = await readSupportLastSeen(mxClient, userRoomId, roomId);
@@ -115,7 +117,9 @@ export function useSupportInit(entityDid: string): SupportInitStatus {
           userRoomId,
           initialThreads: entries,
           initialDmRooms: dms,
+          initialDmInvites: invites,
           initialLastSeen: lastSeen,
+          adminUserIds: adminIds,
         });
       } catch (err) {
         if (cancelled) return;

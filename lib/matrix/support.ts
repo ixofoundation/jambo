@@ -459,29 +459,58 @@ export async function fetchSupportAdminUserIds(mxClient: MatrixClient, supportRo
   return admins;
 }
 
-export async function acceptPendingDmInvitesFromAdmins(
+// Returns rooms where the user has a pending invite from one of the support admins.
+// These are NOT auto-accepted; the UI surfaces them as pending invites so the user
+// can review who's inviting them and the room's encryption status before joining.
+export function findPendingDmInvitesFromAdmins(
   mxClient: MatrixClient,
   adminUserIds: Set<string>,
-): Promise<void> {
-  console.log('acceptPendingDmInvitesFromAdmins::adminUserIds', adminUserIds);
-  if (adminUserIds.size === 0) return;
+): SupportDmRoom[] {
+  if (adminUserIds.size === 0) return [];
   const ownUserId = mxClient.getUserId();
-  if (!ownUserId) return;
+  if (!ownUserId) return [];
   const rooms = mxClient.getRooms() as Array<Room & { getMyMembership?: () => string }>;
-  await Promise.all(
-    rooms.map(async (room) => {
-      try {
-        if (typeof (room as any).getMyMembership !== 'function') return;
-        if ((room as any).getMyMembership() !== 'invite') return;
-        const myMember = room.getMember(ownUserId) as any;
-        const inviter: string | undefined = myMember?.events?.member?.getSender?.();
-        if (!inviter || !adminUserIds.has(inviter)) return;
-        await mxClient.joinRoom(room.roomId);
-      } catch (err) {
-        console.warn('[support] failed to accept DM invite', (room as any)?.roomId, err);
-      }
-    }),
-  );
+  const result: SupportDmRoom[] = [];
+  for (const room of rooms) {
+    try {
+      if (typeof (room as any).getMyMembership !== 'function') continue;
+      if ((room as any).getMyMembership() !== 'invite') continue;
+      const myMember = room.getMember(ownUserId) as any;
+      const inviter: string | undefined = myMember?.events?.member?.getSender?.();
+      if (!inviter || !adminUserIds.has(inviter)) continue;
+      result.push({ roomId: room.roomId, adminUserId: inviter });
+    } catch (err) {
+      console.warn('[support] failed to inspect DM invite', (room as any)?.roomId, err);
+    }
+  }
+  return result;
+}
+
+export async function acceptDmInvite(mxClient: MatrixClient, roomId: string): Promise<void> {
+  await mxClient.joinRoom(roomId);
+}
+
+export async function rejectDmInvite(mxClient: MatrixClient, roomId: string): Promise<void> {
+  await mxClient.leave(roomId);
+}
+
+// Best-effort check of whether the room has been configured for end-to-end encryption.
+// Returns true when an `m.room.encryption` state event is present.
+export function isRoomEncrypted(mxClient: MatrixClient, roomId: string): boolean {
+  try {
+    const room = mxClient.getRoom(roomId);
+    if (!room) return false;
+    const sdkSays = (room as any).hasEncryptionStateEvent?.();
+    if (typeof sdkSays === 'boolean') return sdkSays;
+    const isEncryptedFn = (room as any).currentState?.getStateEvents?.bind((room as any).currentState);
+    if (typeof isEncryptedFn === 'function') {
+      const event = isEncryptedFn('m.room.encryption', '');
+      return !!event;
+    }
+  } catch (err) {
+    console.warn('[support] failed to inspect room encryption', roomId, err);
+  }
+  return false;
 }
 
 export function findJoinedDmsWithAdmins(mxClient: MatrixClient, adminUserIds: Set<string>): SupportDmRoom[] {

@@ -1,11 +1,5 @@
 import type { CSSProperties } from 'react';
 
-export const overlayCardStyle: CSSProperties = {
-  padding: '0',
-  width: '100%',
-  maxWidth: '480px',
-};
-
 export const inlineAlertStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'flex-start',
@@ -13,8 +7,8 @@ export const inlineAlertStyle: CSSProperties = {
   margin: '0 0 16px',
   padding: '10px 12px',
   borderRadius: '10px',
-  border: '1px solid var(--warning-border, #e2b04a)',
-  backgroundColor: 'var(--warning-bg, rgba(255, 196, 0, 0.10))',
+  borderLeft: '5px solid var(--warning-border, #e2b04a)',
+  backgroundColor: 'var(--bg-secondary)',
   fontSize: '12px',
   lineHeight: 1.4,
   color: 'var(--text-primary)',
@@ -22,86 +16,73 @@ export const inlineAlertStyle: CSSProperties = {
 
 export const sectionTitleStyle: CSSProperties = {
   margin: '0 0 8px',
+  fontSize: '1.1rem',
+  fontWeight: 500,
+  color: 'var(--text-primary)',
+};
+
+// Container that wraps a list of conversation rows into a single grouped card.
+export const conversationListBoxStyle: CSSProperties = {
+  backgroundColor: 'var(--bg-secondary)',
+  borderRadius: '12px',
+  overflow: 'hidden',
+};
+
+// A single conversation row inside `conversationListBoxStyle`. Rows are separated by a divider
+// at the bottom; the last row in a list should override `borderBottom` to `none`.
+export const conversationListRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  width: '100%',
+  padding: '12px 14px',
+  border: 'none',
+  borderBottom: '1px solid var(--border-color)',
+  backgroundColor: 'transparent',
+  color: 'var(--text-primary)',
   fontSize: '13px',
-  fontWeight: 600,
+  lineHeight: 1.4,
+  cursor: 'pointer',
+  textAlign: 'left',
+};
+
+export const conversationListChevronStyle: CSSProperties = {
+  flex: '0 0 auto',
   color: 'var(--text-secondary, #777)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-};
-
-export const quickMessageButtonStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '10px 12px',
-  marginBottom: '6px',
-  borderRadius: '10px',
-  border: '1px solid var(--border-color)',
-  backgroundColor: 'var(--bg-primary, transparent)',
-  color: 'var(--text-primary)',
-  fontSize: '13px',
-  lineHeight: 1.4,
-  cursor: 'pointer',
-};
-
-export const threadEntryButtonStyle: CSSProperties = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left',
-  padding: '10px 12px',
-  marginBottom: '6px',
-  borderRadius: '10px',
-  border: '1px solid var(--border-color)',
-  backgroundColor: 'var(--bg-primary, transparent)',
-  color: 'var(--text-primary)',
-  fontSize: '13px',
-  lineHeight: 1.4,
-  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
 };
 
 export const textareaStyle: CSSProperties = {
   width: '100%',
-  minHeight: '72px',
-  resize: 'vertical',
-  borderRadius: '10px',
-  border: '1px solid var(--border-color)',
-  backgroundColor: 'var(--bg-primary)',
+  resize: 'none',
+  border: 'none',
+  outline: 'none',
+  backgroundColor: 'transparent',
   color: 'var(--text-primary)',
-  padding: '10px 12px',
+  padding: '8px 4px',
   fontSize: '14px',
   lineHeight: 1.4,
   fontFamily: 'inherit',
   boxSizing: 'border-box',
-};
-
-export const messageRowStyle: CSSProperties = {
-  padding: '12px 4px',
-};
-
-// Bottom border of each message row provides the divider between consecutive messages
-// (skipped on the last row in each list).
-export const messageBottomDividerStyle: CSSProperties = {
-  borderBottom: '1px solid var(--border-color)',
-};
-
-// Wraps the entire replies group so the accent line runs as one continuous vertical line
-// down the left of all replies instead of being repeated per row.
-export const threadRepliesContainerStyle: CSSProperties = {
-  borderLeft: '2px solid var(--border-color)',
-  paddingLeft: '12px',
+  overflowY: 'auto',
 };
 
 export const inputRowStyle: CSSProperties = {
   display: 'flex',
-  gap: '8px',
+  gap: '6px',
   alignItems: 'flex-end',
+  backgroundColor: 'var(--bg-secondary)',
+  borderRadius: '12px',
+  padding: '4px 4px 4px 10px',
 };
 
 export const sendIconButtonStyle: CSSProperties = {
   flex: '0 0 auto',
-  width: '44px',
-  height: '44px',
-  borderRadius: '10px',
+  width: '36px',
+  height: '36px',
+  borderRadius: '8px',
   border: 'none',
   backgroundColor: 'var(--accent-color, #3b82f6)',
   color: 'white',
@@ -131,16 +112,3 @@ export const backChevronButtonStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
-export const messageMetaRowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '11px',
-  color: 'var(--text-secondary, #777)',
-  marginBottom: '4px',
-};
-
-export const messageBodyStyle: CSSProperties = {
-  fontSize: '14px',
-  lineHeight: 1.45,
-  whiteSpace: 'pre-wrap',
-};
