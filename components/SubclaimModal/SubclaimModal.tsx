@@ -31,7 +31,7 @@ import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
 
 import FloatingClaimButton from './FloatingClaimButton';
 import SubclaimModalErrorCard from './SubclaimModalErrorCard';
-import { ShrinkIcon } from './icons';
+import { CheckIcon, ChevronIcon, ClockIcon, CrossIcon, ShrinkIcon, WarningIcon } from './icons';
 import styles from './SubclaimModal.module.scss';
 
 type BlockReason = null | 'not-configured' | 'worker-unreachable' | 'no-eval-authz' | 'no-submit-authz';
@@ -185,13 +185,26 @@ function shortenId(id: string): string {
   return id.length > 15 ? `${id.slice(0, 7)}...${id.slice(-5)}` : id;
 }
 
-// Status text colour class keyed off the claim's evaluation status.
-function claimStatusTextClass(claim: any): string {
+function StatusBadge({ claim }: { claim: any }) {
   const s = claim?.evaluationByClaimId?.status;
-  if (s === 1) return styles.statusApproved;
-  if (s === 2) return styles.statusRejected;
-  if (s === 3) return styles.statusDisputed;
-  return styles.statusPending;
+  const label = statusLabel(claim);
+  let modifier = styles.statusBadgePending;
+  let icon = <ClockIcon />;
+  if (s === 1) {
+    modifier = styles.statusBadgeApproved;
+    icon = <CheckIcon />;
+  } else if (s === 2) {
+    modifier = styles.statusBadgeRejected;
+    icon = <CrossIcon />;
+  } else if (s === 3) {
+    modifier = styles.statusBadgeDisputed;
+    icon = <WarningIcon />;
+  }
+  return (
+    <span className={`${styles.statusBadge} ${modifier}`} role='img' aria-label={label} title={label}>
+      {icon}
+    </span>
+  );
 }
 
 function ClaimRow({
@@ -218,7 +231,6 @@ function ClaimRow({
   const displayName =
     profile?.displayName || (address ? `${address.slice(0, 10)}...${address.slice(-4)}` : 'Unknown agent');
   const initial = (profile?.displayName || address || '?').charAt(0).toUpperCase();
-  const status = statusLabel(claim);
 
   const classes = [styles.row];
   if (selected) classes.push(styles.rowSelected);
@@ -244,9 +256,7 @@ function ClaimRow({
         </div>
         <div className={styles.rowIdRow}>
           <span className={styles.rowClaimId}>{shortenId(claim.claimId)}</span>
-          <span className={`${styles.rowMeta} ${styles.rowMetaEnd} ${claimStatusTextClass(claim)}`}>
-            {status}
-          </span>
+          <StatusBadge claim={claim} />
         </div>
       </div>
     </div>
@@ -297,6 +307,44 @@ function CollectionCard({
   );
 }
 
+function CollapsibleSection({
+  id,
+  label,
+  count,
+  expanded,
+  onToggle,
+  children,
+}: {
+  id: string;
+  label: string;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const contentId = `${id}-content`;
+  return (
+    <div className={styles.listBox}>
+      <button
+        type='button'
+        className={styles.listBoxHeader}
+        aria-expanded={expanded}
+        aria-controls={contentId}
+        onClick={onToggle}
+      >
+        <span>{label}</span>
+        <span className={styles.collapsibleCount}>{count}</span>
+        <ChevronIcon className={cls(styles.collapsibleChevron, { [styles.collapsibleChevronOpen]: expanded })} />
+      </button>
+      {expanded && (
+        <div id={contentId} role='region' aria-label={label} className={styles.listBoxRows}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SubclaimModal({
   open,
   subclaimCollectionId,
@@ -322,6 +370,8 @@ export default function SubclaimModal({
   const [minimized, setMinimized] = useState(false);
   const [loadingClaims, setLoadingClaims] = useState(false);
   const [claims, setClaims] = useState<any[]>([]);
+  const [needsExpanded, setNeedsExpanded] = useState(true);
+  const [doneExpanded, setDoneExpanded] = useState(false);
   const [blockReason, setBlockReason] = useState<BlockReason>(null);
   const [authzChecked, setAuthzChecked] = useState(false);
   const [hasEvalAuthz, setHasEvalAuthz] = useState(false);
@@ -764,6 +814,14 @@ export default function SubclaimModal({
     return { available: avail, disabled: dis };
   }, [claims, claimsWithSubclaims, selectedParentClaimId]);
 
+  // When the list resolves to only "already has subclaims" rows, force-open
+  // that section so the user isn't staring at an apparently empty modal.
+  useEffect(() => {
+    if (!loadingClaims && available.length === 0 && disabled.length > 0) {
+      setDoneExpanded(true);
+    }
+  }, [loadingClaims, available.length, disabled.length]);
+
   const hasSelection = !!selectedParentClaimId;
   const isFatal = blockReason != null && (FATAL_REASONS as BlockReason[]).includes(blockReason);
   const detailReady = view === 'detail' && !viewedClaimError && !viewedClaimLoading && !!parentSurvey;
@@ -818,6 +876,8 @@ export default function SubclaimModal({
     return ReactDOM.createPortal(<FloatingClaimButton onExpand={handleExpand} />, portalRoot);
   }
 
+  const parentMeta = parentCollectionId ? collectionMeta[parentCollectionId] : undefined;
+  const parentName = parentMeta?.status === 'ready' && parentMeta.name ? parentMeta.name : null;
   const title =
     view === 'collections' ? 'Select a base claim collection' : view === 'list' ? 'Select a base claim' : 'Base claim';
   const multipleBase = baseCollections.length > 1;
@@ -840,7 +900,16 @@ export default function SubclaimModal({
               <ArrowLeft />
             </button>
           )}
-          <h2 className={styles.title}>{title}</h2>
+          {view === 'list' && parentCollectionId ? (
+            <div className={styles.titleStack}>
+              <span className={styles.titleStackName}>
+                {parentName ?? `Collection ${shortenId(parentCollectionId)}`}
+              </span>
+              <span className={styles.titleStackId}>{parentCollectionId}</span>
+            </div>
+          ) : (
+            <h2 className={styles.title}>{title}</h2>
+          )}
           <div className={styles.headerActions}>
             <button
               type='button'
@@ -925,16 +994,18 @@ export default function SubclaimModal({
                 </div>
               )}
               {!blockReason && !discovering && (
-                <div className={styles.list}>
-                  {baseCollections.map((id) => (
-                    <CollectionCard
-                      key={id}
-                      collectionId={id}
-                      meta={collectionMeta[id]}
-                      selected={id === parentCollectionId}
-                      onClick={() => handleSelectCollection(id)}
-                    />
-                  ))}
+                <div className={styles.listBox}>
+                  <div className={styles.listBoxRows}>
+                    {baseCollections.map((id) => (
+                      <CollectionCard
+                        key={id}
+                        collectionId={id}
+                        meta={collectionMeta[id]}
+                        selected={id === parentCollectionId}
+                        onClick={() => handleSelectCollection(id)}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </>
@@ -957,7 +1028,13 @@ export default function SubclaimModal({
                 ) : (
                   <>
                     {available.length > 0 && (
-                      <div className={styles.list}>
+                      <CollapsibleSection
+                        id='subclaim-needs'
+                        label='Select base claim'
+                        count={available.length}
+                        expanded={needsExpanded}
+                        onToggle={() => setNeedsExpanded((v) => !v)}
+                      >
                         {available.map((claim) => (
                           <ClaimRow
                             key={claim.claimId}
@@ -967,23 +1044,26 @@ export default function SubclaimModal({
                             onClick={() => handleSelectClaim(claim.claimId)}
                           />
                         ))}
-                      </div>
+                      </CollapsibleSection>
                     )}
                     {disabled.length > 0 && (
-                      <>
-                        <div className={styles.sectionLabel}>Already has subclaims</div>
-                        <div className={styles.list}>
-                          {disabled.map((claim) => (
-                            <ClaimRow
-                              key={claim.claimId}
-                              claim={claim}
-                              selected={claim.claimId === selectedParentClaimId}
-                              disabled={false}
-                              onClick={() => handleSelectClaim(claim.claimId)}
-                            />
-                          ))}
-                        </div>
-                      </>
+                      <CollapsibleSection
+                        id='subclaim-done'
+                        label='Already has subclaims'
+                        count={disabled.length}
+                        expanded={doneExpanded}
+                        onToggle={() => setDoneExpanded((v) => !v)}
+                      >
+                        {disabled.map((claim) => (
+                          <ClaimRow
+                            key={claim.claimId}
+                            claim={claim}
+                            selected={claim.claimId === selectedParentClaimId}
+                            disabled={false}
+                            onClick={() => handleSelectClaim(claim.claimId)}
+                          />
+                        ))}
+                      </CollapsibleSection>
                     )}
                   </>
                 ))}

@@ -458,9 +458,18 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {claims.map((claim: any) => {
+                  <div
+                    style={{
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    {claims.map((claim: any, idx: number) => {
                       const status = statusLabel(claim);
+                      const isLast = idx === claims.length - 1;
                       return (
                         <div
                           key={claim.claimId}
@@ -469,10 +478,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '14px 16px',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '16px',
-                            backgroundColor: 'var(--bg-secondary)',
+                            gap: '12px',
+                            padding: '12px 14px',
+                            backgroundColor: 'transparent',
+                            borderBottom: isLast ? 'none' : '1px solid var(--border-color)',
                             cursor: 'pointer',
                           }}
                         >
