@@ -340,6 +340,15 @@ export default function SubclaimModal({
 
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Hold the latest onParentResolved in a ref so the discovery effect can call it
+  // without listing it as a dependency. Parents pass it as an inline arrow, so its
+  // identity changes on every render and would otherwise re-fire discovery (which
+  // resets parentCollectionId+view in the multi-base branch).
+  const onParentResolvedRef = useRef(onParentResolved);
+  useEffect(() => {
+    onParentResolvedRef.current = onParentResolved;
+  }, [onParentResolved]);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -358,7 +367,7 @@ export default function SubclaimModal({
           setBlockReason((prev) => (prev === 'no-submit-authz' ? prev : 'not-configured'));
         } else if (bases.length === 1) {
           setParentCollectionId(bases[0]);
-          onParentResolved?.(bases[0]);
+          onParentResolvedRef.current?.(bases[0]);
           setBlockReason((prev) => (prev === 'not-configured' || prev === 'worker-unreachable' ? null : prev));
           setView((v) => (v === 'collections' ? 'list' : v));
         } else {
@@ -380,7 +389,7 @@ export default function SubclaimModal({
     return () => {
       cancelled = true;
     };
-  }, [subclaimCollectionId, discoveryNonce, onParentResolved]);
+  }, [subclaimCollectionId, discoveryNonce]);
 
   // Load display metadata (name, quota, start/end) for each base collection when there
   // is more than one to choose between.
