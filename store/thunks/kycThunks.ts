@@ -5,6 +5,7 @@ import { KYC_ENTITY_ID } from '@constants/kyc';
 import gqlQuery from '@utils/graphql';
 import { getAdditionalInfo, getServiceEndpoint } from '@utils/url';
 import { setKycCollectionId, setKycDeedOfferId, setKycProtocolId, setKycSurveyTemplate } from '../slices/kycSlice';
+import { setCollection } from '../slices/collectionsSlice';
 import type { RootState } from '../index';
 
 const STALENESS_THRESHOLD = 5 * 60 * 1000;
@@ -19,19 +20,23 @@ interface LoadKycFormResult {
   deedOfferId: string;
 }
 
-async function fetchKycClaimCollectionId(protocolId: string): Promise<string> {
+async function fetchKycClaimCollection(protocolId: string): Promise<{ id: string; entity: string }> {
   const query = `
     query getKycClaimCollectionByProtocol($protocolId: String!) {
       claimCollections(filter: { protocol: { equalTo: $protocolId } }) {
-        nodes { id }
+        nodes { 
+          id 
+          entity 
+        }
       }
     }
   `;
   const result = await gqlQuery(BLOCKSYNC_URL, query, { protocolId });
   // @ts-ignore
-  const id = result.data?.data?.claimCollections?.nodes?.[0]?.id;
-  if (!id) throw new Error('KYC claim collection not found');
-  return id;
+  const node = result.data?.data?.claimCollections?.nodes?.[0];
+  if (!node?.id) throw new Error('KYC claim collection not found');
+  if (!node.entity) throw new Error('KYC claim collection has no owning entity');
+  return { id: node.id, entity: node.entity };
 }
 
 async function fetchKycDeedOfferEntity(claimCollectionId: string) {
@@ -70,10 +75,15 @@ export const loadKycForm = createAsyncThunk<LoadKycFormResult, LoadKycFormArgs |
     if (!protocolId) throw new Error('KYC not configured');
 
     if (!force) {
-      const { kyc } = getState() as RootState;
+      const state = getState() as RootState;
+      const { kyc, collections } = state;
+      const cachedCollectionEntity = kyc.claimCollectionId
+        ? collections.byId[kyc.claimCollectionId]?.entity
+        : undefined;
       if (
         kyc.protocolId === protocolId &&
         kyc.claimCollectionId &&
+        cachedCollectionEntity &&
         kyc.deedOfferId &&
         kyc.surveyTemplate &&
         kyc.resolvedAt &&
@@ -89,8 +99,14 @@ export const loadKycForm = createAsyncThunk<LoadKycFormResult, LoadKycFormArgs |
 
     dispatch(setKycProtocolId(protocolId));
 
-    const claimCollectionId = await fetchKycClaimCollectionId(protocolId);
+    const { id: claimCollectionId, entity: claimCollectionEntity } = await fetchKycClaimCollection(protocolId);
     dispatch(setKycCollectionId(claimCollectionId));
+    dispatch(
+      setCollection({
+        id: claimCollectionId,
+        collection: { id: claimCollectionId, entity: claimCollectionEntity, protocol: protocolId },
+      }),
+    );
 
     const offerEntity = await fetchKycDeedOfferEntity(claimCollectionId);
     if (!offerEntity?.id) throw new Error('KYC offer entity not found');

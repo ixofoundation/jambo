@@ -290,8 +290,14 @@ export default function Dashboard() {
             <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>No collections found</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {protocolCollections.map((c) => (
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+            }}
+          >
+            {protocolCollections.map((c, idx) => (
               <button
                 key={c.collectionId}
                 onClick={() =>
@@ -301,14 +307,16 @@ export default function Dashboard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '12px',
+                  width: '100%',
                   padding: '14px 16px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '16px',
-                  backgroundColor: 'var(--bg-secondary)',
+                  border: 'none',
+                  borderBottom:
+                    idx === protocolCollections.length - 1 ? 'none' : '1px solid var(--border-color)',
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  width: '100%',
-                  color: 'var(--text-primary)',
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>

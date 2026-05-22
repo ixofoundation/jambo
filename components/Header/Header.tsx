@@ -9,10 +9,14 @@ type HeaderProps = {
   onGradient?: boolean;
   title?: string;
   onClose?: () => void;
+  /** When set together with `title`, replaces the logo with a clickable "‹ Title" back button. */
+  onBack?: () => void;
+  /** Suppress the right-side fallback button (profile / settings) — used by mid-flow screens like the survey forms. */
+  hideEndAction?: boolean;
   static?: boolean;
 };
 
-const Header: FC<HeaderProps> = ({ onGradient, title, onClose, static: isStatic }) => {
+const Header: FC<HeaderProps> = ({ onGradient, title, onClose, onBack, hideEndAction, static: isStatic }) => {
   const router = useRouter();
   const avatarUrl = useAppSelector((state) => state.matrixProfile.avatarUrl);
   const isProfile = router.pathname === '/profile';
@@ -25,7 +29,27 @@ const Header: FC<HeaderProps> = ({ onGradient, title, onClose, static: isStatic 
       }`}
     >
       <div className={styles.inner}>
-        {title ? (
+        {title && onBack ? (
+          <>
+            <button type='button' onClick={onBack} className={styles.backTitle} aria-label={`Back from ${title}`}>
+              <svg
+                width='20'
+                height='20'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2.5'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                aria-hidden='true'
+              >
+                <polyline points='15 18 9 12 15 6' />
+              </svg>
+              <span>{title}</span>
+            </button>
+            <div className={styles.spacer} />
+          </>
+        ) : title ? (
           <span className={styles.title}>{title}</span>
         ) : (
           <>
@@ -57,7 +81,7 @@ const Header: FC<HeaderProps> = ({ onGradient, title, onClose, static: isStatic 
               <line x1='6' y1='6' x2='18' y2='18' />
             </svg>
           </button>
-        ) : isProfile ? (
+        ) : hideEndAction ? null : isProfile ? (
           <button
             className={styles.iconButton}
             onClick={() => router.push('/settings')}

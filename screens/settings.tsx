@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
+import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
 import { useAuth } from '@hooks/useAuth';
@@ -18,11 +19,20 @@ function shorten(value: string, head = 8, tail = 5) {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { address, did, logout } = useAuth();
 
   const userId = secret.userId;
   const baseUrl = secret.baseUrl;
   const accessToken = secret.accessToken;
+
+  const goBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      void router.push('/profile');
+    }
+  }, [router]);
 
   const [pinModalFor, setPinModalFor] = useState<SecretKey | null>(null);
   const [secrets, setSecrets] = useState<{ password: string; passphrase: string } | null>(null);
@@ -80,14 +90,22 @@ export default function SettingsScreen() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header />
+      <Header onGradient title='Settings' onBack={goBack} />
+
+      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
+      <div
+        style={{
+          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
+          height: 'var(--header-height)',
+        }}
+      />
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: 'calc(var(--header-height) + 20px) 16px 16px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -95,9 +113,9 @@ export default function SettingsScreen() {
       >
         <h1
           style={{
-            margin: '8px 4px 16px',
-            fontSize: '1.2rem',
-            fontWeight: 700,
+            margin: '0 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
             color: 'var(--text-primary)',
           }}
         >
@@ -123,9 +141,9 @@ export default function SettingsScreen() {
 
         <h1
           style={{
-            margin: '8px 4px 16px',
-            fontSize: '1.2rem',
-            fontWeight: 700,
+            margin: '0 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
             color: 'var(--text-primary)',
           }}
         >

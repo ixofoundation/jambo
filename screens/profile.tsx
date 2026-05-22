@@ -38,36 +38,50 @@ export default function ProfileScreen() {
             gap: '12px',
           }}
         >
-          {matrixProfile?.avatarUrl ? (
-            <img
-              src={matrixProfile.avatarUrl}
-              alt=''
-              style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }}
-            />
-          ) : (
-            <div
-              style={{
-                width: '100px',
-                height: '100px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-color)',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '40px',
-                fontWeight: 500,
-              }}
-            >
-              {displayName ? displayName.charAt(0).toUpperCase() : '?'}
-            </div>
-          )}
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              padding: '5px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {matrixProfile?.avatarUrl ? (
+              <img
+                src={matrixProfile.avatarUrl}
+                alt=''
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-color)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '30px',
+                  fontWeight: 500,
+                }}
+              >
+                {displayName ? displayName.charAt(0).toUpperCase() : '?'}
+              </div>
+            )}
+          </div>
 
           <p
             style={{
               margin: 0,
               fontSize: '1.2rem',
-              fontWeight: 700,
+              fontWeight: 500,
               color: 'var(--text-primary-light)',
               maxWidth: '100%',
               textAlign: 'center',
@@ -78,8 +92,20 @@ export default function ProfileScreen() {
             {displayName || 'Unknown'}
           </p>
 
-          {address && <CopyBlock value={address} head={6} tail={5} />}
-          {did && <CopyBlock value={did} />}
+          {(address || did) && (
+            <div
+              style={{
+                marginTop: '10px',
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+              }}
+            >
+              {address && <CopyBlock value={address} head={3} tail={5} />}
+              {did && <CopyBlock value={did} head={3} tail={5} />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -97,9 +123,9 @@ export default function ProfileScreen() {
       >
         <h3
           style={{
-            margin: '8px 4px 12px',
-            fontSize: '1.2rem',
-            fontWeight: 700,
+            margin: '0 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
             color: 'var(--text-primary)',
           }}
         >
@@ -160,7 +186,7 @@ function CopyBlock({ value, head, tail }: { value: string; head?: number; tail?:
           height={14}
           viewBox='0 0 24 24'
           fill='none'
-          stroke='currentColor'
+          stroke='var(--accent-color)'
           strokeWidth='2.5'
           strokeLinecap='round'
           strokeLinejoin='round'
