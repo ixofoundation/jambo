@@ -325,17 +325,24 @@ function CollapsibleSection({
   const contentId = `${id}-content`;
   return (
     <div className={styles.listBox}>
-      <button
-        type='button'
+      <div
         className={styles.listBoxHeader}
+        role='button'
+        tabIndex={0}
         aria-expanded={expanded}
         aria-controls={contentId}
         onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
       >
         <span>{label}</span>
         <span className={styles.collapsibleCount}>{count}</span>
         <ChevronIcon className={cls(styles.collapsibleChevron, { [styles.collapsibleChevronOpen]: expanded })} />
-      </button>
+      </div>
       {expanded && (
         <div id={contentId} role='region' aria-label={label} className={styles.listBoxRows}>
           {children}
