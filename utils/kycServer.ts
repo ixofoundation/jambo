@@ -85,3 +85,16 @@ export async function fetchKycCredential(
   if (!data || typeof data !== 'object') throw new Error('KYC server returned no credential');
   return data;
 }
+
+export async function updateKycStatus(userDid: string, protocolId: string, status: KycStatus): Promise<void> {
+  const headers = await ucanAuthHeaders(userDid);
+  const res = await fetch(
+    `${KYC_API_BASE}/kycaml/${encodeURIComponent(userDid)}/${encodeURIComponent(protocolId)}`,
+    {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    },
+  );
+  if (!res.ok) await handleError(res);
+}

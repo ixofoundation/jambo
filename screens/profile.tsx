@@ -1,19 +1,44 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
 import KycCredentialsCard from '@components/Credentials/KycCredentialsCard';
 import { useAuth } from '@hooks/useAuth';
 import { useAppSelector } from '@store/hooks';
 
+const LONG_PRESS_MS = 4000;
+
 function shorten(value: string, head = 12, tail = 6) {
   return value.length > head + tail + 3 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { address, did } = useAuth();
   const matrixProfile = useAppSelector((state) => state.matrixProfile);
 
   const displayName = matrixProfile?.displayName || address || null;
+
+  // Hidden long-press (4s) on the "My Credentials" header navigates to the full
+  // credentials list. Pointer events cover mouse + touch + pen with the same logic.
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+
+  function clearLongPress() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  function startLongPress() {
+    longPressFiredRef.current = false;
+    clearLongPress();
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      void router.push('/profile/credentials');
+    }, LONG_PRESS_MS);
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -122,11 +147,20 @@ export default function ProfileScreen() {
         }}
       >
         <h3
+          onPointerDown={startLongPress}
+          onPointerUp={clearLongPress}
+          onPointerLeave={clearLongPress}
+          onPointerCancel={clearLongPress}
+          onContextMenu={(e) => e.preventDefault()}
           style={{
             margin: '0 0 8px',
             fontSize: '1.1rem',
             fontWeight: 500,
             color: 'var(--text-primary)',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            touchAction: 'manipulation',
+            cursor: 'default',
           }}
         >
           My Credentials

@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { KYC_ENTITY_ID, KycStatus, isReadyToSave, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
+import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import { useKycStatus } from '@hooks/useKycStatus';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { setRedirectedAt } from '@store/slices/kycSlice';
 import { loadKycForm } from '@store/thunks/kycThunks';
 import { fetchKycRedirect } from '@utils/kycServer';
+import { readAllCredentialIndexEntries } from '@utils/matrixCredential';
 import SupportIconButton from '@components/Support/SupportIconButton';
 import SupportLauncher from '@components/Support/SupportLauncher';
 import { useKycSupportEntityDid } from '@hooks/useKycSupportEntityDid';
@@ -101,7 +103,8 @@ function statusLabel(status?: KycStatus): string {
 export default function KycCredentialsCard() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { did, address } = useAuth();
+  const { did, address, matrixRoomId } = useAuth();
+  const { getMatrixClient } = useContext(BackgroundSetupContext);
 
   const protocolId = KYC_ENTITY_ID || null;
   const [redirectBusy, setRedirectBusy] = useState(false);
@@ -171,6 +174,23 @@ export default function KycCredentialsCard() {
   const onAcquireClick = useCallback(() => {
     router.push('/profile/credentials/kyc');
   }, [router]);
+
+  // Navigate the "Verified" button straight to the most recently stored credential.
+  // Falls back to the credentials list when nothing is found or matrix isn't ready.
+  const onVerifiedClick = useCallback(() => {
+    const mxClient = getMatrixClient();
+    if (!mxClient || !matrixRoomId) {
+      router.push('/profile/credentials');
+      return;
+    }
+    const entries = readAllCredentialIndexEntries(mxClient, matrixRoomId);
+    const latest = [...entries].sort((a, b) => (b.storedAt || '').localeCompare(a.storedAt || ''))[0];
+    if (latest?.cid) {
+      router.push(`/profile/credentials/${encodeURIComponent(latest.cid)}`);
+    } else {
+      router.push('/profile/credentials');
+    }
+  }, [getMatrixClient, matrixRoomId, router]);
 
   const view = useMemo(() => {
     if (isTerminalSuccess(status)) {
@@ -344,7 +364,7 @@ export default function KycCredentialsCard() {
       {view.variant === 'success' && (
         <Button
           label='✓ Verified'
-          disabled
+          onClick={onVerifiedClick}
           color={BUTTON_COLOR.primary}
           borderColor={BUTTON_BORDER_COLOR.primary}
           size={BUTTON_SIZE.mediumLarge}
