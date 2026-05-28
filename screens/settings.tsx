@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
 import PinModal from '@components/PinModal/PinModal';
+import EmailNotifier from '@components/EmailNotifier/EmailNotifier';
 import { useAuth } from '@hooks/useAuth';
 import { secret } from '@utils/secrets';
 import { decrypt } from '@utils/encryption';
@@ -123,6 +124,10 @@ export default function SettingsScreen() {
           Account
         </h1>
 
+        <p style={{ margin: '0 0 12px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+          Your account on the ixo network that identifies your transactions.
+        </p>
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '0 4px', marginBottom: '24px' }}>
           <Row label='Address'>
             {address ? (
@@ -150,6 +155,11 @@ export default function SettingsScreen() {
         >
           Data Store
         </h1>
+
+        <p style={{ margin: '0 0 12px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+          Credentials for your encrypted data store, where your claims, credentials and personal data are securely
+          stored.
+        </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '0 4px' }}>
           <Row label='Username'>
@@ -181,6 +191,19 @@ export default function SettingsScreen() {
             )}
           </Row>
         </div>
+
+        <h1
+          style={{
+            margin: '24px 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+          }}
+        >
+          Email Notifications
+        </h1>
+
+        <EmailNotifier />
 
         <div style={{ flex: 1 }} />
 

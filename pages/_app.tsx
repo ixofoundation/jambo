@@ -11,6 +11,7 @@ import { ThemeProvider } from '@providers/theme';
 import { AuthProvider } from '@providers/auth';
 import { BackgroundSetupProvider } from '@providers/backgroundSetup';
 import { ToastContainer } from '@components/Toast/Toast';
+import EmailNotificationPrompt from '@components/EmailNotifier/EmailNotificationPrompt';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -19,6 +20,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         <AuthProvider>
           <BackgroundSetupProvider>
             <Component {...pageProps} />
+            <EmailNotificationPrompt />
             <ToastContainer />
           </BackgroundSetupProvider>
         </AuthProvider>

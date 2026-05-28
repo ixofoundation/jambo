@@ -23,6 +23,7 @@ import claimDraftsReducer from './slices/claimDraftsSlice';
 import projectsReducer from './slices/projectsSlice';
 import kycReducer from './slices/kycSlice';
 import subclaimsReducer from './slices/subclaimsSlice';
+import emailSubscriptionReducer from './slices/emailSubscriptionSlice';
 import { KycStatus } from '@constants/kyc';
 
 const rootReducer = combineReducers({
@@ -37,6 +38,8 @@ const rootReducer = combineReducers({
   projects: projectsReducer,
   kyc: kycReducer,
   subclaims: subclaimsReducer,
+  // Not whitelisted below — ephemeral per app load (re-verified on login).
+  emailSubscription: emailSubscriptionReducer,
 });
 
 // v3: the save flow now persists the credential-data (PII) payload to matrix in
