@@ -43,42 +43,8 @@ import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '@constants/approvePayment';
 import { buildApprovePaymentPrefill, fetchSourceClaimData, loadKycPii } from '@utils/approvePayment';
-import { convertTimestampObjectToTimestamp } from '@utils/timestamp';
 
 const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
-
-// On-chain quota/count come back as proto Long; normalise to a plain number.
-function toNum(v: any): number {
-  if (v == null) return 0;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'bigint') return Number(v);
-  if (typeof v === 'object' && typeof v.toNumber === 'function') {
-    try {
-      return v.toNumber();
-    } catch {
-      return 0;
-    }
-  }
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-// On-chain start/end dates are proto Timestamp objects; epoch / pre-1970 means "unset".
-function tsToMs(ts: any): number | null {
-  if (!ts) return null;
-  let ms: number | undefined;
-  if (typeof ts === 'object' && ('seconds' in ts || 'nanos' in ts)) {
-    ms = convertTimestampObjectToTimestamp(ts);
-  } else if (typeof ts === 'number') {
-    ms = ts;
-  } else if (typeof ts === 'string') {
-    const parsed = Date.parse(ts);
-    ms = Number.isNaN(parsed) ? undefined : parsed;
-  }
-  if (ms == null || !Number.isFinite(ms)) return null;
-  if (new Date(ms).getFullYear() <= 1970) return null;
-  return ms;
-}
 
 interface CollectionFormProps {
   entityDid: string;
@@ -152,14 +118,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const { getMatrixClient } = useBackgroundSetup();
   const [approvePaymentPrefetching, setApprovePaymentPrefetching] = useState(approvePaymentActive);
   const [approvePaymentError, setApprovePaymentError] = useState<string | null>(null);
-  // Claims grouped by source collection id (only collections where the user has at
-  // least one claim show up here).
-  const [sourceClaimsByCollection, setSourceClaimsByCollection] = useState<Record<string, any[]>>({});
-  const [sourceCollectionMetas, setSourceCollectionMetas] = useState<
-    Record<string, { collectionId: string; entity: string; count: number; quota: number; name: string | null; state: number; startDate: number | null; endDate: number | null }>
-  >({});
-  const [showSourceClaimModal, setShowSourceClaimModal] = useState(false);
-  const [selectedSourceClaim, setSelectedSourceClaim] = useState<{ claimId: string; collectionId: string } | null>(null);
+  const [selectedSourceClaim, setSelectedSourceClaim] = useState<{ claimId: string; collectionId: string } | null>(
+    null,
+  );
   const sourceClaimDataRef = useRef<Record<string, any> | null>(null);
   const piiDataRef = useRef<{ eventId: string; pii: Record<string, any> } | null>(null);
   const approvePaymentPrefillAppliedRef = useRef(false);
@@ -242,75 +203,36 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           throw new Error('Source collections not configured (NEXT_PUBLIC_APPROVE_PAYMENT_SOURCE_COLLECTIONS).');
         }
 
-        // 1) Fetch the user's claims for each configured source collection in parallel
-        //    and hydrate metadata for the picker / error card. Only approved claims
-        //    (evaluationByClaimId.status === 1) are eligible — pending / rejected /
-        //    disputed claims are filtered out before any UI logic.
-        const [claimsPerCollection, metasPerCollection] = await Promise.all([
-          Promise.all(
-            APPROVE_PAYMENT_SOURCE_COLLECTIONS.map(async (cid) => {
-              const all: any[] = (await fetchClaimsByCollectionId(cid, address)) || [];
-              const claims = all.filter((c) => c?.evaluationByClaimId?.status === 1);
-              return { cid, claims };
-            }),
-          ),
-          Promise.all(
-            APPROVE_PAYMENT_SOURCE_COLLECTIONS.map(async (cid) => {
-              try {
-                const col: any = await fetchCollectionByCollectionId(cid);
-                return {
-                  cid,
-                  meta: {
-                    collectionId: cid,
-                    entity: String(col?.entity ?? ''),
-                    count: toNum(col?.count),
-                    quota: toNum(col?.quota),
-                    state: toNum(col?.state),
-                    startDate: tsToMs(col?.startDate),
-                    endDate: tsToMs(col?.endDate),
-                    name: null as string | null,
-                  },
-                };
-              } catch (err) {
-                console.warn('[approve-payment] fetchCollectionByCollectionId failed', cid, err);
-                return null;
-              }
-            }),
-          ),
-        ]);
+        // 1) Fetch the user's claims for each configured source collection in
+        //    parallel. Only approved claims (evaluationByClaimId.status === 1)
+        //    are eligible — pending / rejected / disputed are filtered out.
+        const claimsPerCollection = await Promise.all(
+          APPROVE_PAYMENT_SOURCE_COLLECTIONS.map(async (cid) => {
+            const all: any[] = (await fetchClaimsByCollectionId(cid, address)) || [];
+            const claims = all.filter((c) => c?.evaluationByClaimId?.status === 1);
+            return { cid, claims };
+          }),
+        );
         if (cancelled) return;
 
-        const byCollection: Record<string, any[]> = {};
-        let total = 0;
-        for (const { cid, claims } of claimsPerCollection) {
-          if (claims.length > 0) {
-            byCollection[cid] = claims;
-            total += claims.length;
-          }
-        }
-        setSourceClaimsByCollection(byCollection);
-
-        const metaMap: Record<string, any> = {};
-        for (const m of metasPerCollection) if (m) metaMap[m.cid] = m.meta;
-        setSourceCollectionMetas(metaMap);
-
-        if (total === 0) {
+        // 2) Flatten approved claims across collections and auto-select the most
+        //    recently approved one (most recent `evaluationDate`). No picker UI —
+        //    selection is fully automatic.
+        const allApproved = claimsPerCollection.flatMap(({ claims }) => claims);
+        if (allApproved.length === 0) {
           throw new Error(
             'You do not have any approved claims in the source collections. Please submit one and wait for approval first.',
           );
         }
-
-        // 2) Resolve which claim to use.
-        //    - exactly one across all collections → auto-select.
-        //    - otherwise → open the modal (which presents either the claim list
-        //      directly for a single collection, or the collection picker first).
-        if (total === 1) {
-          const onlyCid = Object.keys(byCollection)[0];
-          const onlyClaim = byCollection[onlyCid][0];
-          setSelectedSourceClaim({ claimId: onlyClaim.claimId, collectionId: onlyCid });
-        } else {
-          setShowSourceClaimModal(true);
-        }
+        const evalTs = (c: any) => {
+          const raw = c?.evaluationByClaimId?.evaluationDate ?? c?.submissionDate;
+          if (!raw) return 0;
+          const t = new Date(raw).getTime();
+          return Number.isFinite(t) ? t : 0;
+        };
+        allApproved.sort((a, b) => evalTs(b) - evalTs(a));
+        const pick = allApproved[0];
+        setSelectedSourceClaim({ claimId: pick.claimId, collectionId: pick.collectionId });
 
         // 3) Fetch the user's credential-data (PII) blob from their matrix room. This
         //    is the raw deed-offer payload saved alongside the verifiable credential
@@ -323,9 +245,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const pii = await loadKycPii(mxClient, roomId);
         if (cancelled) return;
         if (!pii) {
-          throw new Error(
-            'Your credential data is not in your Data Store. Please complete and save your KYC first.',
-          );
+          throw new Error('Your credential data is not in your Data Store. Please complete and save your KYC first.');
         }
         piiDataRef.current = pii;
       } catch (err: any) {
@@ -366,7 +286,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         });
         if (cancelled) return;
         sourceClaimDataRef.current = data;
-        setShowSourceClaimModal(false);
         setApprovePaymentPrefetching(false);
       } catch (err: any) {
         if (cancelled) return;
@@ -676,10 +595,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       // and their credential-data (PII) blob into the survey's initial data. Existing
       // values (from a saved draft) win — we use model.data as the base.
       if (approvePaymentActive) {
-        const prefill = buildApprovePaymentPrefill(
-          sourceClaimDataRef.current,
-          piiDataRef.current?.pii ?? null,
-        );
+        const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
         if (Object.keys(prefill).length > 0) {
           model.data = { ...prefill, ...model.data };
         }
@@ -863,10 +779,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     if (!approvePaymentActive) return;
     if (!survey || approvePaymentPrefetching) return;
     if (approvePaymentPrefillAppliedRef.current) return;
-    const prefill = buildApprovePaymentPrefill(
-      sourceClaimDataRef.current,
-      piiDataRef.current?.pii ?? null,
-    );
+    const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
     if (Object.keys(prefill).length === 0) return;
     Object.entries(prefill).forEach(([key, value]) => {
       try {
@@ -949,7 +862,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         }}
       >
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-secondary)' }}>
-          {formLoading || approvePaymentPrefetching || approvePaymentError || (approvePaymentActive && showSourceClaimModal) ? (
+          {formLoading || approvePaymentPrefetching || approvePaymentError ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div
                 style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}
@@ -1056,32 +969,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             />
           )}
 
-          {approvePaymentActive && (approvePaymentPrefetching || approvePaymentError || showSourceClaimModal) && (
+          {approvePaymentActive && (approvePaymentPrefetching || approvePaymentError) && (
             <ApprovePaymentSourceClaimModal
               open
               phase={
                 approvePaymentError
-                  ? {
-                      kind: 'error',
-                      message: approvePaymentError,
-                      offers: APPROVE_PAYMENT_SOURCE_COLLECTIONS.map((cid) => ({
-                        collectionId: cid,
-                        meta: sourceCollectionMetas[cid],
-                      })),
-                      onOfferClick: (cid, entity) =>
-                        router.replace(
-                          `/entities/${encodeURIComponent(entity)}/claimCollections/${encodeURIComponent(cid)}`,
-                        ),
-                    }
-                  : showSourceClaimModal
-                  ? {
-                      kind: 'pick',
-                      claimsByCollection: sourceClaimsByCollection,
-                      collectionMeta: sourceCollectionMetas,
-                      selectedClaimId: selectedSourceClaim?.claimId ?? null,
-                      onSelect: (claimId, sourceCollectionId) =>
-                        setSelectedSourceClaim({ claimId, collectionId: sourceCollectionId }),
-                    }
+                  ? { kind: 'error', message: approvePaymentError }
                   : { kind: 'loading', message: 'Loading your approved claims and credential data…' }
               }
               onClose={() => router.push(collectionUrl)}

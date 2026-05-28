@@ -513,9 +513,10 @@
   padding: 16px;
   margin-bottom: 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--error-color) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error-color) 40%, transparent);
-  color: var(--error-color);
+  background: var(--bg-secondary);
+  border: none;
+  border-left: 6px solid var(--error-color);
+  color: var(--text-primary);
 }
 
 .errorCardDetailInset {

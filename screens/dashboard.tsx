@@ -10,8 +10,6 @@ import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { addProject } from '@store/slices/projectsSlice';
 import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
@@ -189,7 +187,22 @@ export default function Dashboard() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.dashboard} />
+      {/* Gradient band sized to cover the header + project-name section + ~15px overlap
+          into the top of the collection list. (Default GradientBand is 30vh which is
+          much taller than needed on this screen.) */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 'calc(var(--header-height) + 133px)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%)',
+        }}
+      />
       <Header onGradient />
       <main
         style={{
@@ -202,55 +215,24 @@ export default function Dashboard() {
           minHeight: '100vh',
         }}
       >
-        {/* Page title section */}
+        {/* Project header \u2014 sits in the gradient band, styled like Settings/Support titles. */}
         <div
           style={{
-            minHeight: '150px',
+            minHeight: '110px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
           }}
         >
-          <button
-            onClick={() => router.push('/entities')}
-            aria-label='Go back to projects'
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              margin: '0 0 6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '13px',
-              fontWeight: 400,
-              lineHeight: 1.2,
-            }}
-          >
-            <svg
-              width='14'
-              height='14'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            >
-              <polyline points='15 18 9 12 15 6' />
-            </svg>
-            Projects
-          </button>
           <h1
             style={{
               margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 600,
+              fontSize: '1.1rem',
+              fontWeight: 500,
               color: '#fff',
-              letterSpacing: '-0.3px',
               lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {projectName}
