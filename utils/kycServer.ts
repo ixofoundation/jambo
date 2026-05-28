@@ -86,6 +86,24 @@ export async function fetchKycCredential(
   return data;
 }
 
+/**
+ * Fetch the raw PII / deed-offer payload that fed into the KYC credential. Used for
+ * the parallel save into the user's matrix room alongside the verifiable credential.
+ * The PII lives at `data.deedOfferData` in the dump response.
+ */
+export async function fetchKycPii(userDid: string, protocolId: string): Promise<Record<string, any>> {
+  const headers = await ucanAuthHeaders(userDid);
+  const res = await fetch(
+    `${KYC_API_BASE}/kycaml/${encodeURIComponent(userDid)}/${encodeURIComponent(protocolId)}?dump=true`,
+    { headers },
+  );
+  if (!res.ok) await handleError(res);
+  const body = await parseJson(res);
+  const pii = body?.data?.deedOfferData;
+  if (!pii || typeof pii !== 'object') throw new Error('KYC server returned no credential data');
+  return pii;
+}
+
 export async function updateKycStatus(userDid: string, protocolId: string, status: KycStatus): Promise<void> {
   const headers = await ucanAuthHeaders(userDid);
   const res = await fetch(

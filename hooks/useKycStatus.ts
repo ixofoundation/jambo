@@ -5,11 +5,13 @@ import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { markCredentialSaved, setKycError, setKycStatus } from '@store/slices/kycSlice';
-import { fetchKycCredential, fetchKycStatus, updateKycStatus } from '@utils/kycServer';
+import { fetchKycCredential, fetchKycPii, fetchKycStatus, updateKycStatus } from '@utils/kycServer';
 import {
   computeCredentialCid,
   storeMatrixCredential,
+  storeMatrixPii,
   waitForCredentialIndexEntry,
+  waitForPiiIndexEntry,
 } from '@utils/matrixCredential';
 
 const POLL_INTERVAL_MS = 15_000;
@@ -69,9 +71,18 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
       const roomId = auth.matrixRoomId;
       if (!roomId) throw new Error('User matrix room id missing');
 
-      const credentials = await fetchKycCredential(did, protocolId);
+      // Fetch the verifiable credential AND the raw credential-data (PII) payload in
+      // parallel — they hit different KYC server endpoints and are independent.
+      const [credentials, pii] = await Promise.all([
+        fetchKycCredential(did, protocolId),
+        fetchKycPii(did, protocolId),
+      ]);
       const entries = Object.entries(credentials);
       if (entries.length === 0) throw new Error('KYC credential payload was empty');
+
+      // Stash the first credential's event id / cid so the PII index entry can join
+      // back to the verifiable credential it was issued from.
+      const credentialJoinRef: { eventId?: string; cid?: string } = {};
 
       for (const [credentialType, credential] of entries) {
         const cid = computeCredentialCid(credential);
@@ -97,9 +108,43 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
         }
 
         dispatch(markCredentialSaved({ protocolId, credentialType }));
+        if (!credentialJoinRef.eventId) {
+          credentialJoinRef.eventId = eventId;
+          credentialJoinRef.cid = cid;
+        }
       }
 
-      // All credentials verified in state — promote the KYC status to Complete.
+      // Save the raw credential-data (PII) payload alongside the verifiable credential.
+      // Wrapped so a failure surfaces as a clear, credential-data-focused error message
+      // without confusing the user with "PII" jargon. Re-throws to roll into the outer
+      // catch so the server-side status is NOT promoted to Complete until both records
+      // are in matrix.
+      try {
+        const piiResult = await storeMatrixPii({
+          mxClient,
+          roomId,
+          protocolId,
+          pii,
+          credentialEventId: credentialJoinRef.eventId,
+          credentialCid: credentialJoinRef.cid,
+        });
+        const piiVerified = await waitForPiiIndexEntry({
+          mxClient,
+          roomId,
+          protocolId,
+          cid: piiResult.cid,
+          eventId: piiResult.eventId,
+        });
+        if (!piiVerified) {
+          throw new Error('Credential data was sent but did not appear in your Data Store');
+        }
+      } catch (err) {
+        const cause = err instanceof Error ? err.message : String(err);
+        throw new Error(`Could not save your credential data to your Data Store: ${cause}`);
+      }
+
+      // Credential + credential-data both verified in state — promote the KYC status
+      // to Complete.
       try {
         await updateKycStatus(did, protocolId, KycStatus.Complete);
         dispatch(setKycStatus({ protocolId, status: KycStatus.Complete }));
