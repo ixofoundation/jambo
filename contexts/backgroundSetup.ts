@@ -11,6 +11,16 @@ export interface BackgroundSetupContextType {
   setShowDetails: (show: boolean) => void;
   awaitCompletion: () => Promise<void>;
   getMatrixClient: () => MatrixClient | null;
+  /**
+   * Ensure matrix E2EE / cross-signing / key backup is fully set up. If something is
+   * missing, fetches the user's encrypted matrix mnemonic, shows the PIN modal, and
+   * repairs encryption — resolves when ready, rejects on cancel or failure.
+   *
+   * Called explicitly when an action requires encryption guarantees (e.g. saving a
+   * credential to the user's matrix data store). Reattach on app load does NOT call
+   * this automatically.
+   */
+  ensureEncryptionReady: () => Promise<void>;
 }
 
 export const BackgroundSetupContext = createContext<BackgroundSetupContextType>({
@@ -21,4 +31,5 @@ export const BackgroundSetupContext = createContext<BackgroundSetupContextType>(
   setShowDetails: () => {},
   awaitCompletion: () => Promise.resolve(),
   getMatrixClient: () => null,
+  ensureEncryptionReady: () => Promise.resolve(),
 });

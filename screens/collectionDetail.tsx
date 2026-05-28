@@ -6,8 +6,6 @@ import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
@@ -82,8 +80,10 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     cancelledRef.current = false;
     if (address && claimCollectionIdRef.current) {
       checkAuthz();
-      fetchBids();
       fetchMyClaims();
+      // Bids are only meaningful for users without SubmitClaimAuthorization — they
+      // gate the "Apply as Service Agent" CTA. The dedicated effect below fires
+      // fetchBids once authz resolves, and only when the user lacks submit authz.
     }
     return () => {
       cancelledRef.current = true;
@@ -228,6 +228,19 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
     }
   }, [authzLoading, isServiceAgent, isController]);
 
+  // Fetch the user's own bids only when they DON'T already hold SubmitClaimAuthorization.
+  // Service agents have nothing to bid on (the "Apply as Service Agent" CTA is hidden),
+  // so the bid round-trip is a waste of time. Drops `bidsLoading` immediately for them.
+  useEffect(() => {
+    if (authzLoading) return;
+    if (isServiceAgent) {
+      setBidsLoading(false);
+      return;
+    }
+    fetchBids();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authzLoading, isServiceAgent]);
+
   // Lazy fetch all bids when controller tab is selected
   useEffect(() => {
     if (activeTab === 'controller' && isController && allBids.length === 0 && !allBidsLoading) {
@@ -250,7 +263,22 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.collectionDetail} />
+      {/* Gradient band sized to cover the header + collection-name section + ~15px overlap
+          into the top of the claim list. (Default GradientBand is 30vh which is much
+          taller than needed on this screen.) */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 'calc(var(--header-height) + 133px)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at top right, var(--blue-secondary), var(--blue-primary) 70%)',
+        }}
+      />
       <Header onGradient />
       <main
         style={{
@@ -263,10 +291,11 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           paddingBottom: showBottomBar ? (stackedContributorButtons ? '140px' : '88px') : '16px',
         }}
       >
-        {/* Page title section */}
+        {/* Collection header — sits in the gradient band, styled like the project name on
+            the dashboard / "My Credentials" heading on the profile screen (light variant). */}
         <div
           style={{
-            minHeight: '150px',
+            minHeight: '110px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -306,12 +335,13 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
           </button>
           <h1
             style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: 600,
+              margin: '0 0 4px',
+              fontSize: '1.1rem',
+              fontWeight: 500,
               color: '#fff',
-              letterSpacing: '-0.3px',
               lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {collectionName}

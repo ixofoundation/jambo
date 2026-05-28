@@ -1,12 +1,18 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
-import { KycStatus, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
+import { KycStatus, isReadyToSave, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
 import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { markCredentialSaved, setKycError, setKycStatus } from '@store/slices/kycSlice';
-import { fetchKycCredential, fetchKycStatus } from '@utils/kycServer';
-import { computeCredentialCid, storeMatrixCredential } from '@utils/matrixCredential';
+import { fetchKycCredential, fetchKycPii, fetchKycStatus, updateKycStatus } from '@utils/kycServer';
+import {
+  computeCredentialCid,
+  storeMatrixCredential,
+  storeMatrixPii,
+  waitForCredentialIndexEntry,
+  waitForPiiIndexEntry,
+} from '@utils/matrixCredential';
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -30,7 +36,7 @@ export interface UseKycStatusResult {
 export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatusArgs): UseKycStatusResult {
   const dispatch = useAppDispatch();
   const entry = useAppSelector((state) => (protocolId ? state.kyc.byProtocolId[protocolId] : undefined));
-  const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
+  const { getMatrixClient, awaitCompletion, ensureEncryptionReady } = useContext(BackgroundSetupContext);
   const auth = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,7 +55,7 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
     if (saving) return;
     if (!protocolId) throw new Error('KYC protocol id missing');
     if (!did || !address) throw new Error('User identity missing');
-    if (!isTerminalSuccess(statusRef.current)) {
+    if (!isReadyToSave(statusRef.current) && !isTerminalSuccess(statusRef.current)) {
       throw new Error('KYC credential is not ready yet');
     }
 
@@ -57,25 +63,93 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
     setError(undefined);
     try {
       await awaitCompletion();
+      // Ensure E2EE / cross-signing / key backup are properly set up before writing
+      // credentials into the user's room. Triggers the PIN-gated repair flow if needed.
+      await ensureEncryptionReady();
       const mxClient = getMatrixClient();
       if (!mxClient) throw new Error('Matrix client not ready');
       const roomId = auth.matrixRoomId;
       if (!roomId) throw new Error('User matrix room id missing');
 
-      const credentials = await fetchKycCredential(did, protocolId);
+      // Fetch the verifiable credential AND the raw credential-data (PII) payload in
+      // parallel — they hit different KYC server endpoints and are independent.
+      const [credentials, pii] = await Promise.all([
+        fetchKycCredential(did, protocolId),
+        fetchKycPii(did, protocolId),
+      ]);
       const entries = Object.entries(credentials);
       if (entries.length === 0) throw new Error('KYC credential payload was empty');
 
+      // Stash the first credential's event id / cid so the PII index entry can join
+      // back to the verifiable credential it was issued from.
+      const credentialJoinRef: { eventId?: string; cid?: string } = {};
+
       for (const [credentialType, credential] of entries) {
         const cid = computeCredentialCid(credential);
-        await storeMatrixCredential({
+        const { eventId } = await storeMatrixCredential({
           mxClient,
           roomId,
           credentialKey: credentialType,
           credential: credential as Record<string, any>,
           cid,
         });
+
+        // Re-query the room state to confirm the index event was echoed back through
+        // sync with the new eventId before treating the save as final.
+        const verified = await waitForCredentialIndexEntry({
+          mxClient,
+          roomId,
+          credentialKey: credentialType,
+          cid,
+          eventId,
+        });
+        if (!verified) {
+          throw new Error(`Credential ${credentialType} was sent but did not appear in room state`);
+        }
+
         dispatch(markCredentialSaved({ protocolId, credentialType }));
+        if (!credentialJoinRef.eventId) {
+          credentialJoinRef.eventId = eventId;
+          credentialJoinRef.cid = cid;
+        }
+      }
+
+      // Save the raw credential-data (PII) payload alongside the verifiable credential.
+      // Wrapped so a failure surfaces as a clear, credential-data-focused error message
+      // without confusing the user with "PII" jargon. Re-throws to roll into the outer
+      // catch so the server-side status is NOT promoted to Complete until both records
+      // are in matrix.
+      try {
+        const piiResult = await storeMatrixPii({
+          mxClient,
+          roomId,
+          protocolId,
+          pii,
+          credentialEventId: credentialJoinRef.eventId,
+          credentialCid: credentialJoinRef.cid,
+        });
+        const piiVerified = await waitForPiiIndexEntry({
+          mxClient,
+          roomId,
+          protocolId,
+          cid: piiResult.cid,
+          eventId: piiResult.eventId,
+        });
+        if (!piiVerified) {
+          throw new Error('Credential data was sent but did not appear in your Data Store');
+        }
+      } catch (err) {
+        const cause = err instanceof Error ? err.message : String(err);
+        throw new Error(`Could not save your credential data to your Data Store: ${cause}`);
+      }
+
+      // Credential + credential-data both verified in state — promote the KYC status
+      // to Complete.
+      try {
+        await updateKycStatus(did, protocolId, KycStatus.Complete);
+        dispatch(setKycStatus({ protocolId, status: KycStatus.Complete }));
+      } catch (err) {
+        console.warn('updateKycStatus(complete) failed:', err);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -91,6 +165,7 @@ export function useKycStatus({ did, protocolId, address, enabled }: UseKycStatus
     awaitCompletion,
     did,
     dispatch,
+    ensureEncryptionReady,
     getMatrixClient,
     protocolId,
     saving,

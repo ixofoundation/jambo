@@ -2,13 +2,14 @@ import { FC, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { MatrixClient } from 'matrix-js-sdk';
 import { BackgroundSetupContext, BackgroundSetupStatus } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
+import PinModal from '@components/PinModal/PinModal';
+import { mxLogin, createMatrixClient, generatePasswordFromMnemonic } from '@utils/matrix';
+import { isMatrixEncryptionReady, repairMatrixEncryption } from '@utils/matrixEncryptionRepair';
 import {
-  mxLogin,
-  createMatrixClient,
-  setupCrossSigning,
-  generatePasswordFromMnemonic,
-  generateRecoveryPhraseFromMnemonic,
-} from '@utils/matrix';
+  fetchEncryptedMnemonicFromRoomBot,
+  fetchEncryptedMnemonicFromRoom,
+  decryptEncryptedMnemonic,
+} from '@utils/roomBotMnemonic';
 import { secret } from '@utils/secrets';
 import { secureLoad, secureReset } from '@utils/storage';
 import authConstants from '@constants/auth';
@@ -17,17 +18,25 @@ interface BackgroundSetupProviderProps {
   children: ReactNode;
 }
 
+interface RecoveryPending {
+  ciphertext: string;
+  resolve: () => void;
+  reject: (err: Error) => void;
+}
+
 export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ children }) => {
   const auth = useAuth();
   const [status, setStatus] = useState<BackgroundSetupStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [pinPrompt, setPinPrompt] = useState<{ ciphertext: string } | null>(null);
 
   const awaitersRef = useRef<Array<{ resolve: () => void; reject: (err: Error) => void }>>([]);
   const statusRef = useRef<BackgroundSetupStatus>('idle');
   const setupAttemptedRef = useRef(false);
   const mxClientRef = useRef<MatrixClient | null>(null);
+  const recoveryPendingRef = useRef<RecoveryPending | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const getMatrixClient = useCallback(() => mxClientRef.current, []);
@@ -45,41 +54,43 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
 
   const awaitCompletion = useCallback((): Promise<void> => {
     const current = statusRef.current;
-    if (current === 'success' || current === 'idle') {
+    if (current === 'success' && mxClientRef.current) {
       return Promise.resolve();
     }
     if (current === 'error') {
       return Promise.reject(new Error('Data Store setup failed'));
     }
+    // 'idle' (effect hasn't started yet) or 'running' — wait for the matrix client
+    // to be ready. Resolved by the status effect below when status flips to success.
     setShowDetails(true);
     return new Promise<void>((resolve, reject) => {
       awaitersRef.current.push({ resolve, reject });
     });
   }, []);
 
-  // Auto-setup Matrix when user is authenticated
+  // Auto-setup Matrix when user is authenticated.
+  // - Fresh login (mnemonic in secure storage): full setup including E2EE bootstrap.
+  // - Reattach (Matrix tokens already present): just create the client. No E2EE check,
+  //   no PIN prompt. Repair is deferred until an explicit `ensureEncryptionReady()` call.
   useEffect(() => {
     if (!auth.isLoggedIn || !auth.address || !auth.matrixUserId) return;
     if (setupAttemptedRef.current) return;
 
-    // If tokens already exist from a prior session, reattach by creating a client
-    // without re-running login or cross-signing setup.
-    if (secret.accessToken && secret.userId) {
-      setupAttemptedRef.current = true;
-      void reattachMatrix();
-      return;
-    }
-
-    // Fetch mnemonic from secure storage (not React state)
+    const hasMatrixTokens = !!secret.accessToken && !!secret.userId;
     const matrixMnemonic = secureLoad(authConstants.secretKey.MATRIX_MNEMONIC);
-    if (!matrixMnemonic) {
-      // No mnemonic and no active session — can't set up Matrix
-      console.warn('Matrix mnemonic not available in secure storage');
+
+    if (!hasMatrixTokens && !matrixMnemonic) {
+      console.warn('Matrix mnemonic not available in secure storage and no existing session');
       return;
     }
 
     setupAttemptedRef.current = true;
-    void setupMatrix(matrixMnemonic);
+
+    if (hasMatrixTokens) {
+      void reattachMatrix();
+    } else if (matrixMnemonic) {
+      void setupMatrix(matrixMnemonic);
+    }
 
     async function reattachMatrix() {
       setStatus('running');
@@ -106,7 +117,6 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       try {
         const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
         const mxPassword = generatePasswordFromMnemonic(mnemonic);
-        const securityPhrase = generateRecoveryPhraseFromMnemonic(mnemonic);
 
         setStatusMessage('Logging in to Data Store...');
         await mxLogin({ homeServerUrl, username: auth.matrixUserId!, password: mxPassword });
@@ -115,15 +125,11 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         const mxClient = await createMatrixClient();
         mxClientRef.current = mxClient;
 
-        try {
-          setStatusMessage('Setting up encryption...');
-          await setupCrossSigning(mxClient, { securityPhrase, password: mxPassword });
-        } catch (err) {
-          // Cross-signing may fail if already set up — non-fatal
-          console.warn('Cross-signing setup:', err);
-        }
+        setStatusMessage('Setting up encryption...');
+        await repairMatrixEncryption(mxClient, mnemonic);
 
-        // Matrix is ready — clear the mnemonic from secure storage (fetch-use-drop)
+        // Matrix is ready — clear the mnemonic from secure storage (fetch-use-drop).
+        // Future page loads recover the mnemonic via the room bot + PIN if needed.
         secureReset(authConstants.secretKey.MATRIX_MNEMONIC);
 
         setStatus('success');
@@ -135,6 +141,112 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       }
     }
   }, [auth.isLoggedIn, auth.address, auth.matrixUserId, retryCount]);
+
+  /** Fetch the user's encrypted matrix mnemonic. Tries the room bot first (signed
+   *  challenge), then falls back to a direct matrix room-state read. */
+  const fetchEncryptedMnemonic = useCallback(async (): Promise<string> => {
+    const address = auth.address;
+    if (!address) throw new Error('Address missing');
+    const sessionMnemonic = secureLoad(authConstants.secretKey.SESSION_MNEMONIC);
+    const sessionAuthenticatorId = secureLoad(authConstants.secretKey.SESSION_AUTHENTICATOR_ID);
+
+    const roomBotUrl = process.env.NEXT_PUBLIC_MATRIX_ROOM_BOT_URL as string | undefined;
+    if (roomBotUrl && sessionMnemonic && sessionAuthenticatorId) {
+      try {
+        const res = await fetchEncryptedMnemonicFromRoomBot({
+          roomBotUrl,
+          address,
+          sessionMnemonic,
+          sessionAuthenticatorId,
+        });
+        return res.encryptedMnemonic;
+      } catch (botErr) {
+        console.warn('Room bot recovery failed, falling back to direct room state read:', botErr);
+      }
+    }
+
+    const homeServerUrl = secret.baseUrl;
+    const accessToken = secret.accessToken;
+    if (!homeServerUrl || !accessToken) {
+      throw new Error('Could not retrieve recovery credentials');
+    }
+    const res = await fetchEncryptedMnemonicFromRoom({ homeServerUrl, accessToken, address });
+    return res.encryptedMnemonic;
+  }, [auth.address]);
+
+  const ensureEncryptionReady = useCallback(async (): Promise<void> => {
+    // Make sure the provider's setup effect has placed the client into the ref —
+    // covers React-strict-mode remounts, HMR, and the small race where the effect
+    // hasn't fired yet when a screen mounts and immediately calls this.
+    await awaitCompletion();
+    const mxClient = mxClientRef.current;
+    if (!mxClient) throw new Error('Matrix client not ready');
+
+    const check = await isMatrixEncryptionReady(mxClient);
+    if (check.ready) return;
+
+    if (recoveryPendingRef.current) {
+      throw new Error('Encryption recovery already in progress');
+    }
+
+    setShowDetails(true);
+    setStatus('running');
+    setStatusMessage('Reconnecting Data Store...');
+    setError(null);
+
+    let ciphertext: string;
+    try {
+      ciphertext = await fetchEncryptedMnemonic();
+    } catch (err: any) {
+      console.error('Failed to fetch encrypted mnemonic:', err);
+      setStatus('error');
+      setError(err?.message || 'Could not retrieve recovery credentials');
+      throw err;
+    }
+
+    return await new Promise<void>((resolve, reject) => {
+      recoveryPendingRef.current = { ciphertext, resolve, reject };
+      setPinPrompt({ ciphertext });
+    });
+  }, [awaitCompletion, fetchEncryptedMnemonic]);
+
+  const handlePinSubmit = useCallback(async (pin: string) => {
+    const pending = recoveryPendingRef.current;
+    if (!pending || !mxClientRef.current) {
+      throw new Error('No recovery in progress');
+    }
+    // Throws on bad PIN — caught by PinModal's built-in 3-attempt retry loop.
+    const mnemonic = decryptEncryptedMnemonic(pending.ciphertext, pin);
+
+    setPinPrompt(null);
+    setStatusMessage('Setting up encryption...');
+
+    try {
+      await repairMatrixEncryption(mxClientRef.current, mnemonic);
+      setStatus('success');
+      setStatusMessage('Data Store ready');
+      setShowDetails(false);
+      pending.resolve();
+    } catch (err: any) {
+      console.error('Matrix encryption repair failed:', err);
+      setStatus('error');
+      setError(err.message || 'Encryption setup failed');
+      pending.reject(err);
+    } finally {
+      recoveryPendingRef.current = null;
+    }
+  }, []);
+
+  const handlePinCancel = useCallback(() => {
+    const pending = recoveryPendingRef.current;
+    setPinPrompt(null);
+    if (pending) {
+      setStatus('error');
+      setError('Recovery cancelled');
+      pending.reject(new Error('Recovery cancelled'));
+      recoveryPendingRef.current = null;
+    }
+  }, []);
 
   // Stop the retained Matrix client on retry (stale client) and on unmount.
   useEffect(() => {
@@ -160,11 +272,12 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         setShowDetails,
         awaitCompletion,
         getMatrixClient,
+        ensureEncryptionReady,
       }}
     >
       {children}
-      {/* Show a minimal status indicator when details are requested */}
-      {showDetails && status === 'running' && (
+      {/* Spinner shown during running setup/recovery (but not while PIN modal is up). */}
+      {showDetails && status === 'running' && !pinPrompt && (
         <div
           style={{
             position: 'fixed',
@@ -202,6 +315,13 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
             <style>{`@keyframes bgSetupSpin { to { transform: rotate(360deg); } }`}</style>
           </div>
         </div>
+      )}
+      {pinPrompt && (
+        <PinModal
+          onSuccess={handlePinSubmit}
+          onCancel={handlePinCancel}
+          helper='Enter your Data Store PIN to restore encryption'
+        />
       )}
       {showDetails && status === 'error' && (
         <div

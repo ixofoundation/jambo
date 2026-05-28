@@ -614,6 +614,32 @@ export async function createMatrixClient() {
   return mxClient;
 }
 
+/** Race a promise against a timeout. Resolves with `fallback` if timeout fires first. */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve(fallback);
+    }, ms);
+    promise.then(
+      (val) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(val);
+      },
+      () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(fallback);
+      },
+    );
+  });
+}
+
 export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: MatrixClient; baseUrl?: string }) {
   let client = mxClient ?? activeMatrixClient;
 
@@ -639,17 +665,19 @@ export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: Mat
     } catch (err) {
       console.warn('Matrix stopClient error:', err);
     }
-    await client.logout().catch(console.error);
-    try {
-      await client.clearStores();
-    } catch (err) {
-      console.warn('Matrix clearStores error:', err);
-    }
+    // Server-side logout — network call, can hang if homeserver is slow/unreachable.
+    await withTimeout(client.logout().catch((err) => console.warn('Matrix logout error:', err)), 4000, undefined);
+    // Local store clear — IndexedDB can stall if locked by another tab.
+    await withTimeout(
+      client.clearStores().catch((err) => console.warn('Matrix clearStores error:', err)),
+      3000,
+      undefined,
+    );
   }
 
   activeMatrixClient = null;
 
-  await deleteMatrixIndexedDBs();
+  await withTimeout(deleteMatrixIndexedDBs(), 3000, undefined);
   clearLocalStore();
 }
 
@@ -694,7 +722,10 @@ export async function setupCrossSigning(
   }
   if (!skipBootstrapSecureStorage) {
     const recoveryKey = await mxCrypto.createRecoveryKeyFromPassphrase(securityPhrase);
-    clearSecretStorageKeys();
+    // Note: do not clearSecretStorageKeys() here — callers may have primed the cache
+    // with the existing default key derived from `securityPhrase` so the SDK's
+    // `getSecretStorageKey` callback can return it during bootstrap. The forceReset
+    // branch above already clears when starting fresh.
     await mxCrypto.bootstrapSecretStorage({
       createSecretStorageKey: async () => recoveryKey!,
       setupNewSecretStorage: forceReset,

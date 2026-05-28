@@ -242,13 +242,22 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true);
-    try {
-      await logoutMatrixClient({ baseUrl: secret.baseUrl });
-    } catch {
-      // Matrix logout may fail if not connected — continue
-    }
+
+    // Overall safety net: never let matrix cleanup block the redirect for more than 8s.
+    // Individual matrix steps already have their own timeouts (logoutMatrixClient), but
+    // a misbehaving promise should still not strand the user on this screen.
+    const matrixCleanup = logoutMatrixClient({ baseUrl: secret.baseUrl }).catch((err) => {
+      console.warn('Matrix logout failed (continuing):', err);
+    });
+    const safety = new Promise<void>((resolve) => setTimeout(resolve, 8000));
+    await Promise.race([matrixCleanup, safety]);
+
     clearAllState();
-    await persistor.purge();
+    try {
+      await Promise.race([persistor.purge(), new Promise<void>((resolve) => setTimeout(resolve, 2000))]);
+    } catch (err) {
+      console.warn('persistor.purge failed (continuing):', err);
+    }
 
     window.location.href = '/auth';
   }, []);
