@@ -17,11 +17,14 @@ const projectsSlice = createSlice({
         state.ids.push(action.payload);
       }
     },
+    setProjects(state, action: PayloadAction<string[]>) {
+      state.ids = action.payload;
+    },
     clearProjects() {
       return initialState;
     },
   },
 });
 
-export const { addProject, clearProjects } = projectsSlice.actions;
+export const { addProject, setProjects, clearProjects } = projectsSlice.actions;
 export default projectsSlice.reducer;

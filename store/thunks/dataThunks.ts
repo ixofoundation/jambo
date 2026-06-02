@@ -2,6 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { fetchProtocolEntity } from '@utils/entity';
 import { fetchCollectionsByEntityDid } from '@utils/claims';
 import { getServiceEndpoint, getAdditionalInfo, getCachedTemplate } from '@utils/url';
+import { ensureCollectionBlacklist } from '@utils/collectionBlacklist';
 import { setCollectionsLoading } from '../slices/collectionsSlice';
 import { setVctTemplate, setFormName } from '../slices/protocolsSlice';
 import { setProfile } from '../slices/profilesSlice';
@@ -38,6 +39,12 @@ export const fetchAllCollectionData = createAsyncThunk(
           // Profile fetch failure doesn't block collection loading
         }
       })();
+
+      // Load the per-entity claim-collection blacklist (cache-first, with a
+      // background refresh) so hidden collections are filtered out of the app.
+      // Awaited so the blacklist is in place before loading flips off — no flash
+      // of a collection that's about to be hidden.
+      await ensureCollectionBlacklist(entityDid);
 
       // Step 1: Fetch collections for this entity DID
       // fetchCollectionsByEntityDid dispatches setCollections to the store,

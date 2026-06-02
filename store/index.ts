@@ -62,11 +62,24 @@ const migrations: Record<number, (state: any) => any> = {
     }
     return { ...state, kyc: { ...state.kyc, byProtocolId } };
   },
+  // v4: collections slice gained `blacklistByEntityDid` (worker collection
+  // blacklist). Persisted v3 state lacks it; seed an empty map so selectors that
+  // read it don't hit `undefined`.
+  4: (state: any) => {
+    if (!state?.collections) return state;
+    return {
+      ...state,
+      collections: {
+        ...state.collections,
+        blacklistByEntityDid: state.collections.blacklistByEntityDid ?? {},
+      },
+    };
+  },
 };
 
 const persistConfig = {
   key: 'jambo-cache',
-  version: 3,
+  version: 4,
   storage,
   whitelist: ['account', 'entities', 'collections', 'protocols', 'profiles', 'matrixProfile', 'claimDrafts', 'projects', 'kyc'],
   migrate: createMigrate(migrations, { debug: false }),

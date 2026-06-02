@@ -68,7 +68,7 @@ Each collection references a **protocol entity** that defines the claim form:
 The dashboard screen (`screens/dashboard.tsx`) is the main landing page after login:
 
 - **Route**: `/entities/[entityId]`
-- **Entity DID**: Configured via `NEXT_PUBLIC_DEFAULT_ENTITY` env var or `constants/config.json`
+- **Entity DID**: Comes from the route param; the set of available entities is sourced from the jambo worker whitelist (cached locally)
 - **Shows**: All claim collections belonging to the entity, with:
   - Collection name (from protocol VCT template title)
   - Date info ("Ended ..." or "Started ...")

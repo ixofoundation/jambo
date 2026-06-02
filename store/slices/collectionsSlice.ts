@@ -3,6 +3,8 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface CollectionsState {
   byId: Record<string, any>;
   byEntityDid: Record<string, string[]>;
+  // Worker collection blacklist: entity DID -> blacklisted collection ids.
+  blacklistByEntityDid: Record<string, string[]>;
   fetchedAt: Record<string, number>;
   loading: boolean;
 }
@@ -10,6 +12,7 @@ interface CollectionsState {
 const initialState: CollectionsState = {
   byId: {},
   byEntityDid: {},
+  blacklistByEntityDid: {},
   fetchedAt: {},
   loading: false,
 };
@@ -41,11 +44,20 @@ const collectionsSlice = createSlice({
     setCollectionsLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload;
     },
+    setCollectionBlacklist(state, action: PayloadAction<{ entityDid: string; blacklist: string[] }>) {
+      state.blacklistByEntityDid[action.payload.entityDid] = action.payload.blacklist;
+    },
     clearCollections() {
       return initialState;
     },
   },
 });
 
-export const { setCollections, setCollection, setCollectionsLoading, clearCollections } = collectionsSlice.actions;
+export const {
+  setCollections,
+  setCollection,
+  setCollectionsLoading,
+  setCollectionBlacklist,
+  clearCollections,
+} = collectionsSlice.actions;
 export default collectionsSlice.reducer;

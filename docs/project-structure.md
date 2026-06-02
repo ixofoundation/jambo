@@ -119,7 +119,7 @@ jambo-passkey-claims/
   constants/
     auth.ts                  Auth-related constants
     common.ts                Chain networks, RPC URLs, Blocksync URLs, chain IDs
-    config.json              Site configuration (name, entity DID, protocols, actions)
+    config.json              Site configuration (name, fonts, page metadata)
     events.ts                Event constants
     gradientColors.ts        Gradient color presets for different screens
     matrix.ts                Matrix secret key names
@@ -231,11 +231,15 @@ ReduxProvider (Redux store + PersistGate)
 | `NEXT_PUBLIC_YOMA_SSO_CLIENT_ID` | Yes | OIDC client ID for this app |
 | `NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI` | Yes | OAuth redirect URI (must match Keycloak config) |
 | `NEXT_PUBLIC_YOMA_SSO_SCOPES` | Yes | OIDC scopes (default: `openid email profile`) |
-| `NEXT_PUBLIC_DEFAULT_ENTITY` | Yes | Default entity DID for the dashboard (overrides `config.json`) |
+
+The list of entities (projects) and the per-entity claim-collection blacklist are
+sourced at runtime from the jambo worker whitelist (`NEXT_PUBLIC_JAMBO_WORKER_URL`),
+cached in localStorage, and refreshed in the background — they are no longer
+configured via `config.json` or env vars.
 
 ## Key Constants
 
 - **Chain config** (`constants/common.ts`): Network-dependent RPC URLs, Blocksync GraphQL URLs, chain IDs
 - **Transaction types** (`constants/transaction.ts`): Authz type URLs for `SubmitClaimAuthorization` and `EvaluateClaimAuthorization`
-- **Site config** (`constants/config.json`): Site name, default entity DID, protocol DIDs, legacy action definitions
+- **Site config** (`constants/config.json`): Site name, fonts, page metadata
 - **Survey theme** (`constants/surveyTheme.ts`): Custom SurveyJS theme with dark mode support

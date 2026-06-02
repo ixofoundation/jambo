@@ -5,6 +5,7 @@ import Header from '@components/Header/Header';
 import PinModal from '@components/PinModal/PinModal';
 import EmailNotifier from '@components/EmailNotifier/EmailNotifier';
 import { useAuth } from '@hooks/useAuth';
+import useIsAdmin from '@hooks/useIsAdmin';
 import { secret } from '@utils/secrets';
 import { decrypt } from '@utils/encryption';
 import {
@@ -23,6 +24,7 @@ function shorten(value: string, head = 8, tail = 5) {
 export default function SettingsScreen() {
   const router = useRouter();
   const { address, did, logout } = useAuth();
+  const { isAdmin } = useIsAdmin();
 
   const userId = secret.userId;
   const baseUrl = secret.baseUrl;
@@ -113,6 +115,49 @@ export default function SettingsScreen() {
           flex: 1,
         }}
       >
+        {/* Admin-only entry point. Hidden unless the worker confirms the user is a whitelisted admin. */}
+        {isAdmin && (
+          <button
+            onClick={() => void router.push('/settings/entities')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              width: '100%',
+              padding: '14px 16px',
+              marginBottom: '24px',
+              background: 'var(--card-bg-color)',
+              border: 'none',
+              borderRadius: 'var(--card-border-radius)',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              textAlign: 'left',
+              font: 'inherit',
+            }}
+          >
+            <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500 }}>Admin Configuration</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Manage entity whitelist and collection blacklist
+              </span>
+            </span>
+            <svg
+              width='18'
+              height='18'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              style={{ flexShrink: 0, opacity: 0.7 }}
+            >
+              <polyline points='9 18 15 12 9 6' />
+            </svg>
+          </button>
+        )}
+
         <h1
           style={{
             margin: '0 0 8px',

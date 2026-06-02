@@ -38,6 +38,98 @@ async function safeFetch<T>(path: string, init?: RequestInit): Promise<WorkerRes
   }
 }
 
+/**
+ * Asks the worker whether the current user is a whitelisted admin. The worker's
+ * matrix-auth middleware resolves the matrix access token to a DID and only
+ * returns 200 when that DID is whitelisted — anything else (401/403/network)
+ * is treated as "not an admin". Pass the matrix access token (secret.accessToken).
+ */
+export async function checkIsAdmin(accessToken: string | null | undefined): Promise<boolean> {
+  if (!IS_JAMBO_WORKER_ENABLED || !accessToken) return false;
+  try {
+    const res = await fetch(`${JAMBO_WORKER_API_BASE}/v1/admins/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as WorkerEnvelope<{ isAdmin?: boolean }>;
+    return body?.data?.isAdmin === true;
+  } catch (err) {
+    console.warn(`${LOG_PREFIX} GET /v1/admins/me threw`, err);
+    return false;
+  }
+}
+
+/** Public read of the entity whitelist (the DIDs allowed to appear in the app). */
+export function listWhitelistedEntities(): Promise<WorkerResult<{ entities: string[] }>> {
+  return safeFetch<{ entities: string[] }>('/v1/entities');
+}
+
+/**
+ * Whitelists an entity. Admin-only on the worker — pass the matrix access token
+ * (secret.accessToken), which the worker resolves to a whitelisted admin DID.
+ */
+export function whitelistEntity(
+  entityDid: string,
+  accessToken: string,
+): Promise<WorkerResult<{ entityDid: string }>> {
+  return safeFetch<{ entityDid: string }>('/v1/entities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ entityDid }),
+  });
+}
+
+/** Removes an entity from the whitelist. Admin-only (matrix access token). */
+export function removeWhitelistedEntity(
+  entityDid: string,
+  accessToken: string,
+): Promise<WorkerResult<{ entityDid: string }>> {
+  return safeFetch<{ entityDid: string }>(`/v1/entities/${encodeURIComponent(entityDid)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+/** Public read of an entity's blacklisted claim-collection ids. */
+export function getCollectionBlacklist(
+  entityDid: string,
+): Promise<WorkerResult<{ entityDid: string; blacklist: string[] }>> {
+  return safeFetch<{ entityDid: string; blacklist: string[] }>(
+    `/v1/collections/${encodeURIComponent(entityDid)}`,
+  );
+}
+
+/** Blacklists a claim collection for an entity. Admin-only (matrix access token). */
+export function blacklistCollection(
+  entityDid: string,
+  collectionId: string,
+  accessToken: string,
+): Promise<WorkerResult<{ entityDid: string; collectionId: string }>> {
+  return safeFetch<{ entityDid: string; collectionId: string }>(
+    `/v1/collections/${encodeURIComponent(entityDid)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ collectionId }),
+    },
+  );
+}
+
+/** Removes a claim collection from an entity's blacklist. Admin-only (matrix access token). */
+export function unblacklistCollection(
+  entityDid: string,
+  collectionId: string,
+  accessToken: string,
+): Promise<WorkerResult<{ entityDid: string; collectionId: string }>> {
+  return safeFetch<{ entityDid: string; collectionId: string }>(
+    `/v1/collections/${encodeURIComponent(entityDid)}/${encodeURIComponent(collectionId)}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
 export function getCollectionLinks(collectionId: string): Promise<WorkerResult<CollectionLinksResponse>> {
   return safeFetch<CollectionLinksResponse>(`/v1/collectiononcollection/${encodeURIComponent(collectionId)}`);
 }
