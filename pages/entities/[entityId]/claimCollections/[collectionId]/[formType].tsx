@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import AuthGuard from '@components/AuthGuard';
 import CollectionForm from 'screens/collectionForm';
-import { BLACKLISTED_COLLECTION_IDS } from '@constants/common';
+import useIsCollectionBlacklisted from '@hooks/useIsCollectionBlacklisted';
 
 export default function FormPage() {
   const router = useRouter();
@@ -11,16 +11,19 @@ export default function FormPage() {
   const formType = router.query.formType as string | undefined;
   const claimId = router.query.claimId as string | undefined;
 
-  const isBlacklisted = collectionId && BLACKLISTED_COLLECTION_IDS.includes(collectionId);
+  const isBlacklisted = useIsCollectionBlacklisted(entityDid, collectionId);
 
   useEffect(() => {
-    if (isBlacklisted && entityDid) {
+    if (isBlacklisted === true && entityDid) {
       router.replace(`/entities/${entityDid}`);
     }
   }, [isBlacklisted, entityDid, router]);
 
+  // Render only once confirmed not blacklisted (avoids flashing hidden content).
   const validTypes = ['vct', 'bco', 'bev', 'view'];
-  if (isBlacklisted || !entityDid || !collectionId || !formType || !validTypes.includes(formType)) return null;
+  if (isBlacklisted !== false || !entityDid || !collectionId || !formType || !validTypes.includes(formType)) {
+    return null;
+  }
 
   return (
     <AuthGuard>

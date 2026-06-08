@@ -5,10 +5,9 @@ import { useAppSelector } from '@store/hooks';
 import { store } from '@store/index';
 import { setProfile } from '@store/slices/profilesSlice';
 import { fetchProtocolEntity } from '@utils/entity';
+import { loadWhitelistedEntities } from '@utils/projects';
 import { getServiceEndpoint, getAdditionalInfo } from '@utils/url';
 import Header from '@components/Header/Header';
-import GradientBand from '@components/GradientBand/GradientBand';
-import { GRADIENT_COLORS } from '@constants/gradientColors';
 
 function readableType(type?: string): string {
   if (!type) return '';
@@ -22,6 +21,19 @@ export default function ProjectList() {
   const projectIds = useAppSelector((state) => state.projects.ids);
   const profiles = useAppSelector((state) => state.profiles.byEntityDid);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [loadingEntities, setLoadingEntities] = useState(true);
+
+  // Refresh the project list from the worker whitelist when the screen opens.
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingEntities(true);
+    void loadWhitelistedEntities().finally(() => {
+      if (!cancelled) setLoadingEntities(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch profiles for any projects that don't have one yet
   useEffect(() => {
@@ -54,7 +66,21 @@ export default function ProjectList() {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <GradientBand {...GRADIENT_COLORS.dashboard} />
+      {/* Gradient band sized to cover the header + title section + ~15px overlap into
+          the top of the list — matches the dashboard (/entities/[entityId]) screen. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 'calc(var(--header-height) + 133px)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          background: 'radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%)',
+        }}
+      />
       <Header onGradient />
       <main
         style={{
@@ -70,7 +96,7 @@ export default function ProjectList() {
         {/* Page title section */}
         <div
           style={{
-            minHeight: '150px',
+            minHeight: '110px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
@@ -79,10 +105,9 @@ export default function ProjectList() {
           <h1
             style={{
               margin: '0 0 4px',
-              fontSize: '20px',
-              fontWeight: 600,
+              fontSize: '1.1rem',
+              fontWeight: 500,
               color: '#fff',
-              letterSpacing: '-0.3px',
               lineHeight: 1.2,
             }}
           >
@@ -102,7 +127,7 @@ export default function ProjectList() {
             }}
           >
             <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-              {loadingProfiles ? 'Loading...' : 'No projects found'}
+              {loadingEntities || loadingProfiles ? 'Loading...' : 'No projects found'}
             </p>
           </div>
         ) : (

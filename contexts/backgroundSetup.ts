@@ -7,6 +7,9 @@ export interface BackgroundSetupContextType {
   status: BackgroundSetupStatus;
   statusMessage: string;
   error: string | null;
+  /** Detailed, multi-line diagnostics report for the current error (when/where/why).
+   *  Surfaced behind a "Show details" toggle in the error modal. */
+  errorDetails: string | null;
   showDetails: boolean;
   setShowDetails: (show: boolean) => void;
   awaitCompletion: () => Promise<void>;
@@ -27,6 +30,7 @@ export const BackgroundSetupContext = createContext<BackgroundSetupContextType>(
   status: 'idle',
   statusMessage: '',
   error: null,
+  errorDetails: null,
   showDetails: false,
   setShowDetails: () => {},
   awaitCompletion: () => Promise.resolve(),

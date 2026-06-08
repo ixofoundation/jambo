@@ -224,19 +224,53 @@ export default function Dashboard() {
             justifyContent: 'center',
           }}
         >
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '1.1rem',
-              fontWeight: 500,
-              color: '#fff',
-              lineHeight: 1.2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {projectName}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 4px' }}>
+            <button
+              onClick={() => router.push('/entities')}
+              aria-label='Back to projects'
+              title='Back to projects'
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                marginLeft: '-6px',
+                padding: '2px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#fff',
+              }}
+            >
+              <svg
+                width='22'
+                height='22'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+              >
+                <polyline points='15 18 9 12 15 6' />
+              </svg>
+            </button>
+            <h1
+              style={{
+                margin: 0,
+                minWidth: 0,
+                fontSize: '1.1rem',
+                fontWeight: 500,
+                color: '#fff',
+                lineHeight: 1.2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {projectName}
+            </h1>
+          </div>
           {(projectType || projectStatus) && (
             <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
               {projectType}

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { fetchAllCollectionData } from '@store/thunks/dataThunks';
-import { BLACKLISTED_COLLECTION_IDS } from '@constants/common';
 
 export interface ProtocolCollection {
   collectionId: string;
@@ -45,10 +44,15 @@ function selectAllProtocolCollections(state: {
   }));
 }
 
-export function useProtocolCollections(entityDid?: string) {
+export function useProtocolCollections(entityDid?: string, options?: { applyBlacklist?: boolean }) {
+  // When true (default), collections the worker has blacklisted for their entity
+  // are hidden. Admin screens that manage the blacklist pass false to see all.
+  const applyBlacklist = options?.applyBlacklist ?? true;
+
   const dispatch = useAppDispatch();
   const collectionsById = useAppSelector((state) => state.collections.byId);
   const collectionIdsByEntity = useAppSelector((state) => state.collections.byEntityDid);
+  const blacklistByEntityDid = useAppSelector((state) => state.collections.blacklistByEntityDid);
   const formNames = useAppSelector((state) => state.protocols.formNames);
   const loading = useAppSelector((state) => state.collections.loading);
   const entities = useAppSelector((state) => state.entities.byId);
@@ -67,11 +71,12 @@ export function useProtocolCollections(entityDid?: string) {
     } else {
       result = selectAllProtocolCollections({ collections: { byId: collectionsById }, protocols: { formNames } });
     }
-    if (BLACKLISTED_COLLECTION_IDS.length > 0) {
-      result = result.filter((c) => !BLACKLISTED_COLLECTION_IDS.includes(c.collectionId));
+    // Hide collections blacklisted on the worker for their owning entity.
+    if (applyBlacklist) {
+      result = result.filter((c) => !(blacklistByEntityDid?.[c.entity] ?? []).includes(c.collectionId));
     }
     return result;
-  }, [collectionsById, collectionIdsByEntity, formNames, entityDid]);
+  }, [collectionsById, collectionIdsByEntity, blacklistByEntityDid, formNames, entityDid, applyBlacklist]);
 
   const protocolEntities = useMemo(() => {
     const map = new Map<string, any>();

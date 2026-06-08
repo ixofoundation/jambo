@@ -23,6 +23,7 @@ import claimDraftsReducer from './slices/claimDraftsSlice';
 import projectsReducer from './slices/projectsSlice';
 import kycReducer from './slices/kycSlice';
 import subclaimsReducer from './slices/subclaimsSlice';
+import emailSubscriptionReducer from './slices/emailSubscriptionSlice';
 import { KycStatus } from '@constants/kyc';
 
 const rootReducer = combineReducers({
@@ -37,6 +38,8 @@ const rootReducer = combineReducers({
   projects: projectsReducer,
   kyc: kycReducer,
   subclaims: subclaimsReducer,
+  // Not whitelisted below — ephemeral per app load (re-verified on login).
+  emailSubscription: emailSubscriptionReducer,
 });
 
 // v3: the save flow now persists the credential-data (PII) payload to matrix in
@@ -59,11 +62,24 @@ const migrations: Record<number, (state: any) => any> = {
     }
     return { ...state, kyc: { ...state.kyc, byProtocolId } };
   },
+  // v4: collections slice gained `blacklistByEntityDid` (worker collection
+  // blacklist). Persisted v3 state lacks it; seed an empty map so selectors that
+  // read it don't hit `undefined`.
+  4: (state: any) => {
+    if (!state?.collections) return state;
+    return {
+      ...state,
+      collections: {
+        ...state.collections,
+        blacklistByEntityDid: state.collections.blacklistByEntityDid ?? {},
+      },
+    };
+  },
 };
 
 const persistConfig = {
   key: 'jambo-cache',
-  version: 3,
+  version: 4,
   storage,
   whitelist: ['account', 'entities', 'collections', 'protocols', 'profiles', 'matrixProfile', 'claimDrafts', 'projects', 'kyc'],
   migrate: createMigrate(migrations, { debug: false }),

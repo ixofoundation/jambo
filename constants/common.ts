@@ -40,8 +40,3 @@ export const STEPS_STATE = [STEPS.register, STEPS.dashboard];
 
 // cspell:disable-next-line
 export const TO_ADDRESS = 'ixo1fewufqrjy0r8kercq3wazsr7v0cymhvgteq442';
-
-export const BLACKLISTED_COLLECTION_IDS: string[] = (process.env.NEXT_PUBLIC_BLACKLISTED_COLLECTIONS || '')
-  .split(',')
-  .map((id) => id.trim())
-  .filter(Boolean);

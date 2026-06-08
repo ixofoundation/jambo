@@ -87,6 +87,34 @@ export async function fetchCollectionsByEntityDid(entityDid: string) {
   return collections ?? [];
 }
 
+/**
+ * Lightweight count (no store side effects) of the claim collections an entity
+ * owns. Used by admin entity-whitelisting to warn before whitelisting an entity
+ * that has nothing to claim against, and to label each whitelisted entity.
+ */
+export async function getEntityClaimCollectionCount(entityDid: string): Promise<number> {
+  const query = `
+    query entityCollectionCount {
+      claimCollections(filter: { entity: { equalTo: "${entityDid}" } }) {
+        nodes {
+          id
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery<{ data?: { claimCollections?: { nodes?: Array<{ id: string }> } } }>(
+    BLOCKSYNC_URL,
+    query,
+  );
+  if (result.error) throw result.error;
+  return result.data?.data?.claimCollections?.nodes?.length ?? 0;
+}
+
+/** Convenience boolean wrapper around getEntityClaimCollectionCount. */
+export async function entityHasClaimCollections(entityDid: string): Promise<boolean> {
+  return (await getEntityClaimCollectionCount(entityDid)) > 0;
+}
+
 export async function fetchClaimsByCollectionId(collectionId: string, address: string) {
   const query = `
     query getClaimsByClaimCollectionIds {
