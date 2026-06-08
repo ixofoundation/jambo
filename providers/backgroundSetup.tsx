@@ -4,7 +4,7 @@ import { BackgroundSetupContext, BackgroundSetupStatus } from '@contexts/backgro
 import { useAuth } from '@hooks/useAuth';
 import PinModal from '@components/PinModal/PinModal';
 import { mxLogin, createMatrixClient, generatePasswordFromMnemonic } from '@utils/matrix';
-import { isMatrixEncryptionReady, repairMatrixEncryption } from '@utils/matrixEncryptionRepair';
+import { isMatrixEncryptionReady, repairMatrixEncryption, formatEncryptionDiagnostics } from '@utils/matrixEncryptionRepair';
 import {
   fetchEncryptedMnemonicFromRoomBot,
   fetchEncryptedMnemonicFromRoom,
@@ -29,7 +29,10 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const [status, setStatus] = useState<BackgroundSetupStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [pinPrompt, setPinPrompt] = useState<{ ciphertext: string } | null>(null);
 
   const awaitersRef = useRef<Array<{ resolve: () => void; reject: (err: Error) => void }>>([]);
@@ -40,6 +43,30 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   const [retryCount, setRetryCount] = useState(0);
 
   const getMatrixClient = useCallback(() => mxClientRef.current, []);
+
+  const handleCopyDetails = useCallback(async () => {
+    const text = errorDetails || error || '';
+    if (!text) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for browsers without the async clipboard API.
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.warn('Copy diagnostics failed:', err);
+    }
+  }, [errorDetails, error]);
 
   useEffect(() => {
     statusRef.current = status;
@@ -96,6 +123,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       setStatus('running');
       setStatusMessage('Reconnecting to Data Store...');
       setError(null);
+      setErrorDetails(null);
 
       try {
         const mxClient = await createMatrixClient();
@@ -106,6 +134,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         console.error('Matrix reattach error:', err);
         setStatus('error');
         setError(err.message || 'Data Store reattach failed');
+        setErrorDetails(formatEncryptionDiagnostics(err, { stage: 'reattach' }));
       }
     }
 
@@ -113,6 +142,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       setStatus('running');
       setStatusMessage('Connecting to Data Store...');
       setError(null);
+      setErrorDetails(null);
 
       try {
         const homeServerUrl = process.env.NEXT_PUBLIC_MATRIX_HOMESERVER_URL as string;
@@ -138,6 +168,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         console.error('Matrix setup error:', err);
         setStatus('error');
         setError(err.message || 'Data Store setup failed');
+        setErrorDetails(formatEncryptionDiagnostics(err, { stage: 'login' }));
       }
     }
   }, [auth.isLoggedIn, auth.address, auth.matrixUserId, retryCount]);
@@ -193,6 +224,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     setStatus('running');
     setStatusMessage('Reconnecting Data Store...');
     setError(null);
+    setErrorDetails(null);
 
     let ciphertext: string;
     try {
@@ -201,6 +233,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       console.error('Failed to fetch encrypted mnemonic:', err);
       setStatus('error');
       setError(err?.message || 'Could not retrieve recovery credentials');
+      setErrorDetails(formatEncryptionDiagnostics(err, { stage: 'recovery' }));
       throw err;
     }
 
@@ -231,6 +264,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       console.error('Matrix encryption repair failed:', err);
       setStatus('error');
       setError(err.message || 'Encryption setup failed');
+      setErrorDetails(formatEncryptionDiagnostics(err, { stage: 'recovery' }));
       pending.reject(err);
     } finally {
       recoveryPendingRef.current = null;
@@ -243,6 +277,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     if (pending) {
       setStatus('error');
       setError('Recovery cancelled');
+      setErrorDetails(null);
       pending.reject(new Error('Recovery cancelled'));
       recoveryPendingRef.current = null;
     }
@@ -268,6 +303,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         status,
         statusMessage,
         error,
+        errorDetails,
         showDetails,
         setShowDetails,
         awaitCompletion,
@@ -341,30 +377,101 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
               backgroundColor: 'var(--bg-secondary)',
               borderRadius: 16,
               padding: '28px 24px',
-              maxWidth: 340,
+              maxWidth: 360,
               width: '90%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
               textAlign: 'center',
             }}
           >
             <p style={{ color: 'var(--error-color)', margin: '0 0 16px', fontSize: 14 }}>{error}</p>
-            <button
-              onClick={() => {
-                setupAttemptedRef.current = false;
-                setShowDetails(false);
-                setRetryCount((c) => c + 1);
-              }}
-              style={{
-                padding: '10px 24px',
-                borderRadius: 8,
-                border: 'none',
-                backgroundColor: 'var(--accent-color, #3b82f6)',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-            >
-              Retry
-            </button>
+
+            {errorDetails && (
+              <>
+                <button
+                  onClick={() => setShowErrorDetails((s) => !s)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    marginBottom: showErrorDetails ? 8 : 16,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {showErrorDetails ? 'Hide details ▲' : 'Show details ▼'}
+                </button>
+
+                {showErrorDetails && (
+                  <div
+                    style={{
+                      maxHeight: '40vh',
+                      overflowY: 'auto',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 8,
+                      padding: '12px',
+                      marginBottom: 16,
+                    }}
+                  >
+                    <pre
+                      style={{
+                        margin: 0,
+                        textAlign: 'left',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: 'var(--text-secondary)',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {errorDetails}
+                    </pre>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {errorDetails && (
+                <button
+                  onClick={handleCopyDetails}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
+                >
+                  {copied ? 'Copied!' : 'Copy details'}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setupAttemptedRef.current = false;
+                  setShowDetails(false);
+                  setShowErrorDetails(false);
+                  setCopied(false);
+                  setRetryCount((c) => c + 1);
+                }}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: 'var(--accent-color, #3b82f6)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       )}

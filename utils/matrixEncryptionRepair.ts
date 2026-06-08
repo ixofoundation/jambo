@@ -15,6 +15,107 @@ export interface MatrixEncryptionState {
   keyBackupVersion: string | null;
 }
 
+export interface PhaseDiagnostic {
+  phase: string;
+  step?: string;
+  error: string;
+  name?: string;
+  stack?: string;
+}
+
+export interface MatrixEncryptionDiagnostics {
+  stage?: 'login' | 'reattach' | 'recovery';
+  timestamp: string;
+  userId: string | null;
+  deviceId: string | null;
+  stateBefore: MatrixEncryptionState | null;
+  stateAfter: MatrixEncryptionState;
+  phaseErrors: PhaseDiagnostic[];
+}
+
+/** Error thrown when encryption setup is left incomplete. Carries the per-phase
+ *  failures and surrounding state so the UI can render a detailed report. */
+export class MatrixEncryptionError extends Error {
+  diagnostics: MatrixEncryptionDiagnostics;
+
+  constructor(message: string, diagnostics: MatrixEncryptionDiagnostics) {
+    super(message);
+    this.name = 'MatrixEncryptionError';
+    this.diagnostics = diagnostics;
+  }
+}
+
+/** Normalize any thrown value into a `PhaseDiagnostic`. */
+function toPhaseDiagnostic(phase: string, step: string | undefined, err: unknown): PhaseDiagnostic {
+  if (err instanceof Error) {
+    return { phase, step, error: err.message, name: err.name, stack: err.stack };
+  }
+  return { phase, step, error: typeof err === 'string' ? err : JSON.stringify(err) };
+}
+
+/** Render a human-readable multi-line diagnostics report from any caught error.
+ *  Produces the full per-phase breakdown for a `MatrixEncryptionError`, and
+ *  degrades gracefully (stage + timestamp + message + stack) for any other error. */
+export function formatEncryptionDiagnostics(
+  err: unknown,
+  extra?: { stage?: MatrixEncryptionDiagnostics['stage'] },
+): string {
+  const lines: string[] = [];
+  const fmtState = (s: MatrixEncryptionState | null): string =>
+    s
+      ? `crossSigning=${s.crossSigningReady} secretStorage=${s.secretStorageReady} keyBackup=${s.keyBackupVersion ?? 'none'}`
+      : 'unknown';
+
+  if (err instanceof MatrixEncryptionError) {
+    const d = err.diagnostics;
+    lines.push(`Stage: ${extra?.stage ?? d.stage ?? 'unknown'}`);
+    lines.push(`Time: ${d.timestamp}`);
+    lines.push(`User: ${d.userId ?? 'unknown'}`);
+    lines.push(`Device: ${d.deviceId ?? 'unknown'}`);
+    lines.push(`State before: ${fmtState(d.stateBefore)}`);
+    lines.push(`State after: ${fmtState(d.stateAfter)}`);
+    lines.push('');
+    lines.push(`Summary: ${err.message}`);
+    if (d.phaseErrors.length) {
+      lines.push('');
+      lines.push(`Phase errors (${d.phaseErrors.length}):`);
+      d.phaseErrors.forEach((p, i) => {
+        const where = p.step ? `${p.phase} › ${p.step}` : p.phase;
+        lines.push(`  ${i + 1}. [${where}] ${p.name ? p.name + ': ' : ''}${p.error}`);
+        if (p.stack) {
+          p.stack
+            .split('\n')
+            .slice(0, 6)
+            .forEach((sl) => lines.push(`       ${sl.trim()}`));
+        }
+      });
+    } else {
+      lines.push('');
+      lines.push('No individual phase threw — bootstrap calls succeeded but the');
+      lines.push('final readiness check still reported incomplete encryption.');
+    }
+    return lines.join('\n');
+  }
+
+  // Generic error (login failure, mnemonic fetch failure, recovery cancelled, etc.)
+  lines.push(`Stage: ${extra?.stage ?? 'unknown'}`);
+  lines.push(`Time: ${new Date().toISOString()}`);
+  if (err instanceof Error) {
+    lines.push(`Error: ${err.name}: ${err.message}`);
+    if (err.stack) {
+      lines.push('');
+      lines.push('Stack:');
+      err.stack
+        .split('\n')
+        .slice(0, 10)
+        .forEach((sl) => lines.push(`  ${sl.trim()}`));
+    }
+  } else {
+    lines.push(`Error: ${typeof err === 'string' ? err : JSON.stringify(err)}`);
+  }
+  return lines.join('\n');
+}
+
 export async function isMatrixEncryptionReady(mxClient: MatrixClient): Promise<MatrixEncryptionState> {
   const crypto = mxClient.getCrypto();
   if (!crypto) {
@@ -67,7 +168,11 @@ async function primeExistingSecretStorageKey(mxClient: MatrixClient, securityPhr
  * After a backup version exists server-side the local engine may not have picked it up yet.
  * Force a recheck and poll briefly until the active session backup version is reported.
  */
-async function waitForActiveKeyBackup(mxClient: MatrixClient, timeoutMs = 4000): Promise<string | null> {
+async function waitForActiveKeyBackup(
+  mxClient: MatrixClient,
+  phaseErrors?: PhaseDiagnostic[],
+  timeoutMs = 4000,
+): Promise<string | null> {
   const crypto = mxClient.getCrypto();
   if (!crypto) return null;
 
@@ -78,6 +183,7 @@ async function waitForActiveKeyBackup(mxClient: MatrixClient, timeoutMs = 4000):
       await crypto.checkKeyBackupAndEnable();
     } catch (err) {
       console.warn('checkKeyBackupAndEnable failed:', err);
+      phaseErrors?.push(toPhaseDiagnostic('key-backup', 'waitForActiveKeyBackup/checkKeyBackupAndEnable', err));
     }
     version = await crypto.getActiveSessionBackupVersion();
     if (version) return version;
@@ -105,6 +211,15 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
   const password = generatePasswordFromMnemonic(mnemonic);
   const securityPhrase = generateRecoveryPhraseFromMnemonic(mnemonic);
 
+  // Collect every per-phase failure so an incomplete result can be diagnosed
+  // remotely. Phases stay isolated (best-effort), but the errors are no longer lost.
+  const phaseErrors: PhaseDiagnostic[] = [];
+  const record = (phase: string, step: string | undefined, err: unknown) => {
+    phaseErrors.push(toPhaseDiagnostic(phase, step, err));
+  };
+
+  const stateBefore = await isMatrixEncryptionReady(mxClient).catch(() => null);
+
   await primeExistingSecretStorageKey(mxClient, securityPhrase);
 
   // Before any bootstrap, force the device to finish its initial `/keys/query` so
@@ -121,6 +236,7 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
     }
   } catch (err) {
     console.warn('userHasCrossSigningKeys pre-flight failed:', err);
+    record('pre-flight', 'userHasCrossSigningKeys', err);
   }
 
   // Each phase is isolated so a transient verification failure in one (e.g. stale
@@ -137,6 +253,7 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
     });
   } catch (err) {
     console.warn('bootstrapSecretStorage failed:', err);
+    record('secret-storage', 'bootstrapSecretStorage', err);
   }
 
   // Phase 2: cross-signing. Preserves existing keys. No-op when already healthy.
@@ -152,6 +269,7 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
     });
   } catch (err) {
     console.warn('bootstrapCrossSigning failed:', err);
+    record('cross-signing', 'bootstrapCrossSigning', err);
   }
 
   // Phase 3: key backup. Non-destructive — only create a new version when none exists.
@@ -166,11 +284,13 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
         await crypto.loadSessionBackupPrivateKeyFromSecretStorage();
       } catch (err) {
         console.warn('loadSessionBackupPrivateKeyFromSecretStorage failed:', err);
+        record('key-backup', 'loadSessionBackupPrivateKeyFromSecretStorage', err);
       }
       try {
         await crypto.checkKeyBackupAndEnable();
       } catch (err) {
         console.warn('checkKeyBackupAndEnable failed:', err);
+        record('key-backup', 'checkKeyBackupAndEnable', err);
       }
       // Best-effort: import historical room keys. Failures here are common when the
       // backup contains keys signed by a device that no longer exists — non-fatal.
@@ -178,20 +298,30 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
         await crypto.restoreKeyBackup();
       } catch (err) {
         console.warn('restoreKeyBackup (existing) failed:', err);
+        record('key-backup', 'restoreKeyBackup', err);
       }
     } else {
       await crypto.resetKeyBackup();
     }
   } catch (err) {
     console.warn('Key backup setup failed:', err);
+    record('key-backup', 'resetKeyBackup/getKeyBackupInfo', err);
   }
 
-  await waitForActiveKeyBackup(mxClient);
+  await waitForActiveKeyBackup(mxClient, phaseErrors);
 
   const after = await isMatrixEncryptionReady(mxClient);
   if (!after.ready) {
-    throw new Error(
+    throw new MatrixEncryptionError(
       `Matrix encryption setup incomplete: crossSigning=${after.crossSigningReady} secretStorage=${after.secretStorageReady} keyBackup=${after.keyBackupVersion ?? 'none'}`,
+      {
+        timestamp: new Date().toISOString(),
+        userId: mxClient.getUserId(),
+        deviceId: mxClient.getDeviceId(),
+        stateBefore,
+        stateAfter: after,
+        phaseErrors,
+      },
     );
   }
 }
