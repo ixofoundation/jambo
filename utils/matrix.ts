@@ -677,6 +677,9 @@ export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: Mat
 
   activeMatrixClient = null;
 
+  // Drop all in-memory secret-storage material (derived keys + security phrase).
+  clearSecretStorageKeys();
+
   await withTimeout(deleteMatrixIndexedDBs(), 3000, undefined);
   clearLocalStore();
 }
