@@ -6,7 +6,7 @@ import {
   generateRecoveryPhraseFromMnemonic,
   getAuthId,
 } from '@utils/matrix';
-import { storePrivateKey } from '@utils/secretStorageKeys';
+import { setSecurityPhrase, storePrivateKey } from '@utils/secretStorageKeys';
 
 export interface MatrixEncryptionState {
   ready: boolean;
@@ -210,6 +210,10 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
 
   const password = generatePasswordFromMnemonic(mnemonic);
   const securityPhrase = generateRecoveryPhraseFromMnemonic(mnemonic);
+
+  // Register the phrase so `getSecretStorageKey` can derive the secret-storage key
+  // on demand if the in-memory cache misses (resilient against a cold prime).
+  setSecurityPhrase(securityPhrase);
 
   // Collect every per-phase failure so an incomplete result can be diagnosed
   // remotely. Phases stay isolated (best-effort), but the errors are no longer lost.
