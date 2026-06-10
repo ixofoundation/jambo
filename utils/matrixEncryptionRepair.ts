@@ -1,3 +1,4 @@
+// cspell:ignore megolm falsey decryptable
 import type { MatrixClient } from 'matrix-js-sdk';
 import { deriveRecoveryKeyFromPassphrase } from 'matrix-js-sdk/lib/crypto-api/key-passphrase';
 
@@ -31,6 +32,8 @@ export interface MatrixEncryptionDiagnostics {
   stateBefore: MatrixEncryptionState | null;
   stateAfter: MatrixEncryptionState;
   phaseErrors: PhaseDiagnostic[];
+  /** Where each required secret is stored in 4S relative to the default key. */
+  secretPlacement?: string[];
 }
 
 /** Error thrown when encryption setup is left incomplete. Carries the per-phase
@@ -74,6 +77,11 @@ export function formatEncryptionDiagnostics(
     lines.push(`Device: ${d.deviceId ?? 'unknown'}`);
     lines.push(`State before: ${fmtState(d.stateBefore)}`);
     lines.push(`State after: ${fmtState(d.stateAfter)}`);
+    if (d.secretPlacement?.length) {
+      lines.push('');
+      lines.push('Secret storage placement:');
+      d.secretPlacement.forEach((p) => lines.push(`  ${p}`));
+    }
     lines.push('');
     lines.push(`Summary: ${err.message}`);
     if (d.phaseErrors.length) {
@@ -192,6 +200,73 @@ async function waitForActiveKeyBackup(
   return version;
 }
 
+/** The secrets `isSecretStorageReady` requires to be stored under the default 4S key:
+ *  the three cross-signing keys, plus the megolm backup key when a backup is active. */
+async function getRequiredSecretNames(mxClient: MatrixClient): Promise<string[]> {
+  const names = ['m.cross_signing.master', 'm.cross_signing.user_signing', 'm.cross_signing.self_signing'];
+  const backupActive = await mxClient.getCrypto()?.getActiveSessionBackupVersion();
+  if (backupActive) names.push('m.megolm_backup.v1');
+  return names;
+}
+
+/**
+ * `isSecretStorageReady` requires every required secret to be stored in 4S **under the
+ * current default key**. A secret can be readable yet fail this — e.g. it was encrypted
+ * under an older secret-storage key that is no longer the default. `bootstrapSecretStorage`
+ * re-exports the cross-signing keys but never touches the backup key, so such a secret
+ * stays under the stale key and readiness never flips to true.
+ *
+ * This migrates any required secret not under the default key: read its plaintext
+ * (decryptable via any accessible key — our on-demand `getSecretStorageKey` derives the
+ * stale key from the passphrase) and re-store it, which re-encrypts under the default key.
+ * Non-destructive: the secret value is unchanged, only the key it's wrapped with.
+ */
+async function ensureSecretsUnderDefaultKey(mxClient: MatrixClient, phaseErrors: PhaseDiagnostic[]): Promise<void> {
+  const ss = mxClient.secretStorage;
+  const defaultKeyId = await ss.getDefaultKeyId();
+  if (!defaultKeyId) {
+    phaseErrors.push({ phase: 'secret-storage', step: 'ensureUnderDefaultKey', error: 'no default secret-storage key set' });
+    return;
+  }
+
+  for (const name of await getRequiredSecretNames(mxClient)) {
+    try {
+      const record = (await ss.isStored(name)) || {};
+      if (defaultKeyId in record) continue; // already under the default key
+
+      const plaintext = await ss.get(name);
+      if (!plaintext) {
+        phaseErrors.push({ phase: 'secret-storage', step: `migrate/${name}`, error: 'secret not retrievable to migrate under default key' });
+        continue;
+      }
+      // No keys arg → encrypts and stores under the default key.
+      await ss.store(name, plaintext);
+    } catch (err) {
+      console.warn(`Failed to migrate secret ${name} under default key:`, err);
+      phaseErrors.push(toPhaseDiagnostic('secret-storage', `migrate/${name}`, err));
+    }
+  }
+}
+
+/** Snapshot of where each required secret is stored vs the default key — included in the
+ *  diagnostics report so an incomplete result tells us exactly which secret is misplaced. */
+async function collectSecretPlacement(mxClient: MatrixClient): Promise<string[]> {
+  try {
+    const ss = mxClient.secretStorage;
+    const defaultKeyId = await ss.getDefaultKeyId();
+    const lines = [`defaultKeyId=${defaultKeyId ?? 'none'}`];
+    for (const name of await getRequiredSecretNames(mxClient)) {
+      const record = (await ss.isStored(name)) || {};
+      const keyIds = Object.keys(record);
+      const underDefault = !!defaultKeyId && defaultKeyId in record;
+      lines.push(`${name}: ${keyIds.length ? keyIds.join(',') : 'not stored'}${underDefault ? '' : ' [NOT under default]'}`);
+    }
+    return lines;
+  } catch (err) {
+    return [`secret placement unavailable: ${err instanceof Error ? err.message : String(err)}`];
+  }
+}
+
 /**
  * Non-destructive repair: only creates what's missing, never resets existing keys/backups.
  *
@@ -247,18 +322,34 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
   // device signatures during cross-signing verification on a fresh device) doesn't
   // abort the whole repair. The final readiness check decides success/failure.
 
+  // Derive the recovery key once; reused by both secret-storage bootstrap passes below.
+  let recoveryKey: Awaited<ReturnType<typeof crypto.createRecoveryKeyFromPassphrase>> | null = null;
+  try {
+    recoveryKey = await crypto.createRecoveryKeyFromPassphrase(securityPhrase);
+  } catch (err) {
+    console.warn('createRecoveryKeyFromPassphrase failed:', err);
+    record('secret-storage', 'createRecoveryKeyFromPassphrase', err);
+  }
+
+  // Runs secret-storage bootstrap (non-destructive). On the first pass it ensures a
+  // default key exists; on a later pass it exports whatever cross-signing private keys
+  // are now cached locally into 4S. No-op when everything is already in place.
+  const runBootstrapSecretStorage = async (step: string) => {
+    if (!recoveryKey) return;
+    try {
+      await crypto.bootstrapSecretStorage({
+        createSecretStorageKey: async () => recoveryKey!,
+        setupNewSecretStorage: false,
+      });
+    } catch (err) {
+      console.warn(`bootstrapSecretStorage (${step}) failed:`, err);
+      record('secret-storage', `bootstrapSecretStorage/${step}`, err);
+    }
+  };
+
   // Phase 1: secret storage. Preserves existing default key; createSecretStorageKey
   // only fires when no default key exists on the account.
-  try {
-    const recoveryKey = await crypto.createRecoveryKeyFromPassphrase(securityPhrase);
-    await crypto.bootstrapSecretStorage({
-      createSecretStorageKey: async () => recoveryKey!,
-      setupNewSecretStorage: false,
-    });
-  } catch (err) {
-    console.warn('bootstrapSecretStorage failed:', err);
-    record('secret-storage', 'bootstrapSecretStorage', err);
-  }
+  await runBootstrapSecretStorage('initial');
 
   // Phase 2: cross-signing. Preserves existing keys. No-op when already healthy.
   // Failures here (often "signing key is missing from the object that signed the
@@ -312,6 +403,20 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
     record('key-backup', 'resetKeyBackup/getKeyBackupInfo', err);
   }
 
+  // Phase 4: re-export secrets into secret storage. The first secret-storage pass
+  // (Phase 1) skips exporting the cross-signing private keys when they aren't cached
+  // locally yet — which is the case on a fresh device, since they only get loaded
+  // during cross-signing bootstrap (Phase 2). Running it again now that the keys are
+  // present writes `m.cross_signing.*` into 4S, which `isSecretStorageReady` requires.
+  // Without this the repair leaves crossSigning=true but secretStorage=false.
+  await runBootstrapSecretStorage('export-cross-signing');
+
+  // Phase 5: migrate any required secret that's stored under a stale (non-default)
+  // secret-storage key onto the current default key. This covers the case bootstrap
+  // can't — notably a megolm backup key left under an old key — which otherwise leaves
+  // the repair stuck at crossSigning=true but secretStorage=false.
+  await ensureSecretsUnderDefaultKey(mxClient, phaseErrors);
+
   await waitForActiveKeyBackup(mxClient, phaseErrors);
 
   const after = await isMatrixEncryptionReady(mxClient);
@@ -325,6 +430,7 @@ export async function repairMatrixEncryption(mxClient: MatrixClient, mnemonic: s
         stateBefore,
         stateAfter: after,
         phaseErrors,
+        secretPlacement: await collectSecretPlacement(mxClient),
       },
     );
   }
