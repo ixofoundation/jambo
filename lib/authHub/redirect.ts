@@ -14,10 +14,21 @@ export interface AuthHubSessionData {
 
 /**
  * Redirect to the auth hub for login.
+ *
+ * `hideMnemonic` (default true) appends `hide_mnemonic=true`, which tells the
+ * auth hub to skip the recovery-phrase ("Secret Words") screen during
+ * registration. jambo owns backup/recovery itself — the root mnemonic is stored
+ * encrypted in the user's Matrix room state (PIN-gated) — so the raw phrase
+ * never needs to be surfaced during sign-up. The mnemonic is still generated and
+ * stored server-side; only its display is skipped.
  */
-export function loginViaAuthHub() {
+export function loginViaAuthHub(options?: { hideMnemonic?: boolean }) {
   const redirectUri = `${window.location.origin}/auth/callback`;
-  window.location.href = `${AUTH_HUB_URL}/api/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  let url = `${AUTH_HUB_URL}/api/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  if (options?.hideMnemonic ?? true) {
+    url += '&hide_mnemonic=true';
+  }
+  window.location.href = url;
 }
 
 /**
