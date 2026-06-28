@@ -370,3 +370,123 @@ export async function waitForPiiIndexEntry({
   }
   return false;
 }
+
+// =============================================================================
+// Off-ramp profile — remembered form fields the user typed (bank, account,
+// contact details). Mirrors the PII storage (encrypted timeline blob + state
+// index) but under its own event types and a single fixed state key, since
+// there's just one profile per user (latest wins). This is convenience data the
+// user can override — NOT verified identity.
+// =============================================================================
+
+const OFFRAMP_PROFILE_INDEX_EVENT_TYPE = 'ixo.offramp.profile.index';
+const OFFRAMP_PROFILE_EVENT_TYPE = 'ixo.offramp.profile';
+const OFFRAMP_PROFILE_STATE_KEY = 'yellowcard';
+
+export interface OfframpProfileIndexEntry {
+  eventId: string;
+  cid: string;
+  storedAt: string;
+}
+
+function readOfframpProfileEntries(mxClient: MatrixClient, roomId: string): OfframpProfileIndexEntry[] {
+  try {
+    const room = mxClient.getRoom(roomId);
+    if (!room) return [];
+    const liveState = room.getLiveTimeline().getState(EventTimeline.FORWARDS);
+    const stateEvent = liveState?.getStateEvents(OFFRAMP_PROFILE_INDEX_EVENT_TYPE, OFFRAMP_PROFILE_STATE_KEY);
+    if (!stateEvent) return [];
+    const content = stateEvent.getContent();
+    return Array.isArray(content?.entries) ? (content.entries as OfframpProfileIndexEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persist the user's off-ramp profile to their matrix room (encrypted timeline
+ * event + a single de-duplicated state index entry, latest wins). Throws if the
+ * room isn't E2EE so callers (best-effort) can swallow it.
+ */
+export async function storeOfframpProfile({
+  mxClient,
+  roomId,
+  profile,
+}: {
+  mxClient: MatrixClient;
+  roomId: string;
+  profile: Record<string, any>;
+}): Promise<{ storedAt: string; duplicate: boolean; eventId: string; cid: string }> {
+  if (!mxClient) throw new Error('Matrix client is not available');
+  if (!roomId) throw new Error('User Matrix room ID is required');
+
+  if (!mxClient.isRoomEncrypted(roomId)) {
+    const msg = `[storeOfframpProfile] Room ${roomId} is not E2EE — off-ramp profile would be written in plaintext`;
+    if (REQUIRE_E2EE_CREDENTIALS) throw new Error(msg);
+    console.warn(msg);
+  }
+
+  const cid = computeCredentialCid(profile);
+  const existingEntries = readOfframpProfileEntries(mxClient, roomId);
+  const duplicate = existingEntries.find((entry) => entry.cid === cid);
+
+  // Always write a fresh encrypted timeline event so the user keeps a copy
+  // decryptable with the current session's megolm keys. The index holds one
+  // entry per CID.
+  const sendResult = await mxClient.sendEvent(roomId, OFFRAMP_PROFILE_EVENT_TYPE as any, {
+    profile: JSON.stringify(profile),
+  });
+  const eventId = sendResult.event_id;
+
+  const storedAt = new Date().toISOString();
+  const indexEntry: OfframpProfileIndexEntry = { eventId, cid, storedAt };
+
+  const nextEntries = duplicate
+    ? existingEntries.map((entry) => (entry.cid === cid ? indexEntry : entry))
+    : [...existingEntries, indexEntry];
+
+  await mxClient.sendStateEvent(
+    roomId,
+    OFFRAMP_PROFILE_INDEX_EVENT_TYPE as any,
+    { entries: nextEntries },
+    OFFRAMP_PROFILE_STATE_KEY,
+  );
+
+  return { storedAt, duplicate: !!duplicate, eventId, cid };
+}
+
+/**
+ * Read and decrypt the user's most-recent off-ramp profile, or null when none
+ * exists / it can't be decrypted on this device.
+ */
+export async function readOfframpProfile(mxClient: MatrixClient, roomId: string): Promise<Record<string, any> | null> {
+  const entries = readOfframpProfileEntries(mxClient, roomId);
+  if (entries.length === 0) return null;
+
+  const entry = [...entries].sort((a, b) => (b.storedAt || '').localeCompare(a.storedAt || ''))[0];
+  if (!entry?.eventId) return null;
+
+  const room = mxClient.getRoom(roomId);
+  if (!room) return null;
+
+  let event = room.findEventById(entry.eventId);
+  if (!event) {
+    const raw = await mxClient.fetchRoomEvent(roomId, entry.eventId);
+    const mapper = mxClient.getEventMapper();
+    event = mapper(raw);
+  }
+
+  if (event.isEncrypted()) {
+    await mxClient.decryptEventIfNeeded(event);
+  }
+  if (event.isDecryptionFailure()) return null;
+
+  const content = event.getContent() as { profile?: string };
+  if (!content?.profile) return null;
+
+  try {
+    return JSON.parse(content.profile);
+  } catch {
+    return null;
+  }
+}

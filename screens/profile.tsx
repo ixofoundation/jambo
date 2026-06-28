@@ -167,6 +167,52 @@ export default function ProfileScreen() {
         </h3>
 
         <KycCredentialsCard />
+
+        <h3
+          style={{
+            margin: '24px 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+          }}
+        >
+          Wallet
+        </h3>
+
+        <button
+          onClick={() => router.push('/profile/offramp')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '16px',
+            border: 'none',
+            borderRadius: 'var(--card-border-radius)',
+            background: 'var(--background-color, #fff)',
+            cursor: 'pointer',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span style={{ fontWeight: 500 }}>Withdraw</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Cash out your USDC via YellowCard
+            </span>
+          </span>
+          <svg
+            width={20}
+            height={20}
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+          >
+            <polyline points='9 18 15 12 9 6' />
+          </svg>
+        </button>
       </main>
     </div>
   );
