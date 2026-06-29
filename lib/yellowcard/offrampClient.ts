@@ -150,6 +150,10 @@ export function createOfframp(
     customerType?: string;
     customer: OfframpCustomer;
     destination: OfframpDestination;
+    /** The user's KYC credential as the full canonical SD-JWT presentation
+     *  (`<jwt>~<disclosure>~…`). The worker verifies it against our oracle and
+     *  binds it to the caller's DID before creating the payout. */
+    kycCredential: string;
   },
   bearer: string,
 ): Promise<CreateResult> {

@@ -262,3 +262,20 @@ export async function loadKycLevel1Credential(
   }
   return { eventId: entry.eventId, credential };
 }
+
+/**
+ * The raw KYC SD-JWT presentation string (`<jwt>~<disclosure>~…`) to send to a
+ * verifier (e.g. the YellowCard worker's KYC gate). For an SD-JWT record the
+ * raw credential lives in the record's `credential` field. Returns null when no
+ * credential is held; throws only if it's present but undecryptable.
+ */
+export async function loadKycCredentialJwt(
+  mxClient: MatrixClient,
+  roomId: string,
+): Promise<string | null> {
+  const loaded = await loadKycLevel1Credential(mxClient, roomId);
+  const record = loaded?.credential;
+  if (!record) return null;
+  const raw = record.credential;
+  return typeof raw === 'string' && raw.includes('~') ? raw : null;
+}
