@@ -52,6 +52,9 @@ export interface WithdrawParams {
   sourceDenom?: string;
   customer: OfframpCustomer;
   destination: OfframpDestination;
+  /** The user's KYC SD-JWT presentation — the worker verifies it against our
+   *  oracle and binds it to the caller's DID before creating the payout. */
+  kycCredential: string;
 }
 
 /** Preview combining BOTH legs: the Skip bridge (ixo→Base) fee and the YC
@@ -188,6 +191,7 @@ export default function useOfframp() {
             network: OFFRAMP_DESTINATION.cryptoNetwork,
             customer: params.customer,
             destination: params.destination,
+            kycCredential: params.kycCredential,
           },
           createBearer,
         );

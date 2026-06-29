@@ -21,6 +21,7 @@ import {
 } from 'lib/yellowcard/offrampClient';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, hasKycCredential, loadKycPrefill } from '@utils/kycPrefill';
+import { loadKycCredentialJwt } from '@utils/approvePayment';
 import { type OfframpProfile, loadOfframpProfile, saveOfframpProfile } from '@utils/offrampProfile';
 import { getUsdcBalance } from '@utils/usdcBalance';
 
@@ -101,6 +102,8 @@ export default function OfframpScreen() {
   const [prefill, setPrefill] = useState<KycPrefill | null>(null);
   // KYC gate: null = still checking, true/false = whether they hold a credential.
   const [hasKyc, setHasKyc] = useState<boolean | null>(null);
+  // The raw KYC SD-JWT presentation, sent to the worker to verify at payout time.
+  const [kycCredentialJwt, setKycCredentialJwt] = useState<string | null>(null);
   // Remembered fields from a previous withdrawal (editable, overridable). Lower
   // priority than KYC prefill — only fills fields KYC didn't lock.
   const [savedProfile, setSavedProfile] = useState<OfframpProfile | null>(null);
@@ -164,6 +167,9 @@ export default function OfframpScreen() {
         if (!owns) return;
         const result = await loadKycPrefill(mxClient, matrixRoomId);
         if (!cancelled) setPrefill(result);
+        // The raw SD-JWT to present to the worker's KYC gate at payout time.
+        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
+        if (!cancelled) setKycCredentialJwt(jwt);
       } catch {
         /* best-effort — leave the gate "checking" if matrix isn't reachable */
       }
@@ -368,7 +374,10 @@ export default function OfframpScreen() {
     !!kycDob &&
     !!kycCountry &&
     !!kycIdNumber &&
-    (!isNG || !!kycBvn);
+    (!isNG || !!kycBvn) &&
+    // The worker requires the KYC SD-JWT; don't let a payout be attempted
+    // without it (the testing bypass skips this client-side check).
+    (BYPASS_KYC_CHECK || !!kycCredentialJwt);
 
   const busy = offramp.stage !== 'idle' && offramp.stage !== 'submitted' && offramp.stage !== 'error';
 
@@ -457,6 +466,7 @@ export default function OfframpScreen() {
         currency,
         channelType,
         sourceDenom: heldDenom,
+        kycCredential: kycCredentialJwt ?? '',
         customer: {
           name: kycName,
           country: kycCountry,
