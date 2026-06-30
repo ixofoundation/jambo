@@ -199,10 +199,18 @@ export function getOfframp(id: string, bearer: string): Promise<{ success: true;
 export interface YcNetwork {
   id: string;
   name?: string;
-  code?: string;
+  /** Display code. For most networks a string (e.g. "M PESA", bank sort code),
+   *  but some bank networks return an object mapping branch name → code — never
+   *  render it directly without a typeof check. */
+  code?: string | Record<string, string>;
   status?: string;
   channelId?: string;
   channelIds?: string[];
+  /** The rail this network serves ('bank' | 'momo' | 'p2p' | …). Present on all
+   *  networks observed; the off-ramp collapses it to bank/momo via mapCategory. */
+  channelType?: string;
+  /** 'bank' (account number) | 'phone' (mobile-money number). */
+  accountNumberType?: string;
 }
 export interface YcChannel {
   id: string;
