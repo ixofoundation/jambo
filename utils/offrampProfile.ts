@@ -17,10 +17,13 @@ type MxClient = Parameters<typeof readOfframpProfile>[0];
 export interface OfframpProfile {
   /** Payout country (ISO alpha-2). */
   country?: string;
-  /** Selected bank network id. */
+  /** Payout rail the user chose last time ('bank' | 'momo'). */
+  payoutMethod?: string;
+  /** Selected network id (bank or mobile-money provider). */
   networkId?: string;
-  /** Selected bank display name. */
+  /** Selected network display name (bank or mobile-money provider). */
   bankName?: string;
+  /** Bank account number (bank rail) or mobile-money number digits (momo rail). */
   accountNumber?: string;
   accountName?: string;
   /** Contact / identity fields — only persisted when not locked by KYC. */

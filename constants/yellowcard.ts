@@ -1,9 +1,21 @@
+import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
+
 /**
- * YellowCard off-ramp config. The off-ramp (Skip Go bridge + YC
+ * YellowCard off-ramp config. The real off-ramp (Skip Go bridge + YC
  * directSettlement) is mainnet-only — sandbox has neither Skip routes nor YC
- * webhooks — so there is a single production worker URL.
+ * webhooks. The testnet worker (YC sandbox) is only for temporary smoke tests
+ * of the create/KYC/momo flow with the Skip bridge skipped.
  */
-export const YELLOWCARD_WORKER_API = (process.env.NEXT_PUBLIC_YELLOWCARD_WORKER_API || 'https://yellowcard.worker.ixo.earth').trim();
+const DEFAULT_WORKER_BY_NETWORK: Partial<Record<CHAIN_NETWORK_TYPE, string>> = {
+  [CHAIN_NETWORK_TYPE.MAINNET]: 'https://yellowcard.worker.ixo.earth',
+  [CHAIN_NETWORK_TYPE.TESTNET]: 'https://test.yellowcard.worker.ixo.earth',
+};
+
+export const YELLOWCARD_WORKER_API = (
+  process.env.NEXT_PUBLIC_YELLOWCARD_WORKER_API ||
+  DEFAULT_WORKER_BY_NETWORK[DefaultChainNetwork] ||
+  'https://yellowcard.worker.ixo.earth'
+).trim();
 
 /** Skip Go API base — proxied through the worker so the Skip API key stays
  *  server-side. */

@@ -55,6 +55,9 @@ export interface WithdrawParams {
   /** The user's KYC SD-JWT presentation — the worker verifies it against our
    *  oracle and binds it to the caller's DID before creating the payout. */
   kycCredential: string;
+  /** TEMP (testnet): create the YC sell only — skip the Skip Go bridge + deposit
+   *  notify (no USDC on testnet). The amount is used as-is (no bridge fee). */
+  skipBridge?: boolean;
 }
 
 /** Preview combining BOTH legs: the Skip bridge (ixo→Base) fee and the YC
@@ -134,13 +137,26 @@ export default function useOfframp() {
   /** Preview a withdrawal end-to-end: price the bridge, then quote YC on the
    *  amount that actually arrives so `fiatReceived` is net of both fees. */
   const previewWithdrawal = useCallback(
-    async (params: { amountUsdc: number; currency: string; channelType: string; country: string; sourceDenom?: string }): Promise<WithdrawalPreview> => {
-      const route = await quoteBridge(params.amountUsdc, params.sourceDenom);
-      const bridgedUsdc = Number(route.amountOutMicro) / 1e6;
-      const skipFeeUsd =
-        route.usdAmountIn != null && route.usdAmountOut != null
-          ? Math.max(0, Number(route.usdAmountIn) - Number(route.usdAmountOut))
-          : Math.max(0, params.amountUsdc - bridgedUsdc);
+    async (params: {
+      amountUsdc: number;
+      currency: string;
+      channelType: string;
+      country: string;
+      sourceDenom?: string;
+      skipBridge?: boolean;
+    }): Promise<WithdrawalPreview> => {
+      // TEMP (testnet): no Skip route exists for sandbox USDC — quote YC directly
+      // on the entered amount (no bridge leg, no bridge fee).
+      let bridgedUsdc = params.amountUsdc;
+      let skipFeeUsd = 0;
+      if (!params.skipBridge) {
+        const route = await quoteBridge(params.amountUsdc, params.sourceDenom);
+        bridgedUsdc = Number(route.amountOutMicro) / 1e6;
+        skipFeeUsd =
+          route.usdAmountIn != null && route.usdAmountOut != null
+            ? Math.max(0, Number(route.usdAmountIn) - Number(route.usdAmountOut))
+            : Math.max(0, params.amountUsdc - bridgedUsdc);
+      }
       const bearer = await mintBearer();
       const quote = await quoteOfframp(
         {
@@ -174,12 +190,19 @@ export default function useOfframp() {
         // that will ACTUALLY arrive. The same route is reused for the broadcast
         // below — no drift between what YC expects and what we send.
         setStage('creating');
-        const route = await quoteBridge(params.amountUsdc, params.sourceDenom);
-        const arrivingUsdc = Number(route.amountOutMicro) / 1e6;
-        const skipFeeUsd =
-          route.usdAmountIn != null && route.usdAmountOut != null
-            ? Math.max(0, Number(route.usdAmountIn) - Number(route.usdAmountOut))
-            : Math.max(0, params.amountUsdc - arrivingUsdc);
+        // TEMP (testnet): skip the Skip bridge — use the entered amount directly
+        // with no bridge fee, and don't price a route.
+        let arrivingUsdc = params.amountUsdc;
+        let skipFeeUsd = 0;
+        let route: BridgeRoute | undefined;
+        if (!params.skipBridge) {
+          route = await quoteBridge(params.amountUsdc, params.sourceDenom);
+          arrivingUsdc = Number(route.amountOutMicro) / 1e6;
+          skipFeeUsd =
+            route.usdAmountIn != null && route.usdAmountOut != null
+              ? Math.max(0, Number(route.usdAmountIn) - Number(route.usdAmountOut))
+              : Math.max(0, params.amountUsdc - arrivingUsdc);
+        }
 
         const created = await createOfframp(
           {
@@ -197,6 +220,14 @@ export default function useOfframp() {
         );
         setActive(created);
         void refreshTransactions().catch(() => undefined);
+
+        // TEMP (testnet): the YC sell is created — stop here (no bridge, no
+        // deposit notify). Lets us verify the create/KYC/momo destination flow.
+        if (params.skipBridge) {
+          setStage('submitted');
+          await refreshTransactions().catch(() => undefined);
+          return created;
+        }
 
         if (!created.deposit_address) {
           throw new Error('YellowCard did not return a deposit address for this sell. Check the worker logs.');

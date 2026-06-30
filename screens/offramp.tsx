@@ -40,6 +40,12 @@ const ID_TYPE_OPTIONS = [
 // Leave false in production — withdrawals require a verified identity.
 const BYPASS_KYC_CHECK = false;
 
+// TEMP (testnet smoke test): enable the off-ramp on testnet (YC sandbox) and
+// skip the Skip Go bridge + on-chain USDC balance — there's no testnet USDC, so
+// we just exercise the YC create / KYC / momo destination flow. The worker still
+// enforces KYC server-side. SET BACK TO false BEFORE PRODUCTION.
+const TESTNET_TEST_MODE = false;
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const VERIFIED_LABEL = 'From your verified identity';
@@ -52,6 +58,41 @@ function networkChannelIds(network: YcNetwork): string[] {
   if (Array.isArray(network.channelIds)) return network.channelIds.filter(Boolean);
   if (network.channelId) return [network.channelId];
   return [];
+}
+
+type PayoutMethod = 'bank' | 'momo';
+
+const PAYOUT_METHOD_LABEL: Record<PayoutMethod, string> = {
+  bank: 'Bank transfer',
+  momo: 'Mobile money',
+};
+
+/** YC has many concrete channel types (eft, bank, p2p, virtualbank, momo, …);
+ *  the off-ramp only distinguishes the two rails the worker + fee-config accept. */
+function mapCategory(channelType: string | null | undefined): PayoutMethod {
+  return (channelType ?? '').toLowerCase() === 'momo' ? 'momo' : 'bank';
+}
+
+function isActiveWithdrawChannel(c: YcChannel): boolean {
+  return (
+    (c.status ? c.status.toLowerCase() === 'active' : true) &&
+    (c.rampType ? c.rampType.toLowerCase() === 'withdraw' : true)
+  );
+}
+
+/** The rail a network serves. YC tags every network with its own `channelType`
+ *  (verified present on all networks across KE/NG/CM/UG); collapse it to the two
+ *  categories the worker + fee-config accept. */
+function networkMethod(network: YcNetwork): PayoutMethod {
+  return mapCategory(network.channelType);
+}
+
+/** Safe dropdown label. `code` is usually a string but some bank networks return
+ *  a {branch: code} object — only append it when it's actually a string. */
+function networkLabel(n: YcNetwork): string {
+  const name = n.name ?? n.id;
+  const code = typeof n.code === 'string' ? n.code : '';
+  return code ? `${name} (${code})` : name;
 }
 
 function formatDob(value: string): string {
@@ -73,6 +114,10 @@ export default function OfframpScreen() {
 
   const isMainnet = DefaultChainNetwork === CHAIN_NETWORK_TYPE.MAINNET;
   // const isMainnet = true;
+  // TEMP: gate the off-ramp UI on mainnet OR the testnet test mode; skip the
+  // bridge + balance only on testnet (mainnet always does the real bridge).
+  const offrampEnabled = isMainnet || TESTNET_TEST_MODE;
+  const skipBridge = TESTNET_TEST_MODE && !isMainnet;
 
   const [balance, setBalance] = useState<number | null>(null);
   const [heldDenom, setHeldDenom] = useState<string | undefined>(undefined);
@@ -84,9 +129,15 @@ export default function OfframpScreen() {
   const [bankNetworks, setBankNetworks] = useState<YcNetwork[]>([]);
   const [channels, setChannels] = useState<YcChannel[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
+  const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>('bank');
   const [networkId, setNetworkId] = useState<string>('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
+  // TEMP (testnet): YC sandbox decides the crypto-receive (directSettlement)
+  // outcome from the SENDER NAME — "Successful" or "Failure" anywhere in it. We
+  // append the keyword to the name sent to YC only (the displayed/stored KYC name
+  // is untouched); the worker's KYC name-match still passes (given+family remain).
+  const [simOutcome, setSimOutcome] = useState<'success' | 'failure'>('success');
 
   const [kycName, setKycName] = useState('');
   const [kycPhone, setKycPhone] = useState('');
@@ -108,6 +159,9 @@ export default function OfframpScreen() {
   // priority than KYC prefill — only fills fields KYC didn't lock.
   const [savedProfile, setSavedProfile] = useState<OfframpProfile | null>(null);
   const appliedSavedRef = useRef(false);
+  // Monotonic token so a slow channel load for a PREVIOUS country can't apply
+  // its result over the current one (which would wrongly reset the payout rail).
+  const loadReqRef = useRef(0);
   // Saved bank id waiting to be applied once this country's bank list loads.
   const [pendingBankId, setPendingBankId] = useState<string | null>(null);
 
@@ -149,7 +203,7 @@ export default function OfframpScreen() {
   // (cancelled) run win and discard the result. Each run owns its own
   // `cancelled` flag, and the load is idempotent.
   useEffect(() => {
-    if (!isMainnet || !address || !matrixRoomId) return;
+    if (!offrampEnabled || !address || !matrixRoomId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -177,7 +231,7 @@ export default function OfframpScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isMainnet, address, matrixRoomId, awaitCompletion, getMatrixClient]);
+  }, [offrampEnabled, address, matrixRoomId, awaitCompletion, getMatrixClient]);
 
   // Apply the prefill into the form once it arrives.
   useEffect(() => {
@@ -199,6 +253,9 @@ export default function OfframpScreen() {
     appliedSavedRef.current = true;
     // Payout details — never KYC-locked.
     if (savedProfile.country) setCountry(savedProfile.country);
+    if (savedProfile.payoutMethod === 'bank' || savedProfile.payoutMethod === 'momo') {
+      setPayoutMethod(savedProfile.payoutMethod);
+    }
     if (savedProfile.accountNumber) setAccountNumber(savedProfile.accountNumber);
     if (savedProfile.accountName) setAccountName(savedProfile.accountName);
     if (savedProfile.networkId) setPendingBankId(savedProfile.networkId);
@@ -239,43 +296,61 @@ export default function OfframpScreen() {
   }, []);
 
   const loadBanks = useCallback(async () => {
+    const req = ++loadReqRef.current;
     setLoadingBanks(true);
     setFormError(null);
     setNetworkId('');
     setQuote(null);
+    // Clear the previous country's data immediately so a stale in-flight response
+    // can't drive availableMethods / auto-routing for the wrong country.
+    setChannels([]);
+    setBankNetworks([]);
     try {
       const { channels: ch, networks } = await discoverChannels(country);
+      if (req !== loadReqRef.current) return; // superseded by a newer country load
       setChannels(ch);
       setBankNetworks(networks.filter((n) => (n.status ? n.status.toLowerCase() === 'active' : true) && n.name));
     } catch (err) {
+      if (req !== loadReqRef.current) return;
       setFormError(err instanceof Error ? err.message : 'Failed to load banks');
     } finally {
-      setLoadingBanks(false);
+      if (req === loadReqRef.current) setLoadingBanks(false);
     }
   }, [country]);
 
   useEffect(() => {
-    if (isMainnet && country) void loadBanks();
-  }, [isMainnet, country, loadBanks]);
+    if (offrampEnabled && country) void loadBanks();
+  }, [offrampEnabled, country, loadBanks]);
+
+  const isMomo = payoutMethod === 'momo';
+
+  // Which rails this country actually offers (from its active withdraw channels),
+  // so we only show a method the user can complete.
+  const availableMethods = useMemo<PayoutMethod[]>(() => {
+    const s = new Set<PayoutMethod>();
+    for (const c of channels) if (isActiveWithdrawChannel(c)) s.add(mapCategory(c.channelType));
+    // Stable order: bank first, then momo.
+    return (['bank', 'momo'] as PayoutMethod[]).filter((m) => s.has(m));
+  }, [channels]);
+
+  // Networks (banks or mobile-money providers) for the selected rail only —
+  // keyed off each network's own channelType.
+  const methodNetworks = useMemo<YcNetwork[]>(
+    () => bankNetworks.filter((n) => networkMethod(n) === payoutMethod),
+    [bankNetworks, payoutMethod],
+  );
 
   const channelCandidates = useMemo<YcChannel[]>(() => {
     if (!networkId) return [];
     const net = bankNetworks.find((n) => n.id === networkId);
     if (!net) return [];
     const ids = new Set(networkChannelIds(net));
-    return channels.filter(
-      (c) =>
-        ids.has(c.id) &&
-        (c.status ? c.status.toLowerCase() === 'active' : true) &&
-        (c.rampType ? c.rampType.toLowerCase() === 'withdraw' : true),
-    );
-  }, [networkId, bankNetworks, channels]);
+    return channels.filter((c) => ids.has(c.id) && isActiveWithdrawChannel(c) && mapCategory(c.channelType) === payoutMethod);
+  }, [networkId, bankNetworks, channels, payoutMethod]);
 
   const currency = useMemo(() => channelCandidates.find((c) => c.currency)?.currency ?? '', [channelCandidates]);
-  const channelType = useMemo(
-    () => (channelCandidates.some((c) => (c.channelType ?? '').toLowerCase() === 'momo') ? 'momo' : 'bank'),
-    [channelCandidates],
-  );
+  // The rail is the user's explicit choice — no longer inferred from channels.
+  const channelType = payoutMethod;
   const settlementSecs = useMemo(
     () => channelCandidates.find((c) => c.estimatedSettlementTime)?.estimatedSettlementTime,
     [channelCandidates],
@@ -284,6 +359,23 @@ export default function OfframpScreen() {
     () => bankNetworks.find((n) => n.id === networkId)?.name ?? '',
     [bankNetworks, networkId],
   );
+
+  // Keep the selected rail valid for the country: if the current method isn't
+  // offered here, fall back to the first one that is.
+  useEffect(() => {
+    if (availableMethods.length && !availableMethods.includes(payoutMethod)) {
+      setPayoutMethod(availableMethods[0]);
+    }
+  }, [availableMethods, payoutMethod]);
+
+  // Drop a selected network that doesn't belong to the active rail (e.g. after
+  // switching method or reloading the country's networks).
+  useEffect(() => {
+    if (networkId && !methodNetworks.some((n) => n.id === networkId)) {
+      setNetworkId('');
+      setQuote(null);
+    }
+  }, [methodNetworks, networkId]);
 
   // The quote is only valid for the exact amount + channel it was taken for.
   const clearOfframpError = offramp.clearError;
@@ -310,11 +402,11 @@ export default function OfframpScreen() {
   const didInitialLoadRef = useRef(false);
   useEffect(() => {
     if (didInitialLoadRef.current) return;
-    if (isMainnet && address) {
+    if (offrampEnabled && address) {
       didInitialLoadRef.current = true;
       void refreshTransactions().catch(() => undefined);
     }
-  }, [isMainnet, address, refreshTransactions]);
+  }, [offrampEnabled, address, refreshTransactions]);
 
   // Poll the list every 10s while anything is in-flight.
   useEffect(() => {
@@ -359,6 +451,10 @@ export default function OfframpScreen() {
   const emailValid = EMAIL_RE.test(kycEmail);
   const phoneDigits = kycPhone.replace(/\D/g, '');
   const phoneValid = phoneDigits.length >= 7;
+  // Bank rail: any non-empty account number. Momo rail: a full international
+  // mobile number (digits only; the `+` is added at submit), min 8 digits.
+  const accountDigits = accountNumber.replace(/\D/g, '');
+  const accountNumberValid = isMomo ? accountDigits.length >= 8 : accountNumber.trim().length > 0;
 
   const canQuote = !!currency && !!channelType && Number.isFinite(amountNum) && amountNum > 0 && !overBalance;
   const canWithdraw =
@@ -366,7 +462,7 @@ export default function OfframpScreen() {
     !!quote &&
     !belowMin &&
     !aboveMax &&
-    !!accountNumber &&
+    accountNumberValid &&
     !!accountName &&
     nameValid &&
     emailValid &&
@@ -402,6 +498,7 @@ export default function OfframpScreen() {
     if (!mxClient) return;
     void saveOfframpProfile(mxClient, matrixRoomId, {
       country,
+      payoutMethod,
       networkId,
       bankName: selectedBankName,
       accountNumber,
@@ -419,6 +516,7 @@ export default function OfframpScreen() {
     matrixRoomId,
     getMatrixClient,
     country,
+    payoutMethod,
     networkId,
     selectedBankName,
     accountNumber,
@@ -446,6 +544,7 @@ export default function OfframpScreen() {
         channelType,
         country,
         sourceDenom: heldDenom,
+        skipBridge,
       });
       setQuote(preview.quote);
       persistProfile();
@@ -455,7 +554,7 @@ export default function OfframpScreen() {
     } finally {
       setQuoting(false);
     }
-  }, [canQuote, offramp, amountNum, currency, channelType, country, heldDenom, persistProfile]);
+  }, [canQuote, offramp, amountNum, currency, channelType, country, heldDenom, skipBridge, persistProfile]);
 
   const onWithdraw = useCallback(async () => {
     if (!canWithdraw) return;
@@ -466,9 +565,12 @@ export default function OfframpScreen() {
         currency,
         channelType,
         sourceDenom: heldDenom,
+        skipBridge,
         kycCredential: kycCredentialJwt ?? '',
         customer: {
-          name: kycName,
+          // TEMP (testnet): append the sandbox crypto-receive simulation keyword
+          // so YC settles the directSettlement payout (no real crypto on testnet).
+          name: skipBridge ? `${kycName} ${simOutcome === 'failure' ? 'Failure' : 'Successful'}` : kycName,
           country: kycCountry,
           phone: `+${phoneDigits}`,
           email: kycEmail,
@@ -479,10 +581,14 @@ export default function OfframpScreen() {
         },
         destination: {
           accountName,
-          accountNumber,
-          accountType: 'bank',
+          // Momo: the destination is the mobile number in international format
+          // (+countrycode…); bank: the account number as entered.
+          accountNumber: isMomo ? `+${accountDigits}` : accountNumber.trim(),
+          accountType: payoutMethod,
           networkId: networkId || '',
           country,
+          // The institution name (bank or mobile-money provider) — recorded for
+          // history/proof; the worker only forwards it to YC for the bank rail.
           bankName: selectedBankName,
         },
       });
@@ -497,6 +603,9 @@ export default function OfframpScreen() {
     currency,
     channelType,
     heldDenom,
+    skipBridge,
+    simOutcome,
+    kycCredentialJwt,
     kycName,
     country,
     phoneDigits,
@@ -509,6 +618,9 @@ export default function OfframpScreen() {
     kycBvn,
     accountName,
     accountNumber,
+    accountDigits,
+    isMomo,
+    payoutMethod,
     networkId,
     selectedBankName,
     persistProfile,
@@ -556,13 +668,17 @@ export default function OfframpScreen() {
       <div className={styles.headerBand} />
 
       <main className={styles.body}>
-        {!isMainnet && <div className={styles.alertInfo}>Withdrawals aren’t available on this network.</div>}
+        {!offrampEnabled && <div className={styles.alertInfo}>Withdrawals aren’t available on this network.</div>}
 
-        {isMainnet && (
+        {offrampEnabled && (
           <>
             {/* Balance */}
             <div className={styles.card}>
-              {balance == null ? (
+              {skipBridge ? (
+                <div className={styles.balanceRow}>
+                  <span className={styles.balanceUnit}>Testnet test mode — balance &amp; bridging skipped.</span>
+                </div>
+              ) : balance == null ? (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceUnit}>
                     {address ? 'Loading USDC balance…' : 'Sign in to see your USDC balance.'}
@@ -645,13 +761,58 @@ export default function OfframpScreen() {
 
                   <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
                     <div className={styles.collapseInner}>
+                      {skipBridge && (
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>TEST · simulate settlement</label>
+                            <select
+                              className={styles.select}
+                              value={simOutcome}
+                              onChange={(e) => setSimOutcome(e.currentTarget.value as 'success' | 'failure')}
+                            >
+                              <option value='success'>Success</option>
+                              <option value='failure'>Failure</option>
+                            </select>
+                            <span className={styles.hint}>
+                              Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {availableMethods.length > 1 && (
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Payout method</label>
+                            <select
+                              className={styles.select}
+                              value={payoutMethod}
+                              onChange={(e) => {
+                                // Switching rail invalidates the provider + number
+                                // (and any quote) — start that part of the form fresh.
+                                setPayoutMethod(e.currentTarget.value as PayoutMethod);
+                                setNetworkId('');
+                                setAccountNumber('');
+                                setQuote(null);
+                              }}
+                            >
+                              {availableMethods.map((m) => (
+                                <option key={m} value={m}>
+                                  {PAYOUT_METHOD_LABEL[m]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
                       <div className={styles.row}>
                         <div className={styles.field}>
-                          <label className={styles.label}>Bank</label>
+                          <label className={styles.label}>{isMomo ? 'Mobile provider' : 'Bank'}</label>
                           <select
                             className={styles.select}
                             value={networkId}
-                            disabled={loadingBanks || bankNetworks.length === 0}
+                            disabled={loadingBanks || methodNetworks.length === 0}
                             onChange={(e) => {
                               setNetworkId(e.currentTarget.value);
                               setQuote(null);
@@ -659,14 +820,18 @@ export default function OfframpScreen() {
                           >
                             <option value=''>
                               {loadingBanks
-                                ? 'Loading banks…'
-                                : bankNetworks.length
-                                ? 'Select your bank'
+                                ? 'Loading…'
+                                : methodNetworks.length
+                                ? isMomo
+                                  ? 'Select your provider'
+                                  : 'Select your bank'
+                                : isMomo
+                                ? 'No providers for this country'
                                 : 'No banks for this country'}
                             </option>
-                            {bankNetworks.map((n) => (
+                            {methodNetworks.map((n) => (
                               <option key={n.id} value={n.id}>
-                                {n.code ? `${n.name} (${n.code})` : n.name ?? n.id}
+                                {networkLabel(n)}
                               </option>
                             ))}
                           </select>
@@ -681,32 +846,55 @@ export default function OfframpScreen() {
                           <div className={styles.field}>
                             <label className={styles.label}>Paid out in</label>
                             <input className={styles.input} value={currency} readOnly />
-                            <span className={styles.hint}>Currency this bank receives</span>
+                            <span className={styles.hint}>
+                              {isMomo ? 'Currency this wallet receives' : 'Currency this bank receives'}
+                            </span>
                           </div>
                         )}
                       </div>
 
                       {networkId && channelCandidates.length === 0 && (
-                        <span className={styles.warnLine}>No active withdraw channel for this bank.</span>
+                        <span className={styles.warnLine}>
+                          {isMomo ? 'No active withdraw channel for this provider.' : 'No active withdraw channel for this bank.'}
+                        </span>
                       )}
 
                       <div className={styles.row}>
                         <div className={styles.field}>
-                          <label className={styles.label}>Bank account number</label>
-                          <input
-                            className={styles.input}
-                            value={accountNumber}
-                            onChange={(e) => setAccountNumber(e.currentTarget.value)}
-                          />
+                          <label className={styles.label}>{isMomo ? 'Mobile money number' : 'Bank account number'}</label>
+                          {isMomo ? (
+                            <div
+                              className={`${styles.inputPrefixWrap}${
+                                accountNumber && !accountNumberValid ? ` ${styles.inputError}` : ''
+                              }`}
+                            >
+                              <span className={styles.inputPrefix}>+</span>
+                              <input
+                                className={styles.bareInput}
+                                inputMode='numeric'
+                                placeholder='234801234567'
+                                value={accountDigits}
+                                onChange={(e) => setAccountNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                              />
+                            </div>
+                          ) : (
+                            <input
+                              className={styles.input}
+                              value={accountNumber}
+                              onChange={(e) => setAccountNumber(e.currentTarget.value)}
+                            />
+                          )}
+                          {isMomo && accountNumber && !accountNumberValid && (
+                            <span className={styles.errorText}>Enter the full number with country code</span>
+                          )}
                         </div>
                         <div className={styles.field}>
-                          <label className={styles.label}>Account holder name</label>
+                          <label className={styles.label}>{isMomo ? 'Recipient name' : 'Account holder name'}</label>
                           <input
                             className={styles.input}
                             value={accountName}
                             onChange={(e) => setAccountName(e.currentTarget.value)}
                           />
-                          {/* <span className={styles.hint}>Name on the bank account (YC verifies this)</span> */}
                         </div>
                       </div>
 
@@ -933,6 +1121,7 @@ export default function OfframpScreen() {
                         accountNumber?: string;
                         bankName?: string;
                       };
+                      const txMomo = (tx.channel_type ?? '').toLowerCase() === 'momo';
                       const statusClass = bridging
                         ? styles.statusBlue
                         : isTerminal
@@ -1042,13 +1231,13 @@ export default function OfframpScreen() {
                               )}
                               {dest.accountNumber && (
                                 <div className={styles.detailRow}>
-                                  <span>Account number</span>
+                                  <span>{txMomo ? 'Mobile number' : 'Account number'}</span>
                                   <span className={styles.detailVal}>{dest.accountNumber}</span>
                                 </div>
                               )}
                               {dest.bankName && (
                                 <div className={styles.detailRow}>
-                                  <span>Bank</span>
+                                  <span>{txMomo ? 'Mobile money' : 'Bank'}</span>
                                   <span className={styles.detailVal}>{dest.bankName}</span>
                                 </div>
                               )}
