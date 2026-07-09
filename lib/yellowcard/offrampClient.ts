@@ -1,9 +1,9 @@
 import { YELLOWCARD_WORKER_API } from '@constants/yellowcard';
 
 /**
- * Thin client for the YellowCard worker's off-ramp endpoints. The off-ramp
- * routes are UCAN-gated (rootMode 'any') — pass a freshly-minted invocation
- * CAR as the bearer. `/channels` and `/countries` are public.
+ * Thin client for the YellowCard worker's off-ramp AND on-ramp endpoints.
+ * The ramp routes are UCAN-gated (rootMode 'any') — pass a freshly-minted
+ * invocation CAR as the bearer. `/channels` and `/countries` are public.
  */
 
 const BASE = YELLOWCARD_WORKER_API.replace(/\/+$/, '');
@@ -186,7 +186,9 @@ export async function fetchPaymentRecordPdf(id: string, bearer: string): Promise
   return res.blob();
 }
 
-export function listOfframps(bearer: string): Promise<{ success: true; count: number; transactions: OfframpTransaction[] }> {
+export function listOfframps(
+  bearer: string,
+): Promise<{ success: true; count: number; transactions: OfframpTransaction[] }> {
   return get(`/offramp/transactions`, bearer);
 }
 
@@ -231,10 +233,10 @@ export interface YcChannel {
   estimatedSettlementTime?: number;
 }
 
-/** Public: the YC-supported off-ramp country codes (ISO alpha-2). Maintained
- *  server-side so the list can be updated without a frontend release. */
-export async function fetchSupportedCountries(): Promise<string[]> {
-  const res = await fetch(`${BASE}/countries`);
+/** Public: the YC-supported country codes (ISO alpha-2) for a ramp direction.
+ *  Maintained server-side so the list can change without a frontend release. */
+export async function fetchSupportedCountries(ramp: 'offramp' | 'onramp' = 'offramp'): Promise<string[]> {
+  const res = await fetch(`${BASE}/countries${ramp === 'onramp' ? '?ramp=onramp' : ''}`);
   const text = await res.text();
   const json = text ? JSON.parse(text) : null;
   if (!res.ok) {
@@ -243,15 +245,148 @@ export async function fetchSupportedCountries(): Promise<string[]> {
   return Array.isArray(json?.countries) ? json.countries : [];
 }
 
-export async function discoverChannels(country: string): Promise<{ channels: YcChannel[]; networks: YcNetwork[] }> {
-  const json = await post<{ results?: Array<{ success?: boolean; country?: string; channels?: unknown; networks?: unknown }> }>('/channels', {
+/** Discover a country's active channels + networks. `rampType` selects the
+ *  direction: 'withdraw' (off-ramp payouts, default) or 'deposit' (on-ramp). */
+export async function discoverChannels(
+  country: string,
+  rampType: 'withdraw' | 'deposit' = 'withdraw',
+): Promise<{ channels: YcChannel[]; networks: YcNetwork[] }> {
+  const json = await post<{
+    results?: Array<{ success?: boolean; country?: string; channels?: unknown; networks?: unknown }>;
+  }>('/channels', {
     countries: [country.toUpperCase()],
+    rampType,
   });
   const entry = (json.results ?? []).find((r) => r?.success);
   const arr = (v: unknown): any[] =>
-    Array.isArray(v) ? v : Array.isArray((v as any)?.channels) ? (v as any).channels : Array.isArray((v as any)?.networks) ? (v as any).networks : [];
+    Array.isArray(v)
+      ? v
+      : Array.isArray((v as any)?.channels)
+      ? (v as any).channels
+      : Array.isArray((v as any)?.networks)
+      ? (v as any).networks
+      : [];
   return {
     channels: arr(entry?.channels) as YcChannel[],
     networks: arr(entry?.networks) as YcNetwork[],
   };
+}
+
+// ---------------------------------------------------------------------------
+// On-ramp (pay local fiat → receive USDC on ixo)
+// ---------------------------------------------------------------------------
+
+export interface OnrampSource {
+  accountType: 'bank' | 'momo';
+  /** Momo: the payer's mobile-money number in international format (+…). */
+  accountNumber?: string;
+  /** Momo: the mobile-money provider (YC network id). */
+  networkId?: string;
+  /** Display name of the provider — stored for history only. */
+  networkName?: string;
+}
+
+export interface OnrampTransaction {
+  id: string;
+  status: string;
+  yc_collection_id: string | null;
+  /** Payment rail ('bank' | 'momo'). */
+  channel_type: string | null;
+  /** Local currency the user pays in. */
+  currency: string | null;
+  country: string | null;
+  /** Local fiat the user pays. */
+  local_amount: number | null;
+  /** Gross USD equivalent. */
+  amount_usd: number | null;
+  rate: number | null;
+  service_fee_usd: number | null;
+  /** YC's crypto-send network fee. */
+  network_fee_usd: number | null;
+  partner_fee_usd: number | null;
+  /** EXACT USDC YellowCard sends after its fees (pre bridge fee). */
+  crypto_amount: number | null;
+  /** Our flat bridge fee, withheld from the delivery. */
+  bridge_fee_usd: number | null;
+  /** USDC delivered to the user's ixo account. */
+  net_usdc: number | null;
+  crypto_currency: string;
+  crypto_network: string;
+  /** The ixo address the USDC is delivered to. */
+  ixo_address: string | null;
+  source: unknown;
+  /** YC bankInfo — the account to pay INTO (bank rails), or { paymentLink }. */
+  bank_info: { name?: string; accountNumber?: string; accountName?: string; paymentLink?: string } | null;
+  /** Payment reference the user must include (bank rails). */
+  reference: string | null;
+  /** Hosted payment page (redirect channels, e.g. South Africa). */
+  payment_link: string | null;
+  settlement_tx_hash: string | null;
+  bridge_tx_hash: string | null;
+  bridge_status: string | null;
+  error: string | null;
+  error_detail: string | null;
+  /** Deadline for the user's payment / YC acceptance (unix seconds). */
+  expires_at: number | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface OnrampQuoteResult {
+  success: true;
+  currency: string;
+  localAmount: number;
+  amountUsd?: number;
+  rateLocal?: number;
+  serviceFeeLocal?: number;
+  serviceFeeUSD?: number;
+  partnerFeeLocal?: number;
+  partnerFeeUSD?: number;
+  /** Estimate only — the create response carries the exact network fee. */
+  networkFeeUSDEstimate?: number;
+  bridgeFeeUsd?: number;
+  /** Estimated USDC delivered to the user's ixo account. */
+  estimatedUsdcReceive?: number;
+  /** Min/max in local currency. */
+  transactionLimitMin?: number | null;
+  transactionLimitMax?: number | null;
+}
+
+export function quoteOnramp(
+  body: { localAmount: number; currency: string; channelType: string; country: string },
+  bearer: string,
+): Promise<OnrampQuoteResult> {
+  return post<OnrampQuoteResult>('/onramp/quote', body, bearer);
+}
+
+export function createOnramp(
+  body: {
+    /** Local fiat the user will pay — fixed for the user; YC locks the rate. */
+    localAmount: number;
+    currency: string;
+    country: string;
+    channelType: string;
+    /** The user's ixo address the bridged USDC is delivered to. */
+    ixoAddress: string;
+    source: OnrampSource;
+    customerType?: string;
+    customer: OfframpCustomer;
+    /** Where a hosted payment page (ZA) returns the user to. */
+    returnUrl?: string;
+    /** The user's KYC SD-JWT presentation — same gate as the off-ramp. */
+    kycCredential: string;
+  },
+  bearer: string,
+): Promise<{ success: true; transaction: OnrampTransaction }> {
+  return post('/onramp/create', body, bearer);
+}
+
+export function listOnramps(
+  bearer: string,
+): Promise<{ success: true; count: number; transactions: OnrampTransaction[] }> {
+  return get(`/onramp/transactions`, bearer);
+}
+
+export function getOnramp(id: string, bearer: string): Promise<{ success: true; transaction: OnrampTransaction }> {
+  return get(`/onramp/${id}`, bearer);
 }

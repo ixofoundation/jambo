@@ -20,7 +20,7 @@ import {
   fetchSupportedCountries,
 } from 'lib/yellowcard/offrampClient';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
-import { type KycPrefill, hasKycCredential, loadKycPrefill } from '@utils/kycPrefill';
+import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
 import { type OfframpProfile, loadOfframpProfile, saveOfframpProfile } from '@utils/offrampProfile';
 import { getUsdcBalance } from '@utils/usdcBalance';
@@ -210,8 +210,10 @@ export default function OfframpScreen() {
         await awaitCompletion();
         const mxClient = getMatrixClient();
         if (cancelled || !mxClient) return;
-        // Gate first (cheap, unencrypted index read), then prefill if they qualify.
-        const owns = hasKycCredential(mxClient, matrixRoomId);
+        // Gate first (cheap, unencrypted index read), then prefill if they
+        // qualify. Waits out a still-syncing client — a one-shot read right
+        // after login can miss room state and wrongly gate a KYC'd user.
+        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
         if (cancelled) return;
         setHasKyc(owns);
         // setHasKyc(false);
@@ -345,7 +347,9 @@ export default function OfframpScreen() {
     const net = bankNetworks.find((n) => n.id === networkId);
     if (!net) return [];
     const ids = new Set(networkChannelIds(net));
-    return channels.filter((c) => ids.has(c.id) && isActiveWithdrawChannel(c) && mapCategory(c.channelType) === payoutMethod);
+    return channels.filter(
+      (c) => ids.has(c.id) && isActiveWithdrawChannel(c) && mapCategory(c.channelType) === payoutMethod,
+    );
   }, [networkId, bankNetworks, channels, payoutMethod]);
 
   const currency = useMemo(() => channelCandidates.find((c) => c.currency)?.currency ?? '', [channelCandidates]);
@@ -496,7 +500,11 @@ export default function OfframpScreen() {
     if (!matrixRoomId) return;
     const mxClient = getMatrixClient();
     if (!mxClient) return;
+    // The store is whole-blob latest-wins (no server-side merge), so spread
+    // the loaded profile first — otherwise saving withdraw fields would WIPE
+    // the deposit flow's saved onramp* keys.
     void saveOfframpProfile(mxClient, matrixRoomId, {
+      ...(savedProfile ?? {}),
       country,
       payoutMethod,
       networkId,
@@ -515,6 +523,7 @@ export default function OfframpScreen() {
   }, [
     matrixRoomId,
     getMatrixClient,
+    savedProfile,
     country,
     payoutMethod,
     networkId,
@@ -855,13 +864,17 @@ export default function OfframpScreen() {
 
                       {networkId && channelCandidates.length === 0 && (
                         <span className={styles.warnLine}>
-                          {isMomo ? 'No active withdraw channel for this provider.' : 'No active withdraw channel for this bank.'}
+                          {isMomo
+                            ? 'No active withdraw channel for this provider.'
+                            : 'No active withdraw channel for this bank.'}
                         </span>
                       )}
 
                       <div className={styles.row}>
                         <div className={styles.field}>
-                          <label className={styles.label}>{isMomo ? 'Mobile money number' : 'Bank account number'}</label>
+                          <label className={styles.label}>
+                            {isMomo ? 'Mobile money number' : 'Bank account number'}
+                          </label>
                           {isMomo ? (
                             <div
                               className={`${styles.inputPrefixWrap}${

@@ -16,6 +16,30 @@ export function hasKycCredential(mxClient: MxClient, roomId: string): boolean {
 }
 
 /**
+ * `hasKycCredential`, but tolerant of the matrix client still syncing: the
+ * index lives in room STATE, which may not be loaded yet right after login
+ * (especially a fresh device/session). A one-shot read at that moment would
+ * wrongly gate a fully-KYC'd user, so poll until the credential appears or the
+ * timeout elapses. Resolves `true` as soon as it's found; `false` only after
+ * the full window passed with the room state available-but-empty.
+ */
+export async function waitForKycCredential(
+  mxClient: MxClient,
+  roomId: string,
+  opts: { timeoutMs?: number; pollIntervalMs?: number; cancelled?: () => boolean } = {},
+): Promise<boolean> {
+  const timeoutMs = opts.timeoutMs ?? 15000;
+  const pollIntervalMs = opts.pollIntervalMs ?? 500;
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (opts.cancelled?.()) return false;
+    if (hasKycCredential(mxClient, roomId)) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+  }
+}
+
+/**
  * Best-effort auto-fill for the off-ramp KYC form from the user's stored identity.
  *
  * Design: each SOURCE declares its own `fields` map — exactly which keys (or a
@@ -191,7 +215,11 @@ export const KYC_SOURCES: KycSource[] = [
     // suffix) is the street number here, NOT an ID — only `identifier_1` is the
     // identity-document number.
     fields: {
-      name: composeName(['givenName', 'given_name', 'first_name'], ['familyName', 'family_name', 'last_name', 'surname'], ['name', 'full_name']),
+      name: composeName(
+        ['givenName', 'given_name', 'first_name'],
+        ['familyName', 'family_name', 'last_name', 'surname'],
+        ['name', 'full_name'],
+      ),
       dob: ['birthDate', 'birth_date', 'date_of_birth', 'dob'],
       country: ['nationality', 'country', 'birth_country'],
       idType: ['document_type', 'id_type'],

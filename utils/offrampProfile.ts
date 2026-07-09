@@ -37,6 +37,14 @@ export interface OfframpProfile {
   idType?: string;
   idNumber?: string;
   bvn?: string;
+  /** On-ramp (deposit) fields — same store, separate keys so the two flows
+   *  never overwrite each other's rail/provider choices. */
+  onrampCountry?: string;
+  onrampMethod?: string;
+  onrampNetworkId?: string;
+  onrampProviderName?: string;
+  /** Momo number the user pays FROM (digits, international format). */
+  onrampMomoNumber?: string;
 }
 
 /** Best-effort read of the saved profile; null on absence / decryption failure. */

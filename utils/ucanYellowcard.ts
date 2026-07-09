@@ -1,4 +1,10 @@
-import { createInvocation, serializeInvocation, signerFromMnemonic, type Capability, type SupportedDID } from '@ixo/ucan';
+import {
+  createInvocation,
+  serializeInvocation,
+  signerFromMnemonic,
+  type Capability,
+  type SupportedDID,
+} from '@ixo/ucan';
 
 import authConstants from '@constants/auth';
 import { YELLOWCARD_WORKER_API } from '@constants/yellowcard';
@@ -48,11 +54,9 @@ function generateNonce(): string {
 
 const OFFRAMP_CAPABILITY: Capability = { can: 'yellowcard/offramp', with: 'ixo:yellowcard' };
 
-/**
- * Mint a fresh single-use invocation CAR (bearer token) for the off-ramp
- * capability, signed by the user's Ed25519 key.
- */
-export async function mintOfframpBearer(userDid: string): Promise<string> {
+const ONRAMP_CAPABILITY: Capability = { can: 'yellowcard/onramp', with: 'ixo:yellowcard' };
+
+async function mintBearer(userDid: string, capability: Capability): Promise<string> {
   const mnemonic = secureLoad(authConstants.secretKey.ED_SIGNING_MNEMONIC);
   if (!mnemonic) throw new Error('Signing mnemonic not available — please sign in again');
 
@@ -62,10 +66,23 @@ export async function mintOfframpBearer(userDid: string): Promise<string> {
   const invocation = await createInvocation({
     issuer: signer,
     audience: workerDid,
-    capability: OFFRAMP_CAPABILITY,
+    capability,
     expiration: Math.floor(Date.now() / 1000) + 300,
     facts: [{ nonce: generateNonce() }],
   });
 
   return serializeInvocation(invocation);
+}
+
+/**
+ * Mint a fresh single-use invocation CAR (bearer token) for the off-ramp
+ * capability, signed by the user's Ed25519 key.
+ */
+export function mintOfframpBearer(userDid: string): Promise<string> {
+  return mintBearer(userDid, OFFRAMP_CAPABILITY);
+}
+
+/** Same, for the on-ramp capability. */
+export function mintOnrampBearer(userDid: string): Promise<string> {
+  return mintBearer(userDid, ONRAMP_CAPABILITY);
 }
