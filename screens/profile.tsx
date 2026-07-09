@@ -180,6 +180,42 @@ export default function ProfileScreen() {
         </h3>
 
         <button
+          onClick={() => router.push('/profile/onramp')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '16px',
+            marginBottom: '8px',
+            border: 'none',
+            borderRadius: 'var(--card-border-radius)',
+            background: 'var(--background-color, #fff)',
+            cursor: 'pointer',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span style={{ fontWeight: 500 }}>Deposit</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Buy USDC with local money via YellowCard
+            </span>
+          </span>
+          <svg
+            width={20}
+            height={20}
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+          >
+            <polyline points='9 18 15 12 9 6' />
+          </svg>
+        </button>
+
+        <button
           onClick={() => router.push('/profile/offramp')}
           style={{
             display: 'flex',

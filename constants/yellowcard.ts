@@ -43,4 +43,24 @@ export const OFFRAMP_DESTINATION = {
 };
 
 /** Off-ramp end-states (mirror the worker). Anything else is still in-flight. */
-export const TERMINAL_OFFRAMP_STATUSES = new Set(['completed', 'failed', 'expired', 'refunded', 'refund_failed', 'cancelled']);
+export const TERMINAL_OFFRAMP_STATUSES = new Set([
+  'completed',
+  'failed',
+  'expired',
+  'refunded',
+  'refund_failed',
+  'cancelled',
+]);
+
+/** On-ramp end-states (mirror the worker). `delivered` = USDC arrived on ixo.
+ *  `bridge_failed` is ops-parked (support will resolve it), so the UI treats it
+ *  as no-longer-in-flight too. */
+export const TERMINAL_ONRAMP_STATUSES = new Set([
+  'delivered',
+  'failed',
+  'expired',
+  'cancelled',
+  'refunded',
+  'refund_failed',
+  'bridge_failed',
+]);
