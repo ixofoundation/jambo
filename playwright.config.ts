@@ -15,9 +15,21 @@ import { defineConfig, devices } from '@playwright/test';
  * here once the AuthHub adapter exists.
  */
 
-const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3210);
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
-const isDeployed = !!process.env.PLAYWRIGHT_BASE_URL;
+/**
+ * Read an env var, treating empty and whitespace-only as unset.
+ *
+ * `??` is not enough here. GitHub Actions materialises an unprovided
+ * `workflow_dispatch` input as an empty string rather than leaving it unset, so
+ * `process.env.PLAYWRIGHT_BASE_URL ?? fallback` yields '' on a pull_request run.
+ * That made every `page.goto('/about')` fail with "Cannot navigate to invalid URL"
+ * in CI while passing locally, where the variable was genuinely absent.
+ */
+const env = (name: string): string | undefined => process.env[name]?.trim() || undefined;
+
+const PORT = Number(env('PLAYWRIGHT_PORT') ?? 3210);
+const deployedBaseUrl = env('PLAYWRIGHT_BASE_URL');
+const baseURL = deployedBaseUrl ?? `http://127.0.0.1:${PORT}`;
+const isDeployed = !!deployedBaseUrl;
 
 export default defineConfig({
   testDir: './e2e',
@@ -38,7 +50,7 @@ export default defineConfig({
         // Some environments (CI images, the Claude Code sandbox) ship a Chromium
         // whose build number does not match what this Playwright version would
         // download. Point at it explicitly rather than fetching a second copy.
-        launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+        launchOptions: env('CHROMIUM_PATH') ? { executablePath: env('CHROMIUM_PATH') } : {},
       },
     },
   ],
