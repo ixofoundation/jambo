@@ -18,3 +18,10 @@
 
 # netlify
 /.netlify
+
+# playwright output — gitignored, but prettier does not read .gitignore, so
+# running `yarn test:e2e` before `yarn verify` would otherwise fail format:check
+/test-results
+/playwright-report
+/blob-report
+/.playwright
