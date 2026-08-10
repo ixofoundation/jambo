@@ -17,7 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate:config": "tsx scripts/validate-config.ts",
-    "gen": "tsx scripts/gen-schema.ts",
+    "gen": "tsx scripts/gen-schema.ts && tsx scripts/gen-capabilities.ts",
     "prebuild": "yarn validate:config",
     "verify": "yarn typecheck && yarn lint && yarn format:check && yarn validate:config && yarn test && yarn build",
     "test": "vitest run",

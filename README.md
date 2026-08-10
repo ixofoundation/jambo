@@ -15,6 +15,8 @@
 This repo and product is intentionally managed as Open Source and we aim to use this guide to light our way https://opensource.guide/.  
 Let us know how we are doing!
 
+> **Building with a coding agent?** Start at [AGENTS.md](/AGENTS.md) for the architecture, the verification command, and the traps. [docs/CAPABILITIES.md](/docs/CAPABILITIES.md) lists every step a dApp can be composed from, and [docs/RECIPES.md](/docs/RECIPES.md) has worked examples for rebranding, adding an action, adding a step, and switching chains.
+
 ---
 
 ## 🚀 How to create a dApp using this repo
@@ -44,8 +46,12 @@ Before deploying your dApp, you'll need to add the necessary environment variabl
 - `NEXT_PUBLIC_CHAIN_NAMES`: A comma-separated list of names of any Cosmos chain as found in the [Cosmos chain registry](https://github.com/cosmos/chain-registry). The purpose of this variable is to specify which Cosmos chains the dApp should support.
 - `NEXT_PUBLIC_ENABLE_DEVELOPER_MODE`: Set this variable to true to allow the dApp to support testing on testnets. Otherwise, it can be ignored and the dApp will only support mainnet.
 - `NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK`: Specify the preferred network for the initial load of the dApp if developer mode is active (defaults to devnet). Otherwise, it can be ignored.
+- `NEXT_PUBLIC_DEFAULT_CHAIN_NAME`: Which of the above chains loads first.
+- `NEXT_PUBLIC_USE_LOCAL_BLOCKCHAIN_PORT`: **Leave this at `0`.** Any non-zero value replaces the chain-registry lookup entirely with a hardcoded ixo chain pointed at `localhost`, which is almost never what a fork wants.
+- `NEXT_PUBLIC_KADO_API_KEY`: Required only if your config keeps the `kado_buy_crypto` step. Without it the Buy action builds a broken URL and fails silently.
+- `NEXT_PUBLIC_WC_PROJECT_ID`: Required only if you enable WalletConnect in `components/Wallets/Wallets.tsx`. Without it WalletConnect hides itself.
 
-![.env example](/assets/images/docs/env_example.png)
+`.env.example` documents each of these inline — copy it and edit rather than writing a `.env` from scratch.
 
 Once you've added these variables, you can start a local instance of your dApp with the following terminal command:
 
@@ -106,13 +112,31 @@ Each action object has the following properties:
 
 The steps available for actions can be seen in the [steps](#📚-steps) section.
 
-Below is an example configuration for a delegate action, which allows the user to stake tokens to validators. The id property is a unique identifier for the action and is used for navigation and routing, while the image property represents an image associated with the action (hence the image name corresponds with the action's id).
+Below is an example configuration for a delegate action, which allows the user to stake tokens to validators. The `id` property is a unique identifier for the action and is used for navigation and routing, while the `image` property is a filename in `public/images/actions/`.
 
-![config.json example](/assets/images/docs/config_json_example.png)
+```json
+{
+  "id": "delegate",
+  "name": "Delegate",
+  "description": "Delegate tokens on the IXO Network",
+  "image": "delegate.png",
+  "steps": [
+    { "id": "get_validator_delegate", "name": "Get validator address" },
+    { "id": "select_amount_delegate", "name": "Define amount to delegate" },
+    { "id": "staking_MsgDelegate", "name": "Review and sign" }
+  ]
+}
+```
+
+`constants/config.json` is validated against a schema. Run `yarn validate:config` after editing it — the output names the exact path of any problem and suggests a fix. `config.schema.json` also gives you autocomplete and inline errors in most editors.
 
 ---
 
 ## 📚 STEPS
+
+**The authoritative, always-current list is [docs/CAPABILITIES.md](/docs/CAPABILITIES.md)** — it is generated from `constants/stepCatalogue.ts`, so unlike the screenshots below it cannot fall out of date. It records every step, the config it accepts, the data it captures, the chain message it emits, and which steps must precede it.
+
+The screenshots below show what each step looks like on screen.
 
 | Send                                                                  |                                                                             |                                                       |
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- |

@@ -44,8 +44,9 @@ jobs:
       - name: Generated files are current
         run: |
           yarn gen
-          git diff --exit-code -- config.schema.json \
-            || (echo "::error::config.schema.json is stale. Run 'yarn gen' and commit the result."; exit 1)
+          yarn prettier --write config.schema.json docs >/dev/null
+          git diff --exit-code -- config.schema.json docs \
+            || (echo "::error::Generated files are stale. Run 'yarn gen' and commit the result."; exit 1)
 
       - name: Build
         run: yarn build
