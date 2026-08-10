@@ -14,5 +14,6 @@
     # output_path = "reports/lighthouse.html"
 
 [build.environment]
-  NEXT_USE_NETLIFY_EDGE = "true"
+  # Pinned to match .nvmrc. @netlify/plugin-nextjs@4.7.1 predates Node 20+.
+  NODE_VERSION = "18"
   NETLIFY_USE_YARN = "true"

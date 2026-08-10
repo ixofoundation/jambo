@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # Each rung is a separate, named step so a failed run says which one broke.
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Format check
+        run: yarn format:check
+
+      - name: Build
+        run: yarn build
+        env:
+          NEXT_PUBLIC_CHAIN_NAMES: impacthub
+          NEXT_PUBLIC_DEFAULT_CHAIN_NAME: impacthub
+          NEXT_PUBLIC_ENABLE_DEVELOPER_MODE: 1
+          NEXT_PUBLIC_DEFAULT_CHAIN_NETWORK: mainnet
+          NEXT_PUBLIC_USE_LOCAL_BLOCKCHAIN_PORT: 0

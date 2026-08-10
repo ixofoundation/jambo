@@ -1,5 +1,6 @@
 import React from 'react';
 import { Html5Qrcode, Html5QrcodeScanType, Html5QrcodeSupportedFormats, Html5QrcodeScanner } from 'html5-qrcode';
+import type { Html5QrcodeCameraScanConfig } from 'html5-qrcode/esm/html5-qrcode';
 import { IObjectKeys } from 'types/general';
 
 const qrcodeRegionId = 'html5qr-code-ixo';
@@ -78,7 +79,14 @@ class QRScanner extends React.Component<QRScannerProps> {
       this.html5Qrcode = new Html5Qrcode(qrcodeRegionId, this.props.verbose);
       //@ts-ignore
       this.html5Qrcode
-        .start({ facingMode: 'environment' }, config, this.props.qrCodeSuccessCallback, this.props.qrCodeErrorCallback)
+        .start(
+          { facingMode: 'environment' },
+          // createConfig also carries scanner-only keys (supportedScanTypes) that the
+          // camera-scan config does not declare; the library ignores the extras at runtime.
+          config as unknown as Html5QrcodeCameraScanConfig,
+          this.props.qrCodeSuccessCallback,
+          this.props.qrCodeErrorCallback,
+        )
         .catch((err) => {
           this.setState({ error: err });
           console.log('QR Scanner error: ' + err);

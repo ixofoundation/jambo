@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Keep the churn low: one PR per family rather than one per package.
+      types:
+        patterns: ['@types/*']
+      cosmjs:
+        patterns: ['@cosmjs/*']
+      ixo:
+        patterns: ['@ixo/*']
+    ignore:
+      # Next 12 → 14 and React 18.1 → 19 are tracked migrations, not dependabot bumps.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -3,13 +3,23 @@
   "version": "0.0.1",
   "private": true,
   "author": "ixo",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "yarn@1.22.22",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "format": "yarn prettier --write ."
+    "lint": "next lint --dir pages --dir components --dir utils --dir hooks --dir steps --dir contexts --dir types --dir constants --dir scripts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "yarn typecheck && yarn lint && yarn format:check && yarn build"
+  },
+  "resolutions": {
+    "@types/react": "18.2.78"
   },
   "dependencies": {
     "@cosmjs/amino": "0.29.2",
@@ -58,7 +68,7 @@
     "@netlify/plugin-nextjs": "4.7.1",
     "@types/lodash.memoize": "4.1.7",
     "@types/node": "17.0.35",
-    "@types/react": "18.0.9",
+    "@types/react": "18.2.78",
     "@types/react-color": "3.0.6",
     "@types/react-copy-to-clipboard": "5.0.4",
     "@types/react-dom": "18.0.5",

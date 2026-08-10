@@ -18,7 +18,7 @@ const TermsAndConditions: NextPage = () => {
     <>
       <Head title='TermsAndConditions' description={config.siteDescriptionMeta} />
 
-      <Header allowBack />
+      <Header />
 
       <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.termsAndConditions)}>
         <div className={utilsStyles.spacer3Flex} />
