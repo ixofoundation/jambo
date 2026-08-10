@@ -15,6 +15,11 @@ yarn verify
 Runs, in order: `typecheck` → `lint` → `format:check` → `validate:config` → `test`
 → `build`. If it exits 0, your change is sound. Run it before you claim to be done.
 
+`yarn test:e2e` is separate because it builds and serves the app. Run it when you
+change routing, config, or anything a user walks through. If your environment ships
+a Chromium that Playwright did not install itself, point at it:
+`CHROMIUM_PATH=/path/to/chrome yarn test:e2e`.
+
 When a rung fails:
 
 | Rung              | What it means                                                                                                       |
@@ -156,9 +161,12 @@ user-visible transaction behaviour and deserves an explicit decision:
 
 ## What is not here yet
 
-- **No end-to-end tests.** Every wallet needs a browser extension or a paired mobile
-  device plus a human signature, so no action flow can currently be exercised
-  without a person. IXO AuthHub is being integrated to close this.
+- **No end-to-end coverage of a signed transaction.** `yarn test:e2e` runs a smoke
+  suite over every action route, the home page and the account page, but every
+  wallet needs a browser extension or a paired mobile device plus a human
+  signature, so no capture-review-sign flow can be exercised without a person.
+  IXO AuthHub is being integrated to close this: email + password + PIN means an
+  agent can drive a real signing flow headlessly.
 - **No step registry.** The step id → component → message mapping is still spread
   across three switches (`types/steps.ts`, `pages/[actionId].tsx`,
   `steps/ReviewAndSign.tsx`). `constants/stepCatalogue.ts` is the declarative half;
