@@ -10,10 +10,28 @@ import config from '../constants/config.json';
  * that verifies a deploy actually works rather than merely having uploaded.
  */
 
-/** Console errors that are environmental rather than the app's fault. */
+/**
+ * Console errors that say something about the environment rather than the app.
+ *
+ * The point of the console assertion is to catch *application* faults — React
+ * errors, uncaught exceptions, undefined property access. Network-layer failures
+ * are not that: this app resolves chain info from third-party infrastructure
+ * (registry.ping.pub via @ixo/cosmos-chain-resolver, then a live RPC), so whether
+ * those calls succeed depends entirely on where the tests run.
+ *
+ * Concretely, the same page produces different console output on a GitHub runner
+ * (reaches registry.ping.pub, gets a CORS rejection because it sends no
+ * Access-Control-Allow-Origin) than behind a proxy (the request fails earlier as a
+ * resource load error). Asserting zero console errors would make this suite fail
+ * based on the network it happens to be on.
+ *
+ * Keep these patterns narrow. Anything matching here is invisible to the suite.
+ */
 const IGNORED_CONSOLE = [
-  /Failed to load resource/i, // chain RPC / registry may be unreachable in CI
+  /Failed to load resource/i,
   /net::ERR_/i,
+  /blocked by CORS policy/i,
+  /Access to (XMLHttpRequest|fetch|resource) at/i,
   /Download the React DevTools/i,
 ];
 

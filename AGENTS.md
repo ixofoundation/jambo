@@ -122,6 +122,13 @@ missing switch case is a named test failure rather than an indefinite spinner.
   for the production build. This is why the test runner is Vitest and not Jest.
 - **`pages/404.tsx` loads Lottie via `next/dynamic` with `ssr: false`** because
   `lottie-web` touches `document` at module scope and crashes the build otherwise.
+- **Chain resolution depends on third-party infrastructure and its console output
+  varies by network.** `@ixo/cosmos-chain-resolver` fetches
+  `registry.ping.pub/<chain>/chain.json` from the browser, which returns no
+  `Access-Control-Allow-Origin` header, so it is CORS-rejected on a clean network
+  and fails as a plain resource error behind a proxy. The app degrades gracefully
+  (`getChainOptions` uses `Promise.allSettled`), but do not treat these console
+  errors as a regression — the e2e suite filters them deliberately.
 
 ## Deliberate ixo assumptions
 
