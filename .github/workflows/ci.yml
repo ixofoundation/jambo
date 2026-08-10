@@ -38,6 +38,9 @@ jobs:
       - name: Validate config
         run: yarn validate:config
 
+      - name: Test
+        run: yarn test
+
       - name: Generated files are current
         run: |
           yarn gen
