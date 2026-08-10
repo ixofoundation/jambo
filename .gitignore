@@ -39,3 +39,8 @@ yarn-error.log*
 
 # netlify
 /.netlify
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/

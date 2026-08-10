@@ -1,13 +1,14 @@
 {
-  "siteName": "config.siteName",
-  "siteUrl": "config.siteUrl",
-  "siteTitleMeta": "config.siteTitleMeta",
-  "siteDescriptionMeta": "config.siteDescriptionMeta",
+  "$schema": "./config.schema.json",
+  "siteName": "JAMBO",
+  "siteUrl": "https://my.jambo.earth",
+  "siteTitleMeta": "JAMBO — a dApp for the Internet of Impact",
+  "siteDescriptionMeta": "Send, stake and vote on the ixo network. Fork JAMBO to build your own Cosmos dApp.",
   "fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
   "fontName": "Roboto",
   "headerShowName": true,
   "headerShowLogo": true,
-  "about": "config.about",
+  "about": "JAMBO is an open-source template for building decentralized applications on the ixo network or any other Cosmos chain. Fork it, edit constants/config.json, and deploy.",
   "termsAndConditions": "https://my.jambo.earth/legal/termsOfUse",
   "actions": [
     {

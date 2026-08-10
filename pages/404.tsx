@@ -1,5 +1,5 @@
-import LottieLight from 'react-lottie-player/dist/LottiePlayerLight';
 import type { NextPage } from 'next';
+import dynamic from 'next/dynamic';
 import cls from 'classnames';
 
 import utilsStyles from '@styles/utils.module.scss';
@@ -8,6 +8,10 @@ import Header from '@components/Header/Header';
 import Footer from '@components/Footer/Footer';
 import Head from '@components/Head/Head';
 import animation from '@assets/lotties/404_error.json';
+
+// lottie-web touches `document` at module scope, which crashes `next build` during
+// static page-data collection. Loading it client-side only keeps the build working.
+const LottieLight = dynamic(() => import('react-lottie-player/dist/LottiePlayerLight'), { ssr: false });
 
 const Page404: NextPage = () => {
   return (

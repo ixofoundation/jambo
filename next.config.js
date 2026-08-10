@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
+
+// Keep in sync with the `lint` script in package.json. `next build` runs ESLint over
+// these directories; without them Next 12 only lints `pages/` and `components/`,
+// leaving utils/, hooks/, steps/, contexts/, types/ and constants/ unchecked.
+const lintDirs = ['pages', 'components', 'utils', 'hooks', 'steps', 'contexts', 'types', 'constants', 'scripts'];
+
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: false,
-  experimental: {
-    runtime: 'edge',
-    // Enable below when using React Server Components
-    // serverComponents: true,
-    // concurrentFeatures: true,
-  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,
@@ -17,12 +17,8 @@ const nextConfig = {
 
     return config;
   },
-  typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
+  eslint: {
+    dirs: lintDirs,
   },
   images: {
     domains: ['raw.githubusercontent.com', 'app.osmosis.zone', 's3.amazonaws.com'],

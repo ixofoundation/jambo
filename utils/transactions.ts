@@ -208,8 +208,6 @@ export const generateSubmitProposalTrx = ({
     ? [cosmos.base.v1beta1.Coin.fromPartial({ amount: depositAmount, denom: depositDenom })]
     : [];
 
-  console.log({ initialDeposit, depositAmount, depositDenom });
-
   return {
     typeUrl: '/cosmos.gov.v1beta1.MsgSubmitProposal',
     value: cosmos.gov.v1beta1.MsgSubmitProposal.fromPartial({

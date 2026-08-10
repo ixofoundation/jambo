@@ -10,7 +10,7 @@ import Footer from '@components/Footer/Footer';
 import { PRODUCT } from 'types/kado';
 
 type KadoStepProps = {
-  onSuccess: (data: StepDataType<STEPS.select_token_and_amount>) => void;
+  onSuccess: (data: StepDataType<STEPS.kado_buy_crypto>) => void;
   onBack?: () => void;
   config?: StepConfigType<STEPS.kado_buy_crypto>;
   data?: StepDataType<STEPS.kado_buy_crypto>;
@@ -40,7 +40,7 @@ const KadoBuyCrypto: FC<KadoStepProps> = ({ onSuccess, onBack, header }) => {
         <KadoModal visible={kadoVisible} onClose={handleCloseKado} productList={[PRODUCT.BUY]} />
       </main>
 
-      <Footer onBack={handleCloseKado} onForward={onSuccess} />
+      <Footer onBack={handleCloseKado} onForward={() => onSuccess({})} />
     </>
   );
 };
