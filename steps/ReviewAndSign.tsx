@@ -16,7 +16,9 @@ import Loader from '@components/Loader/Loader';
 import Input from '@components/Input/Input';
 import Anchor from '@components/Anchor/Anchor';
 import Success from '@icons/success.svg';
+import SadFace from '@icons/sad_face.svg';
 import Plus from '@icons/plus.svg';
+import { getErrorMessage } from '@utils/misc';
 import { getDenomFromCurrencyToken, getDisplayDenomFromCurrencyToken } from '@utils/currency';
 import { broadCastMessages, shortenAddress } from '@utils/wallets';
 import { getMicroAmount } from '@utils/encoding';
@@ -64,6 +66,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
 }) => {
   const { wallet } = useContext(WalletContext);
   const [successHash, setSuccessHash] = useState<string | undefined>();
+  const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState<boolean>(false);
   const [amount, setAmount] = useState<number | number[]>(0);
   const [token, setToken] = useState<CURRENCY_TOKEN | CURRENCY_TOKEN[] | undefined>();
@@ -156,6 +159,7 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
   const signTX = async (): Promise<void> => {
     try {
       setLoading(true);
+      setError(undefined);
       const trxMsgs: TRX_MSG[] = [];
       let memo: string | undefined;
       switch (message) {
@@ -243,13 +247,38 @@ const ReviewAndSign: FC<ReviewAndSignProps> = ({
         (Array.isArray(token) ? token[0]?.denom : token?.denom) ?? '',
         chainInfo as KEPLR_CHAIN_INFO_TYPE,
       );
-      if (hash) setSuccessHash(hash);
-    } catch (error) {
-      console.error(error);
+      if (hash) {
+        setSuccessHash(hash);
+      } else {
+        // The wallet adapters swallow their own failures and return null, so a
+        // null hash is a failed broadcast rather than a no-op. Without this the
+        // user sat on the review screen with no indication anything went wrong.
+        setError('The transaction was not broadcast. Your wallet may have rejected or cancelled it.');
+      }
+    } catch (e) {
+      console.error(e);
+      setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
   };
+
+  if (error)
+    return (
+      <>
+        <Header header={header} />
+
+        <main className={cls(utilsStyles.main, utilsStyles.columnJustifyCenter, styles.stepContainer)}>
+          <IconText title='Your transaction failed' Img={SadFace} imgSize={50}>
+            <p className={utilsStyles.label} data-testid='transaction-error'>
+              {error}
+            </p>
+          </IconText>
+        </main>
+
+        <Footer onBack={() => setError(undefined)} backLabel='Try again' onBackUrl={undefined} />
+      </>
+    );
 
   if (successHash)
     return (
