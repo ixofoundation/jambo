@@ -1,0 +1,138 @@
+{
+  "$ref": "#/definitions/JamboConfig",
+  "definitions": {
+    "JamboConfig": {
+      "type": "object",
+      "properties": {
+        "siteName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "siteUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "siteTitleMeta": {
+          "type": "string",
+          "minLength": 1
+        },
+        "siteDescriptionMeta": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fontUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "fontName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headerShowName": {
+          "type": "boolean"
+        },
+        "headerShowLogo": {
+          "type": "boolean"
+        },
+        "about": {
+          "type": "string"
+        },
+        "termsAndConditions": {
+          "type": "string"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string"
+              },
+              "image": {
+                "type": "string",
+                "pattern": "\\.(png|jpe?g|svg|webp)$"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "enum": [
+                        "kado_buy_crypto",
+                        "check_user_balance",
+                        "get_receiver_address",
+                        "get_validator_delegate",
+                        "get_validator_redelegate",
+                        "get_delegated_validator_undelegate",
+                        "get_delegated_validator_redelegate",
+                        "select_token_and_amount",
+                        "select_amount_delegate",
+                        "select_amount_undelegate",
+                        "select_amount_redelegate",
+                        "define_amount",
+                        "send_token_to_receiver",
+                        "select_proposal",
+                        "define_proposal_title",
+                        "define_proposal_description",
+                        "define_proposal_deposit",
+                        "review_and_sign",
+                        "bank_MsgSend",
+                        "bank_MsgMultiSend",
+                        "staking_MsgDelegate",
+                        "staking_MsgUndelegate",
+                        "staking_MsgRedelegate",
+                        "distribution_MsgWithdrawDelegatorReward",
+                        "gov_MsgVote",
+                        "gov_MsgSubmitProposal"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "config": {}
+                  },
+                  "required": ["id", "name"],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            },
+            "required": ["id", "name", "description", "image", "steps"],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "siteName",
+        "siteUrl",
+        "siteTitleMeta",
+        "siteDescriptionMeta",
+        "fontUrl",
+        "fontName",
+        "headerShowName",
+        "headerShowLogo",
+        "about",
+        "termsAndConditions",
+        "actions"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

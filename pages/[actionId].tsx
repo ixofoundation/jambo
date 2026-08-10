@@ -21,6 +21,8 @@ import ShortTextInput from '@steps/ShortTextInput';
 import LongTextInput from '@steps/LongTextInput';
 import ProposalDeposit from '@steps/ProposalDeposit';
 import KadoBuyCrypto from '@steps/KadoBuyCrypto';
+import UnknownStep from '@steps/UnknownStep';
+import { configSchema } from '@constants/config.schema';
 
 type ActionPageProps = {
   actionData: ACTION;
@@ -240,7 +242,10 @@ const ActionExecution: NextPage<ActionPageProps> = ({ actionData }) => {
           />
         );
       default:
-        return <EmptySteps loading={true} />;
+        // Previously `<EmptySteps loading />` — an indefinite spinner with no error.
+        // Any step id that reaches here should have been rejected by the config
+        // validator at build time, so say so loudly instead of hanging.
+        return <UnknownStep stepId={step?.id} actionId={action?.id} index={count} />;
     }
   };
 
@@ -265,8 +270,31 @@ type PathsParams = {
   actionId: string;
 };
 
+/**
+ * Validates constants/config.json and returns the parsed actions.
+ *
+ * This runs in `getStaticPaths`, which Next strips from the client bundle, so the
+ * validation gates `next build` at zero cost to the shipped JavaScript. An invalid
+ * config fails the build rather than producing a dApp that breaks at runtime.
+ */
+const getValidatedActions = () => {
+  const result = configSchema.safeParse(config);
+
+  if (!result.success) {
+    const problems = result.error.issues
+      .map((issue) => `  ${issue.path.join('.') || '(root)'}\n    ${issue.message}`)
+      .join('\n');
+    throw new Error(
+      `constants/config.json is invalid, so the dApp cannot be built:\n\n${problems}\n\n` +
+        'Run `yarn validate:config` for suggestions and the full step catalogue.\n',
+    );
+  }
+
+  return result.data.actions;
+};
+
 export const getStaticPaths: GetStaticPaths<PathsParams> = async () => {
-  const paths = config.actions.map((a) => ({ params: { actionId: a.id } }));
+  const paths = getValidatedActions().map((a) => ({ params: { actionId: a.id } }));
 
   return {
     paths,
@@ -277,7 +305,7 @@ export const getStaticPaths: GetStaticPaths<PathsParams> = async () => {
 export const getStaticProps = async ({
   params,
 }: GetStaticPropsContext<PathsParams>): Promise<GetStaticPropsResult<ActionPageProps>> => {
-  const actionData = config.actions.find((a) => params!.actionId == a.id);
+  const actionData = getValidatedActions().find((a) => params!.actionId == a.id);
 
   return {
     props: {

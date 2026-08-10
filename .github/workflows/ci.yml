@@ -35,6 +35,15 @@ jobs:
       - name: Format check
         run: yarn format:check
 
+      - name: Validate config
+        run: yarn validate:config
+
+      - name: Generated files are current
+        run: |
+          yarn gen
+          git diff --exit-code -- config.schema.json \
+            || (echo "::error::config.schema.json is stale. Run 'yarn gen' and commit the result."; exit 1)
+
       - name: Build
         run: yarn build
         env:
