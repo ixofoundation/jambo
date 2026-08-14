@@ -19,6 +19,11 @@ export interface ProtocolCollection {
   formName?: string;
 }
 
+/** Display name for a collection: its protocol's form title, else a generic label. */
+export function collectionName(c: ProtocolCollection): string {
+  return c.formName || `Collection ${c.collectionId}`;
+}
+
 function selectAllProtocolCollections(state: {
   collections: { byId: Record<string, any> };
   protocols: { formNames: Record<string, string> };

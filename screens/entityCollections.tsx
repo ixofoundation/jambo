@@ -2,15 +2,12 @@ import { CSSProperties, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
+import CollectionLinkagesPanel from '@components/CollectionLinkagesPanel/CollectionLinkagesPanel';
 import useCollectionBlacklist from '@hooks/useCollectionBlacklist';
-import { ProtocolCollection, useProtocolCollections } from '@hooks/useProtocolCollections';
+import { ProtocolCollection, collectionName, useProtocolCollections } from '@hooks/useProtocolCollections';
 
 function shorten(value: string, head = 14, tail = 6) {
   return value.length > head + tail + 3 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
-}
-
-function collectionName(c: ProtocolCollection): string {
-  return c.formName || `Collection ${c.collectionId}`;
 }
 
 function claimsLabel(c: ProtocolCollection): string {
@@ -35,6 +32,12 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
   const [started, setStarted] = useState(false);
   useEffect(() => {
     setStarted(true);
+  }, [entityDid]);
+
+  // Single-open accordion for the per-collection linkages panel.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => {
+    setExpandedId(null);
   }, [entityDid]);
 
   const goBack = useCallback(() => {
@@ -86,7 +89,8 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
           {shorten(entityDid)}
         </p>
         <p style={{ margin: '0 0 16px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Toggle a collection on to blacklist it — blacklisted collections are hidden from the app.
+          Toggle a collection on to blacklist it — blacklisted collections are hidden from the app. Expand a collection
+          to manage its base/sub claim linkages.
         </p>
 
         {loading ? (
@@ -97,16 +101,29 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
           </span>
         ) : (
           <div style={listBoxStyle}>
-            {collections.map((c, idx) => (
-              <CollectionCard
-                key={c.collectionId}
-                collection={c}
-                blacklisted={blacklist.has(c.collectionId)}
-                saving={savingIds.has(c.collectionId)}
-                onToggle={(next) => void setBlacklisted(c.collectionId, next)}
-                last={idx === collections.length - 1}
-              />
-            ))}
+            {collections.map((c, idx) => {
+              const expanded = expandedId === c.collectionId;
+              const last = idx === collections.length - 1;
+              return (
+                <div key={c.collectionId} style={{ display: 'flex', flexDirection: 'column' }}>
+                  <CollectionCard
+                    collection={c}
+                    blacklisted={blacklist.has(c.collectionId)}
+                    saving={savingIds.has(c.collectionId)}
+                    onToggle={(next) => void setBlacklisted(c.collectionId, next)}
+                    expanded={expanded}
+                    onToggleExpand={() => setExpandedId(expanded ? null : c.collectionId)}
+                    last={last || expanded}
+                  />
+                  {expanded && (
+                    // Unmounted on collapse, so useCollectionLinks refetches on every expand.
+                    <div style={{ borderBottom: last ? 'none' : '1px solid var(--border-color)' }}>
+                      <CollectionLinkagesPanel collection={c} allCollections={collections} blacklist={blacklist} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
@@ -132,12 +149,16 @@ function CollectionCard({
   blacklisted,
   saving,
   onToggle,
+  expanded,
+  onToggleExpand,
   last,
 }: {
   collection: ProtocolCollection;
   blacklisted: boolean;
   saving: boolean;
   onToggle: (next: boolean) => void;
+  expanded: boolean;
+  onToggleExpand: () => void;
   last: boolean;
 }) {
   return (
@@ -195,8 +216,61 @@ function CollectionCard({
         </div>
       </div>
 
+      <LinkagesButton expanded={expanded} onToggleExpand={onToggleExpand} />
       <VisibilityButton blacklisted={blacklisted} saving={saving} onToggle={onToggle} />
     </div>
+  );
+}
+
+// Icon-only toggle for the base/sub linkages panel under the card.
+function LinkagesButton({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpand: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      type='button'
+      aria-expanded={expanded}
+      aria-label={expanded ? 'Hide claim linkages' : 'Manage claim linkages'}
+      title={expanded ? 'Hide linkages' : 'Manage linkages'}
+      onClick={onToggleExpand}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '32px',
+        height: '32px',
+        padding: 0,
+        border: 'none',
+        borderRadius: '8px',
+        color: expanded ? 'var(--green-primary)' : 'var(--text-secondary)',
+        background: hover ? 'color-mix(in srgb, var(--text-primary) 8%, transparent)' : 'transparent',
+        cursor: 'pointer',
+        transition: 'background 140ms ease, color 140ms ease',
+      }}
+    >
+      <LinkIcon />
+    </button>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg
+      width='18'
+      height='18'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' />
+      <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' />
+    </svg>
   );
 }
 
