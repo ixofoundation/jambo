@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 
 import useCollectionLinks, { LinkDirection, linkSavingKey } from '@hooks/useCollectionLinks';
 import { ProtocolCollection, collectionName } from '@hooks/useProtocolCollections';
@@ -6,22 +6,47 @@ import { ProtocolCollection, collectionName } from '@hooks/useProtocolCollection
 /**
  * Admin panel for one collection's base/sub links. "Base collections" are the
  * collections this one submits onto (this collection is their sub); "Sub
- * collections" are gated by this one. Add pickers only offer the entity's own
- * non-blacklisted collections (excluding self and already-linked ones) — the
- * worker additionally rejects cross-entity and reverse links.
+ * collections" are gated by this one. A segmented toggle shows one direction
+ * at a time. Add pickers only offer the entity's own non-blacklisted
+ * collections (excluding self and already-linked ones) — the worker
+ * additionally rejects cross-entity and reverse links.
  */
 export default function CollectionLinkagesPanel({
   collection,
   allCollections,
   blacklist,
+  onHasLinksChange,
 }: {
   collection: ProtocolCollection;
   allCollections: ProtocolCollection[];
   blacklist: Set<string>;
+  /** Reports whether this collection has any base/sub link, for the card's indicator dot. */
+  onHasLinksChange?: (hasLinks: boolean) => void;
 }) {
   const { base, sub, loading, error, savingKeys, addLink, removeLink, refresh } = useCollectionLinks(
     collection.collectionId,
   );
+  const [activeDirection, setActiveDirection] = useState<LinkDirection>('base');
+
+  // Land on the direction that has links (base wins a tie) — but only once,
+  // when the initial load resolves; after that the user's choice sticks.
+  const directionInitializedRef = useRef(false);
+  useEffect(() => {
+    if (loading || error || directionInitializedRef.current) return;
+    directionInitializedRef.current = true;
+    if (base.length === 0 && sub.length > 0) setActiveDirection('sub');
+  }, [loading, error, base.length, sub.length]);
+
+  // Keep the latest callback in a ref so the report effect doesn't re-fire
+  // when the parent passes a new inline arrow each render.
+  const onHasLinksChangeRef = useRef(onHasLinksChange);
+  useEffect(() => {
+    onHasLinksChangeRef.current = onHasLinksChange;
+  }, [onHasLinksChange]);
+  useEffect(() => {
+    if (loading || error) return;
+    onHasLinksChangeRef.current?.(base.length + sub.length > 0);
+  }, [loading, error, base.length, sub.length]);
 
   const nameFor = (id: string): string | null => {
     const match = allCollections.find((c) => c.collectionId === id);
@@ -59,29 +84,70 @@ export default function CollectionLinkagesPanel({
 
   return (
     <div style={panelStyle}>
-      <LinkSection
-        title='Base collections'
-        hint='This collection can only be submitted against approved claims from these collections.'
-        direction='base'
-        linkedIds={base}
-        candidates={candidates}
-        nameFor={nameFor}
-        savingKeys={savingKeys}
-        onAdd={(id) => addLink('base', id)}
-        onRemove={(id) => void removeLink('base', id)}
-      />
-      <LinkSection
-        title='Sub collections'
-        hint='Claims in these collections must reference an approved claim from this collection.'
-        direction='sub'
-        linkedIds={sub}
-        candidates={candidates}
-        nameFor={nameFor}
-        savingKeys={savingKeys}
-        onAdd={(id) => addLink('sub', id)}
-        onRemove={(id) => void removeLink('sub', id)}
-      />
+      <div role='tablist' aria-label='Link direction' style={{ display: 'flex', gap: '4px' }}>
+        <DirectionTab
+          label={`Base${base.length ? ` (${base.length})` : ''}`}
+          active={activeDirection === 'base'}
+          onClick={() => setActiveDirection('base')}
+        />
+        <DirectionTab
+          label={`Sub${sub.length ? ` (${sub.length})` : ''}`}
+          active={activeDirection === 'sub'}
+          onClick={() => setActiveDirection('sub')}
+        />
+      </div>
+
+      {activeDirection === 'base' ? (
+        <LinkSection
+          title='Base collections'
+          hint='This collection can only be submitted against approved claims from these collections.'
+          direction='base'
+          linkedIds={base}
+          candidates={candidates}
+          nameFor={nameFor}
+          savingKeys={savingKeys}
+          onAdd={(id) => addLink('base', id)}
+          onRemove={(id) => void removeLink('base', id)}
+        />
+      ) : (
+        <LinkSection
+          title='Sub collections'
+          hint='Claims in these collections must reference an approved claim from this collection.'
+          direction='sub'
+          linkedIds={sub}
+          candidates={candidates}
+          nameFor={nameFor}
+          savingKeys={savingKeys}
+          onAdd={(id) => addLink('sub', id)}
+          onRemove={(id) => void removeLink('sub', id)}
+        />
+      )}
     </div>
+  );
+}
+
+function DirectionTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type='button'
+      role='tab'
+      aria-selected={active}
+      onClick={onClick}
+      style={{
+        padding: '4px 12px',
+        fontSize: '11px',
+        fontWeight: 600,
+        border: '1px solid',
+        borderColor: active ? 'var(--green-primary)' : 'var(--border-color)',
+        borderRadius: '9999px',
+        background: active ? 'color-mix(in srgb, var(--green-primary) 12%, transparent)' : 'transparent',
+        color: active ? 'var(--green-primary)' : 'var(--text-secondary)',
+        cursor: 'pointer',
+        transition: 'background 140ms ease, color 140ms ease, border-color 140ms ease',
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -122,7 +188,6 @@ function LinkSection({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
       <span style={mutedTextStyle}>{hint}</span>
 
       {linkedIds.length === 0 ? (

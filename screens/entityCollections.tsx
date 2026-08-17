@@ -5,6 +5,7 @@ import Header from '@components/Header/Header';
 import CollectionLinkagesPanel from '@components/CollectionLinkagesPanel/CollectionLinkagesPanel';
 import useCollectionBlacklist from '@hooks/useCollectionBlacklist';
 import { ProtocolCollection, collectionName, useProtocolCollections } from '@hooks/useProtocolCollections';
+import { getCollectionLinks } from 'lib/yomaWorker/client';
 
 function shorten(value: string, head = 14, tail = 6) {
   return value.length > head + tail + 3 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
@@ -39,6 +40,39 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
   useEffect(() => {
     setExpandedId(null);
   }, [entityDid]);
+
+  // Collections that already have at least one base/sub link, for the dot on
+  // the link icon. Seeded with one lookup per listed collection (best-effort —
+  // failures just leave the dot off), then kept live by the expanded panel.
+  const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setLinkedIds(new Set());
+    if (collections.length === 0) return;
+    let cancelled = false;
+    collections.forEach((c) => {
+      void getCollectionLinks(c.collectionId).then((res) => {
+        if (cancelled || !res.ok) return;
+        if ((res.data.base?.length ?? 0) + (res.data.sub?.length ?? 0) > 0) {
+          setLinkedIds((prev) => new Set(prev).add(c.collectionId));
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Re-seed only when the set of listed collection ids changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityDid, collections.map((c) => c.collectionId).join(',')]);
+
+  const setHasLinks = (collectionId: string, hasLinks: boolean) => {
+    setLinkedIds((prev) => {
+      if (prev.has(collectionId) === hasLinks) return prev;
+      const next = new Set(prev);
+      if (hasLinks) next.add(collectionId);
+      else next.delete(collectionId);
+      return next;
+    });
+  };
 
   const goBack = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -112,13 +146,19 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
                     saving={savingIds.has(c.collectionId)}
                     onToggle={(next) => void setBlacklisted(c.collectionId, next)}
                     expanded={expanded}
+                    hasLinks={linkedIds.has(c.collectionId)}
                     onToggleExpand={() => setExpandedId(expanded ? null : c.collectionId)}
                     last={last || expanded}
                   />
                   {expanded && (
                     // Unmounted on collapse, so useCollectionLinks refetches on every expand.
                     <div style={{ borderBottom: last ? 'none' : '1px solid var(--border-color)' }}>
-                      <CollectionLinkagesPanel collection={c} allCollections={collections} blacklist={blacklist} />
+                      <CollectionLinkagesPanel
+                        collection={c}
+                        allCollections={collections}
+                        blacklist={blacklist}
+                        onHasLinksChange={(hasLinks) => setHasLinks(c.collectionId, hasLinks)}
+                      />
                     </div>
                   )}
                 </div>
@@ -150,6 +190,7 @@ function CollectionCard({
   saving,
   onToggle,
   expanded,
+  hasLinks,
   onToggleExpand,
   last,
 }: {
@@ -158,6 +199,7 @@ function CollectionCard({
   saving: boolean;
   onToggle: (next: boolean) => void;
   expanded: boolean;
+  hasLinks: boolean;
   onToggleExpand: () => void;
   last: boolean;
 }) {
@@ -216,25 +258,37 @@ function CollectionCard({
         </div>
       </div>
 
-      <LinkagesButton expanded={expanded} onToggleExpand={onToggleExpand} />
+      <LinkagesButton expanded={expanded} hasLinks={hasLinks} onToggleExpand={onToggleExpand} />
       <VisibilityButton blacklisted={blacklisted} saving={saving} onToggle={onToggle} />
     </div>
   );
 }
 
-// Icon-only toggle for the base/sub linkages panel under the card.
-function LinkagesButton({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpand: () => void }) {
+// Icon-only toggle for the base/sub linkages panel under the card. A small
+// dot on the icon marks collections that already have a base or sub link.
+function LinkagesButton({
+  expanded,
+  hasLinks,
+  onToggleExpand,
+}: {
+  expanded: boolean;
+  hasLinks: boolean;
+  onToggleExpand: () => void;
+}) {
   const [hover, setHover] = useState(false);
   return (
     <button
       type='button'
       aria-expanded={expanded}
-      aria-label={expanded ? 'Hide claim linkages' : 'Manage claim linkages'}
-      title={expanded ? 'Hide linkages' : 'Manage linkages'}
+      aria-label={
+        expanded ? 'Hide claim linkages' : hasLinks ? 'Manage claim linkages (has links)' : 'Manage claim linkages'
+      }
+      title={expanded ? 'Hide linkages' : hasLinks ? 'Manage linkages (has links)' : 'Manage linkages'}
       onClick={onToggleExpand}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
+        position: 'relative',
         flexShrink: 0,
         display: 'inline-flex',
         alignItems: 'center',
@@ -251,6 +305,21 @@ function LinkagesButton({ expanded, onToggleExpand }: { expanded: boolean; onTog
       }}
     >
       <LinkIcon />
+      {hasLinks && (
+        <span
+          aria-hidden='true'
+          style={{
+            position: 'absolute',
+            top: '4px',
+            right: '4px',
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: 'var(--green-primary)',
+            border: '1px solid var(--bg-secondary)',
+          }}
+        />
+      )}
     </button>
   );
 }
