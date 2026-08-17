@@ -4,8 +4,9 @@ import { ElementFactory, Question, Serializer, SvgRegistry } from 'survey-core';
 import { ReactQuestionFactory, SurveyQuestionElementBase } from 'survey-react-ui';
 
 import MapIcon from './MapIcon';
-import UnlMap from './UnlMapClient';
-import { CellPrecision, getFormattedCellDimensions } from './unl.service';
+import HereMap from './HereMapClient';
+import type { ClickedCell, Feature, FeatureCollection } from './HereMapClient';
+import { CellPrecision, getFormattedCellDimensions } from './grid.service';
 
 const CUSTOM_TYPE = 'map-grid-selector';
 
@@ -278,17 +279,23 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
     return this.question.value;
   }
 
-  private createGridCellData(featureData: any): GridCell {
-    const properties = featureData?.properties || {};
-    const unlLocation = properties?.unl_location || {};
-    const coordinates = featureData?.geometry?.coordinates || [0, 0];
+  private createGridCellData(
+    featureData: Feature | undefined,
+    precision: CellPrecision,
+    cellInfo: ClickedCell,
+  ): GridCell {
+    const properties: any = featureData?.properties || {};
+    const coordinates = cellInfo.coordinates || featureData?.geometry?.coordinates || [0, 0];
     const postalAddress = (properties?.postal_address && properties.postal_address[0]) || {};
 
     const gridCell: GridCell = {
-      geoId: unlLocation?.id || '',
+      // The locally computed geohash is authoritative (no vendor id fallback).
+      geoId: cellInfo.locationId || '',
       latitude: coordinates[1] || 0,
       longitude: coordinates[0] || 0,
-      gridPrecision: this.question.gridPrecision,
+      // The precision actually used at click time — the user may have changed
+      // it via the map's grid-size control since the template default.
+      gridPrecision: precision,
     };
 
     if (this.question.capturePlaceIdentifier && properties?.place?.identifier) {
@@ -355,25 +362,27 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
     return gridCell;
   }
 
-  private handleFeatureCollectionClick = (featureCollection: any) => {
-    if (!featureCollection?.features?.length) return;
-
-    const feature = featureCollection.features[0];
-    const newCell = this.createGridCellData(feature);
-    if (!newCell.geoId) return;
+  private handleFeatureCollectionClick = (
+    featureCollection: FeatureCollection | null,
+    cellInfo: ClickedCell,
+    precision: CellPrecision,
+  ) => {
+    // The reverse geocode is best-effort — the cell itself always selects.
+    const feature = featureCollection?.features?.[0];
+    const newCell = this.createGridCellData(feature, precision, cellInfo);
+    if (!newCell.geoId) {
+      newCell.geoId = `${newCell.latitude.toFixed(6)}_${newCell.longitude.toFixed(6)}`;
+    }
 
     let newValue: SelectedCellsValue;
     if (this.question.allowMultiple) {
       const currentCells = Array.isArray(this.value) ? this.value : this.value ? [this.value] : [];
       const existingIndex = currentCells.findIndex((cell) => cell.geoId === newCell.geoId);
       const updatedCells =
-        existingIndex >= 0
-          ? currentCells.filter((_, index) => index !== existingIndex)
-          : [...currentCells, newCell];
+        existingIndex >= 0 ? currentCells.filter((_, index) => index !== existingIndex) : [...currentCells, newCell];
       newValue = updatedCells.length > 0 ? updatedCells : null;
     } else {
-      const isSameCell =
-        this.value && !Array.isArray(this.value) && (this.value as GridCell).geoId === newCell.geoId;
+      const isSameCell = this.value && !Array.isArray(this.value) && (this.value as GridCell).geoId === newCell.geoId;
       newValue = isSameCell ? null : newCell;
     }
 
@@ -433,47 +442,54 @@ export class SurveyQuestionMapGridSelector extends SurveyQuestionElementBase {
   private renderCapturedFieldsForCell(cell: GridCell): React.ReactNode {
     const capturedFields: React.ReactNode[] = [];
     if (this.question.capturePlaceName && cell.placeName) {
-      capturedFields.push(<div key="placeName">Place: {cell.placeName}</div>);
+      capturedFields.push(<div key='placeName'>Place: {cell.placeName}</div>);
     }
     if (this.question.captureCountryName && cell.countryName) {
-      capturedFields.push(<div key="countryName">Country: {cell.countryName}</div>);
+      capturedFields.push(<div key='countryName'>Country: {cell.countryName}</div>);
     }
     if (this.question.captureStateName && cell.stateName) {
-      capturedFields.push(<div key="stateName">State: {cell.stateName}</div>);
+      capturedFields.push(<div key='stateName'>State: {cell.stateName}</div>);
     }
     if (this.question.captureCountyName && cell.countyName) {
-      capturedFields.push(<div key="countyName">County: {cell.countyName}</div>);
+      capturedFields.push(<div key='countyName'>County: {cell.countyName}</div>);
     }
     if (this.question.captureCityName && cell.cityName) {
-      capturedFields.push(<div key="cityName">City: {cell.cityName}</div>);
+      capturedFields.push(<div key='cityName'>City: {cell.cityName}</div>);
     }
     if (this.question.captureDistrictName && cell.districtName) {
-      capturedFields.push(<div key="districtName">District: {cell.districtName}</div>);
+      capturedFields.push(<div key='districtName'>District: {cell.districtName}</div>);
     }
     if (this.question.captureRoadName && cell.roadName) {
-      capturedFields.push(<div key="roadName">Road: {cell.roadName}</div>);
+      capturedFields.push(<div key='roadName'>Road: {cell.roadName}</div>);
     }
     if (this.question.capturePostalCode && cell.postalCode) {
-      capturedFields.push(<div key="postalCode">Postal Code: {cell.postalCode}</div>);
+      capturedFields.push(<div key='postalCode'>Postal Code: {cell.postalCode}</div>);
     }
     if (this.question.captureHouseNumber && cell.houseNumber) {
-      capturedFields.push(<div key="houseNumber">House Number: {cell.houseNumber}</div>);
+      capturedFields.push(<div key='houseNumber'>House Number: {cell.houseNumber}</div>);
     }
     if (capturedFields.length === 0) return null;
-    return (
-      <div style={{ marginLeft: 8, color: 'var(--text-primary, #555)', fontSize: 11 }}>{capturedFields}</div>
-    );
+    return <div style={{ marginLeft: 8, color: 'var(--text-primary, #555)', fontSize: 11 }}>{capturedFields}</div>;
   }
 
   renderElement() {
     return (
       <div style={this.style}>
-        <UnlMap
-          precision={this.question.gridPrecision}
+        <HereMap
+          value={this.value}
+          displayMode={this.isDisplayMode}
+          gridPrecision={this.question.gridPrecision}
+          minZoom={this.question.minZoom}
+          maxZoom={this.question.maxZoom}
           focusOnUser={this.question.focusOnUser}
+          basemapToggle={this.question.basemapToggle !== false}
           center={this.question.center}
           getFeatureCollectionOnClick={this.handleFeatureCollectionClick}
-          mapId={`map-${this.question.name || 'default'}`}
+          // question.id is unique per model instance — two surveys mounted at
+          // once (collectionForm + SubclaimModal viewer) can share a question
+          // NAME, and a name-based container id would make the maps clobber
+          // each other's DOM.
+          mapId={`map-${this.question.id || this.question.name || 'default'}`}
         />
         {this.renderSelectedCellsSummary()}
 

@@ -1,4 +1,4 @@
-import { CSSProperties, useCallback, useEffect, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -45,13 +45,18 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
   // the link icon. Seeded with one lookup per listed collection (best-effort —
   // failures just leave the dot off), then kept live by the expanded panel.
   const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set());
+  // Collections whose link state the expanded panel has reported live — those
+  // reports are fresher than the seed lookups, so a slow seed response must
+  // not overwrite them (e.g. re-adding the dot right after a link deletion).
+  const panelReportedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     setLinkedIds(new Set());
+    panelReportedRef.current = new Set();
     if (collections.length === 0) return;
     let cancelled = false;
     collections.forEach((c) => {
       void getCollectionLinks(c.collectionId).then((res) => {
-        if (cancelled || !res.ok) return;
+        if (cancelled || !res.ok || panelReportedRef.current.has(c.collectionId)) return;
         if ((res.data.base?.length ?? 0) + (res.data.sub?.length ?? 0) > 0) {
           setLinkedIds((prev) => new Set(prev).add(c.collectionId));
         }
@@ -65,6 +70,7 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
   }, [entityDid, collections.map((c) => c.collectionId).join(',')]);
 
   const setHasLinks = (collectionId: string, hasLinks: boolean) => {
+    panelReportedRef.current.add(collectionId);
     setLinkedIds((prev) => {
       if (prev.has(collectionId) === hasLinks) return prev;
       const next = new Set(prev);
