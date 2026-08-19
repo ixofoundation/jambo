@@ -8,6 +8,7 @@ import { createMatrixClaimBotClient } from '@ixo/matrixclient-sdk';
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
+import '../../lib/here'; // registers the `map-grid-selector` SurveyJS question type for the parent-claim viewer
 import Cross from '@icons/cross.svg';
 import Reload from '@icons/reload.svg';
 import ArrowLeft from '@icons/arrow_left.svg';

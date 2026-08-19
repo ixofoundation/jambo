@@ -134,6 +134,42 @@ export function getCollectionLinks(collectionId: string): Promise<WorkerResult<C
   return safeFetch<CollectionLinksResponse>(`/v1/collectiononcollection/${encodeURIComponent(collectionId)}`);
 }
 
+/**
+ * Links a collection as an allowed subcollection of a base collection.
+ * Admin-only on the worker (matrix access token, same as blacklistCollection).
+ */
+export function addCollectionLink(
+  collectionId: string,
+  subCollectionId: string,
+  accessToken: string,
+): Promise<WorkerResult<{ collectionId: string; subCollectionId: string }>> {
+  return safeFetch<{ collectionId: string; subCollectionId: string }>(
+    `/v1/collectiononcollection/collections/${encodeURIComponent(collectionId)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ subCollectionId }),
+    },
+  );
+}
+
+/** Removes a base↔sub collection link. Admin-only (matrix access token). */
+export function removeCollectionLink(
+  collectionId: string,
+  subCollectionId: string,
+  accessToken: string,
+): Promise<WorkerResult<{ collectionId: string; subCollectionId: string }>> {
+  return safeFetch<{ collectionId: string; subCollectionId: string }>(
+    `/v1/collectiononcollection/collections/${encodeURIComponent(collectionId)}/${encodeURIComponent(
+      subCollectionId,
+    )}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+}
+
 export function getClaimsWithSubclaims(
   parentCollectionId: string,
 ): Promise<WorkerResult<CollectionClaimsResponse>> {

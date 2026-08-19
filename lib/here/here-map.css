@@ -1,0 +1,61 @@
+/* Global CSS for the HERE-based map-grid-selector (imported in pages/_app.tsx). */
+
+/* ── Map attribution (HERE/maplibre) — hidden by design, mirroring the
+   supamoto/impacts-x implementations. Scoped to the map-grid-selector's own
+   container so any future maplibre map elsewhere in the app keeps its
+   bottom-right controls/attribution. ── */
+.here-map-root .maplibregl-ctrl-bottom-right,
+.here-map-root .mapboxgl-ctrl-bottom-right {
+  display: none;
+}
+
+/* ── "You are here" dot (map-grid-selector) ──
+   White spot with a blue center and blue pulses, marking the cached one-shot
+   geolocation. Colors are map chrome (match marker/control styling), not app
+   design tokens. */
+.map-user-location-dot {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+.map-user-location-dot::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #1a73e8;
+}
+.map-user-location-dot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: #1a73e8;
+  opacity: 0.35;
+  z-index: -1;
+  animation: map-user-location-pulse 2s ease-out infinite;
+}
+@keyframes map-user-location-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  70% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-user-location-dot::after {
+    animation: none;
+    transform: scale(1.8);
+    opacity: 0.15;
+  }
+}

@@ -54,8 +54,6 @@
     "redux-persist": "6.0.0",
     "secure-web-storage": "1.0.2",
     "survey-react-ui": "1.9.101",
-    "unl-core": "^3.0.1",
-    "unl-map-js": "^0.1.5",
     "maplibre-gl": "^5.6.1"
   },
   "resolutions": {

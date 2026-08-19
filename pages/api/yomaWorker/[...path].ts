@@ -23,7 +23,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const pathParts = (req.query.path as string[] | undefined) ?? [];
   const qs = req.url?.includes('?') ? '?' + req.url.split('?')[1] : '';
-  const targetUrl = `${JAMBO_WORKER_URL}/${pathParts.join('/')}${qs}`;
+  // Next decodes the catch-all segments; re-encode so a segment containing an
+  // encoded "/" (or similar) can't address a different upstream route.
+  const targetUrl = `${JAMBO_WORKER_URL}/${pathParts.map(encodeURIComponent).join('/')}${qs}`;
 
   const headers = new Headers();
   for (const [k, v] of Object.entries(req.headers)) {

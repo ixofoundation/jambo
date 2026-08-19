@@ -23,7 +23,7 @@ import {
   createAttachDownloadHandler,
 } from '@constants/surveyDefaultConfig';
 import { createAttachPdfPreviewHandler } from '@constants/surveyPdfPreview';
-import '../lib/unl'; // registers the `map-grid-selector` SurveyJS question type
+import '../lib/here'; // registers the `map-grid-selector` SurveyJS question type
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
