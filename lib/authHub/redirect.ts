@@ -4,6 +4,12 @@ export interface AuthHubSessionData {
   address: string;
   did: string;
   displayName: string | null;
+  /**
+   * The user's WorkOS-verified email (nullable; absent from hubs that predate
+   * the field). Display/UX only — the Yoma link flow never trusts it, the
+   * yoma worker verifies the email itself against the hub via UCAN.
+   */
+  email?: string | null;
   sessionMnemonic: string | null;
   sessionAuthenticatorId: string | null;
   edSigningMnemonic: string | null;

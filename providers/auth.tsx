@@ -6,6 +6,8 @@ import { secureSave, secureLoad, secureReset } from '@utils/storage';
 import { secret } from '@utils/secrets';
 import { logoutMatrixClient } from '@utils/matrix';
 import { cleanUrlString } from '@utils/url';
+import { clearReturnTo, saveReturnTo, suppressReturnTo } from '@utils/returnTo';
+import { clearLinkState, clearYref } from '@utils/yomaLink';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 import { store, persistor } from '@store/index';
@@ -60,6 +62,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   const [address, setAddress] = useState<string | null>(null);
   const [did, setDid] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [sessionAuthenticatorId, setSessionAuthenticatorId] = useState<string | null>(null);
   const [matrixUserId, setMatrixUserId] = useState<string | null>(null);
   const [matrixRoomId, setMatrixRoomId] = useState<string | null>(null);
@@ -79,6 +82,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     if (data.matrixUserId) secureSave(authConstants.secretKey.MATRIX_USER_ID, data.matrixUserId);
     if (data.matrixRoomId) secureSave(authConstants.secretKey.MATRIX_ROOM_ID, data.matrixRoomId);
     if (data.displayName) secureSave(authConstants.secretKey.DISPLAY_NAME, data.displayName);
+    if (data.email) secureSave(authConstants.secretKey.EMAIL, data.email);
     secureSave(authConstants.secretKey.SESSION_CREATED_AT, String(Date.now()));
   }
 
@@ -92,6 +96,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     setAddress(null);
     setDid(null);
     setDisplayName(null);
+    setEmail(null);
     setSessionAuthenticatorId(null);
     setMatrixUserId(null);
     setMatrixRoomId(null);
@@ -147,6 +152,9 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       setAddress(persistedAccount.address);
       setDid(persistedAccount.did);
       setDisplayName(persistedAccount.displayName ?? null);
+      // Optional — sessions created before the auth hub returned an email
+      // simply have none until the next login.
+      setEmail(persistedAccount.email ?? null);
       setSessionAuthenticatorId(persistedAccount.sessionAuthenticatorId ?? null);
       setMatrixUserId(persistedAccount.matrixUserId ?? null);
       setMatrixRoomId(persistedAccount.matrixRoomId ?? null);
@@ -163,6 +171,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     setAddress(data.address);
     setDid(data.did);
     setDisplayName(data.displayName);
+    setEmail(data.email ?? null);
     setSessionAuthenticatorId(data.sessionAuthenticatorId);
     setMatrixUserId(data.matrixUserId);
     setMatrixRoomId(data.matrixRoomId);
@@ -175,6 +184,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         signingMethod: 'session_key',
         sessionAuthenticatorId: data.sessionAuthenticatorId,
         displayName: data.displayName,
+        email: data.email ?? null,
         matrixUserId: data.matrixUserId,
         matrixRoomId: data.matrixRoomId,
       }),
@@ -240,7 +250,26 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     }
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (options?: { preserveReturnTo?: boolean }) => {
+    const preserveReturnTo = options?.preserveReturnTo ?? false;
+    if (preserveReturnTo) {
+      // "Switch account" logout (Yoma wrong-account prompt): the next sign-in
+      // SHOULD land back on this page, so save it explicitly and leave the
+      // yref hand-off marker in place for the re-comparison. Only the
+      // previous account's link cache is wiped.
+      saveReturnTo(window.location.pathname + window.location.search);
+    } else {
+      // Clean-break logout: before any state flips, wipe the saved deep link
+      // and block re-saves — AuthGuard reacts to the logged-out flip below
+      // and would otherwise capture the page the user logged out from (see
+      // utils/returnTo.ts). Also drop any Yoma hand-off marker: on a shared
+      // computer the next person must not inherit it.
+      suppressReturnTo();
+      clearYref();
+    }
+    // Either way, the per-account Yoma link cache and session-check flag
+    // belong to the account signing out — never to the next login.
+    clearLinkState();
     setIsLoggingOut(true);
 
     // Overall safety net: never let matrix cleanup block the redirect for more than 8s.
@@ -259,6 +288,12 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       console.warn('persistor.purge failed (continuing):', err);
     }
 
+    // Clean break only — drop any deep link AuthGuard saved while this
+    // page's auth state flipped (e.g. /settings), so the next sign-in starts
+    // fresh instead of resuming where the user logged out. The switch-account
+    // variant deliberately keeps its explicitly saved return path.
+    if (!preserveReturnTo) clearReturnTo();
+
     window.location.href = '/auth';
   }, []);
 
@@ -268,6 +303,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     address,
     did,
     displayName,
+    email,
     sessionAuthenticatorId,
     matrixUserId,
     matrixRoomId,

@@ -6,6 +6,8 @@ interface AccountState {
   signingMethod: 'session_key' | undefined;
   sessionAuthenticatorId: string | null;
   displayName: string | null;
+  /** Optional — sessions created before the auth hub returned it have none. */
+  email?: string | null;
   matrixUserId: string | null;
   matrixRoomId: string | null;
 }
@@ -16,6 +18,7 @@ const initialState: AccountState = {
   signingMethod: undefined,
   sessionAuthenticatorId: null,
   displayName: null,
+  email: null,
   matrixUserId: null,
   matrixRoomId: null,
 };
@@ -32,6 +35,7 @@ const accountSlice = createSlice({
         signingMethod: 'session_key';
         sessionAuthenticatorId: string | null;
         displayName: string | null;
+        email?: string | null;
         matrixUserId: string | null;
         matrixRoomId: string | null;
       }>,
@@ -41,6 +45,7 @@ const accountSlice = createSlice({
       state.signingMethod = action.payload.signingMethod;
       state.sessionAuthenticatorId = action.payload.sessionAuthenticatorId;
       state.displayName = action.payload.displayName;
+      state.email = action.payload.email ?? null;
       state.matrixUserId = action.payload.matrixUserId;
       state.matrixRoomId = action.payload.matrixRoomId;
     },

@@ -9,6 +9,7 @@ import { ReduxProvider } from '@store/provider';
 import { ThemeProvider } from '@providers/theme';
 import { AuthProvider } from '@providers/auth';
 import { BackgroundSetupProvider } from '@providers/backgroundSetup';
+import { YomaLinkProvider } from '@providers/yomaLink';
 import { ToastContainer } from '@components/Toast/Toast';
 import EmailNotificationPrompt from '@components/EmailNotifier/EmailNotificationPrompt';
 
@@ -18,9 +19,11 @@ function MyApp({ Component, pageProps }: AppProps) {
       <ThemeProvider>
         <AuthProvider>
           <BackgroundSetupProvider>
-            <Component {...pageProps} />
-            <EmailNotificationPrompt />
-            <ToastContainer />
+            <YomaLinkProvider>
+              <Component {...pageProps} />
+              <EmailNotificationPrompt />
+              <ToastContainer />
+            </YomaLinkProvider>
           </BackgroundSetupProvider>
         </AuthProvider>
       </ThemeProvider>
