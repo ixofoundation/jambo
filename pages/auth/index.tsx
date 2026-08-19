@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import GuestGuard from '@components/GuestGuard';
@@ -7,10 +7,16 @@ import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE
 import { GRADIENT_COLORS } from '@constants/gradientColors';
 import { loginViaAuthHub } from 'lib/authHub/redirect';
 import { isDevBypass } from 'lib/authHub/devBypass';
+import { peekYref } from '@utils/yomaLink';
 
 export default function AuthPage() {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  // sessionStorage is browser-only — read after mount to keep SSR happy.
+  const [fromYoma, setFromYoma] = useState(false);
+  useEffect(() => {
+    setFromYoma(peekYref() !== null);
+  }, []);
 
   function handleSignIn() {
     setIsRedirecting(true);
@@ -57,6 +63,21 @@ export default function AuthPage() {
           {hasError && (
             <p style={{ color: 'var(--error-color)', fontSize: '14px', textAlign: 'center', margin: 0 }}>
               {router.query.error_description?.toString() || router.query.error?.toString()}
+            </p>
+          )}
+
+          {fromYoma && (
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: '14px',
+                textAlign: 'center',
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              You&apos;re joining from Yoma — please sign in with the <strong>same email</strong> you use on Yoma so
+              your progress counts towards your Yoma rewards.
             </p>
           )}
 

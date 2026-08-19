@@ -14,6 +14,7 @@ export function getDevBypassSession(): AuthHubSessionData {
     address: 'ixo1devbypassaddress000000000000000000000',
     did: 'did:ixo:entity:devbypass000000000000000000000',
     displayName: 'Dev User',
+    email: 'devbypass@example.com',
     sessionMnemonic:
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
     sessionAuthenticatorId: '1',

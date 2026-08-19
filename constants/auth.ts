@@ -9,6 +9,7 @@ const authConstants = {
     MATRIX_USER_ID: 'auth_ixo_matrix_user_id',
     MATRIX_ROOM_ID: 'auth_ixo_matrix_room_id',
     DISPLAY_NAME: 'auth_ixo_display_name',
+    EMAIL: 'auth_ixo_email',
     SESSION_CREATED_AT: 'auth_ixo_session_created_at',
   },
 };
