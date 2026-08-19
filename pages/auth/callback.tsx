@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAuth } from '@hooks/useAuth';
 import { exchangeAuthCode } from 'lib/authHub/redirect';
 import { isDevBypass, getDevBypassSession } from 'lib/authHub/devBypass';
+import { takeReturnTo } from '@utils/returnTo';
 import { persistor } from '@store/index';
 import GradientBand from '@components/GradientBand/GradientBand';
 import AuthHeader from '@components/AuthHeader/AuthHeader';
@@ -13,8 +14,16 @@ export default function AuthCallbackPage() {
   const router = useRouter();
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const ranRef = useRef(false);
 
   useEffect(() => {
+    // The exchange code is single-use and gets stripped from the URL below —
+    // guard against React's double-invoke (StrictMode), whose second run
+    // would otherwise find no code and flash "Authentication Failed" while
+    // the first run's exchange is still succeeding.
+    if (ranRef.current) return;
+    ranRef.current = true;
+
     // Read code from URL and immediately strip it — prevents re-use on re-render/reload
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
@@ -26,13 +35,15 @@ export default function AuthCallbackPage() {
 
     // Guard: if this code was already exchanged (e.g., page reload, bfcache), skip
     if (code && sessionStorage.getItem('ixo_code_used') === code) {
-      // Code was already exchanged — just navigate home
-      window.location.replace('/');
+      // Code was already exchanged — navigate to the saved deep link, or home
+      window.location.replace(takeReturnTo() ?? '/');
       return;
     }
 
     if (!code && !bypass) {
-      setError('No authorization code received');
+      // Opened directly with nothing to exchange (bookmark, stale tab) — not
+      // a failure, just bounce to the sign-in page.
+      window.location.replace('/auth');
       return;
     }
 
@@ -57,9 +68,11 @@ export default function AuthCallbackPage() {
         // otherwise the home page may see stale auth state and redirect back to /auth
         await persistor.flush();
 
-        // Use full page navigation (not router.replace) to ensure the home page
-        // re-initializes from persisted state — avoids client-side routing race conditions
-        window.location.replace('/');
+        // Use full page navigation (not router.replace) to ensure the target page
+        // re-initializes from persisted state — avoids client-side routing race
+        // conditions. Lands on the deep link saved before the auth redirect
+        // (e.g. a Yoma hand-off to /entities/<did>), or home when there is none.
+        window.location.replace(takeReturnTo() ?? '/');
       } catch (err) {
         console.error('Auth callback failed:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');

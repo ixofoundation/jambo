@@ -1,4 +1,4 @@
-import { useState, useCallback, ReactNode } from 'react';
+import { useState, useCallback, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -14,6 +14,7 @@ import {
   generateUserRoomAliasFromAddress,
 } from '@utils/matrix';
 import { cleanUrlString } from '@utils/url';
+import { getCachedLink, type YomaLinkState } from '@utils/yomaLink';
 
 type SecretKey = 'password' | 'passphrase';
 
@@ -29,6 +30,13 @@ export default function SettingsScreen() {
   const userId = secret.userId;
   const baseUrl = secret.baseUrl;
   const accessToken = secret.accessToken;
+
+  // Populated by the root YomaLinkProvider's silent check; storage is
+  // browser-only, so read after mount to keep SSR/hydration happy.
+  const [yomaLink, setYomaLink] = useState<YomaLinkState | null>(null);
+  useEffect(() => {
+    if (did) setYomaLink(getCachedLink(did));
+  }, [did]);
 
   const goBack = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -235,6 +243,41 @@ export default function SettingsScreen() {
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
+        </div>
+
+        <h1
+          style={{
+            margin: '24px 0 8px',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+          }}
+        >
+          Yoma Account
+        </h1>
+
+        <div style={{ padding: '0 4px' }}>
+          {yomaLink?.yomaId ? (
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <span style={{ color: '#3E9B4F', fontWeight: 600 }}>Connected</span> — your completions count towards
+              your Yoma rewards.
+              {yomaLink.email ? (
+                <>
+                  {' '}
+                  Linked email: <span style={{ color: 'var(--text-primary)' }}>{yomaLink.email}</span>
+                </>
+              ) : null}
+            </p>
+          ) : yomaLink?.email ? (
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Your email <span style={{ color: 'var(--text-primary)' }}>{yomaLink.email}</span> is verified, but no
+              Yoma account with this email is linked yet. Make sure your Yoma account uses the same email.
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Not connected to a Yoma account.
+            </p>
+          )}
         </div>
 
         <h1
