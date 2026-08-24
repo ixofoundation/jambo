@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import GuestGuard from '@components/GuestGuard';
-import { LogOutIcon, UserRoundPlusIcon } from '@components/Icons/icons';
+import { LogInIcon, UserRoundPlusIcon } from '@components/Icons/icons';
 import { loginViaAuthHub } from 'lib/authHub/redirect';
 import { isDevBypass } from 'lib/authHub/devBypass';
 import { peekYref } from '@utils/yomaLink';
@@ -83,7 +83,7 @@ export default function AuthPage() {
           </div>
           <div className='anim-rise' style={{ display: 'flex', flexDirection: 'column', gap: 12, animationDelay: '0.12s' }}>
             <button className='btn btn--primary btn--block' onClick={handleSignIn} disabled={isRedirecting}>
-              <LogOutIcon size={18} style={{ transform: 'scaleX(-1)' }} /> {primaryLabel}
+              <LogInIcon size={18} /> {primaryLabel}
             </button>
             <button className='btn btn--ghost btn--block' onClick={handleSignIn} disabled={isRedirecting}>
               <UserRoundPlusIcon size={18} /> Create account
