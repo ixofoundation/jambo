@@ -265,7 +265,16 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
       <GradientBand variant='blue' />
-      <Header onGradient title='Claim Collections' onBack={() => router.push(`/entities/${entityDid}`)} />
+      <Header
+        onGradient
+        title='Claim Collections'
+        onBack={() => {
+          // Return wherever the user came from (Tasks, entity page, …);
+          // pushing the entity page unconditionally builds a broken back-stack.
+          if (typeof window !== 'undefined' && window.history.length > 2) router.back();
+          else router.push(`/entities/${entityDid}`);
+        }}
+      />
       <main
         style={{
           position: 'relative',
@@ -396,7 +405,28 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
               </div>
             )}
 
-            {isServiceAgent && (
+            {/* Catch-all: no role, nothing to apply for, no claims — say so
+                instead of rendering an empty page. */}
+            {!isServiceAgent && !hasPendingSaBid && !showApplySaButton && !claimsLoading && claims.length === 0 && (
+              <div
+                style={{
+                  padding: '32px 20px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Nothing to do here right now — this collection isn’t open for new applications.
+                </p>
+              </div>
+            )}
+
+            {/* The user's own claims: shown to current service agents AND to
+                anyone who has submitted claims here before (e.g. payment
+                claims) — a past contributor must never see an empty page. */}
+            {(isServiceAgent || claims.length > 0) && (
               <>
                 {claimsLoading ? (
                   <div

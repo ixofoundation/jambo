@@ -139,6 +139,32 @@ export async function fetchClaimsByCollectionId(collectionId: string, address: s
   return result.data?.data?.claims?.nodes;
 }
 
+/** One claim by id — the on-chain record (used by the view-mode fallback).
+ *  claimId is URL-controlled, so it travels as a GraphQL variable, never
+ *  string-interpolated into the query. */
+export async function fetchClaimById(claimId: string) {
+  const query = `
+    query getClaimById($claimId: String!) {
+      claim(claimId: $claimId) {
+        claimId
+        collectionId
+        agentAddress
+        schemaType
+        submissionDate
+        paymentsStatus
+        evaluationByClaimId {
+          status
+          evaluationDate
+          oracle
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery(BLOCKSYNC_URL, query, { claimId });
+  // @ts-ignore
+  return result.data?.data?.claim ?? null;
+}
+
 /** All claims submitted by one agent across every collection — one query. */
 export async function fetchClaimsByAgentAddress(address: string) {
   const query = `

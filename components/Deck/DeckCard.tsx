@@ -9,6 +9,9 @@ export interface DeckCardData {
   title: string;
   provider?: string;
   image?: string;
+  /** True when `image` is the entity's LOGO fallback (no hero photo published)
+   *  — rendered contained on a blurred fill instead of cover-cropped. */
+  logoOnly?: boolean;
   typeLabel?: string;
   location?: string;
 }
@@ -170,8 +173,23 @@ export const DeckCard: FC<Props> = ({ card, top, depth, seed = 0, forceExit, onD
       aria-label={top ? `${card.title} — tap for details` : undefined}
     >
       {card.image && !imgFailed && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={card.image} alt='' className='deck-card__img' draggable={false} onError={() => setImgFailed(true)} />
+        card.logoOnly ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={card.image}
+              alt=''
+              className='deck-card__img deck-card__img--blur'
+              draggable={false}
+              onError={() => setImgFailed(true)}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={card.image} alt='' className='deck-card__logo' draggable={false} />
+          </>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={card.image} alt='' className='deck-card__img' draggable={false} onError={() => setImgFailed(true)} />
+        )
       )}
       <div className='deck-card__scrim' />
 

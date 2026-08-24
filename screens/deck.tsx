@@ -115,6 +115,7 @@ export default function Deck() {
           title: p?.name || 'Opportunity',
           provider: p?.brand ? `${p.brand} · Verified` : 'Verified partner',
           image: p?.image || p?.logo,
+          logoOnly: !p?.image && !!p?.logo,
           typeLabel: readableType(p?.type),
           location: p?.location,
         };
@@ -534,7 +535,22 @@ function DetailSheet({
       <button className='sheet-scrim anim-fade' aria-label='Close details' onClick={onClose} />
       <div className='sheet sheet--in' style={{ padding: 0, maxHeight: '92dvh' }}>
         <div style={{ position: 'relative' }}>
-          {card.image ? (
+          {card.image && card.logoOnly ? (
+            <div style={{ position: 'relative', width: '100%', height: 190, overflow: 'hidden', borderRadius: '26px 26px 0 0', background: 'var(--surface-2)' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={card.image}
+                alt=''
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(24px) saturate(0.9)', transform: 'scale(1.25)', opacity: 0.55 }}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={card.image}
+                alt=''
+                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '44%', maxHeight: '62%', objectFit: 'contain' }}
+              />
+            </div>
+          ) : card.image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={card.image} alt='' style={{ width: '100%', height: 190, objectFit: 'cover', borderRadius: '26px 26px 0 0', display: 'block' }} />
           ) : (

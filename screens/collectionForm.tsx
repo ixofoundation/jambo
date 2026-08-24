@@ -6,7 +6,12 @@ import { createMatrixBidBotClient, createMatrixClaimBotClient } from '@ixo/matri
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
-import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
+import {
+  fetchCollectionByCollectionId,
+  fetchClaimsByCollectionId,
+  fetchAllClaimsByCollectionId,
+  fetchClaimById,
+} from '@utils/claims';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -73,6 +78,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   const [surveyTemplate, setSurveyTemplate] = useState<string | undefined>();
   const [viewClaimData, setViewClaimData] = useState<Record<string, any> | null>(null);
+  // View mode without a stored claim document (payment claims recorded
+  // directly on-chain) — renders the on-chain claim record instead.
+  const [viewFallback, setViewFallback] = useState(false);
+  const [fallbackClaim, setFallbackClaim] = useState<any | null>(null);
   const [viewClaimId, setViewClaimId] = useState<string | null>(claimId ?? null);
   const [formLoading, setFormLoading] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
@@ -307,11 +316,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       setFormError(null);
 
       if (surveyMode === 'view' && claimId) {
-        // View mode — load claim data + survey template
-        const client = getClaimBotClient();
-        const response = await withMatrixOpenIdRetry((token) =>
-          client!?.claim.v1beta1.queryClaim(collectionId, claimId, token, did),
-        );
+        try {
+          // View mode — load claim data + survey template
+          const client = getClaimBotClient();
+          const response = await withMatrixOpenIdRetry((token) =>
+            client!?.claim.v1beta1.queryClaim(collectionId, claimId, token, did),
+          );
         let claimData: Record<string, any> = {};
         if (response) {
           let parsed = typeof response === 'string' ? JSON.parse(response) : response;
@@ -337,11 +347,20 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         if (cached) {
           console.log({ surveyTemplate: cached });
           setSurveyTemplate(JSON.stringify(cached));
-        } else {
-          const formData = await getAdditionalInfo(url);
-          dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
-          console.log({ surveyTemplate: formData });
-          setSurveyTemplate(JSON.stringify(formData));
+          } else {
+            const formData = await getAdditionalInfo(url);
+            dispatch(setVctTemplate({ protocolDid: col.protocol, template: formData, url }));
+            console.log({ surveyTemplate: formData });
+            setSurveyTemplate(JSON.stringify(formData));
+          }
+        } catch {
+          // The claims bot has no stored document for this claim (payment
+          // claims are recorded directly on-chain and never pass through the
+          // bot) — show the on-chain claim record instead of an error.
+          setViewFallback(true);
+          void fetchClaimById(claimId)
+            .then((c) => setFallbackClaim(c))
+            .catch(() => {});
         }
       } else if (surveyMode === 'kyc') {
         if (hasDraft && draft) {
@@ -412,8 +431,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // No toast: formError always renders the inline error card (with Go
+      // Back) on this screen — a toast would duplicate it, twice in dev where
+      // StrictMode double-runs the mount effect.
       setFormError(message || 'Something went wrong');
-      toast.error(message || 'Something went wrong');
     } finally {
       setFormLoading(false);
     }
@@ -804,32 +825,42 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
 
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
+  // On-chain record for the fallback card (blocksync direct fetch; allClaims
+  // is only populated by the currently-disabled evaluation flow).
+  const recordClaim = fallbackClaim ?? viewedClaim;
   const viewedClaimIsPending = viewedClaim && !viewedClaim.evaluationByClaimId?.status;
   // Evaluation flow disabled for now — re-enable by restoring the original expression.
   const canEvaluate = false && isEvalAgent && surveyMode === 'view' && viewedClaimIsPending;
 
+  // Leave via history when we can: pushing the collection URL from here builds
+  // forward entries that ping-pong with the collection page's own back button.
+  function leaveForm() {
+    if (typeof window !== 'undefined' && window.history.length > 2) router.back();
+    else router.push(collectionUrl);
+  }
+
   function handleClose() {
     if (surveyMode === 'view') {
-      router.push(collectionUrl);
+      leaveForm();
       return;
     }
     if (surveyHasChangesRef.current) {
       setCloseConfirmVisible(true);
     } else {
-      router.push(collectionUrl);
+      leaveForm();
     }
   }
 
   function handleConfirmSave() {
     // Draft is already saved via onValueChanged — just navigate back
     setCloseConfirmVisible(false);
-    router.push(collectionUrl);
+    leaveForm();
   }
 
   function handleConfirmDiscard() {
     setCloseConfirmVisible(false);
     dispatch(clearDraft(collectionId));
-    router.push(collectionUrl);
+    leaveForm();
   }
 
   const title = formLoading
@@ -888,6 +919,51 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                 to { transform: rotate(360deg); }
               }
             `}</style>
+              </div>
+            </div>
+          ) : viewFallback ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+              <div
+                style={{
+                  maxWidth: 420,
+                  width: '100%',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 16,
+                  padding: '24px',
+                }}
+              >
+                <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {recordClaim?.evaluationByClaimId?.status === 1 ? 'Approved claim' : 'Claim record'}
+                </p>
+                <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  This claim was recorded directly on-chain — there’s no form submission to display.
+                </p>
+                {recordClaim ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <ClaimFactRow
+                      label='Status'
+                      value={
+                        recordClaim.evaluationByClaimId?.status === 1
+                          ? 'Approved'
+                          : recordClaim.evaluationByClaimId?.status === 2
+                          ? 'Not approved'
+                          : recordClaim.evaluationByClaimId?.status === 3
+                          ? 'Disputed'
+                          : 'Awaiting review'
+                      }
+                      accent={recordClaim.evaluationByClaimId?.status === 1}
+                    />
+                    <ClaimFactRow label='Submitted' value={fmtClaimDateTime(recordClaim.submissionDate)} />
+                    {recordClaim.evaluationByClaimId?.evaluationDate && (
+                      <ClaimFactRow label='Evaluated' value={fmtClaimDateTime(recordClaim.evaluationByClaimId.evaluationDate)} />
+                    )}
+                    <ClaimFactRow label='Collection' value={collectionId} />
+                    <ClaimFactRow label='Claim ID' value={claimId ?? ''} mono />
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)' }}>Loading claim record…</p>
+                )}
               </div>
             </div>
           ) : formError ? (
@@ -1394,6 +1470,39 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// On-chain claim record (view-mode fallback when the claims bot holds no
+// stored document — e.g. payment claims written directly on-chain).
+// ---------------------------------------------------------------------------
+
+function fmtClaimDateTime(iso?: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso.endsWith('Z') ? iso : `${iso}Z`);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function ClaimFactRow({ label, value, mono, accent }: { label: string; value: string; mono?: boolean; accent?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+      <span style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{label}</span>
+      <span
+        style={{
+          fontSize: 13.5,
+          fontWeight: accent ? 700 : 500,
+          color: accent ? 'var(--green-primary)' : 'var(--text-primary)',
+          fontFamily: mono ? 'var(--font-mono)' : undefined,
+          textAlign: 'right',
+          overflowWrap: 'anywhere',
+          minWidth: 0,
+        }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

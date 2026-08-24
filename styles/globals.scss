@@ -30,8 +30,8 @@ body {
 @media (min-width: 501px) {
   body {
     background:
-      radial-gradient(90rem 60rem at 70% -20%, rgba(231, 212, 237, 0.45), transparent 60%),
-      radial-gradient(70rem 50rem at 10% 110%, rgba(250, 228, 198, 0.4), transparent 55%),
+      radial-gradient(90rem 60rem at 70% -20%, rgba(231, 212, 237, 0.55), transparent 60%),
+      radial-gradient(70rem 50rem at 10% 110%, rgba(250, 228, 198, 0.5), transparent 55%),
       var(--bg-primary);
     background-attachment: fixed;
   }
@@ -353,13 +353,20 @@ a {
   position: relative;
   z-index: var(--z-sticky);
 }
-.deck__stage { position: relative; flex: 1; min-height: 0; margin: 0 14px; }
+/* The stage never stretches past phone proportions: on tall viewports the
+   card caps at 680px and the card+actions group centres in the leftover space
+   (the auto margins collapse to zero on phones, where flex:1 fills exactly). */
+.deck__stage { position: relative; flex: 1; min-height: 0; margin: auto 14px 0; max-height: 680px; }
+/* While the actions row is hidden (Vault loading), the stage is the column's
+   last child and must carry the bottom auto margin itself, or it sinks. */
+.deck__stage:last-child { margin-bottom: auto; }
 .deck__actions {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 22px;
   padding: 14px 0 64px;
+  margin-bottom: auto;
   position: relative;
   z-index: 2;
 }
@@ -391,6 +398,19 @@ a {
   will-change: transform;
 }
 .deck-card__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Logo-safe hero: when an entity only published a logo (no hero photo), never
+   cover-crop it — a blurred fill carries the colour, the logo sits contained. */
+.deck-card__img--blur { filter: blur(26px) saturate(0.9); transform: scale(1.25); opacity: 0.55; }
+.deck-card__logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  width: 60%;
+  max-height: 42%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(24, 18, 30, 0.18));
+}
 .deck-card__scrim {
   position: absolute;
   inset: 0;
