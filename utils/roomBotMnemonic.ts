@@ -101,7 +101,19 @@ export async function fetchEncryptedMnemonicFromRoom({
 }
 
 export function decryptEncryptedMnemonic(ciphertext: string, pin: string): string {
-  const mnemonic = decrypt(ciphertext, pin);
-  if (!mnemonic) throw new Error('Incorrect PIN');
+  let mnemonic: string;
+  try {
+    mnemonic = decrypt(ciphertext, pin);
+  } catch {
+    // A wrong PIN surfaces as a raw AES padding error ("unable to decrypt
+    // data") — translate to the customer-facing message.
+    throw new Error('Incorrect PIN. Please try again.');
+  }
+  // A wrong PIN can (rarely) pass the padding check but yield garbage rather
+  // than a bip39 phrase — treat that as a wrong PIN too instead of silently
+  // deriving wrong credentials from it.
+  if (!mnemonic || !/^([a-z]+ ){11,23}[a-z]+$/.test(mnemonic.trim())) {
+    throw new Error('Incorrect PIN. Please try again.');
+  }
   return mnemonic;
 }

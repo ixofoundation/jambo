@@ -2,6 +2,7 @@ import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
+import { FileCheckIcon } from '@components/Icons/icons';
 import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import { PiiIndexEntry, readAllPiiIndexEntries } from '@utils/matrixCredential';
@@ -113,23 +114,16 @@ export default function PiiDetailScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header onGradient title='Credential Data' onBack={goBack} />
-
-      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -140,49 +134,82 @@ export default function PiiDetailScreen() {
 
         {!loading && !error && data && (
           <>
-            {/* Header strip: shortened CID + stored date */}
-            <div
-              style={{
-                backgroundColor: 'var(--bg-secondary)',
-                borderRadius: 16,
-                border: '1px solid var(--border-color)',
-                padding: '14px 16px',
-                marginBottom: 12,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-              }}
-            >
+            {/* Credential pass hero: centred icon + title */}
+            <div className='center' style={{ marginTop: 8, marginBottom: 20 }}>
               <span
+                className='cred-icon'
                 style={{
-                  fontSize: 12,
-                  color: 'var(--text-primary)',
-                  opacity: 0.7,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  width: 70,
+                  height: 70,
+                  borderRadius: 20,
+                  margin: '0 auto',
+                  background: 'var(--purple-tint)',
+                  color: 'var(--purple-primary)',
                 }}
               >
-                {shortenCid(data.entry.cid)}
+                <FileCheckIcon size={34} />
               </span>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                {formatStoredDate(data.entry.storedAt)}
-              </span>
+              <h1 className='h1' style={{ marginTop: 14, fontSize: 24 }}>
+                Credential Data
+              </h1>
+            </div>
+
+            {/* Header strip: shortened CID + stored date */}
+            <div className='card card--inset' style={{ overflow: 'hidden', marginBottom: 16 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '14px 16px',
+                }}
+              >
+                <span className='muted' style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
+                  ID
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: 'var(--font-mono)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {shortenCid(data.entry.cid)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '14px 16px',
+                  borderTop: '1px solid var(--border-color)',
+                }}
+              >
+                <span className='muted' style={{ fontSize: 14, whiteSpace: 'nowrap' }}>
+                  Stored
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {formatStoredDate(data.entry.storedAt)}
+                </span>
+              </div>
             </div>
 
             {/* JSON box with floating copy icon */}
             <div style={{ position: 'relative' }}>
               <pre
+                className='card card--inset'
                 style={{
                   margin: 0,
                   padding: 16,
                   paddingRight: 48,
-                  borderRadius: 16,
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
                   color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: 12,
                   lineHeight: 1.5,
                   overflowX: 'auto',
@@ -205,9 +232,9 @@ export default function PiiDetailScreen() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   border: 'none',
-                  borderRadius: 8,
-                  background: 'var(--card-bg-color)',
-                  color: copied ? 'var(--accent-color, #3b82f6)' : 'var(--text-secondary)',
+                  borderRadius: 10,
+                  background: 'var(--surface-2)',
+                  color: copied ? 'var(--green-primary)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                 }}
               >
@@ -262,16 +289,8 @@ function formatStoredDate(iso: string): string {
 
 function Message({ children, error }: { children: React.ReactNode; error?: boolean }) {
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderRadius: 16,
-        border: '1px solid var(--border-color)',
-        padding: '32px 16px',
-        textAlign: 'center',
-      }}
-    >
-      <p style={{ color: error ? 'var(--error-color)' : 'var(--text-secondary)', fontSize: 14, margin: 0 }}>
+    <div className='card card--inset center' style={{ padding: '32px 16px' }}>
+      <p className={error ? undefined : 'muted'} style={{ color: error ? 'var(--error-color)' : undefined, fontSize: 14, margin: 0 }}>
         {children}
       </p>
     </div>

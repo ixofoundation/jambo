@@ -10,13 +10,21 @@ type MessageRowProps = {
   avatarUrl?: string | null;
   timestamp: number;
   isAdmin?: boolean;
+  /** Styling only: my messages render as aubergine bubbles on the right. */
+  isMine?: boolean;
   body: ReactNode;
 };
 
 const containerStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  padding: '4px 0 10px',
+  alignItems: 'flex-start',
+  padding: '3px 0 9px',
+};
+
+const containerMineStyle: CSSProperties = {
+  ...containerStyle,
+  alignItems: 'flex-end',
 };
 
 const headerStyle: CSSProperties = {
@@ -28,9 +36,9 @@ const headerStyle: CSSProperties = {
 };
 
 const senderNameStyle: CSSProperties = {
-  fontSize: '14px',
-  fontWeight: 400,
-  color: 'var(--text-primary)',
+  fontSize: '13.5px',
+  fontWeight: 600,
+  color: 'var(--text-secondary)',
   lineHeight: 1.2,
 };
 
@@ -42,18 +50,32 @@ function truncateSenderLabel(label: string): string {
 }
 
 const timestampStyle: CSSProperties = {
-  fontSize: '10px',
-  color: 'var(--text-secondary, #777)',
-  opacity: 0.7,
+  fontSize: '11px',
+  color: 'var(--text-secondary)',
+  opacity: 0.8,
   lineHeight: 1.2,
 };
 
+// Bubble shells — them: quiet surface; me: aubergine with light ink.
 const bodyStyle: CSSProperties = {
-  fontSize: '14px',
-  lineHeight: 1.45,
+  maxWidth: '82%',
+  padding: '12px 15px',
+  borderRadius: '16px',
+  borderBottomLeftRadius: '4px',
+  backgroundColor: 'var(--surface-2)',
+  fontSize: '15.5px',
+  lineHeight: 1.5,
   color: 'var(--text-primary)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
+};
+
+const bodyMineStyle: CSSProperties = {
+  ...bodyStyle,
+  borderBottomLeftRadius: '16px',
+  borderBottomRightRadius: '4px',
+  backgroundColor: 'var(--purple-primary)',
+  color: 'var(--purple-ink)',
 };
 
 export default function MessageRow({
@@ -62,19 +84,20 @@ export default function MessageRow({
   avatarUrl,
   timestamp,
   isAdmin,
+  isMine,
   body,
 }: MessageRowProps) {
   return (
-    <div style={containerStyle}>
+    <div style={isMine ? containerMineStyle : containerStyle}>
       <div style={headerStyle}>
-        <UserAvatar userId={senderUserId} displayName={senderLabel} avatarUrl={avatarUrl} size={20} />
+        {!isMine && <UserAvatar userId={senderUserId} displayName={senderLabel} avatarUrl={avatarUrl} size={20} />}
         <span style={senderNameStyle} title={senderLabel}>
           {truncateSenderLabel(senderLabel)}
         </span>
         {isAdmin && <AdminBadge />}
         <span style={timestampStyle}>{formatTimeOfDay(timestamp)}</span>
       </div>
-      <div style={bodyStyle}>{body}</div>
+      <div style={isMine ? bodyMineStyle : bodyStyle}>{body}</div>
     </div>
   );
 }

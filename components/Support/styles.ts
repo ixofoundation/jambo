@@ -5,26 +5,29 @@ export const inlineAlertStyle: CSSProperties = {
   alignItems: 'flex-start',
   gap: '10px',
   margin: '0 0 16px',
-  padding: '10px 12px',
-  borderRadius: '10px',
-  borderLeft: '5px solid var(--warning-border, #e2b04a)',
-  backgroundColor: 'var(--bg-secondary)',
-  fontSize: '12px',
-  lineHeight: 1.4,
+  padding: '12px 14px',
+  borderRadius: '14px',
+  border: '1px solid var(--warning-border)',
+  backgroundColor: '#fdeed8',
+  fontSize: '13px',
+  lineHeight: 1.5,
   color: 'var(--text-primary)',
 };
 
 export const sectionTitleStyle: CSSProperties = {
-  margin: '0 0 8px',
-  fontSize: '1.1rem',
-  fontWeight: 500,
+  margin: '0 0 10px',
+  fontFamily: 'var(--font-display)',
+  fontSize: '20px',
+  fontWeight: 700,
+  letterSpacing: '-0.01em',
   color: 'var(--text-primary)',
 };
 
 // Container that wraps a list of conversation rows into a single grouped card.
 export const conversationListBoxStyle: CSSProperties = {
-  backgroundColor: 'var(--bg-secondary)',
-  borderRadius: '12px',
+  backgroundColor: 'var(--surface)',
+  borderRadius: 'var(--r-card)',
+  boxShadow: 'var(--shadow-soft)',
   overflow: 'hidden',
 };
 
@@ -36,12 +39,12 @@ export const conversationListRowStyle: CSSProperties = {
   justifyContent: 'space-between',
   gap: '12px',
   width: '100%',
-  padding: '12px 14px',
+  padding: '14px 16px',
   border: 'none',
   borderBottom: '1px solid var(--border-color)',
   backgroundColor: 'transparent',
   color: 'var(--text-primary)',
-  fontSize: '13px',
+  fontSize: '15px',
   lineHeight: 1.4,
   cursor: 'pointer',
   textAlign: 'left',
@@ -49,7 +52,7 @@ export const conversationListRowStyle: CSSProperties = {
 
 export const conversationListChevronStyle: CSSProperties = {
   flex: '0 0 auto',
-  color: 'var(--text-secondary, #777)',
+  color: 'var(--text-secondary)',
   display: 'inline-flex',
   alignItems: 'center',
 };
@@ -61,8 +64,8 @@ export const textareaStyle: CSSProperties = {
   outline: 'none',
   backgroundColor: 'transparent',
   color: 'var(--text-primary)',
-  padding: '8px 4px',
-  fontSize: '14px',
+  padding: '10px 0',
+  fontSize: '16px',
   lineHeight: 1.4,
   fontFamily: 'inherit',
   boxSizing: 'border-box',
@@ -71,21 +74,22 @@ export const textareaStyle: CSSProperties = {
 
 export const inputRowStyle: CSSProperties = {
   display: 'flex',
-  gap: '6px',
+  gap: '8px',
   alignItems: 'flex-end',
-  backgroundColor: 'var(--bg-secondary)',
-  borderRadius: '12px',
-  padding: '4px 4px 4px 10px',
+  backgroundColor: 'var(--surface-inset)',
+  border: '1.5px solid var(--border-color)',
+  borderRadius: '999px',
+  padding: '4px 4px 4px 16px',
 };
 
 export const sendIconButtonStyle: CSSProperties = {
   flex: '0 0 auto',
-  width: '36px',
-  height: '36px',
-  borderRadius: '8px',
+  width: '40px',
+  height: '40px',
+  borderRadius: '50%',
   border: 'none',
-  backgroundColor: 'var(--accent-color, #3b82f6)',
-  color: 'white',
+  backgroundColor: 'var(--green-primary)',
+  color: '#fff',
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
@@ -95,7 +99,7 @@ export const sendIconButtonStyle: CSSProperties = {
 export const sendIconButtonDisabledStyle: CSSProperties = {
   ...sendIconButtonStyle,
   cursor: 'not-allowed',
-  opacity: 0.5,
+  opacity: 0.45,
 };
 
 export const backChevronButtonStyle: CSSProperties = {

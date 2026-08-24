@@ -122,14 +122,14 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: 'rgba(30, 22, 38, 0.44)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <div
             style={{
-              backgroundColor: 'var(--bg-primary, #1a1a2e)',
-              borderRadius: 16,
+              backgroundColor: 'var(--surface, #fff)',
+              borderRadius: 26,
               padding: '32px 28px',
               maxWidth: 360,
               width: '90%',
@@ -137,10 +137,19 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
               display: 'flex',
               flexDirection: 'column',
               gap: 16,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              boxShadow: 'var(--shadow-card)',
             }}
           >
-            <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>
+            <p
+              style={{
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 21,
+                fontWeight: 700,
+                letterSpacing: '-0.01em',
+                margin: 0,
+              }}
+            >
               Different Yoma account
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0, lineHeight: 1.5 }}>
@@ -151,14 +160,16 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
               onClick={handleSwitchAccount}
               disabled={loggingOut}
               style={{
-                padding: '12px 20px',
-                borderRadius: 8,
+                padding: '15px 24px',
+                borderRadius: 999,
                 border: 'none',
-                backgroundColor: '#3E9B4F',
-                color: 'white',
+                backgroundColor: 'var(--green-primary)',
+                boxShadow: 'var(--shadow-btn)',
+                color: '#fff',
                 cursor: 'pointer',
-                fontSize: 15,
-                fontWeight: 600,
+                fontSize: 16,
+                fontWeight: 700,
+                opacity: loggingOut ? 0.45 : 1,
               }}
             >
               {loggingOut ? 'Signing out…' : 'Log out and switch account'}
@@ -167,13 +178,15 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
               onClick={handleContinue}
               disabled={loggingOut}
               style={{
-                padding: '10px 20px',
-                borderRadius: 8,
-                border: '1px solid var(--border-color)',
+                padding: '12px 20px',
+                borderRadius: 999,
+                border: 'none',
+                boxShadow: 'inset 0 0 0 1.5px var(--border-color)',
                 background: 'none',
                 color: 'var(--text-primary)',
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 15,
+                fontWeight: 700,
               }}
             >
               Continue with this account

@@ -1,7 +1,8 @@
-import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
 import CollectionLinkagesPanel from '@components/CollectionLinkagesPanel/CollectionLinkagesPanel';
 import useCollectionBlacklist from '@hooks/useCollectionBlacklist';
 import { ProtocolCollection, collectionName, useProtocolCollections } from '@hooks/useProtocolCollections';
@@ -91,44 +92,39 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
   const loading = !started || collectionsLoading || blacklistLoading;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GradientBand variant='purple' />
       <Header onGradient title='Claim Collections' onBack={goBack} />
-
-      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
         }}
       >
-        <h1 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+        <h1 className='h2' style={{ margin: '4px 0 4px' }}>
           Claim Collections
         </h1>
         <p
+          className='muted'
           title={entityDid}
           style={{
             margin: '0 0 4px',
-            padding: '0 4px',
             fontSize: '12px',
             fontFamily: 'var(--font-mono, monospace)',
-            color: 'var(--text-secondary)',
           }}
         >
           {shorten(entityDid)}
         </p>
-        <p style={{ margin: '0 0 16px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+        <p className='muted' style={{ margin: '0 0 16px', fontSize: '13px', lineHeight: 1.5 }}>
           Toggle a collection on to blacklist it — blacklisted collections are hidden from the app. Expand a collection
           to manage its base/sub claim linkages.
         </p>
@@ -140,12 +136,12 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
             This entity has no claim collections.
           </span>
         ) : (
-          <div style={listBoxStyle}>
+          <div className='list-card' style={{ display: 'flex', flexDirection: 'column' }}>
             {collections.map((c, idx) => {
               const expanded = expandedId === c.collectionId;
-              const last = idx === collections.length - 1;
               return (
                 <div key={c.collectionId} style={{ display: 'flex', flexDirection: 'column' }}>
+                  {idx > 0 && <div className='list-divider' />}
                   <CollectionCard
                     collection={c}
                     blacklisted={blacklist.has(c.collectionId)}
@@ -154,11 +150,10 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
                     expanded={expanded}
                     hasLinks={linkedIds.has(c.collectionId)}
                     onToggleExpand={() => setExpandedId(expanded ? null : c.collectionId)}
-                    last={last || expanded}
                   />
                   {expanded && (
                     // Unmounted on collapse, so useCollectionLinks refetches on every expand.
-                    <div style={{ borderBottom: last ? 'none' : '1px solid var(--border-color)' }}>
+                    <div>
                       <CollectionLinkagesPanel
                         collection={c}
                         allCollections={collections}
@@ -178,17 +173,8 @@ export default function EntityCollectionsScreen({ entityDid }: { entityDid: stri
 }
 
 // ---------------------------------------------------------------------------
-// Collection card + toggle (styled to match the base-claim-modal collection list)
+// Collection card + toggle (rows live inside the shared .list-card container)
 // ---------------------------------------------------------------------------
-
-// Solid list container with row dividers — matches the base-claim-modal lists.
-const listBoxStyle: CSSProperties = {
-  background: 'var(--bg-secondary)',
-  borderRadius: '12px',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
 
 function CollectionCard({
   collection,
@@ -198,7 +184,6 @@ function CollectionCard({
   expanded,
   hasLinks,
   onToggleExpand,
-  last,
 }: {
   collection: ProtocolCollection;
   blacklisted: boolean;
@@ -207,7 +192,6 @@ function CollectionCard({
   expanded: boolean;
   hasLinks: boolean;
   onToggleExpand: () => void;
-  last: boolean;
 }) {
   return (
     <div
@@ -215,8 +199,7 @@ function CollectionCard({
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        padding: '12px 14px',
-        borderBottom: last ? 'none' : '1px solid var(--border-color)',
+        padding: '12px 16px',
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -322,7 +305,7 @@ function LinkagesButton({
             height: '7px',
             borderRadius: '50%',
             background: 'var(--green-primary)',
-            border: '1px solid var(--bg-secondary)',
+            border: '1px solid var(--surface)',
           }}
         />
       )}

@@ -33,23 +33,16 @@ export default function SupportThreadScreen({ entityDid, rootId }: SupportThread
   }, [entityDid, router]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header onGradient title='Public Support' onBack={goBack} />
-
-      {/* Thin gradient band behind the header so its onGradient styles render correctly. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px 16px',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',

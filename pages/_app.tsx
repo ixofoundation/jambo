@@ -12,6 +12,7 @@ import { BackgroundSetupProvider } from '@providers/backgroundSetup';
 import { YomaLinkProvider } from '@providers/yomaLink';
 import { ToastContainer } from '@components/Toast/Toast';
 import EmailNotificationPrompt from '@components/EmailNotifier/EmailNotificationPrompt';
+import Dock from '@components/Dock/Dock';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -21,6 +22,7 @@ function MyApp({ Component, pageProps }: AppProps) {
           <BackgroundSetupProvider>
             <YomaLinkProvider>
               <Component {...pageProps} />
+              <Dock />
               <EmailNotificationPrompt />
               <ToastContainer />
             </YomaLinkProvider>

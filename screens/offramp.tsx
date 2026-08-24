@@ -9,6 +9,8 @@ import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
+import { useLocalCurrency } from '@hooks/useLocalCurrency';
+import { localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
 import {
@@ -109,6 +111,7 @@ function formatUsdc(amount: number): string {
 export default function OfframpScreen() {
   const router = useRouter();
   const { address, did, matrixRoomId } = useAuth();
+  const local = useLocalCurrency();
   const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
   const offramp = useOfframp();
 
@@ -698,6 +701,7 @@ export default function OfframpScreen() {
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatUsdc(balance)}</span>
                   <span className={styles.balanceUnit}>USDC</span>
+                  {local && <span className={styles.balanceUnit}>{localEstimate(balance, local)}</span>}
                   {balanceLoading && <Loader size={16} />}
                 </div>
               )}
@@ -751,6 +755,11 @@ export default function OfframpScreen() {
                         onChange={(e) => setAmount(e.currentTarget.value)}
                       />
                       {overBalance && <span className={styles.errorText}>Exceeds your available USDC</span>}
+                      {!overBalance && local && Number.isFinite(amountNum) && amountNum > 0 && (
+                        <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+                          {localEstimate(amountNum, local)} at the mid-market rate
+                        </span>
+                      )}
                     </div>
                     <div className={styles.field}>
                       <label className={styles.label}>Country</label>

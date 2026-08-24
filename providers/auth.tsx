@@ -5,6 +5,8 @@ import authConstants from '@constants/auth';
 import { secureSave, secureLoad, secureReset } from '@utils/storage';
 import { secret } from '@utils/secrets';
 import { logoutMatrixClient } from '@utils/matrix';
+import { clearDeckPrefsStorage } from '@utils/deckPrefs';
+import { clearLocalCurrencyStorage } from '@utils/localCurrency';
 import { cleanUrlString } from '@utils/url';
 import { clearReturnTo, saveReturnTo, suppressReturnTo } from '@utils/returnTo';
 import { clearLinkState, clearYref } from '@utils/yomaLink';
@@ -24,7 +26,9 @@ import { clearKycData } from '@store/slices/kycSlice';
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH_VERSION = '2'; // Bump to force clean break from passkey-based accounts
 
-function fetchMatrixProfile() {
+/** Fetch own Matrix displayname/avatar into the store. No-ops until the Matrix
+ *  session tokens exist, so backgroundSetup re-invokes it after Matrix login. */
+export function fetchMatrixProfile() {
   try {
     const baseUrl = secret.baseUrl;
     const accessToken = secret.accessToken;
@@ -92,6 +96,10 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
   function clearAllState() {
     clearAuthStorage();
+    // Wipe deck prefs for ALL accounts: if the next user's Matrix session fails,
+    // the localStorage fallback must not surface the previous user's deck.
+    clearDeckPrefsStorage();
+    clearLocalCurrencyStorage();
     setIsLoggedIn(false);
     setAddress(null);
     setDid(null);
@@ -324,13 +332,13 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: 'rgba(30, 22, 38, 0.44)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <div
             style={{
-              backgroundColor: 'var(--bg-primary, #1a1a2e)',
+              backgroundColor: 'var(--surface, #fff)',
               borderRadius: 16,
               padding: '32px 28px',
               maxWidth: 340,
@@ -340,7 +348,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
               flexDirection: 'column',
               alignItems: 'center',
               gap: 20,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              boxShadow: 'var(--shadow-card)',
             }}
           >
             <div
@@ -348,7 +356,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
                 width: 48,
                 height: 48,
                 border: '3px solid var(--border-color)',
-                borderTopColor: 'var(--accent-color, #3b82f6)',
+                borderTopColor: 'var(--accent-color)',
                 borderRadius: '50%',
                 animation: 'authSpinner 0.8s linear infinite',
               }}
@@ -376,13 +384,13 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: 'rgba(30, 22, 38, 0.44)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <div
             style={{
-              backgroundColor: 'var(--bg-primary, #1a1a2e)',
+              backgroundColor: 'var(--surface, #fff)',
               borderRadius: 16,
               padding: '32px 28px',
               maxWidth: 340,
@@ -392,7 +400,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
               flexDirection: 'column',
               alignItems: 'center',
               gap: 20,
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              boxShadow: 'var(--shadow-card)',
             }}
           >
             <div
@@ -400,7 +408,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
                 width: 48,
                 height: 48,
                 border: '3px solid var(--border-color)',
-                borderTopColor: 'var(--accent-color, #3b82f6)',
+                borderTopColor: 'var(--accent-color)',
                 borderRadius: '50%',
                 animation: 'authSpinner 0.8s linear infinite',
               }}

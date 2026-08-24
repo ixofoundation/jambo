@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { openPinResetFlow } from 'lib/authHub/pinReset';
+
 const PIN_LENGTH = 6;
 
 interface PinModalProps {
@@ -157,7 +159,7 @@ export default function PinModal({ onSuccess, onCancel, title = 'Data Store', he
                     position: 'relative',
                     borderRadius: '8px',
                     border: isCurrent
-                      ? '2px solid var(--accent-color, #3b82f6)'
+                      ? '2px solid var(--accent-color)'
                       : '1px solid var(--border-color)',
                     backgroundColor: isCurrent ? 'var(--card-bg-color)' : 'var(--bg-primary)',
                     boxSizing: 'border-box',
@@ -211,6 +213,24 @@ export default function PinModal({ onSuccess, onCancel, title = 'Data Store', he
         {loading && (
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center' }}>Verifying...</p>
         )}
+
+        <button
+          type='button'
+          onClick={openPinResetFlow}
+          style={{
+            display: 'block',
+            margin: '4px auto 0',
+            background: 'none',
+            border: 'none',
+            padding: '4px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--accent-color)',
+          }}
+        >
+          Forgot your PIN? Reset it
+        </button>
       </div>
     </div>
   );

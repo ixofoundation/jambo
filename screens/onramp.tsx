@@ -233,6 +233,18 @@ export default function OnrampScreen() {
     if (savedProfile.idNumber && !prefill?.idNumber) setKycIdNumber(savedProfile.idNumber);
   }, [savedProfile, prefill]);
 
+  // Default the deposit country to the user's own (KYC) country when nothing
+  // was remembered for the on-ramp — so a Zambian user starts on Zambia, not
+  // the hardcoded fallback. Saved onrampCountry (applied above) wins.
+  const appliedKycCountryRef = useRef(false);
+  useEffect(() => {
+    if (appliedKycCountryRef.current || !prefill?.country) return;
+    if (savedProfile?.onrampCountry) return;
+    if (!supportedOptions.some((o) => o.value === prefill.country)) return;
+    appliedKycCountryRef.current = true;
+    setCountry(prefill.country);
+  }, [prefill, savedProfile, supportedOptions]);
+
   // Apply the saved provider once its country's networks have loaded.
   useEffect(() => {
     if (!pendingNetworkId) return;

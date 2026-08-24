@@ -45,34 +45,25 @@ export default function SupportNewThreadScreen({ entityDid, promptsKey }: Suppor
   }, [entityDid, promptsKey, router]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header onGradient title='New Support Thread' onBack={goBack} />
-
-      {/* Gradient band wraps the privacy alert so it stays at the top of the new-thread flow. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          paddingTop: 'calc(var(--header-height) + 12px)',
-          paddingBottom: '16px',
-        }}
-      >
-        <div style={{ maxWidth: 'var(--max-width)', margin: '0 auto', padding: '0 16px' }}>
-          <PrivacyAlert />
-        </div>
-      </div>
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px 16px',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0,
         }}
       >
+        {/* Privacy note leads the new-thread flow on the light ground. */}
+        <PrivacyAlert />
+
         {init.kind === 'loading' && <SupportLoadingView />}
         {init.kind === 'error' && <SupportErrorView message={init.message} onClose={goBack} />}
         {init.kind === 'ready' && (
@@ -134,10 +125,11 @@ function ReadyNewThread({ mxClient, supportRoomId, userRoomId, entityDid, prompt
       {quickMessages.length > 0 && (
         <div style={{ paddingBottom: '12px' }}>
           <p
+            className='muted'
             style={{
               margin: '0 0 8px',
-              fontSize: '12px',
-              color: 'var(--text-secondary, #777)',
+              fontSize: '13px',
+              fontWeight: 600,
             }}
           >
             Pick a starter or write your own:

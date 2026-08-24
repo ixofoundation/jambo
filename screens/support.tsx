@@ -33,50 +33,37 @@ export default function SupportScreen({ entityDid, promptsKey }: SupportScreenPr
   }, [router]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header onGradient title='Support' onBack={goToProfile} />
-
-      {/* Gradient hero: sized to fit only the description. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          paddingTop: 'calc(var(--header-height) + 16px)',
-          paddingBottom: '20px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 'var(--max-width)',
-            margin: '0 auto',
-            padding: '0 16px',
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: '14px',
-              lineHeight: 1.7,
-              color: 'var(--text-primary-light)',
-            }}
-          >
-            Support chats are public and anyone can join in to help. Users with the <AdminBadge /> badge are verified
-            admins - be cautious with advice or requests from others.
-          </p>
-        </div>
-      </div>
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0,
         }}
       >
+        {/* Quiet inset note replaces the old gradient hero. */}
+        <div className='card card--inset' style={{ padding: '14px 16px', marginBottom: 16 }}>
+          <p
+            className='muted'
+            style={{
+              margin: 0,
+              fontSize: '14px',
+              lineHeight: 1.7,
+            }}
+          >
+            Support chats are public and anyone can join in to help. Users with the <AdminBadge /> badge are verified
+            admins - be cautious with advice or requests from others.
+          </p>
+        </div>
+
         {init.kind === 'loading' && <SupportLoadingView />}
         {init.kind === 'error' && <SupportErrorView message={init.message} onClose={goToProfile} />}
         {init.kind === 'ready' && (

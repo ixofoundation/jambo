@@ -154,11 +154,12 @@ export default function SupportThreadView({
             <span
               style={{
                 display: 'inline-block',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                backgroundColor: 'var(--bg-secondary)',
-                color: 'var(--text-secondary, #777)',
-                fontSize: '11px',
+                padding: '5px 12px',
+                borderRadius: 'var(--r-pill)',
+                backgroundColor: 'var(--surface-2)',
+                color: 'var(--text-secondary)',
+                fontSize: '12px',
+                fontWeight: 600,
                 lineHeight: 1.2,
               }}
             >
@@ -166,7 +167,7 @@ export default function SupportThreadView({
             </span>
           </div>
         )}
-        {!root && <div style={{ color: 'var(--text-secondary, #777)', padding: '8px 0' }}>Loading conversation…</div>}
+        {!root && <div className='muted' style={{ padding: '8px 0' }}>Loading conversation…</div>}
         {allMessages.map((msg, idx) => {
           const prev = idx > 0 ? allMessages[idx - 1] : null;
           // The "Started on …" chip above already labels the first day, so skip the divider before
@@ -186,6 +187,7 @@ export default function SupportThreadView({
                 avatarUrl={avatarUrl}
                 timestamp={msg.origin_server_ts}
                 isAdmin={isAdmin}
+                isMine={isMine}
                 body={msg.content?.body ?? ''}
               />
             </Fragment>

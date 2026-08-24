@@ -139,6 +139,31 @@ export async function fetchClaimsByCollectionId(collectionId: string, address: s
   return result.data?.data?.claims?.nodes;
 }
 
+/** All claims submitted by one agent across every collection — one query. */
+export async function fetchClaimsByAgentAddress(address: string) {
+  const query = `
+    query getClaimsByAgentAddress {
+      claims(filter: { agentAddress: { equalTo: "${address}" } }) {
+        nodes {
+          claimId
+          collectionId
+          paymentsStatus
+          schemaType
+          submissionDate
+          evaluationByClaimId {
+            status
+            evaluationDate
+            oracle
+          }
+        }
+      }
+    }
+  `;
+  const result = await gqlQuery(BLOCKSYNC_URL, query);
+  // @ts-ignore
+  return result.data?.data?.claims?.nodes;
+}
+
 export async function fetchAllClaimsByCollectionId(collectionId: string) {
   const query = `
     query getAllClaimsByCollectionId {

@@ -2,7 +2,9 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
 import KycCredentialsCard from '@components/Credentials/KycCredentialsCard';
+import { ArrowDownLeftIcon, CheckIcon, ChevronRightIcon, CopyIcon, LandmarkIcon } from '@components/Icons/icons';
 import { useAuth } from '@hooks/useAuth';
 import { useAppSelector } from '@store/hooks';
 
@@ -17,7 +19,10 @@ export default function ProfileScreen() {
   const { address, did } = useAuth();
   const matrixProfile = useAppSelector((state) => state.matrixProfile);
 
-  const displayName = matrixProfile?.displayName || address || null;
+  // Fall back to a shortened address — a full bech32 address must never run
+  // as a two-line display headline.
+  const rawName = matrixProfile?.displayName || address || null;
+  const displayName = rawName && rawName === address ? shorten(address, 8, 6) : rawName;
 
   // Hidden long-press (4s) on the "My Credentials" header navigates to the full
   // credentials list. Pointer events cover mouse + touch + pen with the same logic.
@@ -41,122 +46,73 @@ export default function ProfileScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <GradientBand variant='green' />
       <Header onGradient />
-
-      {/* Hero (content-sized gradient) */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          paddingTop: 'calc(var(--header-height) + 20px)',
-          paddingBottom: '24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 'var(--max-width)',
-            margin: '0 auto',
-            padding: '0 16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <div
-            style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              padding: '5px',
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              boxSizing: 'border-box',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {matrixProfile?.avatarUrl ? (
-              <img
-                src={matrixProfile.avatarUrl}
-                alt=''
-                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent-color)',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '30px',
-                  fontWeight: 500,
-                }}
-              >
-                {displayName ? displayName.charAt(0).toUpperCase() : '?'}
-              </div>
-            )}
-          </div>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: '1.2rem',
-              fontWeight: 500,
-              color: 'var(--text-primary-light)',
-              maxWidth: '100%',
-              textAlign: 'center',
-              overflowWrap: 'anywhere',
-              wordBreak: 'break-word',
-            }}
-          >
-            {displayName || 'Unknown'}
-          </p>
-
-          {(address || did) && (
-            <div
-              style={{
-                marginTop: '10px',
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
-              {address && <CopyBlock value={address} head={3} tail={5} />}
-              {did && <CopyBlock value={did} head={3} tail={5} />}
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Body */}
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
         }}
       >
-        <h3
+        {/* Hero — centred avatar on the light ground */}
+        <div className='center' style={{ marginTop: 12 }}>
+          {matrixProfile?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={matrixProfile.avatarUrl}
+              alt=''
+              style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', margin: '0 auto', display: 'block', boxShadow: 'var(--shadow-card)' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: '50%',
+                margin: '0 auto',
+                backgroundColor: 'var(--purple-primary)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--font-display)',
+                fontSize: 36,
+                fontWeight: 800,
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              {displayName ? displayName.charAt(0).toUpperCase() : '?'}
+            </div>
+          )}
+          <h1
+            className='h1'
+            style={{ marginTop: 12, fontSize: 24, overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+          >
+            {displayName || 'Unknown'}
+          </h1>
+          {did && <DidLine did={did} />}
+        </div>
+
+        <h2
+          className='h2'
           onPointerDown={startLongPress}
           onPointerUp={clearLongPress}
           onPointerLeave={clearLongPress}
           onPointerCancel={clearLongPress}
           onContextMenu={(e) => e.preventDefault()}
           style={{
-            margin: '0 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
+            margin: '24px 0 12px',
             userSelect: 'none',
             WebkitUserSelect: 'none',
             touchAction: 'manipulation',
@@ -164,90 +120,34 @@ export default function ProfileScreen() {
           }}
         >
           My Credentials
-        </h3>
+        </h2>
 
         <KycCredentialsCard />
 
-        <h3
-          style={{
-            margin: '24px 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
-          }}
-        >
+        <h2 className='h2' style={{ margin: '24px 0 12px' }}>
           Wallet
-        </h3>
+        </h2>
 
-        <button
-          onClick={() => router.push('/profile/onramp')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            padding: '16px',
-            marginBottom: '8px',
-            border: 'none',
-            borderRadius: 'var(--card-border-radius)',
-            background: 'var(--background-color, #fff)',
-            cursor: 'pointer',
-            color: 'var(--text-primary)',
-          }}
-        >
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <span style={{ fontWeight: 500 }}>Deposit</span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Buy USDC with local money via YellowCard
-            </span>
+        <button className='status-item' style={{ width: '100%', marginBottom: 12 }} onClick={() => router.push('/profile/onramp')}>
+          <span className='notif-ic' style={{ background: 'var(--mint)', color: 'var(--green-primary)' }}>
+            <ArrowDownLeftIcon size={20} />
           </span>
-          <svg
-            width={20}
-            height={20}
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <polyline points='9 18 15 12 9 6' />
-          </svg>
+          <span className='status-item__body'>
+            <span className='status-item__title' style={{ display: 'block' }}>Deposit</span>
+            <span className='status-item__meta' style={{ display: 'block' }}>Buy USDC with local money via YellowCard</span>
+          </span>
+          <ChevronRightIcon size={18} color='var(--text-secondary)' />
         </button>
 
-        <button
-          onClick={() => router.push('/profile/offramp')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%',
-            padding: '16px',
-            border: 'none',
-            borderRadius: 'var(--card-border-radius)',
-            background: 'var(--background-color, #fff)',
-            cursor: 'pointer',
-            color: 'var(--text-primary)',
-          }}
-        >
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <span style={{ fontWeight: 500 }}>Withdraw</span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Cash out your USDC via YellowCard
-            </span>
+        <button className='status-item' style={{ width: '100%' }} onClick={() => router.push('/profile/offramp')}>
+          <span className='notif-ic' style={{ background: '#fdeed8', color: 'var(--coral)' }}>
+            <LandmarkIcon size={20} />
           </span>
-          <svg
-            width={20}
-            height={20}
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <polyline points='9 18 15 12 9 6' />
-          </svg>
+          <span className='status-item__body'>
+            <span className='status-item__title' style={{ display: 'block' }}>Withdraw</span>
+            <span className='status-item__meta' style={{ display: 'block' }}>Cash out your USDC via YellowCard</span>
+          </span>
+          <ChevronRightIcon size={18} color='var(--text-secondary)' />
         </button>
       </main>
     </div>
@@ -255,15 +155,25 @@ export default function ProfileScreen() {
 }
 
 // ---------------------------------------------------------------------------
-// Copy block — pressable pill, shortened value, green-check feedback
+// DID line — the designer's quiet identifier under the name: light text with a
+// copy affordance. (Address + DID copy chips live in Settings → Account.)
 // ---------------------------------------------------------------------------
 
-function CopyBlock({ value, head, tail }: { value: string; head?: number; tail?: number }) {
+/** The designer's DID format: `did:ixo:z7Gq…4Kd9` — method prefix kept, then
+ *  the first 4 and last 4 characters of the identifier. */
+function shortDid(did: string) {
+  const cut = did.lastIndexOf(':') + 1;
+  const prefix = did.slice(0, cut);
+  const id = did.slice(cut);
+  return id.length > 11 ? `${prefix}${id.slice(0, 4)}…${id.slice(-4)}` : did;
+}
+
+function DidLine({ did }: { did: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleClick() {
     navigator.clipboard
-      .writeText(value)
+      .writeText(did)
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
@@ -274,57 +184,28 @@ function CopyBlock({ value, head, tail }: { value: string; head?: number; tail?:
   return (
     <button
       onClick={handleClick}
+      className='muted'
+      title='Copy DID'
+      aria-label='Copy DID'
       style={{
-        borderRadius: 'var(--card-border-radius)',
-        border: 'none',
-        background: 'rgba(255, 255, 255, 0.15)',
-        padding: '5px 12px',
+        marginTop: 4,
+        maxWidth: '100%',
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: 6,
+        background: 'none',
+        border: 'none',
+        padding: 0,
         cursor: 'pointer',
-        color: 'var(--text-primary-light)',
+        fontSize: 14,
+        fontWeight: 500,
       }}
-      title='Copy'
     >
-      <span
-        style={{
-          fontSize: '13px',
-          fontFamily: 'monospace',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {shorten(value, head, tail)}
-      </span>
+      <span style={{ whiteSpace: 'nowrap' }}>{shortDid(did)}</span>
       {copied ? (
-        <svg
-          width={14}
-          height={14}
-          viewBox='0 0 24 24'
-          fill='none'
-          stroke='var(--accent-color)'
-          strokeWidth='2.5'
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          style={{ flexShrink: 0 }}
-        >
-          <polyline points='20 6 9 17 4 12' />
-        </svg>
+        <CheckIcon size={14} color='var(--green-primary)' style={{ flexShrink: 0 }} />
       ) : (
-        <svg
-          width={14}
-          height={14}
-          viewBox='0 0 24 24'
-          fill='none'
-          stroke='currentColor'
-          strokeWidth='2'
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          style={{ flexShrink: 0, opacity: 0.75 }}
-        >
-          <rect x='9' y='9' width='13' height='13' rx='2' ry='2' />
-          <path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1' />
-        </svg>
+        <CopyIcon size={14} style={{ flexShrink: 0, opacity: 0.75 }} />
       )}
     </button>
   );

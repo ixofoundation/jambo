@@ -4,9 +4,9 @@
   flex-direction: column;
 }
 
-// Green gradient band behind the fixed header (matches /settings).
+// Soft mint tint behind the fixed header (matches /settings on the light ground).
 .headerBand {
-  background: radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%);
+  background: radial-gradient(90rem 60rem at 70% -20%, rgba(214, 238, 232, 0.55), transparent 60%);
   height: var(--header-height);
 }
 
@@ -22,8 +22,9 @@
 }
 
 .card {
-  background: var(--card-bg-color);
+  background: var(--surface);
   border-radius: var(--card-border-radius);
+  box-shadow: var(--shadow-soft);
   padding: 16px;
 }
 

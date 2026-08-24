@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-14T12:00:00Z",
+  "title": "Design System: JAMBO yoma",
+  "extensions": {
+    "colorMeta": {
+      "paper-beige": {
+        "role": "neutral",
+        "displayName": "Paper Beige",
+        "canonical": "#f7f5eb",
+        "tonalRamp": ["oklch(15% 0.014 105)", "oklch(27% 0.014 105)", "oklch(39% 0.014 105)", "oklch(51% 0.014 105)", "oklch(63% 0.014 105)", "oklch(75% 0.014 105)", "oklch(87% 0.014 105)", "oklch(97% 0.014 105)"]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(100% 0 0)"]
+      },
+      "sand": {
+        "role": "neutral",
+        "displayName": "Sand",
+        "canonical": "#efece0",
+        "tonalRamp": ["oklch(15% 0.017 105)", "oklch(27% 0.017 105)", "oklch(39% 0.017 105)", "oklch(51% 0.017 105)", "oklch(63% 0.017 105)", "oklch(75% 0.017 105)", "oklch(87% 0.017 105)", "oklch(94% 0.017 105)"]
+      },
+      "border-sand": {
+        "role": "neutral",
+        "displayName": "Border Sand",
+        "canonical": "#e5e2d4",
+        "tonalRamp": ["oklch(15% 0.02 105)", "oklch(27% 0.02 105)", "oklch(39% 0.02 105)", "oklch(51% 0.02 105)", "oklch(63% 0.02 105)", "oklch(75% 0.02 105)", "oklch(87% 0.02 105)", "oklch(93% 0.02 105)"]
+      },
+      "input-sand": {
+        "role": "neutral",
+        "displayName": "Input Sand",
+        "canonical": "#d9d5c6",
+        "tonalRamp": ["oklch(15% 0.022 105)", "oklch(27% 0.022 105)", "oklch(39% 0.022 105)", "oklch(51% 0.022 105)", "oklch(63% 0.022 105)", "oklch(75% 0.022 105)", "oklch(87% 0.022 105)", "oklch(95% 0.022 105)"]
+      },
+      "aubergine": {
+        "role": "secondary",
+        "displayName": "Aubergine",
+        "canonical": "#54365d",
+        "tonalRamp": ["oklch(15% 0.075 320)", "oklch(27% 0.075 320)", "oklch(37% 0.075 320)", "oklch(51% 0.075 320)", "oklch(63% 0.075 320)", "oklch(75% 0.075 320)", "oklch(87% 0.075 320)", "oklch(95% 0.075 320)"]
+      },
+      "aubergine-deep": {
+        "role": "secondary",
+        "displayName": "Deep Aubergine",
+        "canonical": "#41204b",
+        "tonalRamp": ["oklch(15% 0.09 320)", "oklch(22% 0.09 320)", "oklch(30% 0.09 320)", "oklch(43% 0.09 320)", "oklch(56% 0.09 320)", "oklch(69% 0.09 320)", "oklch(82% 0.09 320)", "oklch(95% 0.09 320)"]
+      },
+      "lilac-tint": {
+        "role": "secondary",
+        "displayName": "Lilac Tint",
+        "canonical": "#ecdff1",
+        "tonalRamp": ["oklch(15% 0.03 320)", "oklch(27% 0.03 320)", "oklch(39% 0.03 320)", "oklch(51% 0.03 320)", "oklch(63% 0.03 320)", "oklch(75% 0.03 320)", "oklch(87% 0.03 320)", "oklch(94% 0.03 320)"]
+      },
+      "forest-green": {
+        "role": "primary",
+        "displayName": "Forest Green",
+        "canonical": "#387f6a",
+        "tonalRamp": ["oklch(15% 0.08 175)", "oklch(27% 0.08 175)", "oklch(39% 0.08 175)", "oklch(55% 0.08 175)", "oklch(63% 0.08 175)", "oklch(75% 0.08 175)", "oklch(87% 0.08 175)", "oklch(95% 0.08 175)"]
+      },
+      "forest-deep": {
+        "role": "primary",
+        "displayName": "Deep Forest",
+        "canonical": "#2f6a59",
+        "tonalRamp": ["oklch(15% 0.075 175)", "oklch(26% 0.075 175)", "oklch(37% 0.075 175)", "oklch(48% 0.075 175)", "oklch(60% 0.075 175)", "oklch(72% 0.075 175)", "oklch(84% 0.075 175)", "oklch(95% 0.075 175)"]
+      },
+      "mint-tint": {
+        "role": "primary",
+        "displayName": "Mint Tint",
+        "canonical": "#e6f5f3",
+        "tonalRamp": ["oklch(15% 0.02 180)", "oklch(27% 0.02 180)", "oklch(39% 0.02 180)", "oklch(51% 0.02 180)", "oklch(63% 0.02 180)", "oklch(75% 0.02 180)", "oklch(87% 0.02 180)", "oklch(96% 0.02 180)"]
+      },
+      "money-orange": {
+        "role": "tertiary",
+        "displayName": "Money Orange",
+        "canonical": "#e07b00",
+        "tonalRamp": ["oklch(15% 0.16 60)", "oklch(27% 0.16 60)", "oklch(39% 0.16 60)", "oklch(51% 0.16 60)", "oklch(66% 0.16 60)", "oklch(75% 0.16 60)", "oklch(87% 0.16 60)", "oklch(95% 0.16 60)"]
+      },
+      "earned-yellow": {
+        "role": "tertiary",
+        "displayName": "Earned Yellow",
+        "canonical": "#f9ab3e",
+        "tonalRamp": ["oklch(15% 0.15 75)", "oklch(27% 0.15 75)", "oklch(39% 0.15 75)", "oklch(51% 0.15 75)", "oklch(63% 0.15 75)", "oklch(79% 0.15 75)", "oklch(87% 0.15 75)", "oklch(95% 0.15 75)"]
+      },
+      "yellow-deep": {
+        "role": "tertiary",
+        "displayName": "Deep Yellow",
+        "canonical": "#e49526",
+        "tonalRamp": ["oklch(15% 0.15 72)", "oklch(27% 0.15 72)", "oklch(39% 0.15 72)", "oklch(51% 0.15 72)", "oklch(63% 0.15 72)", "oklch(72% 0.15 72)", "oklch(87% 0.15 72)", "oklch(95% 0.15 72)"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#23202a",
+        "tonalRamp": ["oklch(15% 0.02 310)", "oklch(24% 0.02 310)", "oklch(39% 0.02 310)", "oklch(51% 0.02 310)", "oklch(63% 0.02 310)", "oklch(75% 0.02 310)", "oklch(87% 0.02 310)", "oklch(95% 0.02 310)"]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#5b5860",
+        "tonalRamp": ["oklch(15% 0.012 310)", "oklch(27% 0.012 310)", "oklch(45% 0.012 310)", "oklch(51% 0.012 310)", "oklch(63% 0.012 310)", "oklch(75% 0.012 310)", "oklch(87% 0.012 310)", "oklch(95% 0.012 310)"]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "#928e97",
+        "tonalRamp": ["oklch(15% 0.01 310)", "oklch(27% 0.01 310)", "oklch(39% 0.01 310)", "oklch(51% 0.01 310)", "oklch(65% 0.01 310)", "oklch(75% 0.01 310)", "oklch(87% 0.01 310)", "oklch(95% 0.01 310)"]
+      },
+      "error-red": {
+        "role": "tertiary",
+        "displayName": "Error Red",
+        "canonical": "#fe4d57",
+        "tonalRamp": ["oklch(15% 0.21 20)", "oklch(27% 0.21 20)", "oklch(39% 0.21 20)", "oklch(51% 0.21 20)", "oklch(66% 0.21 20)", "oklch(75% 0.21 20)", "oklch(87% 0.21 20)", "oklch(95% 0.21 20)"]
+      },
+      "warning-amber": {
+        "role": "tertiary",
+        "displayName": "Warning Amber",
+        "canonical": "#d48414",
+        "tonalRamp": ["oklch(15% 0.14 70)", "oklch(27% 0.14 70)", "oklch(39% 0.14 70)", "oklch(51% 0.14 70)", "oklch(66% 0.14 70)", "oklch(75% 0.14 70)", "oklch(87% 0.14 70)", "oklch(95% 0.14 70)"]
+      },
+      "info-blue": {
+        "role": "tertiary",
+        "displayName": "Info Blue (legacy chips only)",
+        "canonical": "#4cade9",
+        "tonalRamp": ["oklch(15% 0.12 240)", "oklch(27% 0.12 240)", "oklch(39% 0.12 240)", "oklch(51% 0.12 240)", "oklch(70% 0.12 240)", "oklch(75% 0.12 240)", "oklch(87% 0.12 240)", "oklch(95% 0.12 240)"]
+      },
+      "brand-coral-ring": {
+        "role": "tertiary",
+        "displayName": "Brand Coral Ring (wordmark only)",
+        "canonical": "#F4552E",
+        "tonalRamp": ["oklch(15% 0.2 35)", "oklch(27% 0.2 35)", "oklch(39% 0.2 35)", "oklch(51% 0.2 35)", "oklch(65% 0.2 35)", "oklch(75% 0.2 35)", "oklch(87% 0.2 35)", "oklch(95% 0.2 35)"]
+      },
+      "brand-yellow-dot": {
+        "role": "tertiary",
+        "displayName": "Brand Yellow Dot (wordmark only)",
+        "canonical": "#FFD23F",
+        "tonalRamp": ["oklch(15% 0.17 95)", "oklch(27% 0.17 95)", "oklch(39% 0.17 95)", "oklch(51% 0.17 95)", "oklch(63% 0.17 95)", "oklch(75% 0.17 95)", "oklch(87% 0.17 95)", "oklch(95% 0.17 95)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Deck-card title over the photo scrim (32px/800); scales to 40px for the match eyecatch and 42px for the wallet balance figure." },
+      "headline": { "displayName": "Headline", "purpose": "Screen-level .h1 with balanced wrapping." },
+      "title": { "displayName": "Title", "purpose": "Section headers, sheet headings, topbar and back titles (20-26px band, 700, tight tracking)." },
+      "body": { "displayName": "Body", "purpose": "Base UI text at 16px; emphasized rows go 700 at 16-17.5px; secondary body is 14.5px muted." },
+      "label": { "displayName": "Label", "purpose": "Field labels, status lines, dock items, badges (13-14.5px, 600-700). The wordmark tagline is the only uppercase tracked-out text." }
+    },
+    "shadows": [
+      { "name": "shadow-soft", "value": "0 2px 10px rgba(50, 40, 60, 0.09)", "purpose": "Resting cards, list rows, deck actions, toasts." },
+      { "name": "shadow-card", "value": "0 10px 30px rgba(50, 40, 60, 0.16)", "purpose": "Deck card, dock, credential passes, modals, match imagery - anything hovering over the world." },
+      { "name": "shadow-btn", "value": "0 6px 18px rgba(56, 127, 106, 0.32)", "purpose": "Primary green buttons and the apply deck-action only; the shadow is tinted with the button's own green." },
+      { "name": "sheet-lift", "value": "0 -14px 44px rgba(35, 27, 42, 0.22)", "purpose": "Bottom sheets, cast upward." }
+    ],
+    "motion": [
+      { "name": "ease-spring-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "All entrances (rise-in, sheet-in, dock-in, pop-in) and the deck snap-back." },
+      { "name": "ease-accelerate", "value": "cubic-bezier(0.32, 0, 0.67, 0)", "purpose": "Deck-card fly-out exit (0.32s)." },
+      { "name": "rise-in", "value": "0.45s ease-spring-out", "purpose": "Content entrance: fade + 14px rise (.anim-rise; dock uses 0.28s)." },
+      { "name": "sheet-in", "value": "0.34s ease-spring-out", "purpose": "Bottom sheet slide-up." },
+      { "name": "fade-in", "value": "0.25s ease-out", "purpose": "Scrims and the match interstitial (0.3s)." },
+      { "name": "pop-in", "value": "0.45s ease-spring-out", "purpose": "Match image: scale 0.72 and -8deg settling to -4deg." },
+      { "name": "press", "value": "0.12-0.15s transitions", "purpose": "Buttons scale to 0.97 (deck actions 0.92); background swaps on press." },
+      { "name": "deck-snap-back", "value": "transform 0.35s ease-spring-out", "purpose": "Card returns to rest after an uncommitted drag; drag itself is untransitioned pointer-driven transform (rotate 0.055deg/px)." },
+      { "name": "reduced-motion", "value": "0.01ms !important globally", "purpose": "prefers-reduced-motion: reduce collapses every animation and transition." }
+    ],
+    "breakpoints": [
+      { "name": "desktop-stage", "value": "501px", "purpose": "The only media query: adds fixed lilac/apricot radial corner washes behind the centred 400px column. No responsive layout changes exist." }
+    ],
+    "zScale": [
+      { "name": "z-sticky", "value": 10, "purpose": "Topbars, deck header." },
+      { "name": "z-dock", "value": 40, "purpose": "Dock pill and open dock (scrim at 39)." },
+      { "name": "z-sheet-backdrop", "value": 50, "purpose": "Sheet scrim." },
+      { "name": "z-sheet", "value": 51, "purpose": "Bottom sheets." },
+      { "name": "z-match", "value": 60, "purpose": "Match interstitial." },
+      { "name": "z-toast", "value": 70, "purpose": "Toast whisper." },
+      { "name": "legacy-modal-ladder", "value": "100 -> 1200 -> 1500 -> 2000 -> 2100 -> 2200", "purpose": "Preserved app flows: Modal/SubclaimModal/PdfPreview (100), collectionForm overlays (1200), background setup (1500), signing (2000), logging out (2100), PIN / Yoma-mismatch prompts (2200). Design-system overlays must stay below 100." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one green action per decision context: full pill, green-glow shadow, presses down physically.",
+      "html": "<button class=\"ds-btn-primary\">Apply now</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; font-family: Nunito, system-ui, sans-serif; font-weight: 700; font-size: 16px; border-radius: 999px; padding: 15px 24px; background: var(--green-primary, #387f6a); color: #fff; box-shadow: 0 6px 18px rgba(56, 127, 106, 0.32); cursor: pointer; transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease; } .ds-btn-primary:hover { background: var(--green-secondary, #2f6a59); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--purple-primary, #54365d); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.45; cursor: default; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Deferring sibling of the primary: transparent pill with a 1.5px inset sand ring.",
+      "html": "<button class=\"ds-btn-ghost\">Not now</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; font-family: Nunito, system-ui, sans-serif; font-weight: 700; font-size: 16px; border-radius: 999px; padding: 15px 24px; background: transparent; color: var(--text-primary, #23202a); box-shadow: inset 0 0 0 1.5px var(--border-color, #e5e2d4); cursor: pointer; transition: transform 0.12s ease, background 0.15s ease; } .ds-btn-ghost:hover { background: var(--surface-2, #efece0); } .ds-btn-ghost:active { transform: scale(0.97); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--purple-primary, #54365d); outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "42px sand circle with a 2px stroke icon; press flips it to lilac. Optional coral attention dot.",
+      "html": "<button class=\"ds-iconbtn\" aria-label=\"Notifications\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\"/><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\"/></svg><span class=\"ds-iconbtn__dot\"></span></button>",
+      "css": ".ds-iconbtn { position: relative; width: 42px; height: 42px; border-radius: 50%; border: none; display: grid; place-items: center; background: var(--surface-2, #efece0); color: var(--text-primary, #23202a); cursor: pointer; transition: background 0.15s ease; } .ds-iconbtn:hover, .ds-iconbtn:active { background: var(--purple-tint, #ecdff1); } .ds-iconbtn:focus-visible { outline: 2px solid var(--purple-primary, #54365d); outline-offset: 2px; } .ds-iconbtn__dot { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--coral, #e07b00); border: 2px solid var(--bg-primary, #f7f5eb); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Sand filter pill; the selected chip fills forest green.",
+      "html": "<span style=\"display:inline-flex;gap:8px\"><button class=\"ds-chip ds-chip--active\">All</button><button class=\"ds-chip\">Nearby</button><button class=\"ds-chip\">Paid</button></span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; border: none; padding: 9px 15px; border-radius: 999px; background: var(--surface-2, #efece0); font-family: Nunito, system-ui, sans-serif; font-weight: 600; font-size: 15px; color: var(--text-primary, #23202a); cursor: pointer; transition: background 0.15s ease, color 0.15s ease; } .ds-chip:hover { background: var(--purple-tint, #ecdff1); } .ds-chip--active, .ds-chip--active:hover { background: var(--green-primary, #387f6a); color: #fff; } .ds-chip:focus-visible { outline: 2px solid var(--purple-primary, #54365d); outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Item",
+      "kind": "card",
+      "refersTo": "status-item",
+      "description": "Tappable white list row: 52px thumb, bold title, muted meta, green status word.",
+      "html": "<button class=\"ds-status-item\"><span class=\"ds-status-item__thumb\"></span><span class=\"ds-status-item__body\"><span class=\"ds-status-item__title\">Storytelling workshop</span><span class=\"ds-status-item__meta\">The Dignity Project</span></span><span class=\"ds-status-item__ok\">Approved</span></button>",
+      "css": ".ds-status-item { display: flex; align-items: center; gap: 12px; width: 100%; border: none; background: var(--surface, #ffffff); border-radius: 18px; padding: 12px 14px; box-shadow: 0 2px 10px rgba(50, 40, 60, 0.09); text-align: left; cursor: pointer; font-family: Nunito, system-ui, sans-serif; transition: background 0.15s ease; } .ds-status-item:hover, .ds-status-item:active { background: var(--surface-2, #efece0); } .ds-status-item__thumb { width: 52px; height: 52px; border-radius: 14px; flex: none; background: linear-gradient(135deg, #84a98c, #2f6b52); } .ds-status-item__body { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ds-status-item__title { font-weight: 700; font-size: 16.5px; color: var(--text-primary, #23202a); } .ds-status-item__meta { color: var(--text-secondary, #5b5860); font-size: 14.5px; margin-top: 2px; } .ds-status-item__ok { color: var(--green-primary, #387f6a); font-weight: 700; font-size: 13.5px; flex: none; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Beige inset box with a sand stroke; focus recolors the stroke aubergine.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field__label\" for=\"ds-f1\">Email</label><input class=\"ds-field__box\" id=\"ds-f1\" placeholder=\"you@example.com\"/></div>",
+      "css": ".ds-field { font-family: Nunito, system-ui, sans-serif; } .ds-field__label { display: block; font-size: 14.5px; color: var(--text-secondary, #5b5860); margin-bottom: 7px; font-weight: 600; } .ds-field__box { width: 100%; border: 1.5px solid var(--border-color, #e5e2d4); border-radius: 12px; padding: 14px; font-size: 16px; font-family: inherit; outline: none; background: var(--surface-inset, #f7f5eb); color: var(--text-primary, #23202a); transition: border-color 0.15s ease; } .ds-field__box:focus { border-color: var(--purple-primary, #54365d); } .ds-field__box::placeholder { color: var(--text-nav, #928e97); }"
+    },
+    {
+      "name": "Dock Pill",
+      "kind": "nav",
+      "refersTo": "dock-pill",
+      "description": "The summoned-navigation handle: a floating glass pill showing the current area; tapping it opens the full dock.",
+      "html": "<button class=\"ds-dock-pill\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m18 15-6-6-6 6\"/></svg>Deck</button>",
+      "css": ".ds-dock-pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(50, 40, 60, 0.1); background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(14px); border-radius: 999px; padding: 11px 19px; font-family: Nunito, system-ui, sans-serif; font-weight: 700; font-size: 14.5px; color: var(--text-primary, #23202a); box-shadow: 0 10px 30px rgba(50, 40, 60, 0.16); cursor: pointer; transition: transform 0.12s ease; } .ds-dock-pill:hover { transform: translateY(-1px); } .ds-dock-pill:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "Meta Pills",
+      "kind": "chip",
+      "refersTo": "meta-pill-pay",
+      "description": "Card-surface facts: white glass over the photo scrim; the pay variant is the earned-yellow exception.",
+      "html": "<span class=\"ds-meta-demo\"><span class=\"ds-meta-pill\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>Lusaka</span><span class=\"ds-meta-pill ds-meta-pill--pay\">$12 on approval</span></span>",
+      "css": ".ds-meta-demo { display: inline-flex; gap: 7px; padding: 14px; border-radius: 16px; background: linear-gradient(to top, rgba(24, 18, 30, 0.94), rgba(24, 18, 30, 0.62)); } .ds-meta-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(6px); font-family: Nunito, system-ui, sans-serif; font-size: 14px; font-weight: 700; color: #fff; } .ds-meta-pill--pay { background: var(--yellow-primary, #f9ab3e); color: #3d2c07; }"
+    },
+    {
+      "name": "Toast Whisper",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "The single feedback grammar: a centred top pill of dark plum glass. No icon, no close button, no progress bar.",
+      "html": "<div class=\"ds-toast\">Saved to your list</div>",
+      "css": ".ds-toast { display: inline-block; background: rgba(43, 33, 51, 0.94); backdrop-filter: blur(10px); color: #fff; border-radius: 999px; padding: 9px 16px; font-family: Nunito, system-ui, sans-serif; font-weight: 600; font-size: 14px; box-shadow: 0 2px 10px rgba(50, 40, 60, 0.09); text-align: center; }"
+    },
+    {
+      "name": "Deck Card",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "The signature surface: full-bleed 26px photo card with plum scrim, verified provider line, 32px/800 white title, and glass meta-pills. In the app it carries hand-rolled swipe physics and rotated APPLY/PASS/SAVED stamps.",
+      "html": "<div class=\"ds-deck-card\"><div class=\"ds-deck-card__scrim\"></div><div class=\"ds-deck-card__body\"><span class=\"ds-deck-card__provider\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#7fd7b2\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76\"/><path d=\"m9 12 2 2 4-4\"/></svg> The Dignity Project</span><h2 class=\"ds-deck-card__title\">Youth-Led Inclusion Storytelling</h2><div class=\"ds-deck-card__meta\"><span class=\"ds-deck-card__pill\">Lusaka</span><span class=\"ds-deck-card__pill\">Tap for details</span></div></div></div>",
+      "css": ".ds-deck-card { position: relative; width: 100%; max-width: 340px; height: 420px; border-radius: 26px; overflow: hidden; background: linear-gradient(135deg, #84a98c, #2f6b52); box-shadow: 0 10px 30px rgba(50, 40, 60, 0.16); font-family: Nunito, system-ui, sans-serif; } .ds-deck-card__scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(24, 18, 30, 0.94) 0%, rgba(24, 18, 30, 0.62) 26%, rgba(24, 18, 30, 0.1) 55%, rgba(24, 18, 30, 0.35) 100%); } .ds-deck-card__body { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 20px 18px; color: #fff; } .ds-deck-card__provider { display: inline-flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 700; opacity: 0.92; } .ds-deck-card__title { font-size: 32px; font-weight: 800; line-height: 1.06; letter-spacing: -0.02em; margin: 8px 0 10px; } .ds-deck-card__meta { display: flex; flex-wrap: wrap; gap: 7px; } .ds-deck-card__pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(6px); font-size: 14px; font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Deck · Light Edition",
+    "overview": "The opportunity is the interface. Home is a deck of full-bleed photo cards — one real, verified opportunity at a time — and everything else in the app is quiet support for that decision. The world is warm and paper-like: a beige ground, white 22px-radius cards floating on soft plum-tinted shadows, and Nunito set bold and tight everywhere. Chrome is summoned, never resident: navigation lives in a small floating pill until asked for, detail arrives in bottom sheets, and feedback is a dark whisper-pill at the top of the screen. Color is rationed by meaning, not by decoration: aubergine speaks for the brand and AI, forest green is the one color of action, orange carries money, and yellow appears only at earned moments. Motion is CSS-only — spring-eased entrances and hand-rolled pointer physics on the deck — because low-end Android is the performance bar. A deliberate engineering trait: the token file keeps jambo's legacy variable names alongside the prototype's new names, so pre-existing screens retint themselves through the cascade.",
+    "keyCharacteristics": [
+      "Warm paper ground, white cards, plum-tinted soft shadows — no grey, no dark bands.",
+      "One typeface (Nunito), bold by default, negative tracking that tightens as size grows.",
+      "Meaning-locked palette: green acts, aubergine brands, orange pays, yellow celebrates.",
+      "Summoned chrome: dock pill, bottom sheets, top toast whisper.",
+      "Fixed 400px mobile column at every viewport; CSS-only motion; nothing fabricated."
+    ],
+    "rules": [
+      { "name": "The Earned Yellow Rule", "body": "Yellow appears only at earned moments — payment shown on a card, the match celebration, a saved opportunity. It is never a decorative accent.", "section": "colors" },
+      { "name": "The One Green Rule", "body": "Forest green means \"this is the action\" (or \"this succeeded\"). One green-filled element per decision context; everything else defers with sand, ghost, or tint treatments.", "section": "colors" },
+      { "name": "The Aubergine Is Not A Button Rule", "body": "Aubergine identifies the brand, AI, and progress; it fills chat bubbles, badges and focus rings, but never a primary call-to-action — that is green's job.", "section": "colors" },
+      { "name": "The Bold Ladder Rule", "body": "Weight and tracking move together: 800/−0.02em for display, 700/−0.01em for titles, 600 for labels, 400 for reading text. Never set a heading below 700, and never track headings out.", "section": "typography" },
+      { "name": "The One Face Rule", "body": "Nunito everywhere. The only exception is --font-mono for on-chain addresses.", "section": "typography" },
+      { "name": "The Under-100 Rule", "body": "New design-system overlays (docks, sheets, interstitials, toasts) take z values on the 10–70 scale. Never claim 100+ — that ladder belongs to the preserved modal flows, in that order.", "section": "layout" },
+      { "name": "The Warm Shadow Rule", "body": "Every shadow is plum-tinted rgba(50, 40, 60, …) or self-colored (the green button glow). No neutral-black shadows, no hard offsets.", "section": "elevation" },
+      { "name": "The Contained Glow Rule", "body": "A tint band must fade to transparent inside its own bounds (mask black 40% → transparent); a glow still visible at its boundary produces a hard horizontal edge, which this world forbids.", "section": "elevation" },
+      { "name": "The No Corner Rule", "body": "If it can be a pill or a circle, it is. Rectangular surfaces never go below 12px radius.", "section": "shapes" },
+      { "name": "The Scrim Ink Rule", "body": "Card text over photos is always white — theme-independent.", "section": "components" }
+    ],
+    "dos": [
+      "Do build new screens on the scaffold: .screen → .topbar → .screen__scroll (+ .pad), with .bottom-cta for pinned actions and .dock-clear on anything that scrolls under the dock pill.",
+      "Do use the global grammar (.btn, .chip, .card, .status-item, .field, .sheet) before writing new CSS — the system already has a shape for most needs.",
+      "Do keep both token vocabularies alive: prefer the new names (--surface-2, --r-card, --shadow-soft) in new code, and leave the legacy aliases (--card-bg-color, --accent-color, --button-border-radius…) defined so untouched screens keep retinting through the cascade.",
+      "Do give every gesture a visible tap equivalent (deck action buttons mirror the swipes) and keep touch targets ≥ 42px.",
+      "Do color SVG strokes with currentColor or style={{ stroke: 'var(…)' }} — never a var() in a presentation attribute.",
+      "Do keep motion CSS-driven on the spring-out curve, and let prefers-reduced-motion kill all of it."
+    ],
+    "donts": [
+      "Don't fabricate data to fill the comp's slots: payment/hours meta-pills, wallet activity, notifications feed, AI chat, and the Visa card are deliberately absent until real backing exists (see .impeccable/surfaces/screens-deck-tsx.md and screens-wallet-tsx.md). A surface shows real data or doesn't ship.",
+      "Don't add @media responsive layouts — the app is a fixed 400px column everywhere; the only breakpoint is the ≥501px desktop stage wash. No phone bezel on desktop.",
+      "Don't take z-index 100 or above for design-system overlays; the 100→2200 ladder belongs to the preserved modal flows.",
+      "Don't spend the reserved colors: yellow outside earned moments, aubergine as a call-to-action, orange for anything but money/attention, info-blue on new surfaces.",
+      "Don't add fonts, filled/glyph icon sets, animation libraries, pure-black shadows, or dark background bands (bands are light tints now — GradientBand).",
+      "Don't put technical jargon in user-facing copy — \"Vault\", never \"Matrix\"; money words, never token words."
+    ]
+  }
+}

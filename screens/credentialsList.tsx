@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { EventTimeline, RoomStateEvent } from 'matrix-js-sdk';
 
 import Header from '@components/Header/Header';
+import { ChevronRightIcon, ShieldCheckIcon } from '@components/Icons/icons';
 import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
 import { ListedCredential, readAllCredentialIndexEntries } from '@utils/matrixCredential';
@@ -92,23 +93,16 @@ export default function CredentialsListScreen() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <Header onGradient title='Credentials' onBack={goBack} />
-
-      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -119,38 +113,32 @@ export default function CredentialsListScreen() {
         {!loading && !error && sorted.length === 0 && <ListMessage>No credentials stored yet.</ListMessage>}
 
         {!loading && !error && sorted.length > 0 && (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}
-          >
-            {sorted.map((c, idx) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {sorted.map((c) => (
               <button
                 key={c.cid}
+                className='cred-card'
                 onClick={() => router.push(`/profile/credentials/${encodeURIComponent(c.cid)}`)}
                 style={{
                   textAlign: 'left',
                   cursor: 'pointer',
-                  backgroundColor: 'transparent',
+                  background: 'var(--surface)',
                   border: 'none',
-                  borderBottom: idx === sorted.length - 1 ? 'none' : '1px solid var(--border-color)',
                   width: '100%',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
                   color: 'var(--text-primary)',
                 }}
               >
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span className='cred-icon' style={{ background: 'var(--mint)', color: 'var(--green-primary)' }}>
+                  <ShieldCheckIcon size={22} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: '15px',
-                      fontWeight: 500,
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '16.5px',
+                      fontWeight: 700,
+                      letterSpacing: '-0.01em',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       display: '-webkit-box',
@@ -161,14 +149,13 @@ export default function CredentialsListScreen() {
                     {c.credentialKey || 'Credential'}
                   </p>
                   <div
+                    className='muted'
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
-                      fontSize: 12,
-                      color: 'var(--text-primary)',
-                      opacity: 0.7,
-                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: 12.5,
+                      fontFamily: 'var(--font-mono)',
                       overflow: 'hidden',
                       whiteSpace: 'nowrap',
                     }}
@@ -177,24 +164,11 @@ export default function CredentialsListScreen() {
                     <span aria-hidden>·</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortenCid(c.eventId)}</span>
                   </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                  <span className='muted' style={{ fontSize: 12.5 }}>
                     Stored at {formatDate(c.storedAt)}
                   </span>
                 </div>
-                <div style={{ flexShrink: 0, marginLeft: '12px' }}>
-                  <svg
-                    width='16'
-                    height='16'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='var(--text-secondary)'
-                    strokeWidth='2'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                  >
-                    <polyline points='9 18 15 12 9 6' />
-                  </svg>
-                </div>
+                <ChevronRightIcon size={18} color='var(--text-secondary)' />
               </button>
             ))}
           </div>
@@ -206,16 +180,8 @@ export default function CredentialsListScreen() {
 
 function ListMessage({ children, error }: { children: React.ReactNode; error?: boolean }) {
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderRadius: 16,
-        border: '1px solid var(--border-color)',
-        padding: '32px 16px',
-        textAlign: 'center',
-      }}
-    >
-      <p style={{ color: error ? 'var(--error-color)' : 'var(--text-secondary)', fontSize: 14, margin: 0 }}>
+    <div className='card card--inset center' style={{ padding: '32px 16px' }}>
+      <p className={error ? undefined : 'muted'} style={{ color: error ? 'var(--error-color)' : undefined, fontSize: 14, margin: 0 }}>
         {children}
       </p>
     </div>

@@ -1,8 +1,9 @@
-import { CSSProperties, useCallback, useEffect, useState } from 'react';
+import { CSSProperties, Fragment, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
 import useEntityWhitelist from '@hooks/useEntityWhitelist';
 import { entityHasClaimCollections, getEntityClaimCollectionCount } from '@utils/claims';
 
@@ -23,23 +24,19 @@ export default function SettingsEntitiesScreen() {
   }, [router]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GradientBand variant='purple' />
       <Header onGradient title='Entities' onBack={goBack} />
-
-      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -54,15 +51,6 @@ export default function SettingsEntitiesScreen() {
 // ---------------------------------------------------------------------------
 // Entity whitelist
 // ---------------------------------------------------------------------------
-
-// Solid list container with row dividers — matches the base-claim-modal lists.
-const listBoxStyle: CSSProperties = {
-  background: 'var(--bg-secondary)',
-  borderRadius: '12px',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
 
 function EntityWhitelistSection() {
   const { entities, loading, mutating, add, remove } = useEntityWhitelist();
@@ -115,10 +103,10 @@ function EntityWhitelistSection() {
 
   return (
     <>
-      <h1 style={{ margin: '0 0 8px', fontSize: '1.1rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+      <h1 className='h2' style={{ margin: '4px 0 6px' }}>
         Entity Whitelist
       </h1>
-      <p style={{ margin: '0 0 16px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+      <p className='muted' style={{ margin: '0 0 16px', fontSize: '13px', lineHeight: 1.5 }}>
         Entities approved to appear in the app.
       </p>
 
@@ -144,27 +132,17 @@ function EntityWhitelistSection() {
             fontSize: '13px',
             fontFamily: 'var(--font-mono, monospace)',
             color: 'var(--text-primary)',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '14px',
+            background: 'var(--surface)',
+            border: '1px solid var(--input-border-color)',
+            borderRadius: 'var(--r-input)',
             outline: 'none',
           }}
         />
         <button
           onClick={() => void handleAdd()}
           disabled={busy || !input.trim()}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 500,
-            color: 'var(--button-text-color, #fff)',
-            background: 'var(--green-primary)',
-            border: 'none',
-            borderRadius: '14px',
-            cursor: busy || !input.trim() ? 'default' : 'pointer',
-            opacity: busy || !input.trim() ? 0.6 : 1,
-            whiteSpace: 'nowrap',
-          }}
+          className='btn btn--primary btn--sm'
+          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
         >
           {checking ? 'Checking…' : mutating ? 'Adding…' : 'Add'}
         </button>
@@ -173,18 +151,17 @@ function EntityWhitelistSection() {
       {/* No-collections warning + proceed-anyway confirmation */}
       {pending && (
         <div
+          className='card'
           style={{
             margin: '12px 0 0',
             padding: '14px 16px',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--warning-color, #d99a00)',
-            borderRadius: '14px',
+            border: '1px solid var(--warning-border)',
           }}
         >
-          <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
             No claim collections found
           </p>
-          <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>
+          <p className='muted' style={{ margin: '0 0 12px', fontSize: '13px', overflowWrap: 'anywhere' }}>
             <span style={{ fontFamily: 'var(--font-mono, monospace)' }}>{shorten(pending)}</span> has no claim
             collections with this entity. Whitelist it anyway?
           </p>
@@ -192,34 +169,12 @@ function EntityWhitelistSection() {
             <button
               onClick={() => void doAdd(pending)}
               disabled={mutating}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: 'var(--button-text-color, #fff)',
-                background: 'var(--warning-color, #d99a00)',
-                border: 'none',
-                borderRadius: '14px',
-                cursor: mutating ? 'default' : 'pointer',
-                opacity: mutating ? 0.6 : 1,
-              }}
+              className='btn btn--sm'
+              style={{ background: 'var(--warning-color)', color: 'var(--button-text-color)' }}
             >
               {mutating ? 'Adding…' : 'Proceed anyway'}
             </button>
-            <button
-              onClick={() => setPending(null)}
-              disabled={mutating}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: '14px',
-                cursor: mutating ? 'default' : 'pointer',
-              }}
-            >
+            <button onClick={() => setPending(null)} disabled={mutating} className='btn btn--ghost btn--sm'>
               Cancel
             </button>
           </div>
@@ -235,15 +190,12 @@ function EntityWhitelistSection() {
             No entities whitelisted yet.
           </span>
         ) : (
-          <div style={listBoxStyle}>
+          <div className='list-card' style={{ display: 'flex', flexDirection: 'column' }}>
             {entities.map((entityDid, idx) => (
-              <EntityRow
-                key={entityDid}
-                entityDid={entityDid}
-                onRemove={remove}
-                disabled={mutating}
-                last={idx === entities.length - 1}
-              />
+              <Fragment key={entityDid}>
+                {idx > 0 && <div className='list-divider' />}
+                <EntityRow entityDid={entityDid} onRemove={remove} disabled={mutating} />
+              </Fragment>
             ))}
           </div>
         )}
@@ -318,12 +270,10 @@ function EntityRow({
   entityDid,
   onRemove,
   disabled,
-  last,
 }: {
   entityDid: string;
   onRemove: (entityDid: string) => Promise<void>;
   disabled: boolean;
-  last: boolean;
 }) {
   const router = useRouter();
   const [removing, setRemoving] = useState(false);
@@ -375,8 +325,7 @@ function EntityRow({
         flexDirection: 'column',
         alignItems: 'stretch',
         gap: '12px',
-        padding: '12px 14px',
-        borderBottom: last ? 'none' : '1px solid var(--border-color)',
+        padding: '12px 16px',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

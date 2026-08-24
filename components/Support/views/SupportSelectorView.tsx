@@ -3,6 +3,7 @@ import type { MatrixUserProfile } from '@store/slices/matrixProfilesSlice';
 import type { SupportDmRoom, SupportThreadEntry } from 'lib/matrix/support';
 
 import PrivacyAlert from '../parts/PrivacyAlert';
+import UserAvatar from '../parts/UserAvatar';
 import { ForwardChevron } from '../icons';
 import { formatRelativeAgo } from '../format';
 import {
@@ -27,10 +28,10 @@ type SupportSelectorViewProps = {
 
 const listRowUnreadDotStyle = {
   display: 'inline-block',
-  width: '8px',
-  height: '8px',
+  width: '9px',
+  height: '9px',
   borderRadius: '50%',
-  backgroundColor: 'var(--error-color, #e54545)',
+  backgroundColor: 'var(--coral)',
   flex: '0 0 auto',
 } as const;
 
@@ -38,8 +39,15 @@ const listRowTitleStyle = {
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
-  fontSize: '13px',
+  fontSize: '15.5px',
+  fontWeight: 700,
   lineHeight: 1.4,
+} as const;
+
+const listRowMetaStyle = {
+  marginTop: '3px',
+  fontSize: '13.5px',
+  color: 'var(--text-secondary)',
 } as const;
 
 export default function SupportSelectorView({
@@ -75,33 +83,28 @@ export default function SupportSelectorView({
                     style={isLast ? { ...conversationListRowStyle, borderBottom: 'none' } : conversationListRowStyle}
                     onClick={() => onOpenInvite(d.roomId, d.adminUserId)}
                   >
+                    <UserAvatar userId={d.adminUserId} displayName={label} avatarUrl={profile?.avatarUrl} size={50} />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={listRowTitleStyle}>
-                        <span>{label}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {label}
+                        </span>
                         <span
                           style={{
-                            fontSize: '10px',
-                            fontWeight: 600,
+                            fontSize: '11px',
+                            fontWeight: 700,
                             letterSpacing: '0.04em',
                             textTransform: 'uppercase',
-                            padding: '1px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: 'var(--accent-bg, rgba(59, 130, 246, 0.12))',
-                            color: 'var(--accent-color, #3b82f6)',
+                            padding: '2px 9px',
+                            borderRadius: 'var(--r-pill)',
+                            backgroundColor: 'var(--purple-tint)',
+                            color: 'var(--purple-primary)',
                           }}
                         >
                           Invite
                         </span>
                       </div>
-                      <div
-                        style={{
-                          marginTop: '4px',
-                          fontSize: '11px',
-                          color: 'var(--text-secondary, #777)',
-                        }}
-                      >
-                        Tap to review and join
-                      </div>
+                      <div style={listRowMetaStyle}>Tap to review and join</div>
                     </div>
                     <span style={conversationListChevronStyle} aria-hidden='true'>
                       <ForwardChevron />
@@ -121,20 +124,15 @@ export default function SupportSelectorView({
                     style={isLast ? { ...conversationListRowStyle, borderBottom: 'none' } : conversationListRowStyle}
                     onClick={() => onOpenDm(d.roomId)}
                   >
+                    <UserAvatar userId={d.adminUserId} displayName={label} avatarUrl={profile?.avatarUrl} size={50} />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={listRowTitleStyle}>
                         {unread && <span aria-label='Unread' style={listRowUnreadDotStyle} />}
-                        <span>{label}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {label}
+                        </span>
                       </div>
-                      <div
-                        style={{
-                          marginTop: '4px',
-                          fontSize: '11px',
-                          color: 'var(--text-secondary, #777)',
-                        }}
-                      >
-                        Private chat
-                      </div>
+                      <div style={listRowMetaStyle}>Private chat</div>
                     </div>
                     <span style={conversationListChevronStyle} aria-hidden='true'>
                       <ForwardChevron />
@@ -163,17 +161,11 @@ export default function SupportSelectorView({
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={listRowTitleStyle}>
                         {unread && <span aria-label='Unread' style={listRowUnreadDotStyle} />}
-                        <span>{t.preview}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.preview}
+                        </span>
                       </div>
-                      <div
-                        style={{
-                          marginTop: '4px',
-                          fontSize: '11px',
-                          color: 'var(--text-secondary, #777)',
-                        }}
-                      >
-                        {formatRelativeAgo(t.createdAt)}
-                      </div>
+                      <div style={listRowMetaStyle}>{formatRelativeAgo(t.createdAt)}</div>
                     </div>
                     <span style={conversationListChevronStyle} aria-hidden='true'>
                       <ForwardChevron />
@@ -186,12 +178,12 @@ export default function SupportSelectorView({
         )}
         {!hasAny && (
           <p
+            className='muted'
             style={{
               margin: 0,
               padding: '16px 0',
               textAlign: 'center',
-              color: 'var(--text-secondary, #777)',
-              fontSize: '13px',
+              fontSize: '14px',
             }}
           >
             No support conversations yet — start a new one below.
@@ -221,7 +213,15 @@ export default function SupportSelectorView({
             borderColor={BUTTON_BORDER_COLOR.primary}
             color={BUTTON_COLOR.white}
             size={BUTTON_SIZE.mediumLarge}
-            style={{ width: '100%', padding: '12px 16px', borderRadius: '10px' }}
+            style={{
+              width: '100%',
+              padding: '15px 24px',
+              borderRadius: 'var(--r-pill)',
+              background: 'var(--green-primary)',
+              border: 'none',
+              fontWeight: 700,
+              boxShadow: 'var(--shadow-btn)',
+            }}
           />
         </div>
       </section>

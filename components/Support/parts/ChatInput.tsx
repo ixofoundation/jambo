@@ -91,10 +91,10 @@ export default function ChatInput({
       </div>
       {footerNote && (
         <p
+          className='muted'
           style={{
             margin: '6px 0 0',
-            fontSize: '11px',
-            color: 'var(--text-secondary, #777)',
+            fontSize: '12px',
             lineHeight: 1.4,
           }}
         >

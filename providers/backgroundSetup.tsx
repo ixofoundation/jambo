@@ -12,6 +12,9 @@ import {
 } from '@utils/roomBotMnemonic';
 import { secret } from '@utils/secrets';
 import { secureLoad, secureReset } from '@utils/storage';
+import { activateDeckPrefs, hydrateDeckPrefsFromMatrix } from '@utils/deckPrefs';
+import { initLocalCurrency } from '@utils/localCurrency';
+import { fetchMatrixProfile } from '@providers/auth';
 import authConstants from '@constants/auth';
 
 interface BackgroundSetupProviderProps {
@@ -101,6 +104,9 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
   //   no PIN prompt. Repair is deferred until an explicit `ensureEncryptionReady()` call.
   useEffect(() => {
     if (!auth.isLoggedIn || !auth.address || !auth.matrixUserId) return;
+    // Namespace deck prefs to this account as soon as we know who's logged in —
+    // this must happen even when Matrix never comes up (dev bypass, outages).
+    activateDeckPrefs(auth.address);
     if (setupAttemptedRef.current) return;
 
     const hasMatrixTokens = !!secret.accessToken && !!secret.userId;
@@ -130,6 +136,13 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         mxClientRef.current = mxClient;
         setStatus('success');
         setStatusMessage('Data Store ready');
+        fetchMatrixProfile();
+        void hydrateDeckPrefsFromMatrix(mxClient).catch((err) => console.warn('Deck prefs hydration failed:', err));
+        if (auth.matrixRoomId && auth.address) {
+          void initLocalCurrency(mxClient, auth.matrixRoomId, auth.address).catch((err) =>
+            console.warn('Local currency resolution failed:', err),
+          );
+        }
       } catch (err: any) {
         console.error('Matrix reattach error:', err);
         setStatus('error');
@@ -164,6 +177,13 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
 
         setStatus('success');
         setStatusMessage('Data Store ready');
+        fetchMatrixProfile();
+        void hydrateDeckPrefsFromMatrix(mxClient).catch((err) => console.warn('Deck prefs hydration failed:', err));
+        if (auth.matrixRoomId && auth.address) {
+          void initLocalCurrency(mxClient, auth.matrixRoomId, auth.address).catch((err) =>
+            console.warn('Local currency resolution failed:', err),
+          );
+        }
       } catch (err: any) {
         console.error('Matrix setup error:', err);
         setStatus('error');
@@ -315,6 +335,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       {/* Spinner shown during running setup/recovery (but not while PIN modal is up). */}
       {showDetails && status === 'running' && !pinPrompt && (
         <div
+          onClick={() => setShowDetails(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -322,14 +343,16 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backgroundColor: 'rgba(30, 22, 38, 0.44)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 16,
+              backgroundColor: 'var(--surface, #fff)',
+              borderRadius: 26,
+              boxShadow: 'var(--shadow-card)',
               padding: '32px 28px',
               maxWidth: 340,
               width: '90%',
@@ -361,6 +384,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       )}
       {showDetails && status === 'error' && (
         <div
+          onClick={() => setShowDetails(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -368,14 +392,16 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backgroundColor: 'rgba(30, 22, 38, 0.44)',
             backdropFilter: 'blur(4px)',
           }}
         >
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 16,
+              backgroundColor: 'var(--surface, #fff)',
+              borderRadius: 26,
+              boxShadow: 'var(--shadow-card)',
               padding: '28px 24px',
               maxWidth: 360,
               width: '90%',

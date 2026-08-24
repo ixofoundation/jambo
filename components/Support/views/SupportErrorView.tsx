@@ -16,7 +16,14 @@ export default function SupportErrorView({ message, onClose }: SupportErrorViewP
         borderColor={BUTTON_BORDER_COLOR.primary}
         color={BUTTON_COLOR.white}
         size={BUTTON_SIZE.mediumLarge}
-        style={{ padding: '10px 24px', borderRadius: '10px' }}
+        style={{
+          padding: '12px 24px',
+          borderRadius: 'var(--r-pill)',
+          background: 'var(--green-primary)',
+          border: 'none',
+          fontWeight: 700,
+          boxShadow: 'var(--shadow-btn)',
+        }}
       />
     </div>
   );

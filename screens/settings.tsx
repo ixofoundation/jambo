@@ -2,12 +2,25 @@ import { useState, useCallback, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
 import PinModal from '@components/PinModal/PinModal';
 import EmailNotifier from '@components/EmailNotifier/EmailNotifier';
+import {
+  BadgeCheckIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  FingerprintIcon,
+  KeyRoundIcon,
+  LogOutIcon,
+  ShieldCheckIcon,
+  UserRoundIcon,
+  WalletIcon,
+} from '@components/Icons/icons';
+import { openPinResetFlow } from 'lib/authHub/pinReset';
 import { useAuth } from '@hooks/useAuth';
 import useIsAdmin from '@hooks/useIsAdmin';
 import { secret } from '@utils/secrets';
-import { decrypt } from '@utils/encryption';
+import { decryptEncryptedMnemonic } from '@utils/roomBotMnemonic';
 import {
   generatePassphraseFromMnemonic,
   generatePasswordFromMnemonic,
@@ -76,8 +89,9 @@ export default function SettingsScreen() {
         const encryptedMnemonic = stateData.encrypted_mnemonic;
         if (!encryptedMnemonic) throw new Error('No encrypted credentials found');
 
-        const mnemonic = decrypt(encryptedMnemonic, pin);
-        if (!mnemonic) throw new Error('Incorrect PIN');
+        // Throws "Incorrect PIN. Please try again." on a wrong PIN — shown
+        // verbatim by PinModal.
+        const mnemonic = decryptEncryptedMnemonic(encryptedMnemonic, pin);
 
         const password = generatePasswordFromMnemonic(mnemonic);
         const passphrase = generatePassphraseFromMnemonic(mnemonic);
@@ -101,23 +115,19 @@ export default function SettingsScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <GradientBand variant='yellow' />
       <Header onGradient title='Settings' onBack={goBack} />
-
-      {/* Small green gradient band behind the (fixed) header so its onGradient styles apply. */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%)',
-          height: 'var(--header-height)',
-        }}
-      />
 
       <main
         style={{
+          position: 'relative',
+          zIndex: 1,
           width: '100%',
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '16px',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -126,206 +136,117 @@ export default function SettingsScreen() {
         {/* Admin-only entry point. Hidden unless the worker confirms the user is a whitelisted admin. */}
         {isAdmin && (
           <button
+            className='status-item'
+            style={{ width: '100%', marginBottom: 6 }}
             onClick={() => void router.push('/settings/entities')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              width: '100%',
-              padding: '14px 16px',
-              marginBottom: '24px',
-              background: 'var(--card-bg-color)',
-              border: 'none',
-              borderRadius: 'var(--card-border-radius)',
-              cursor: 'pointer',
-              color: 'var(--text-primary)',
-              textAlign: 'left',
-              font: 'inherit',
-            }}
           >
-            <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>Admin Configuration</span>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <span className='status-item__body'>
+              <span className='status-item__title' style={{ display: 'block', fontSize: 15.5 }}>Admin Configuration</span>
+              <span className='status-item__meta' style={{ display: 'block' }}>
                 Manage entity whitelist and collection blacklist
               </span>
             </span>
-            <svg
-              width='18'
-              height='18'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-              style={{ flexShrink: 0, opacity: 0.7 }}
-            >
-              <polyline points='9 18 15 12 9 6' />
-            </svg>
+            <ChevronRightIcon size={18} color='var(--text-secondary)' />
           </button>
         )}
 
-        <h1
-          style={{
-            margin: '0 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
-          }}
-        >
-          Account
-        </h1>
-
-        <p style={{ margin: '0 0 12px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Your account on the ixo network that identifies your transactions.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '0 4px', marginBottom: '24px' }}>
-          <Row label='Address'>
+        <Group title='Account' hint='Your account on the ixo network that identifies your transactions.'>
+          <Row label='Address' icon={<WalletIcon size={20} />}>
             {address ? (
               <CopyChip value={address} label={shorten(address)} monospace />
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
-          <Row label='DID'>
+          <Row label='DID' icon={<BadgeCheckIcon size={20} />}>
             {did ? (
               <CopyChip value={did} label={shorten(did)} monospace />
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
-        </div>
+        </Group>
 
-        <h1
-          style={{
-            margin: '0 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
-          }}
+        <Group
+          title='Data Store'
+          hint='Credentials for your encrypted data store, where your claims, credentials and personal data are securely stored.'
         >
-          Data Store
-        </h1>
-
-        <p style={{ margin: '0 0 12px', padding: '0 4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Credentials for your encrypted data store, where your claims, credentials and personal data are securely
-          stored.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '0 4px' }}>
-          <Row label='Username'>
+          <Row label='Username' icon={<UserRoundIcon size={20} />}>
             {userId ? (
               <CopyChip value={userId} label={shorten(userId)} monospace />
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
-          <Row label='Password'>
+          <Row label='Password' icon={<KeyRoundIcon size={20} />}>
             {revealed.password && secrets ? (
               <CopyChip value={secrets.password} label='Copy' />
             ) : (
               <ActionChip label='View' icon={<LockIcon />} onClick={() => handleView('password')} />
             )}
           </Row>
-          <Row label='Passphrase'>
+          <Row label='Passphrase' icon={<ShieldCheckIcon size={20} />}>
             {revealed.passphrase && secrets ? (
               <CopyChip value={secrets.passphrase} label='Copy' />
             ) : (
               <ActionChip label='View' icon={<LockIcon />} onClick={() => handleView('passphrase')} />
             )}
           </Row>
-          <Row label='Access Token'>
+          <Row label='Access Token' icon={<CopyIcon size={20} />}>
             {accessToken ? (
               <CopyChip value={accessToken} label={shorten(accessToken)} monospace />
             ) : (
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
-        </div>
+          {/* PIN reset lives on the auth hub: fresh email sign-in there, new
+              PIN chosen there — no old PIN needed (designer's "PIN Code" row). */}
+          <Row label='PIN Code' icon={<FingerprintIcon size={20} />}>
+            <ActionChip label='Reset' onClick={openPinResetFlow} />
+          </Row>
+        </Group>
 
-        <h1
-          style={{
-            margin: '24px 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
-          }}
-        >
-          Yoma Account
-        </h1>
+        <Group title='Yoma Account'>
+          <div style={{ padding: '12px 4px' }}>
+            {yomaLink?.yomaId ? (
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--green-primary)', fontWeight: 700 }}>Connected</span> — your completions
+                count towards your Yoma rewards.
+                {yomaLink.email ? (
+                  <>
+                    {' '}
+                    Linked email: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{yomaLink.email}</span>
+                  </>
+                ) : null}
+              </p>
+            ) : yomaLink?.email ? (
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Your email <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{yomaLink.email}</span> is
+                verified, but no Yoma account with this email is linked yet. Make sure your Yoma account uses the same
+                email.
+              </p>
+            ) : (
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Not connected to a Yoma account.
+              </p>
+            )}
+          </div>
+        </Group>
 
-        <div style={{ padding: '0 4px' }}>
-          {yomaLink?.yomaId ? (
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              <span style={{ color: '#3E9B4F', fontWeight: 600 }}>Connected</span> — your completions count towards
-              your Yoma rewards.
-              {yomaLink.email ? (
-                <>
-                  {' '}
-                  Linked email: <span style={{ color: 'var(--text-primary)' }}>{yomaLink.email}</span>
-                </>
-              ) : null}
-            </p>
-          ) : yomaLink?.email ? (
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Your email <span style={{ color: 'var(--text-primary)' }}>{yomaLink.email}</span> is verified, but no
-              Yoma account with this email is linked yet. Make sure your Yoma account uses the same email.
-            </p>
-          ) : (
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Not connected to a Yoma account.
-            </p>
-          )}
-        </div>
-
-        <h1
-          style={{
-            margin: '24px 0 8px',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-            color: 'var(--text-primary)',
-          }}
-        >
-          Email Notifications
-        </h1>
-
-        <EmailNotifier />
+        <Group title='Email Notifications'>
+          <div style={{ padding: '6px 4px' }}>
+            <EmailNotifier />
+          </div>
+        </Group>
 
         <div style={{ flex: 1 }} />
 
         <button
           onClick={() => void logout()}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            padding: '14px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '14px',
-            color: 'var(--error-color)',
-            marginTop: '24px',
-            marginBottom: '32px',
-          }}
+          className='btn btn--ghost btn--block'
+          style={{ color: 'var(--error-color)', marginTop: 28, marginBottom: 8 }}
         >
-          <svg
-            width='16'
-            height='16'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' />
-            <polyline points='16 17 21 12 16 7' />
-            <line x1='21' y1='12' x2='9' y2='12' />
-          </svg>
+          <LogOutIcon size={17} />
           <span>Logout</span>
         </button>
       </main>
@@ -335,11 +256,25 @@ export default function SettingsScreen() {
   );
 }
 
+function Group({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <p className='muted' style={{ fontSize: 14, fontWeight: 600, margin: '0 0 6px 4px' }}>{title}</p>
+      {hint && (
+        <p className='muted' style={{ fontSize: 13, margin: '0 0 8px 4px', lineHeight: 1.5 }}>
+          {hint}
+        </p>
+      )}
+      <div className='card card--inset' style={{ padding: '4px 14px' }}>{children}</div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Row + chip primitives
 // ---------------------------------------------------------------------------
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Row({ label, icon, children }: { label: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <div
       style={{
@@ -347,24 +282,29 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '12px',
+        padding: '12px 0',
       }}
     >
-      <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{label}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+        {icon && <span style={{ display: 'inline-flex', color: 'var(--text-primary)' }}>{icon}</span>}
+        <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
+      </span>
       {children}
     </div>
   );
 }
 
 const chipBaseStyle = {
-  borderRadius: 'var(--card-border-radius)',
+  borderRadius: '8px',
   border: 'none',
-  background: 'var(--card-bg-color)',
-  padding: '5px 12px',
+  background: 'var(--surface-2)',
+  padding: '7px 12px',
   display: 'inline-flex',
   alignItems: 'center',
   gap: '8px',
   cursor: 'pointer',
   color: 'var(--text-primary)',
+  boxShadow: 'var(--shadow-soft)',
 } as const;
 
 function ActionChip({ label, icon, onClick }: { label: string; icon?: ReactNode; onClick: () => void }) {
@@ -413,8 +353,8 @@ function CopyChip({ value, label, monospace }: { value: string; label: string; m
       <span
         style={{
           fontSize: '13px',
-          fontFamily: monospace ? 'monospace' : 'inherit',
-          fontWeight: monospace ? 400 : 500,
+          fontFamily: monospace ? 'var(--font-mono)' : 'inherit',
+          fontWeight: monospace ? 400 : 600,
           whiteSpace: 'nowrap',
         }}
       >

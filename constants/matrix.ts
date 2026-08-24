@@ -13,6 +13,8 @@ const cons = {
   },
   DEVICE_DISPLAY_NAME: 'JAMBO CLAIMS',
   IN_IXO_SPACES: 'in.ixo.spaces',
+  // Global account data holding Yoma app preferences (deck choices, tutorial flag)
+  IN_IXO_YOMA_PREFERENCES: 'in.ixo.yoma.preferences',
   // types that will get notifs and can see
   supportEventTypes: ['m.room.create', 'm.room.message', 'm.room.encrypted', 'm.room.member', 'm.sticker'],
   supportReceiptTypes: ['m.read', 'm.read.private'],

@@ -3,6 +3,7 @@ import { FC } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import HeaderStatusIndicator from '@components/HeaderStatusIndicator/HeaderStatusIndicator';
+import { YomaWordmark } from '@components/Brand/YomaWordmark';
 import { useAppSelector } from '@store/hooks';
 
 type HeaderProps = {
@@ -54,11 +55,20 @@ const Header: FC<HeaderProps> = ({ onGradient, title, onClose, onBack, hideEndAc
         ) : (
           <>
             {isSettings ? (
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  letterSpacing: '-0.01em',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                Settings
+              </span>
             ) : (
               <Link href='/' className={styles.logo} aria-label='Home'>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src='/images/logo.png' alt='Jambo' className={styles.logoImg} />
+                <YomaWordmark height={22} />
               </Link>
             )}
             <div className={styles.spacer} />

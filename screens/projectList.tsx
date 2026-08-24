@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAppSelector } from '@store/hooks';
-import { store } from '@store/index';
-import { setProfile } from '@store/slices/profilesSlice';
-import { fetchProtocolEntity } from '@utils/entity';
 import { loadWhitelistedEntities } from '@utils/projects';
-import { getServiceEndpoint, getAdditionalInfo } from '@utils/url';
+import { ensureEntityProfiles } from '@utils/entityProfiles';
 import Header from '@components/Header/Header';
+import { ChevronRightIcon, LayersIcon } from '@components/Icons/icons';
 
 function readableType(type?: string): string {
   if (!type) return '';
@@ -20,184 +18,85 @@ export default function ProjectList() {
   const router = useRouter();
   const projectIds = useAppSelector((state) => state.projects.ids);
   const profiles = useAppSelector((state) => state.profiles.byEntityDid);
-  const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [loadingEntities, setLoadingEntities] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Refresh the project list from the worker whitelist when the screen opens.
+  // Refresh the project list from the worker whitelist when the screen opens,
+  // then pull profile documents (name, image) for anything missing.
   useEffect(() => {
     let cancelled = false;
-    setLoadingEntities(true);
-    void loadWhitelistedEntities().finally(() => {
-      if (!cancelled) setLoadingEntities(false);
-    });
+    void loadWhitelistedEntities()
+      .then((ids) => ensureEntityProfiles(ids))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Fetch profiles for any projects that don't have one yet
-  useEffect(() => {
-    const missingIds = projectIds.filter((id) => !profiles[id]);
-    if (missingIds.length === 0) return;
-
-    setLoadingProfiles(true);
-    Promise.allSettled(
-      missingIds.map(async (entityDid) => {
-        try {
-          const entity = await fetchProtocolEntity(entityDid);
-          const profileEndpoint = entity?.settings?.Profile?.serviceEndpoint;
-          if (!profileEndpoint) return;
-          const resolvedUrl = getServiceEndpoint(profileEndpoint, entity.service);
-          const profileData = await getAdditionalInfo(resolvedUrl);
-          if (profileData?.name) {
-            store.dispatch(
-              setProfile({
-                entityDid,
-                profile: { name: profileData.name, logo: profileData.logo, type: entity.type },
-              }),
-            );
-          }
-        } catch {
-          // Profile fetch failure is non-blocking
-        }
-      }),
-    ).finally(() => setLoadingProfiles(false));
-  }, [projectIds, profiles]);
-
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* Gradient band sized to cover the header + title section + ~15px overlap into
-          the top of the list — matches the dashboard (/entities/[entityId]) screen. */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 'calc(var(--header-height) + 133px)',
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%)',
-        }}
-      />
-      <Header onGradient />
+    <div style={{ position: 'relative', minHeight: '100dvh' }}>
+      <Header />
       <main
         style={{
           position: 'relative',
           zIndex: 1,
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
-          minHeight: '100vh',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
+          minHeight: '100dvh',
         }}
       >
-        {/* Page title section */}
-        <div
-          style={{
-            minHeight: '110px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '1.1rem',
-              fontWeight: 500,
-              color: '#fff',
-              lineHeight: 1.2,
-            }}
-          >
-            Projects
-          </h1>
+        <div className='section-header' style={{ marginTop: 4 }}>
+          <h2>All opportunities</h2>
+          <button className='section-arrow' aria-label='Open your deck' onClick={() => router.push('/')}>
+            <LayersIcon size={16} />
+          </button>
         </div>
 
-        {/* Project list */}
         {projectIds.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color)',
-              padding: '32px 16px',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
-              {loadingEntities || loadingProfiles ? 'Loading...' : 'No projects found'}
+          <div className='card card--inset center' style={{ padding: '32px 20px' }}>
+            <p className='muted' style={{ margin: 0, fontSize: 14.5 }}>
+              {loading ? 'Loading…' : 'No opportunities are live right now.'}
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}
-          >
-            {projectIds.map((id, idx) => {
-              const profile = profiles[id];
-              return (
-                <button
-                  key={id}
-                  onClick={() => router.push(`/entities/${encodeURIComponent(id)}`)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    width: '100%',
-                    padding: '14px 16px',
-                    border: 'none',
-                    borderBottom: idx === projectIds.length - 1 ? 'none' : '1px solid var(--border-color)',
-                    backgroundColor: 'transparent',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '15px',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                      }}
-                    >
-                      {profile?.name || id}
-                    </p>
-                    {profile?.type && (
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                        {readableType(profile.type)}
-                      </span>
-                    )}
+          projectIds.map((id) => {
+            const profile = profiles[id];
+            const thumb = profile?.image || profile?.logo;
+            return (
+              <button
+                key={id}
+                className='status-item'
+                style={{ width: '100%', marginBottom: 12 }}
+                onClick={() => router.push(`/entities/${encodeURIComponent(id)}`)}
+              >
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumb} className='status-item__thumb' alt='' />
+                ) : (
+                  <span
+                    className='status-item__thumb'
+                    style={{ background: 'var(--purple-tint)', display: 'grid', placeItems: 'center', color: 'var(--purple-primary)' }}
+                  >
+                    <LayersIcon size={22} />
+                  </span>
+                )}
+                <div className='status-item__body'>
+                  <div className='status-item__title' style={{ fontSize: 15.5 }}>
+                    {profile?.name || id}
                   </div>
-                  <div style={{ flexShrink: 0, marginLeft: '12px' }}>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--text-secondary)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  {(profile?.brand || profile?.type) && (
+                    <div className='status-item__meta'>
+                      {[profile?.brand, readableType(profile?.type)].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                </div>
+                <ChevronRightIcon size={18} color='var(--text-secondary)' />
+              </button>
+            );
+          })
         )}
       </main>
     </div>

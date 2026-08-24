@@ -1,3 +1,5 @@
+// Soft light tints on the paper ground — the design keeps screens on one warm
+// beige world, with a gentle per-area glow instead of the old dark bands.
 .band {
   position: absolute;
   top: 0;
@@ -8,25 +10,32 @@
   z-index: 0;
   pointer-events: none;
 
+  // The glow must fade fully inside the band's own height — a tint that is
+  // still visible at the boundary produces a hard horizontal edge.
+  mask-image: linear-gradient(to bottom, black 40%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent);
+
   &.purple {
-    background: radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%);
+    background: radial-gradient(90rem 60rem at 70% -20%, rgba(231, 212, 237, 0.55), transparent 60%);
   }
 
   &.blue {
-    background: radial-gradient(ellipse at top right, var(--blue-secondary), var(--blue-primary) 70%);
+    background: radial-gradient(90rem 60rem at 70% -20%, rgba(206, 229, 245, 0.5), transparent 60%);
   }
 
   &.green {
-    background: radial-gradient(ellipse at top right, var(--green-secondary), var(--green-primary) 70%);
+    background: radial-gradient(90rem 60rem at 70% -20%, rgba(214, 238, 232, 0.55), transparent 60%);
   }
 
   &.yellow {
-    background: radial-gradient(ellipse at top right, var(--yellow-secondary), var(--yellow-primary) 70%);
+    background: radial-gradient(90rem 60rem at 70% -20%, rgba(250, 228, 198, 0.5), transparent 55%);
   }
 
   &.fullScreen {
     height: 100%;
     max-height: none;
     bottom: 0;
+    mask-image: none;
+    -webkit-mask-image: none;
   }
 }

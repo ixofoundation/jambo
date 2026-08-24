@@ -57,7 +57,7 @@ export default function AuthCallbackPage() {
         let sessionData;
 
         if (isDevBypass() && bypass === 'true') {
-          sessionData = getDevBypassSession();
+          sessionData = await getDevBypassSession();
         } else {
           sessionData = await exchangeAuthCode(code!);
         }
@@ -121,7 +121,7 @@ export default function AuthCallbackPage() {
                 padding: '12px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                backgroundColor: '#3E9B4F',
+                backgroundColor: 'var(--green-primary)',
                 color: 'white',
                 cursor: 'pointer',
                 fontSize: '15px',
@@ -153,7 +153,7 @@ export default function AuthCallbackPage() {
             width: 48,
             height: 48,
             border: '3px solid var(--border-color)',
-            borderTopColor: 'var(--accent-color, #3b82f6)',
+            borderTopColor: 'var(--accent-color)',
             borderRadius: '50%',
             animation: 'callbackSpinner 0.8s linear infinite',
             margin: '0 auto 16px',

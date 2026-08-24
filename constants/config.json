@@ -3,6 +3,6 @@
   "siteUrl": "https://jambo.test.yoma.impacts.exchange",
   "siteTitleMeta": "JAMBO yoma",
   "siteDescriptionMeta": "A mobile-first web app for the Yoma Impacts Exchange, helping young people access opportunities, complete verified tasks, and build pathways to skills, income, and impact.",
-  "fontUrl": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap",
-  "fontName": "Roboto"
+  "fontUrl": "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap",
+  "fontName": "Nunito"
 }

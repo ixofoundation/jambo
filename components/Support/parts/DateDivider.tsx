@@ -14,9 +14,9 @@ export default function DateDivider({ timestamp }: DateDividerProps) {
         alignItems: 'center',
         gap: '12px',
         margin: '16px 0 8px',
-        color: 'var(--text-secondary, #777)',
+        color: 'var(--text-secondary)',
         fontSize: '11px',
-        fontWeight: 500,
+        fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.04em',
       }}

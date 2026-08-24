@@ -95,7 +95,7 @@ export default function SupportDmView({
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '12px' }}>
         {messages.length === 0 && (
-          <div style={{ color: 'var(--text-secondary, #777)', padding: '8px 0' }}>
+          <div className='muted' style={{ padding: '8px 0' }}>
             No messages yet — say hi to start the conversation.
           </div>
         )}
@@ -117,11 +117,12 @@ export default function SupportDmView({
                 avatarUrl={avatarUrl}
                 timestamp={msg.origin_server_ts}
                 isAdmin={isAdmin}
+                isMine={isMine}
                 body={
                   <span
                     style={{
                       fontStyle: isEncrypted ? 'italic' : 'normal',
-                      color: isEncrypted ? 'var(--text-secondary, #777)' : 'inherit',
+                      opacity: isEncrypted ? 0.75 : 1,
                     }}
                   >
                     {msg.body}

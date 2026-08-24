@@ -4,6 +4,12 @@ interface EntityProfile {
   name: string;
   logo?: string;
   type?: string;
+  /** Hero image from the entity profile document (deck cards). */
+  image?: string;
+  /** Brand / organisation label from the profile document. */
+  brand?: string;
+  description?: string;
+  location?: string;
 }
 
 interface ProfilesState {

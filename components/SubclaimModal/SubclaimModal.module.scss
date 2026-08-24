@@ -193,11 +193,10 @@
 }
 
 .listBoxRows .rowSelected {
-  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  background: var(--purple-tint);
   border: none;
   border-bottom: 1px solid var(--border-color);
-  border-left: 3px solid var(--accent-color);
-  padding: 12px 14px 12px 11px;
+  padding: 12px 14px;
 }
 
 .listBoxRows .rowSelected:last-child {
@@ -513,9 +512,8 @@
   padding: 16px;
   margin-bottom: 12px;
   border-radius: 14px;
-  background: var(--bg-secondary);
-  border: none;
-  border-left: 6px solid var(--error-color);
+  background: #fde7e7;
+  border: 1px solid var(--error-color);
   color: var(--text-primary);
 }
 

@@ -6,6 +6,7 @@ import { createMatrixBidBotClient } from '@ixo/matrixclient-sdk';
 
 import { fetchCollectionByCollectionId, fetchClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
+import GradientBand from '@components/GradientBand/GradientBand';
 import { useAuth } from '@hooks/useAuth';
 import { useBackgroundSetup } from '@hooks/useBackgroundSetup';
 import { useProtocolCollections } from '@hooks/useProtocolCollections';
@@ -255,98 +256,34 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
 
   function statusLabel(claim: any): { text: string; color: string; bg: string } {
     const s = claim.evaluationByClaimId?.status;
-    if (s === 1) return { text: 'Approved', color: '#2F6A59', bg: '#dcfce7' };
-    if (s === 2) return { text: 'Rejected', color: '#991b1b', bg: '#fee2e2' };
-    if (s === 3) return { text: 'Disputed', color: '#E49526', bg: '#fef3c7' };
-    return { text: 'Pending', color: '#545859', bg: '#F3F6FA' };
+    if (s === 1) return { text: 'Approved', color: 'var(--green-secondary)', bg: 'var(--mint)' };
+    if (s === 2) return { text: 'Rejected', color: 'var(--error-color)', bg: '#fde7e7' };
+    if (s === 3) return { text: 'Disputed', color: 'var(--yellow-secondary)', bg: '#fdeed8' };
+    return { text: 'Pending', color: 'var(--text-secondary)', bg: 'var(--surface-2)' };
   }
 
   return (
     <div style={{ overflow: 'hidden', position: 'relative', minHeight: '100vh' }}>
-      {/* Gradient band sized to cover the header + collection-name section + ~15px overlap
-          into the top of the claim list. (Default GradientBand is 30vh which is much
-          taller than needed on this screen.) */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 'calc(var(--header-height) + 133px)',
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at top right, var(--blue-secondary), var(--blue-primary) 70%)',
-        }}
-      />
-      <Header onGradient />
+      <GradientBand variant='blue' />
+      <Header onGradient title='Claim Collections' onBack={() => router.push(`/entities/${entityDid}`)} />
       <main
         style={{
           position: 'relative',
           zIndex: 1,
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
-          paddingBottom: showBottomBar ? (stackedContributorButtons ? '140px' : '88px') : '16px',
+          padding: '0 20px 16px',
+          paddingTop: 'calc(var(--header-height) + 4px)',
+          paddingBottom: showBottomBar
+            ? stackedContributorButtons
+              ? 'calc(196px + env(safe-area-inset-bottom, 0px))'
+              : 'calc(144px + env(safe-area-inset-bottom, 0px))'
+            : 'var(--dock-clearance)',
         }}
       >
-        {/* Collection header — sits in the gradient band, styled like the project name on
-            the dashboard / "My Credentials" heading on the profile screen (light variant). */}
-        <div
-          style={{
-            minHeight: '110px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          <button
-            onClick={() => router.push(`/entities/${entityDid}`)}
-            aria-label='Go back to claim collections'
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              margin: '0 0 6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '13px',
-              fontWeight: 400,
-              lineHeight: 1.2,
-            }}
-          >
-            <svg
-              width='14'
-              height='14'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            >
-              <polyline points='15 18 9 12 15 6' />
-            </svg>
-            Claim Collections
-          </button>
-          <h1
-            style={{
-              margin: '0 0 4px',
-              fontSize: '1.1rem',
-              fontWeight: 500,
-              color: '#fff',
-              lineHeight: 1.2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {collectionName}
-          </h1>
-        </div>
+        <h1 className='title-lg' style={{ margin: '4px 0 16px', fontSize: 24, lineHeight: 1.2 }}>
+          {collectionName}
+        </h1>
 
         {/* Loading state */}
         {dataLoading && (
@@ -622,8 +559,8 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                           borderRadius: 9999,
                           whiteSpace: 'nowrap',
                           flexShrink: 0,
-                          color: bid.role === 'EA' ? '#1e40af' : 'var(--green-secondary)',
-                          backgroundColor: bid.role === 'EA' ? '#dbeafe' : '#dcfce7',
+                          color: bid.role === 'EA' ? 'var(--blue-secondary)' : 'var(--green-secondary)',
+                          backgroundColor: bid.role === 'EA' ? '#edf6fd' : 'var(--mint)',
                         }}
                       >
                         {bid.role === 'EA' ? 'Evaluator' : 'Service Agent'}
@@ -748,7 +685,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
             zIndex: 5,
             display: 'flex',
             justifyContent: 'center',
-            padding: '12px 16px',
+            // Bottom padding keeps the CTAs clear of the floating dock pill,
+            // which occupies the ~50px above the bottom safe area.
+            padding: '12px 16px calc(62px + env(safe-area-inset-bottom, 0px))',
             backgroundColor: 'var(--bg-primary)',
           }}
         >

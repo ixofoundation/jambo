@@ -33,6 +33,20 @@ class MyDocument extends Document {
         </Head>
 
         <body>
+          <div
+            hidden
+            aria-hidden
+            dangerouslySetInnerHTML={{
+              __html: `<!--
+THESIS: The opportunity is the interface — home is a deck of full-bleed task cards, one decision at a time; refuses the portal list-of-links default.
+OWN-WORLD: Warm paper beige #f7f5eb, white 22px-radius cards, Nunito 700/800, aubergine #54365d brand, forest-green #387f6a pill actions, orange money, yellow earned-only; summoned dock, bottom sheets, quiet top toast pill.
+STORY: A youth lands from Yoma, signs in with the same email, swipes real opportunities, applies, submits proof, gets paid — and trusts the loop.
+FIRST VIEWPORT: yoma wordmark top-left with round icon actions right; one full-bleed opportunity card (photo, scrim, provider · Verified, 32px title, meta pills); pass/apply/save buttons beneath; dock pill bottom-centre.
+FORM: Brief-pinned redesign — the designer's coded prototype (yoma-app, "The Deck · light edition") is the approved comp; pinned direction, no concept roll.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md.
+-->`,
+            }}
+          />
           <Main />
           <NextScript />
         </body>

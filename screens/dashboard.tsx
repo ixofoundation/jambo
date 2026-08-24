@@ -10,10 +10,12 @@ import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { addProject } from '@store/slices/projectsSlice';
 import Header from '@components/Header/Header';
+import { BadgeCheckIcon, CalendarDaysIcon, ChevronRightIcon, FileCheckIcon } from '@components/Icons/icons';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
+import { ensureEntityProfiles } from '@utils/entityProfiles';
 
 function readableStatus(status?: number): string {
   if (status === 0) return 'Created';
@@ -60,6 +62,11 @@ export default function Dashboard() {
       dispatch(addProject(entityDid));
     }
   }, [entityDid, entity?.type, profile?.type, dispatch]);
+
+  // Fetch the full profile document (hero image, description) for this entity.
+  useEffect(() => {
+    if (entityDid) void ensureEntityProfiles([entityDid]);
+  }, [entityDid]);
 
   // Per-collection authz status for SA and EA independently
   const [collectionStatus, setCollectionStatus] = useState<Record<string, { sa: RoleStatus; ea: RoleStatus }>>({});
@@ -156,27 +163,19 @@ export default function Dashboard() {
 
   function statusBadges(status?: { sa: RoleStatus; ea: RoleStatus }) {
     if (!status) return null;
-    const badges: { label: string; color: string }[] = [];
-    if (status.sa === 'agent') badges.push({ label: 'Contributor', color: 'var(--green-primary)' });
-    else if (status.sa === 'pending') badges.push({ label: 'SA Pending', color: 'var(--yellow-primary)' });
-    if (status.ea === 'agent') badges.push({ label: 'Evaluator', color: 'var(--green-primary)' });
-    else if (status.ea === 'pending') badges.push({ label: 'EA Pending', color: 'var(--yellow-primary)' });
+    const badges: { label: string; bg: string; fg: string }[] = [];
+    if (status.sa === 'agent') badges.push({ label: 'Contributor', bg: 'var(--mint)', fg: 'var(--green-primary)' });
+    else if (status.sa === 'pending') badges.push({ label: 'SA Pending', bg: '#fdeed8', fg: 'var(--warning-color)' });
+    if (status.ea === 'agent') badges.push({ label: 'Evaluator', bg: 'var(--mint)', fg: 'var(--green-primary)' });
+    else if (status.ea === 'pending') badges.push({ label: 'EA Pending', bg: '#fdeed8', fg: 'var(--warning-color)' });
     if (badges.length === 0) return null;
     return (
       <>
         {badges.map((b, i) => (
           <span
             key={i}
-            style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              color: b.color,
-              backgroundColor: `color-mix(in srgb, ${b.color} 12%, transparent)`,
-              padding: '2px 8px',
-              borderRadius: '10px',
-              flexShrink: 0,
-              whiteSpace: 'nowrap',
-            }}
+            className='badge'
+            style={{ background: b.bg, color: b.fg, fontSize: '12px', padding: '4px 10px', flexShrink: 0, whiteSpace: 'nowrap' }}
           >
             {b.label}
           </span>
@@ -185,207 +184,118 @@ export default function Dashboard() {
     );
   }
 
+  function collectionDates(c: (typeof protocolCollections)[number]): string {
+    if (c.endDate && new Date(c.endDate).getFullYear() > 1970 && new Date(c.endDate) < new Date()) {
+      return `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    if (c.startDate) {
+      return `Started ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    return '';
+  }
+
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
-      {/* Gradient band sized to cover the header + project-name section + ~15px overlap
-          into the top of the collection list. (Default GradientBand is 30vh which is
-          much taller than needed on this screen.) */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 'calc(var(--header-height) + 133px)',
-          zIndex: 0,
-          pointerEvents: 'none',
-          background: 'radial-gradient(ellipse at top right, var(--purple-secondary), var(--purple-primary) 70%)',
-        }}
-      />
-      <Header onGradient />
+    <div style={{ position: 'relative', minHeight: '100dvh' }}>
+      <Header onGradient title='Back' onBack={() => router.push('/')} />
       <main
         style={{
           position: 'relative',
           zIndex: 1,
           maxWidth: 'var(--max-width)',
           margin: '0 auto',
-          padding: '0 16px 16px',
-          paddingTop: 'calc(var(--header-height) + 8px)',
-          minHeight: '100vh',
+          padding: '0 20px var(--dock-clearance)',
+          paddingTop: 'calc(var(--header-height) + 4px)',
+          minHeight: '100dvh',
         }}
       >
-        {/* Project header \u2014 sits in the gradient band, styled like Settings/Support titles. */}
-        <div
-          style={{
-            minHeight: '110px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 4px' }}>
-            <button
-              onClick={() => router.push('/entities')}
-              aria-label='Back to projects'
-              title='Back to projects'
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginLeft: '-6px',
-                padding: '2px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#fff',
-              }}
-            >
-              <svg
-                width='22'
-                height='22'
-                viewBox='0 0 24 24'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='2'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              >
-                <polyline points='15 18 9 12 15 6' />
-              </svg>
-            </button>
-            <h1
-              style={{
-                margin: 0,
-                minWidth: 0,
-                fontSize: '1.1rem',
-                fontWeight: 500,
-                color: '#fff',
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {projectName}
-            </h1>
-          </div>
+        {/* Opportunity hero \u2014 the entity's own imagery on the light ground */}
+        {profile?.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.image}
+            alt=''
+            style={{ width: '100%', height: 165, borderRadius: 14, objectFit: 'cover', display: 'block' }}
+          />
+        )}
+        <h1 className='title-lg' style={{ marginTop: profile?.image ? 16 : 4 }}>
+          {projectName}
+        </h1>
+        <p className='deck-card__provider' style={{ color: 'var(--text-primary)', opacity: 1, marginTop: 4 }}>
+          <BadgeCheckIcon size={15} color='var(--green-primary)' />
+          {profile?.brand ? `${profile.brand} \u00B7 Verified partner` : 'Verified partner'}
+        </p>
+
+        <div className='info-list' style={{ marginTop: 16 }}>
           {(projectType || projectStatus) && (
-            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-              {projectType}
-              {projectType && projectStatus ? ' \u00B7 ' : ''}
-              {projectStatus}
-            </p>
+            <div className='info-row'>
+              <span className='info-row__icon'>
+                <FileCheckIcon size={20} />
+              </span>
+              <div>
+                <div className='info-row__t'>{projectType || 'Opportunity'}</div>
+                {projectStatus && <div className='info-row__s'>{projectStatus}</div>}
+              </div>
+            </div>
+          )}
+          {profile?.location && (
+            <div className='info-row'>
+              <span className='info-row__icon'>
+                <CalendarDaysIcon size={20} />
+              </span>
+              <div>
+                <div className='info-row__t'>{profile.location}</div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Collection list */}
+        {profile?.description && (
+          <>
+            <h3 className='muted' style={{ fontSize: 14, margin: '22px 0 8px', fontWeight: 600 }}>
+              About
+            </h3>
+            <p style={{ fontSize: 14.5, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' }}>{profile.description}</p>
+          </>
+        )}
+
+        <div className='section-header'>
+          <h2>Submit Your Claims</h2>
+        </div>
+
         {collectionsLoading ? (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color)',
-              padding: '32px 16px',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>Loading...</p>
+          <div className='card card--inset center' style={{ padding: '32px 16px' }}>
+            <p className='muted' style={{ margin: 0, fontSize: 14 }}>
+              Loading\u2026
+            </p>
           </div>
         ) : protocolCollections.length === 0 ? (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-color)',
-              padding: '32px 16px',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>No collections found</p>
+          <div className='card card--inset center' style={{ padding: '32px 16px' }}>
+            <p className='muted' style={{ margin: 0, fontSize: 14 }}>
+              No claim collections found
+            </p>
           </div>
         ) : (
-          <div
-            style={{
-              backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}
-          >
-            {protocolCollections.map((c, idx) => (
-              <button
-                key={c.collectionId}
-                onClick={() =>
-                  router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)
-                }
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '14px 16px',
-                  border: 'none',
-                  borderBottom:
-                    idx === protocolCollections.length - 1 ? 'none' : '1px solid var(--border-color)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {c.formName || `Collection ${c.collectionId}`}
-                  </p>
-                  <div style={{ margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {c.endDate && new Date(c.endDate).getFullYear() > 1970 && new Date(c.endDate) < new Date()
-                        ? `Ended ${new Date(c.endDate).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}`
-                        : c.startDate
-                        ? `Started ${new Date(c.startDate).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}`
-                        : ''}
-                    </span>
-                    {!statusLoading && statusBadges(collectionStatus[c.collectionId])}
-                  </div>
+          protocolCollections.map((c) => (
+            <button
+              key={c.collectionId}
+              className='status-item'
+              style={{ width: '100%', marginBottom: 12 }}
+              onClick={() =>
+                router.push(`/entities/${entityDid}/claimCollections/${encodeURIComponent(c.collectionId)}`)
+              }
+            >
+              <div className='status-item__body'>
+                <div className='status-item__title' style={{ fontSize: 15.5 }}>
+                  {c.formName || `Collection ${c.collectionId}`}
                 </div>
-                <div style={{ flexShrink: 0, marginLeft: '12px' }}>
-                  <svg
-                    width='16'
-                    height='16'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='var(--text-secondary)'
-                    strokeWidth='2'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                  >
-                    <polyline points='9 18 15 12 9 6' />
-                  </svg>
+                <div className='status-item__meta hstack' style={{ gap: 6, flexWrap: 'wrap' }}>
+                  {collectionDates(c) && <span>{collectionDates(c)}</span>}
+                  {!statusLoading && statusBadges(collectionStatus[c.collectionId])}
                 </div>
-              </button>
-            ))}
-          </div>
+              </div>
+              <ChevronRightIcon size={18} color='var(--text-secondary)' />
+            </button>
+          ))
         )}
       </main>
     </div>

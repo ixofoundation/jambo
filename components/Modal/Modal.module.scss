@@ -7,19 +7,20 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(30, 22, 38, 0.44);
   z-index: 100;
   padding: 20px;
 }
 
 .modal {
   max-height: 90vh;
-  background: var(--bg-secondary);
+  background: var(--surface);
   width: auto;
   height: auto;
-  border-radius: var(--card-border-radius);
+  border-radius: 26px;
   padding: 10px 15px 15px;
   overflow: auto;
+  box-shadow: var(--shadow-card);
 }
 
 .modalHeader {
@@ -28,8 +29,10 @@
 }
 
 .modalTitle {
-  font-size: 1rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin: 0;
   text-align: center;
   color: var(--text-primary);

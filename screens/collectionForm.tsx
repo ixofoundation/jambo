@@ -561,6 +561,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         templateData.showProgressBar = templateData.showProgressBar ? templateData.progressBarLocation || 'top' : 'off';
       }
       const model = new Model(templateData);
+      // The app is a mobile-width column even on desktop — SurveyJS's TOC
+      // sidebar (a desktop pattern some templates enable, e.g. the KYC form)
+      // would crush the form into a sliver. Page progress stays available via
+      // showProgressBar.
+      model.showTOC = false;
       model.applyTheme(themeJson);
       model.allowCompleteSurveyAutomatic = false;
 
@@ -1018,7 +1023,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                   padding: '14px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: '#2F6A59',
+                  backgroundColor: 'var(--green-secondary)',
                   color: '#fff',
                   fontSize: '15px',
                   fontWeight: 600,
@@ -1365,7 +1370,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                   cursor: evaluating ? 'default' : 'pointer',
                   fontSize: '15px',
                   fontWeight: 500,
-                  color: evalConfirm.status === 'approve' ? '#2F6A59' : 'var(--error-color)',
+                  color: evalConfirm.status === 'approve' ? 'var(--green-secondary)' : 'var(--error-color)',
                 }}
               >
                 {evaluating ? 'Processing...' : evalConfirm.status === 'approve' ? 'Confirm Approve' : 'Confirm Reject'}

@@ -1,78 +1,96 @@
+// ============================================================
+// Yoma v2 — "The Deck" · light edition
+// Tokens ported from the designer's prototype (yoma-app/src/index.css).
+// Warm paper beige, Nunito, aubergine brand + forest-green actions,
+// orange carries money, yellow appears only at earned moments.
+// ============================================================
+
 :root {
-  // ─── Palette: Backgrounds ───
-  --bg-primary: #F3F6FA;
-  --bg-secondary: #FFFFFF;
+  // ─── Surfaces — warm paper beige, white cards ───
+  --bg-primary: #f7f5eb;
+  --bg-secondary: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #efece0;
+  --surface-inset: #f7f5eb;
 
-  // ─── Palette: Purple ───
-  --purple-primary: #41204B;
-  --purple-secondary: #5A2B68;
+  // ─── Palette: Purple (aubergine — brand & AI) ───
+  --purple-primary: #54365d;
+  --purple-secondary: #41204b;
+  --purple-deep: #41204b;
+  --purple-tint: #ecdff1;
+  --purple-ink: #ffffff;
+  --violet: #5f65b9;
 
-  // ─── Palette: Yellow ───
-  --yellow-primary: #F9AB3E;
-  --yellow-secondary: #E49526;
+  // ─── Palette: Yellow (earned moments) & Orange (money) ───
+  --yellow-primary: #f9ab3e;
+  --yellow-secondary: #e49526;
+  --coral: #e07b00;
 
-  // ─── Palette: Green ───
-  --green-primary: #387F6A;
-  --green-secondary: #2F6A59;
+  // ─── Palette: Green (actions) ───
+  --green-primary: #387f6a;
+  --green-secondary: #2f6a59;
+  --mint: #e6f5f3;
 
-  // ─── Palette: Blue ───
-  --blue-primary: #4CADE9;
-  --blue-secondary: #2487C5;
+  // ─── Palette: Blue (informational; kept for legacy chips) ───
+  --blue-primary: #4cade9;
+  --blue-secondary: #2487c5;
 
-  // ─── Palette: Text (on light backgrounds) ───
-  --text-primary: #020304;
-  --text-secondary: #545859;
-
-  // ─── Palette: Text (on dark backgrounds) ───
-  --text-primary-light: #FFFFFF;
-  --text-secondary-light: #FFFFFF;
+  // ─── Ink ───
+  --text-primary: #23202a;
+  --text-secondary: #5b5860;
+  --text-nav: #928e97;
+  --text-primary-light: #ffffff;
+  --text-secondary-light: #ffffff;
 
   // ─── Semantic ───
-  --accent-color: #6B1787;
-  --error-color: #a11c43;
+  --accent-color: #54365d;
+  --error-color: #fe4d57;
+  --warning-color: #d48414;
+  --warning-border: #e2b04a;
+  --accent-bg: rgba(84, 54, 93, 0.1);
   --disabled-color: #d1d5db;
 
-  // ─── Surfaces ───
-  --card-bg-color: rgba(0, 0, 0, 0.04);
-  --card-bg-hover-color: rgba(0, 0, 0, 0.07);
-  --border-color: #e9ecef;
-  --input-border-color: #ced4da;
-  --backdrop-color: rgba(0, 0, 0, 0.1);
-  --icon-grey-color: #d1d5db;
-  --light-grey-color: #f0f0f0;
+  // ─── Surfaces (legacy names kept for existing screens) ───
+  --background-color: #ffffff;
+  --card-bg-color: rgba(50, 40, 60, 0.05);
+  --card-bg-hover-color: rgba(50, 40, 60, 0.09);
+  --border-color: #e5e2d4;
+  --input-border-color: #d9d5c6;
+  --backdrop-color: rgba(30, 22, 38, 0.44);
+  --icon-grey-color: #cfccc0;
+  --light-grey-color: #efece0;
+  --button-text-color: #ffffff;
+
+  // ─── Depth ───
+  --shadow-soft: 0 2px 10px rgba(50, 40, 60, 0.09);
+  --shadow-card: 0 10px 30px rgba(50, 40, 60, 0.16);
+  --shadow-btn: 0 6px 18px rgba(56, 127, 106, 0.32);
+
+  // ─── Type ───
+  --main-font-size: 16px;
+  --font-display: var(--font-family-name, 'Nunito'), system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  // ─── Shape ───
+  --r-card: 22px;
+  --r-input: 12px;
+  --r-pill: 999px;
+  --card-border-radius: 22px;
+  --button-border-radius: 999px;
 
   // ─── Layout ───
-  --main-font-size: 16px;
-  --button-border-radius: 18px;
   --header-height: 60px;
   --header-logo-width: 42px;
   --header-logo-height: 42px;
   --footer-height: 90px;
-  --card-border-radius: 16px;
   --max-width: 400px;
+  --dock-clearance: 96px; // room for the floating dock pill at the bottom of scrollers
 
-  // ─── Dark mode ───
-  .dark {
-    --bg-primary: #111113;
-    --bg-secondary: #1c1c1e;
-
-    --purple-primary: #5A2B68;
-    --purple-secondary: #41204B;
-
-    --text-primary: #FFFFFF;
-    --text-secondary: #adb5bd;
-    --text-primary-light: #020304;
-    --text-secondary-light: #020304;
-
-    --error-color: #ef4444;
-    --disabled-color: #d1d5db;
-
-    --card-bg-color: rgba(255, 255, 255, 0.08);
-    --card-bg-hover-color: rgba(255, 255, 255, 0.12);
-    --border-color: #2a2a2c;
-    --input-border-color: #3a3a3c;
-    --backdrop-color: rgba(255, 255, 255, 0.1);
-    --icon-grey-color: #d1d5db;
-    --light-grey-color: #2a2a2c;
-  }
+  // ─── Z scale (below the app's modal ladder: 100 … 2200) ───
+  --z-sticky: 10;
+  --z-dock: 40;
+  --z-sheet-backdrop: 50;
+  --z-sheet: 51;
+  --z-match: 60;
+  --z-toast: 70;
 }

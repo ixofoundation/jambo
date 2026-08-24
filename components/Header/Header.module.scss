@@ -8,14 +8,18 @@
   display: flex;
   justify-content: center;
   padding: 0 16px;
-  // background-color: var(--bg-primary);
+  // Soft fade so content scrolling under the fixed bar stays legible
+  // without a hard chrome edge (the design keeps chrome quiet).
+  background: linear-gradient(to bottom, var(--bg-primary) 62%, rgba(247, 245, 235, 0));
+  pointer-events: none;
 
   .inner {
     width: 100%;
     max-width: var(--max-width);
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
+    pointer-events: auto;
   }
 
   .spacer {
@@ -35,34 +39,41 @@
   }
 
   .iconButton {
-    background: var(--header-btn-bg, var(--card-bg-color));
+    width: 42px;
+    height: 42px;
+    background: var(--header-btn-bg, var(--surface-2));
     border: none;
-    border-radius: 8px;
+    border-radius: 50%;
     cursor: pointer;
-    padding: 6px;
+    padding: 0;
     color: var(--header-btn-color, var(--text-primary));
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: none;
+    transition: background 0.15s ease;
+
+    &:active {
+      background: var(--purple-tint);
+    }
   }
 
   .profileButton {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
     overflow: hidden;
   }
 
   .profileAvatar {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     object-fit: cover;
   }
 
   .title {
-    font-size: 1.2rem;
+    font-family: var(--font-display);
+    font-size: 20px;
     font-weight: 700;
+    letter-spacing: -0.01em;
     color: var(--header-btn-color, var(--text-primary));
     flex: 1;
     min-width: 0;
@@ -74,16 +85,18 @@
   .backTitle {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     background: transparent;
     border: none;
     padding: 4px 6px;
     margin-left: -6px; // optical alignment with the left edge of the inner container
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     color: var(--header-btn-color, var(--text-primary));
-    font-size: 1.2rem;
-    font-weight: 500;
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     line-height: 1;
     min-width: 0;
 
@@ -101,13 +114,17 @@
     }
   }
 
+  // Bands are light tints in this design — chrome keeps its normal ink AND the
+  // soft paper fade: content scrolling under the fixed bar must never collide
+  // with the title/back chrome (seen on the KYC form). The band simply reads
+  // as starting a little lower.
   &.onGradient {
-    --header-btn-bg: rgba(255, 255, 255, 0.15);
-    --header-btn-color: #fff;
+    background: linear-gradient(to bottom, var(--bg-primary) 62%, rgba(247, 245, 235, 0));
   }
 
   &.static {
     position: static;
     z-index: auto;
+    background: none;
   }
 }
