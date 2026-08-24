@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAuth } from '@hooks/useAuth';
-import { useKycSupportEntityDid } from '@hooks/useKycSupportEntityDid';
 import { useVaultGate } from '@hooks/useVaultGate';
-import { ChevronUpIcon, HandshakeIcon, LayersIcon, LifeBuoyIcon, UserRoundIcon, WalletIcon } from '@components/Icons/icons';
+import { ChevronUpIcon, HandshakeIcon, LayersIcon, UserRoundIcon, WalletIcon } from '@components/Icons/icons';
 
 const ITEMS = [
   { to: '/', label: 'Deck', icon: LayersIcon, match: (p: string) => p === '/' || p.startsWith('/entities') },
@@ -39,9 +38,6 @@ const HIDDEN_ON = [
  */
 export default function Dock() {
   const [open, setOpen] = useState(false);
-  // Resolved before the dock ever opens (see SupportEntityWarmer) so the item
-  // set never changes while the dock is visible — no mid-open reflow.
-  const [helpEntityDid, setHelpEntityDid] = useState<string | null>(null);
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   // Hidden while the Vault is opening — the deck shows its loading state and
@@ -66,8 +62,6 @@ export default function Dock() {
 
   return (
     <>
-      <SupportEntityWarmer onResolved={setHelpEntityDid} />
-
       {!vaultPending && open && (
         <>
           <button className='dock-scrim anim-fade' aria-label='Close navigation' onClick={() => setOpen(false)} />
@@ -79,12 +73,6 @@ export default function Dock() {
                   {label}
                 </button>
               ))}
-              {helpEntityDid && (
-                <button className='dock__item' onClick={() => go(`/profile/support/${encodeURIComponent(helpEntityDid)}`)}>
-                  <LifeBuoyIcon size={22} />
-                  Help
-                </button>
-              )}
             </div>
           </nav>
         </>
@@ -98,17 +86,4 @@ export default function Dock() {
       )}
     </>
   );
-}
-
-/**
- * Resolves the entity-scoped support chat destination while the dock is still
- * closed. Renders nothing; only reports the resolved DID up so Help is either
- * present from the first frame the dock opens, or absent entirely.
- */
-function SupportEntityWarmer({ onResolved }: { onResolved: (did: string | null) => void }) {
-  const { entityDid } = useKycSupportEntityDid();
-  useEffect(() => {
-    onResolved(entityDid ?? null);
-  }, [entityDid, onResolved]);
-  return null;
 }

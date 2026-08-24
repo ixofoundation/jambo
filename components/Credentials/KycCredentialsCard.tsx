@@ -273,8 +273,9 @@ export default function KycCredentialsCard() {
             {prettyStatus(status)}
           </span>
         </div>
+        {/* Help lives here (not in the dock): visible until the credential is
+            actually obtained — anyone still without it can reach support. */}
         {protocolId &&
-          view.variant !== 'idle' &&
           view.variant !== 'success' &&
           (supportEntityDid ? (
             <SupportLauncher entityDid={supportEntityDid} />
