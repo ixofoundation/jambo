@@ -19,7 +19,6 @@ import {
   subscribeDeckPrefs,
 } from '@utils/deckPrefs';
 import DeckCard, { DeckCardData, SwipeDir } from '@components/Deck/DeckCard';
-import { YomaWordmark } from '@components/Brand/YomaWordmark';
 import {
   ArrowRightIcon,
   ArrowUpIcon,
@@ -189,7 +188,8 @@ export default function Deck() {
     <div className='screen'>
       <div className='deck'>
         <header className='deck__header'>
-          <YomaWordmark height={22} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src='/images/yoma-logo.png' alt='Yoma — Impacts Exchange' style={{ height: 32, width: 'auto' }} />
           <div className='topbar__actions'>
             <button
               className='iconbtn'

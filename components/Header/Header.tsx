@@ -3,7 +3,6 @@ import { FC } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import HeaderStatusIndicator from '@components/HeaderStatusIndicator/HeaderStatusIndicator';
-import { YomaWordmark } from '@components/Brand/YomaWordmark';
 import { useAppSelector } from '@store/hooks';
 
 type HeaderProps = {
@@ -68,7 +67,8 @@ const Header: FC<HeaderProps> = ({ onGradient, title, onClose, onBack, hideEndAc
               </span>
             ) : (
               <Link href='/' className={styles.logo} aria-label='Home'>
-                <YomaWordmark height={22} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src='/images/yoma-logo.png' alt='Yoma — Impacts Exchange' className={styles.logoImg} />
               </Link>
             )}
             <div className={styles.spacer} />
