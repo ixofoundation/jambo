@@ -812,6 +812,75 @@ a {
 .match__img--in { animation: pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.05s backwards; }
 .match__dot--in { animation: dot-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards; }
 
+/* ---------- SurveyJS claim forms — The Deck world ----------
+   Variable mapping lives in constants/surveyTheme.ts; this block carries
+   only what --sjs-* variables cannot express: pill nav buttons, the
+   aubergine focus ring (focus is aubergine, action is green), aubergine
+   wizard progress, and the 12px input radius pin. */
+.sd-root-modern {
+  background: transparent;
+}
+/* Triple-class specificity: defaultV2.css loads dynamically AFTER globals,
+   so these must outrank .sd-body--responsive/--static on weight, not order */
+.sd-root-modern .sd-body.sd-body--responsive,
+.sd-root-modern .sd-body.sd-body--static,
+.sd-root-modern .sd-body {
+  padding: 8px 20px calc(24px + env(safe-area-inset-bottom));
+  max-width: none;
+}
+/* Nav sits on the paper, not on a white band */
+.sd-root-modern .sd-action-bar,
+.sd-root-modern .sd-body__navigation {
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+/* The world's forms don't number their questions */
+.sd-root-modern .sd-element__num {
+  display: none;
+}
+/* Fields: 12px radius regardless of the 18px question-card radius */
+.sd-root-modern .sd-input,
+.sd-root-modern .sd-dropdown,
+.sd-root-modern .sd-comment {
+  border-radius: var(--r-input);
+}
+/* Focus recolors the stroke aubergine — same as .field (never green) */
+.sd-root-modern .sd-input:focus,
+.sd-root-modern .sd-input--focus,
+.sd-root-modern .sd-dropdown:focus,
+.sd-root-modern .sd-comment:focus {
+  box-shadow: inset 0 0 0 1.5px var(--accent-color);
+  outline: none;
+}
+/* Nav buttons: confident pills; Complete carries the green glow */
+.sd-root-modern .sd-btn {
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  padding: 13px 22px;
+  transition: transform 0.12s ease;
+}
+.sd-root-modern .sd-btn:active {
+  transform: scale(0.97);
+}
+.sd-root-modern .sd-btn--action {
+  box-shadow: var(--shadow-btn);
+}
+/* Page progress follows the wizard grammar: lilac track, aubergine fill */
+.sd-root-modern .sd-progress {
+  background: var(--purple-tint);
+  border-radius: 2px;
+  height: 4px;
+  margin: 12px 20px 0;
+}
+.sd-root-modern .sd-progress__bar {
+  background: var(--purple-primary);
+  border-radius: 2px;
+}
+.sd-root-modern .sd-progress__text {
+  display: none;
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,
