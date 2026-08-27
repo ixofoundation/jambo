@@ -897,7 +897,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           flexDirection: 'column',
         }}
       >
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-secondary)' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
           {formLoading || approvePaymentPrefetching || approvePaymentError ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div
