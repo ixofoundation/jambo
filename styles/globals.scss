@@ -835,10 +835,42 @@ a {
   padding-left: 0;
   padding-right: 0;
 }
+/* survey-core stamps question wrappers with inline min-width: 300px —
+   inside a padded panel on the 400px column that overflows ~20px to the
+   right (inputs hug the card edge). Let them shrink; !important is required
+   to beat the inline style. */
+.sd-root-modern .sd-row > div {
+  min-width: 0 !important;
+}
 /* The world's forms don't number their questions */
 .sd-root-modern .sd-element__num {
   display: none;
 }
+/* One gutter, not two: .sd-page layers its own horizontal padding on top
+   of .sd-body's 20px, making the form narrower than the rest of the app */
+.sd-root-modern .sd-body .sd-page {
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Survey header: on the paper at the same gutter - no white band, no accent
+   rule; title in the world's headline voice */
+.sd-root-modern .sd-title.sd-container-modern__title {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  padding: 10px 20px 0;
+}
+.sd-root-modern .sd-container-modern__title .sd-header__text h3 {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.015em;
+}
+.sd-root-modern .sd-container-modern__title .sd-description {
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
 /* Fields: 12px radius regardless of the 18px question-card radius */
 .sd-root-modern .sd-input,
 .sd-root-modern .sd-dropdown,
