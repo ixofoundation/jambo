@@ -10,7 +10,7 @@ import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { addProject } from '@store/slices/projectsSlice';
 import Header from '@components/Header/Header';
-import { BadgeCheckIcon, CalendarDaysIcon, ChevronRightIcon, FileCheckIcon } from '@components/Icons/icons';
+import { BadgeCheckIcon, CalendarDaysIcon, ChevronRightIcon, FileCheckIcon, MapPinIcon } from '@components/Icons/icons';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { secret } from '@utils/secrets';
@@ -18,11 +18,28 @@ import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { ensureEntityProfiles } from '@utils/entityProfiles';
 
 function readableStatus(status?: number): string {
-  if (status === 0) return 'Created';
+  // Status 0 ("Created") is suppressed: testers read it as the outcome of their
+  // own swipe rather than the deed's on-chain state. Unknown no longer defaults
+  // to "Active" — only real statuses are shown.
   if (status === 1) return 'Active';
   if (status === 2) return 'Paused';
   if (status === 3) return 'Closed';
-  return 'Active';
+  return '';
+}
+
+/**
+ * On-chain dates carry two "no date" sentinels: epoch-era zeros and far-future
+ * (+100 year) stamps. Only dates between those are worth showing.
+ */
+function isRealDate(iso?: string): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return false;
+  return d.getFullYear() > 1970 && d.getFullYear() < new Date().getFullYear() + 90;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function readableType(type?: string): string {
@@ -53,6 +70,18 @@ export default function Dashboard() {
   const projectName = profile?.name || entityDid || '';
   const projectType = readableType(profile?.type || entity?.type);
   const projectStatus = readableStatus(entity?.status);
+
+  // The deed's own start/end window, from the on-chain entity record.
+  const entityStart = isRealDate(entity?.startDate) ? formatDate(entity.startDate) : '';
+  const entityEnd = isRealDate(entity?.endDate) ? formatDate(entity.endDate) : '';
+  const entityDates =
+    entityStart && entityEnd
+      ? `${entityStart} – ${entityEnd}`
+      : entityStart
+      ? `${new Date(entity.startDate) > new Date() ? 'Starts' : 'Started'} ${entityStart}`
+      : entityEnd
+      ? `Ends ${entityEnd}`
+      : '';
 
   // Auto-add this entity to the projects list if it's a project type
   useEffect(() => {
@@ -185,13 +214,17 @@ export default function Dashboard() {
   }
 
   function collectionDates(c: (typeof protocolCollections)[number]): string {
-    if (c.endDate && new Date(c.endDate).getFullYear() > 1970 && new Date(c.endDate) < new Date()) {
-      return `Ended ${new Date(c.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    if (isRealDate(c.endDate) && new Date(c.endDate!) < new Date()) {
+      return `Ended ${formatDate(c.endDate!)}`;
     }
-    if (c.startDate) {
-      return `Started ${new Date(c.startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    const parts: string[] = [];
+    if (isRealDate(c.startDate)) {
+      parts.push(`${new Date(c.startDate!) > new Date() ? 'Starts' : 'Started'} ${formatDate(c.startDate!)}`);
     }
-    return '';
+    if (isRealDate(c.endDate)) {
+      parts.push(`Closes ${formatDate(c.endDate!)}`);
+    }
+    return parts.join(' · ');
   }
 
   return (
@@ -240,10 +273,20 @@ export default function Dashboard() {
           {profile?.location && (
             <div className='info-row'>
               <span className='info-row__icon'>
-                <CalendarDaysIcon size={20} />
+                <MapPinIcon size={20} />
               </span>
               <div>
                 <div className='info-row__t'>{profile.location}</div>
+              </div>
+            </div>
+          )}
+          {entityDates && (
+            <div className='info-row'>
+              <span className='info-row__icon'>
+                <CalendarDaysIcon size={20} />
+              </span>
+              <div>
+                <div className='info-row__t'>{entityDates}</div>
               </div>
             </div>
           )}

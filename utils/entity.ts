@@ -39,6 +39,8 @@ export async function fetchProtocolEntities(ids: string[], force = false) {
             settings
             type
             status
+            startDate
+            endDate
           }
         }
       }
@@ -79,6 +81,8 @@ export async function fetchProtocolEntity(id: string, force = false) {
           settings
           type
           status
+          startDate
+          endDate
         }
       }
     }
