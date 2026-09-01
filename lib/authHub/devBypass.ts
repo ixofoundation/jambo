@@ -12,7 +12,10 @@ export function isDevBypass(): boolean {
 export function getDevBypassSession(): AuthHubSessionData {
   return {
     address: 'ixo1devbypassaddress000000000000000000000',
-    did: 'did:ixo:entity:devbypass000000000000000000000',
+    // Must match the matrixclient-sdk DID shape (did:ixo:<id>, no extra
+    // segment) or every bid/claim-bot call fails client-side with
+    // "Invalid DID" under the bypass.
+    did: 'did:ixo:devbypass000000000000000000000',
     displayName: 'Dev User',
     email: 'devbypass@example.com',
     sessionMnemonic:

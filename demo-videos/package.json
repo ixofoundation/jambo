@@ -1,0 +1,33 @@
+{
+  "name": "jambo-demo-videos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright-captured, Remotion-rendered demo videos of jambo claims app flows",
+  "scripts": {
+    "capture:sign-in": "tsx capture/flows/sign-in.ts",
+    "capture:submit-claim": "tsx capture/flows/submit-claim.ts",
+    "capture:apply-as-agent": "tsx capture/flows/apply-as-agent.ts",
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "render:sign-in": "remotion render sign-in out/sign-in.mp4",
+    "render:submit-claim": "remotion render submit-claim out/submit-claim.mp4",
+    "render:apply-as-agent": "remotion render apply-as-agent out/apply-as-agent.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.399",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.399"
+  },
+  "devDependencies": {
+    "@types/node": "26.0.0",
+    "@types/react": "19.2.17",
+    "playwright": "^1.54.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

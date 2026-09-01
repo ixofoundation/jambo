@@ -1,0 +1,4 @@
+node_modules/
+out/
+public/captures/
+debug-failure.png
