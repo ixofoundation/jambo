@@ -35,6 +35,7 @@ import authConstants from '@constants/auth';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
+import { ensureEd25519VerificationMethod } from '@utils/ensureSigningKey';
 import base58 from 'bs58';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
@@ -603,8 +604,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         return model;
       }
 
-      // Attach upload + download handlers for claim and bid modes
-      createAttachUploadHandler(collectionId, did)(model);
+      // Attach upload + download handlers for claim and bid modes. Evidence goes to the VFS
+      // claims lane, whose UCANs are verified against the IID document — so the signing key is
+      // registered (once) before the first upload, not only at submission.
+      createAttachUploadHandler(collectionId, did, {
+        ensureVfsSigner: () => ensureEd25519VerificationMethod({ did, address, onSign }),
+      })(model);
       createAttachDownloadHandler(did)(model);
 
       // Restore draft data if available
