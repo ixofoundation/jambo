@@ -16,7 +16,27 @@ export function configureFileQuestions(model: Model): void {
       fq.storeDataAsText = false;
       fq.waitForUpload = true;
       fq.showPreview = true;
+      allowVideo(fq);
     }
+  }
+}
+
+/** The VFS object ceiling (R2 single-object limit) — the only size limit evidence has now. */
+const VFS_MAX_UPLOAD_BYTES = 5 * 1024 * 1024 * 1024;
+
+/**
+ * Video evidence is supported now (VFS claims lane, resumable uploads up to 5 GiB), but claim
+ * templates were authored when the claims bot rejected video outright and capped uploads at
+ * 10 MB. Widen media (image) accept lists to include video and lift size caps below the VFS
+ * ceiling. Document-only questions (e.g. `application/pdf`) are left as authored.
+ */
+function allowVideo(fq: QuestionFileModel): void {
+  const accepted = (fq.acceptedTypes || '').trim();
+  if (accepted && /image/i.test(accepted) && !/video/i.test(accepted)) {
+    fq.acceptedTypes = `${accepted},video/*`;
+  }
+  if (fq.maxSize > 0 && fq.maxSize < VFS_MAX_UPLOAD_BYTES) {
+    fq.maxSize = VFS_MAX_UPLOAD_BYTES;
   }
 }
 
@@ -30,11 +50,36 @@ export function configureFileQuestions(model: Model): void {
 export function createAttachUploadHandler(
   collectionId: string,
   did: string,
+  opts: {
+    /**
+     * Registers the user's ed25519 signing key on their IID document if it isn't yet (one signed
+     * tx the very first time) — the VFS verifies every upload's UCAN against the DID document.
+     * Runs once per form, before the first VFS upload. If it fails (e.g. the user declines to
+     * sign) the upload falls back to the claims bot for this form.
+     */
+    ensureVfsSigner?: () => Promise<void>;
+  } = {},
 ): (model: Model) => void {
   return (model: Model) => {
+    let signerReady: Promise<boolean> | null = null;
+    const vfsReady = (): Promise<boolean> => {
+      if (!hasVfsSigner()) return Promise.resolve(false);
+      if (!signerReady) {
+        signerReady = (opts.ensureVfsSigner ? opts.ensureVfsSigner() : Promise.resolve())
+          .then(() => true)
+          .catch((err) => {
+            console.warn('[surveyDefaultConfig] VFS signing key not registered, using claims bot for uploads:', err);
+            signerReady = null; // retry on the next upload
+            return false;
+          });
+      }
+      return signerReady;
+    };
+
     model.onUploadFiles.add(async (_sender, options) => {
       try {
         const results: Array<{ file: File | Blob; content: string }> = [];
+        const useVfs = await vfsReady();
 
         for (const file of options.files) {
           let fileToUpload: File | Blob = file;
@@ -56,7 +101,7 @@ export function createAttachUploadHandler(
             }
           }
 
-          const result = hasVfsSigner()
+          const result = useVfs
             ? await uploadClaimFileToVfs(fileToUpload, collectionId, did)
             : await uploadFile(fileToUpload, collectionId, did);
           results.push(result);
