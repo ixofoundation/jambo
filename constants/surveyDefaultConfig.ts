@@ -1,5 +1,7 @@
 import { Model, QuestionFileModel } from 'survey-core';
 import { uploadFile, getSurveyFilePreview } from '../lib/matrix/matrixClaims';
+import { uploadClaimFileToVfs } from '../lib/vfs/claimMedia';
+import { hasVfsSigner } from '@utils/ucanVfs';
 
 /**
  * Configures all file-type questions on the model for external upload:
@@ -20,7 +22,10 @@ export function configureFileQuestions(model: Model): void {
 
 /**
  * Returns a function that attaches the onUploadFiles handler to a model.
- * Images are compressed before upload.
+ * Images are compressed before upload. New evidence goes to the VFS claims lane (video-capable
+ * via resumable uploads — lib/vfs/claimMedia.ts); the claims bot (Matrix media) remains only as
+ * the fallback when no UCAN signing key is available. Reads branch on the stored reference's
+ * URL shape, so claims whose media still lives in Matrix keep working.
  */
 export function createAttachUploadHandler(
   collectionId: string,
@@ -51,7 +56,9 @@ export function createAttachUploadHandler(
             }
           }
 
-          const result = await uploadFile(fileToUpload, collectionId, did);
+          const result = hasVfsSigner()
+            ? await uploadClaimFileToVfs(fileToUpload, collectionId, did)
+            : await uploadFile(fileToUpload, collectionId, did);
           results.push(result);
         }
 
