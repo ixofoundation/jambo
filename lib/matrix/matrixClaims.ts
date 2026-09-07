@@ -1,6 +1,8 @@
 import { fetchWithMatrixOpenIdRetry } from '@utils/matrix';
 import { blobToDataURL } from '@utils/encoding';
 
+import { fetchVfsClaimMedia, parseVfsClaimMediaUrl } from '../vfs/claimMedia';
+
 const CLAIM_BOT_URL = process.env.NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL!;
 
 /**
@@ -59,6 +61,13 @@ export async function getSurveyFilePreview(rawContent: string, did: string): Pro
     const url: string | undefined = attachment?.serviceEndpoint;
     if (!url) return '';
 
+    // VFS claims-lane reference (self-describing URL) → fetch from the VFS with a fresh
+    // lane-scoped UCAN; any other URL is a legacy claims-bot (Matrix) reference and keeps the
+    // bot read path, so claims whose media still lives in Matrix stay readable forever.
+    if (parseVfsClaimMediaUrl(url)) {
+      return await blobToDataURL(await fetchVfsClaimMedia(url, did));
+    }
+
     const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
       fetch(url, {
         headers: {
@@ -90,6 +99,12 @@ export async function getSurveyFileBlob(
     const attachment = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
     const url: string | undefined = attachment?.serviceEndpoint;
     if (!url) return null;
+
+    // VFS claims-lane reference → VFS; anything else → legacy claims-bot path (see above).
+    if (parseVfsClaimMediaUrl(url)) {
+      const blob = await fetchVfsClaimMedia(url, did);
+      return { blob, mediaType: attachment?.mediaType || blob.type || 'application/octet-stream' };
+    }
 
     const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
       fetch(url, {
