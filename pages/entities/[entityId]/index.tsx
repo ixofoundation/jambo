@@ -6,28 +6,27 @@ import Dashboard from 'screens/dashboard';
 import { isCleanupEntity, openCleanup } from '@constants/cleanup';
 import { saveYref } from '@utils/yomaLink';
 
+/**
+ * The cleanup deed's own address — where the Yoma hand-off lands — opens the
+ * youth app instead of the deed view, but only past the same login gate every
+ * deed has: somebody signed out sees Jambo's sign-in first (a Yoma email, a
+ * new account), comes back to this address, and then walks through. The
+ * hand-off marker is kept first: the root provider also catches it, but we
+ * are leaving the page and should not depend on effect order for it.
+ */
+function CleanupDoor({ yref }: { yref: string | string[] | undefined }) {
+  useEffect(() => {
+    if (typeof yref === 'string') saveYref(yref);
+    openCleanup(true);
+  }, [yref]);
+  return null;
+}
+
 export default function EntityPage() {
   const router = useRouter();
   const entityId = router.isReady ? (router.query.entityId as string | undefined) : undefined;
-  const cleanup = isCleanupEntity(entityId);
 
-  // The cleanup deed's own address — the Yoma hand-off lands here — opens the
-  // youth app, signed in or not (it asks for the login itself, through this
-  // app). The hand-off marker is kept first: the root provider would also
-  // catch it, but we are leaving the page and should not depend on effect
-  // order for it.
-  useEffect(() => {
-    if (!cleanup) return;
-    const yref = router.query.yref;
-    if (typeof yref === 'string') saveYref(yref);
-    openCleanup(true);
-  }, [cleanup, router.query.yref]);
+  if (!router.isReady) return null;
 
-  if (!router.isReady || cleanup) return null;
-
-  return (
-    <AuthGuard>
-      <Dashboard />
-    </AuthGuard>
-  );
+  return <AuthGuard>{isCleanupEntity(entityId) ? <CleanupDoor yref={router.query.yref} /> : <Dashboard />}</AuthGuard>;
 }
