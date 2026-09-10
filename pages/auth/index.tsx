@@ -6,6 +6,7 @@ import { LogInIcon, UserRoundPlusIcon } from '@components/Icons/icons';
 import { loginViaAuthHub } from 'lib/authHub/redirect';
 import { isDevBypass } from 'lib/authHub/devBypass';
 import { peekYref } from '@utils/yomaLink';
+import { saveReturnTo } from '@utils/returnTo';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -15,6 +16,14 @@ export default function AuthPage() {
   useEffect(() => {
     setFromYoma(peekYref() !== null);
   }, []);
+  // Another app on this domain (the youth app under /cleanup) sends people
+  // here with a way back. saveReturnTo keeps only internal paths, so a
+  // crafted link can never turn this page into a redirect elsewhere.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const back = router.query.returnTo;
+    if (typeof back === 'string') saveReturnTo(back);
+  }, [router.isReady, router.query.returnTo]);
 
   function handleSignIn() {
     setIsRedirecting(true);
@@ -45,7 +54,11 @@ export default function AuthPage() {
           <div className='onboard__center'>
             <div className='anim-rise' style={{ textAlign: 'center' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src='/images/yoma-logo.png' alt='Yoma — Impacts Exchange' style={{ width: 199, height: 'auto', margin: '0 auto', display: 'block' }} />
+              <img
+                src='/images/yoma-logo.png'
+                alt='Yoma — Impacts Exchange'
+                style={{ width: 199, height: 'auto', margin: '0 auto', display: 'block' }}
+              />
               <p
                 style={{
                   marginTop: 26,
@@ -75,13 +88,16 @@ export default function AuthPage() {
                     marginInline: 'auto',
                   }}
                 >
-                  You&apos;re joining from Yoma — please sign in with the <strong>same email</strong> you use on Yoma
-                  so your progress counts towards your Yoma rewards.
+                  You&apos;re joining from Yoma — please sign in with the <strong>same email</strong> you use on Yoma so
+                  your progress counts towards your Yoma rewards.
                 </p>
               )}
             </div>
           </div>
-          <div className='anim-rise' style={{ display: 'flex', flexDirection: 'column', gap: 12, animationDelay: '0.12s' }}>
+          <div
+            className='anim-rise'
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, animationDelay: '0.12s' }}
+          >
             <button className='btn btn--primary btn--block' onClick={handleSignIn} disabled={isRedirecting}>
               <LogInIcon size={18} /> {primaryLabel}
             </button>

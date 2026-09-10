@@ -10,6 +10,7 @@ import { clearLocalCurrencyStorage } from '@utils/localCurrency';
 import { cleanUrlString } from '@utils/url';
 import { clearReturnTo, saveReturnTo, suppressReturnTo } from '@utils/returnTo';
 import { clearLinkState, clearYref } from '@utils/yomaLink';
+import { writeCleanupSession, clearCleanupSession } from 'lib/cleanupSession';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 import { store, persistor } from '@store/index';
@@ -43,7 +44,10 @@ export function fetchMatrixProfile() {
         if (!data) return;
         const avatarUrl = data.avatar_url
           ? cleanUrlString(
-              `${baseUrl}/_matrix/media/v3/thumbnail/${data.avatar_url.replace('mxc://', '')}?width=96&height=96&method=crop`,
+              `${baseUrl}/_matrix/media/v3/thumbnail/${data.avatar_url.replace(
+                'mxc://',
+                '',
+              )}?width=96&height=96&method=crop`,
             )
           : null;
         store.dispatch(setMatrixProfile({ displayName: data.displayname ?? null, avatarUrl }));
@@ -88,10 +92,20 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     if (data.displayName) secureSave(authConstants.secretKey.DISPLAY_NAME, data.displayName);
     if (data.email) secureSave(authConstants.secretKey.EMAIL, data.email);
     secureSave(authConstants.secretKey.SESSION_CREATED_AT, String(Date.now()));
+    // The youth app under /cleanup reads its own record — one sign-in, both apps.
+    writeCleanupSession({
+      address: data.address,
+      did: data.did,
+      displayName: data.displayName,
+      sessionMnemonic: data.sessionMnemonic,
+      sessionAuthenticatorId: data.sessionAuthenticatorId,
+    });
   }
 
   function clearAuthStorage() {
     Object.values(authConstants.secretKey).forEach((key) => secureReset(key));
+    // Ending a session here ends it for the youth app too.
+    clearCleanupSession();
   }
 
   function clearAllState() {
@@ -167,6 +181,15 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       setMatrixUserId(persistedAccount.matrixUserId ?? null);
       setMatrixRoomId(persistedAccount.matrixRoomId ?? null);
       setIsLoggedIn(true);
+      // Re-written on every revival, so a session from before the youth app
+      // shared this login gets its record without signing in again.
+      writeCleanupSession({
+        address: persistedAccount.address,
+        did: persistedAccount.did ?? storedDid,
+        displayName: persistedAccount.displayName ?? null,
+        sessionMnemonic: storedSessionMnemonic,
+        sessionAuthenticatorId: persistedAccount.sessionAuthenticatorId ?? null,
+      });
       fetchMatrixProfile();
     } catch (error) {
       console.error('Session revival failed:', error);
