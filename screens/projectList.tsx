@@ -6,6 +6,7 @@ import { loadWhitelistedEntities } from '@utils/projects';
 import { ensureEntityProfiles } from '@utils/entityProfiles';
 import Header from '@components/Header/Header';
 import { ChevronRightIcon, LayersIcon } from '@components/Icons/icons';
+import { isCleanupEntity, openCleanup } from '@constants/cleanup';
 
 function readableType(type?: string): string {
   if (!type) return '';
@@ -70,7 +71,9 @@ export default function ProjectList() {
                 key={id}
                 className='status-item'
                 style={{ width: '100%', marginBottom: 12 }}
-                onClick={() => router.push(`/entities/${encodeURIComponent(id)}`)}
+                onClick={() =>
+                  isCleanupEntity(id) ? openCleanup() : router.push(`/entities/${encodeURIComponent(id)}`)
+                }
               >
                 {thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -78,7 +81,12 @@ export default function ProjectList() {
                 ) : (
                   <span
                     className='status-item__thumb'
-                    style={{ background: 'var(--purple-tint)', display: 'grid', placeItems: 'center', color: 'var(--purple-primary)' }}
+                    style={{
+                      background: 'var(--purple-tint)',
+                      display: 'grid',
+                      placeItems: 'center',
+                      color: 'var(--purple-primary)',
+                    }}
                   >
                     <LayersIcon size={22} />
                   </span>

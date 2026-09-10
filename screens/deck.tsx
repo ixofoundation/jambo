@@ -19,6 +19,7 @@ import {
   subscribeDeckPrefs,
 } from '@utils/deckPrefs';
 import DeckCard, { DeckCardData, SwipeDir } from '@components/Deck/DeckCard';
+import { isCleanupEntity, openCleanup } from '@constants/cleanup';
 import {
   ArrowRightIcon,
   ArrowUpIcon,
@@ -133,6 +134,11 @@ export default function Deck() {
     decided.current.add(top.id);
     setForced(null);
     if (dir === 'apply') {
+      // The cleanup deed is a door, not a deed view (constants/cleanup.ts).
+      if (isCleanupEntity(top.id)) {
+        openCleanup();
+        return;
+      }
       // The real apply flow lives on the opportunity itself.
       router.push(`/entities/${encodeURIComponent(top.id)}`);
       return;
@@ -224,7 +230,11 @@ export default function Deck() {
             <button className='iconbtn' aria-label='Profile' onClick={() => router.push('/profile')}>
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt='' style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
+                <img
+                  src={avatarUrl}
+                  alt=''
+                  style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }}
+                />
               ) : (
                 <UserRoundIcon size={19} />
               )}
@@ -271,13 +281,25 @@ export default function Deck() {
               }}
             >
               <SparklesIcon size={26} color='var(--warning-color)' />
-              <h2 className='deck-card__title' style={{ fontSize: 30, margin: '14px 0 6px', color: 'var(--text-primary)' }}>
+              <h2
+                className='deck-card__title'
+                style={{ fontSize: 30, margin: '14px 0 6px', color: 'var(--text-primary)' }}
+              >
                 Your next move is a swipe away.
               </h2>
               <p className='muted' style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>
                 Each card is a real opportunity from a verified partner — completing it grows your verified CV.
               </p>
-              <div style={{ marginTop: 22, display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14.5, fontWeight: 600 }}>
+              <div
+                style={{
+                  marginTop: 22,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  fontSize: 14.5,
+                  fontWeight: 600,
+                }}
+              >
                 <span className='hstack' style={{ gap: 10 }}>
                   <span className='badge badge--match'>
                     <UserRoundPlusIcon size={13} />
@@ -309,7 +331,11 @@ export default function Deck() {
           {!vaultPending && tutorialDone && cards.length === 0 && (
             <div className='deck-empty'>
               <div>
-                <SparklesIcon size={26} color='var(--purple-primary)' style={{ margin: '0 auto 12px', display: 'block' }} />
+                <SparklesIcon
+                  size={26}
+                  color='var(--purple-primary)'
+                  style={{ margin: '0 auto 12px', display: 'block' }}
+                />
                 <h2 className='h2' style={{ marginBottom: 8 }}>
                   {loading && projectIds.length === 0 ? 'Finding opportunities…' : 'Deck cleared'}
                 </h2>
@@ -368,10 +394,18 @@ export default function Deck() {
             <button className='deck-action deck-action--skip' aria-label='Pass' onClick={() => buttonDecide('skip')}>
               <XIcon size={26} />
             </button>
-            <button className='deck-action deck-action--apply' aria-label='Open and apply' onClick={() => buttonDecide('apply')}>
+            <button
+              className='deck-action deck-action--apply'
+              aria-label='Open and apply'
+              onClick={() => buttonDecide('apply')}
+            >
               <UserRoundPlusIcon size={28} />
             </button>
-            <button className='deck-action deck-action--save' aria-label='Save for later' onClick={() => buttonDecide('save')}>
+            <button
+              className='deck-action deck-action--save'
+              aria-label='Save for later'
+              onClick={() => buttonDecide('save')}
+            >
               <BookmarkIcon size={24} />
             </button>
           </div>
@@ -444,7 +478,11 @@ export default function Deck() {
 
               {savedCards.length === 0 && (
                 <div className='card--inset card center' style={{ padding: '28px 20px', marginBottom: 8 }}>
-                  <BookmarkIcon size={22} color='var(--text-secondary)' style={{ margin: '0 auto 8px', display: 'block' }} />
+                  <BookmarkIcon
+                    size={22}
+                    color='var(--text-secondary)'
+                    style={{ margin: '0 auto 8px', display: 'block' }}
+                  />
                   <p className='muted' style={{ fontSize: 14, margin: 0 }}>
                     Nothing saved yet.
                   </p>
@@ -470,8 +508,18 @@ export default function Deck() {
                     PASSED
                   </p>
                   {skippedCards.map((id) => (
-                    <SavedRow key={id} id={id} name={profiles[id]?.name} thumb={profiles[id]?.image || profiles[id]?.logo} dim>
-                      <button className='iconbtn' aria-label={`Bring ${profiles[id]?.name ?? 'card'} back`} onClick={() => restore(id)}>
+                    <SavedRow
+                      key={id}
+                      id={id}
+                      name={profiles[id]?.name}
+                      thumb={profiles[id]?.image || profiles[id]?.logo}
+                      dim
+                    >
+                      <button
+                        className='iconbtn'
+                        aria-label={`Bring ${profiles[id]?.name ?? 'card'} back`}
+                        onClick={() => restore(id)}
+                      >
                         <RotateCcwIcon size={18} />
                       </button>
                     </SavedRow>
@@ -536,25 +584,63 @@ function DetailSheet({
       <div className='sheet sheet--in' style={{ padding: 0, maxHeight: '92dvh' }}>
         <div style={{ position: 'relative' }}>
           {card.image && card.logoOnly ? (
-            <div style={{ position: 'relative', width: '100%', height: 190, overflow: 'hidden', borderRadius: '26px 26px 0 0', background: 'var(--surface-2)' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: 190,
+                overflow: 'hidden',
+                borderRadius: '26px 26px 0 0',
+                background: 'var(--surface-2)',
+              }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={card.image}
                 alt=''
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(24px) saturate(0.9)', transform: 'scale(1.25)', opacity: 0.55 }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  filter: 'blur(24px) saturate(0.9)',
+                  transform: 'scale(1.25)',
+                  opacity: 0.55,
+                }}
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={card.image}
                 alt=''
-                style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '44%', maxHeight: '62%', objectFit: 'contain' }}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '44%',
+                  maxHeight: '62%',
+                  objectFit: 'contain',
+                }}
               />
             </div>
           ) : card.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={card.image} alt='' style={{ width: '100%', height: 190, objectFit: 'cover', borderRadius: '26px 26px 0 0', display: 'block' }} />
+            <img
+              src={card.image}
+              alt=''
+              style={{
+                width: '100%',
+                height: 190,
+                objectFit: 'cover',
+                borderRadius: '26px 26px 0 0',
+                display: 'block',
+              }}
+            />
           ) : (
-            <div style={{ width: '100%', height: 120, background: 'var(--purple-tint)', borderRadius: '26px 26px 0 0' }} />
+            <div
+              style={{ width: '100%', height: 120, background: 'var(--purple-tint)', borderRadius: '26px 26px 0 0' }}
+            />
           )}
           <div
             style={{
