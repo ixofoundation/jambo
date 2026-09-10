@@ -29,11 +29,15 @@ const nextConfig = {
    */
   async rewrites() {
     const origin = (process.env.CLEANUP_APP_ORIGIN || '').replace(/\/$/, '');
-    if (!origin) return [];
-    return [
-      { source: '/cleanup', destination: `${origin}/cleanup` },
-      { source: '/cleanup/:path*', destination: `${origin}/cleanup/:path*` },
-    ];
+    // Blank: no proxy, and pages/cleanup/[[...path]].tsx answers instead.
+    if (!origin) return { beforeFiles: [] };
+    // beforeFiles, so the proxy wins over that page wherever it is configured.
+    return {
+      beforeFiles: [
+        { source: '/cleanup', destination: `${origin}/cleanup` },
+        { source: '/cleanup/:path*', destination: `${origin}/cleanup/:path*` },
+      ],
+    };
   },
   swcMinify: false,
   experimental: {
