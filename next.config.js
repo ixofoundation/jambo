@@ -15,6 +15,26 @@ const withTM = require('next-transpile-modules')([
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  /**
+   * The World Cleanup Day youth app (Openhands Network, `wcd/`) is served
+   * under this domain as a sub-route: every request to /cleanup and below is
+   * proxied server-side to the standalone deployment, whose own build carries
+   * the same `/cleanup` prefix, so its pages, scripts, API routes and service
+   * worker all resolve here too. Same origin as Jambo is the point: shared
+   * browser storage, and one login once the session adapter lands.
+   *
+   * CLEANUP_APP_ORIGIN is read at build time (rewrites are compiled into the
+   * routes manifest), one value per Vercel environment. Unset, the route
+   * simply does not exist.
+   */
+  async rewrites() {
+    const origin = (process.env.CLEANUP_APP_ORIGIN || '').replace(/\/$/, '');
+    if (!origin) return [];
+    return [
+      { source: '/cleanup', destination: `${origin}/cleanup` },
+      { source: '/cleanup/:path*', destination: `${origin}/cleanup/:path*` },
+    ];
+  },
   swcMinify: false,
   experimental: {
     esmExternals: 'loose',
