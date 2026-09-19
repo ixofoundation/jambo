@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -9,6 +9,8 @@ import {
   markSupportThreadSeen,
   removeSupportThreadId,
 } from 'lib/matrix/support';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 import type { MatrixClient } from 'matrix-js-sdk';
 
 import SupportLoadingView from '@components/Support/views/SupportLoadingView';
@@ -78,6 +80,11 @@ type ReadyThreadProps = {
 function ReadyThread({ mxClient, supportRoomId, userRoomId, adminUserIds, rootId, goBack }: ReadyThreadProps) {
   const profilesById = useAppSelector((state) => state.matrixProfiles.byUserId);
   const ownerUserId = mxClient.getUserId() ?? '';
+
+  // Mirrors the portal's room-select event so chat dashboards include JAMBO support threads.
+  useEffect(() => {
+    track(AnalyticsEvents.ChatRoomEntered, { roomId: supportRoomId });
+  }, [supportRoomId]);
 
   const [observedSenders, setObservedSenders] = useState<Set<string>>(() => new Set());
   const observeSenders = useCallback((senders: string[]) => {

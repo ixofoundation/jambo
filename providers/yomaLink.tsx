@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
 import { successToast } from '@components/Toast/Toast';
 import { bindLink, getLinkStatus } from 'lib/yomaSync/client';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 import {
   clearYref,
   getCachedLink,
@@ -80,10 +82,12 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
           if (link.yomaId && link.yomaId === yref) {
             clearYref();
             successToast('Yoma account connected');
+            track(AnalyticsEvents.YomaAccountLinked);
           } else {
             // Wrong account OR an email that matches no Yoma profile — either
             // way this sign-in isn't the account the hand-off was for.
             setMismatch(true);
+            track(AnalyticsEvents.YomaAccountMismatchShown);
           }
         }
       } catch (err) {
