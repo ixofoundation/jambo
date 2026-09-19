@@ -31,6 +31,11 @@ export const IXO_CHAIN_ID = 'ixo-5';
  *  uses, falling back to this. */
 export const IXO_USDC_DENOM = 'ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B';
 
+/** PAY — ixo's liquid-staking token (native `upay`, 6 decimals, 1 PAY = 1 USDC).
+ *  World Cleanup Day rewards are paid in it. Not Skip-routable: the off-ramp
+ *  can't move it until the PAY → USDC conversion ships (see constants/cleanup). */
+export const IXO_PAY_DENOM = 'upay';
+
 /**
  * Off-ramp destination: Base (cheapest/fastest EVM CCTP leg YC supports).
  * `cryptoNetwork` is what YC expects; `skipChainId`/`skipDenom` are what Skip
