@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -6,6 +6,8 @@ import { useAppSelector } from '@store/hooks';
 import { useSupportInit } from '@hooks/useSupportInit';
 import { useSupportProfilePrefetch } from '@hooks/useSupportProfilePrefetch';
 import { markSupportDmSeen } from 'lib/matrix/support';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 import type { MatrixClient } from 'matrix-js-sdk';
 
 import SupportLoadingView from '@components/Support/views/SupportLoadingView';
@@ -100,6 +102,11 @@ type ReadyDmProps = {
 function ReadyDm({ mxClient, supportRoomId, userRoomId, adminUserIds, adminUserId, roomId }: ReadyDmProps) {
   const profilesById = useAppSelector((state) => state.matrixProfiles.byUserId);
   const ownerUserId = mxClient.getUserId() ?? '';
+
+  // Mirrors the portal's room-select event so chat dashboards include JAMBO support DMs.
+  useEffect(() => {
+    track(AnalyticsEvents.ChatRoomEntered, { roomId });
+  }, [roomId]);
 
   const [observedSenders, setObservedSenders] = useState<Set<string>>(() => new Set([adminUserId]));
   const observeSenders = useCallback((senders: string[]) => {

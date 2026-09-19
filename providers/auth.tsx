@@ -11,6 +11,9 @@ import { cleanUrlString } from '@utils/url';
 import { clearReturnTo, saveReturnTo, suppressReturnTo } from '@utils/returnTo';
 import { clearLinkState, clearYref } from '@utils/yomaLink';
 import { writeCleanupSession, clearCleanupSession } from 'lib/cleanupSession';
+import { buildUserTraits, identify, resetAnalytics, track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
+import { consumeFreshLogin, markFreshLogin } from 'lib/analytics/session';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 import { store, persistor } from '@store/index';
@@ -114,6 +117,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     // the localStorage fallback must not surface the previous user's deck.
     clearDeckPrefsStorage();
     clearLocalCurrencyStorage();
+    // Forget the PostHog person with the session (no-op until analytics is on).
+    resetAnalytics();
     setIsLoggedIn(false);
     setAddress(null);
     setDid(null);
@@ -191,6 +196,23 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         sessionAuthenticatorId: persistedAccount.sessionAuthenticatorId ?? null,
       });
       fetchMatrixProfile();
+
+      // Analytics: the account is already in Redux (rehydrated), so the event
+      // carries the user context. A boot straight after login is not a
+      // "restore" — that login already produced `user_logged_in`.
+      const restoredDid = persistedAccount.did ?? storedDid;
+      if (restoredDid) {
+        identify(
+          restoredDid,
+          buildUserTraits({
+            did: restoredDid,
+            address: persistedAccount.address,
+            displayName: persistedAccount.displayName,
+            matrixUserId: persistedAccount.matrixUserId,
+          }),
+        );
+      }
+      if (!consumeFreshLogin()) track(AnalyticsEvents.SessionRestored);
     } catch (error) {
       console.error('Session revival failed:', error);
     } finally {
@@ -220,6 +242,22 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         matrixRoomId: data.matrixRoomId,
       }),
     );
+    // Analytics — after the Redux dispatch so the event carries the user
+    // context, identify first so the event lands on the DID. The auth hub does
+    // not say whether this account is new, so registration is not tracked here.
+    identify(
+      data.did,
+      buildUserTraits({
+        did: data.did,
+        address: data.address,
+        displayName: data.displayName,
+        matrixUserId: data.matrixUserId,
+      }),
+    );
+    track(AnalyticsEvents.UserLoggedIn, { place: 'auth hub callback' });
+    // The callback page ends in a full-page navigation; the next boot must not
+    // also count as a `session_restored`.
+    markFreshLogin();
     fetchMatrixProfile();
   }, []);
 
@@ -302,6 +340,10 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     // belong to the account signing out — never to the next login.
     clearLinkState();
     setIsLoggingOut(true);
+    // Captured while the account is still in Redux (user context) and before
+    // clearAllState() resets the PostHog person. The Matrix cleanup below gives
+    // the SDK's batch time to flush before the navigation to /auth.
+    track(AnalyticsEvents.UserLoggedOut);
 
     // Overall safety net: never let matrix cleanup block the redirect for more than 8s.
     // Individual matrix steps already have their own timeouts (logoutMatrixClient), but

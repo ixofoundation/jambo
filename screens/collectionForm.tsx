@@ -49,6 +49,8 @@ import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '@constants/approvePayment';
 import { buildApprovePaymentPrefill, fetchSourceClaimData, loadKycPii } from '@utils/approvePayment';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 
 const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
 
@@ -503,7 +505,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   async function evaluateClaim(status: 'approve' | 'reject', customAmount?: { denom: string; amount: string }) {
     if (!viewClaimId) return;
     setEvaluating(true);
+    // Same event names/props as the portal's claim flows so the shared
+    // submission dashboards include JAMBO evaluations (split by `app`).
+    const evaluationProps = { flowType: 'claim-evaluation' as const, entityDid, collectionId, claimId: viewClaimId };
     try {
+      track(AnalyticsEvents.EditorFlowSubmissionAttempted, evaluationProps);
       const col = await fetchCollectionByCollectionId(collectionId);
 
       const amountField =
@@ -542,9 +548,14 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         }),
       };
       await onSign([message]);
+      track(AnalyticsEvents.EditorFlowSubmitted, evaluationProps);
       toast.success(`Claim ${status === 'approve' ? 'approved' : 'rejected'} successfully`);
       router.push(collectionUrl);
     } catch (err) {
+      track(AnalyticsEvents.EditorFlowSubmissionFailed, {
+        ...evaluationProps,
+        reason: (err as Error).message || `Failed to ${status} claim`,
+      });
       toast.error((err as Error).message || `Failed to ${status} claim`);
       console.error('Evaluation error:', err);
     } finally {
@@ -650,6 +661,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         model.onCompleting.remove(preventComplete);
         model.completeText = 'Submitting...';
         setSubmitting({ active: true, label: 'Preparing submission...' });
+        // Analytics (portal-compatible claim-flow events). Only the on-chain
+        // claim branch reports; the KYC and bid branches are not claims.
+        const submissionProps = { flowType: 'claim-submission' as const, entityDid, collectionId };
+        let claimSubmissionStarted = false;
+        let claimSubmissionReported = false;
         try {
           await awaitCompletion();
           if (surveyMode === 'kyc') {
@@ -681,6 +697,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             );
             if (!response.id) throw new Error('Failed to submit application');
           } else {
+            claimSubmissionStarted = true;
+            track(AnalyticsEvents.EditorFlowSubmissionAttempted, submissionProps);
             setSubmitting({ active: true, label: 'Preparing signing key...' });
             const edMnemonic = secureLoad(authConstants.secretKey.ED_SIGNING_MNEMONIC);
             if (!edMnemonic) throw new Error('Ed25519 signing mnemonic not available — please sign in again');
@@ -740,6 +758,8 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
               }),
             };
             await onSign([message]);
+            track(AnalyticsEvents.EditorFlowSubmitted, { ...submissionProps, claimId: response.data.cid as string });
+            claimSubmissionReported = true;
             if (requiresBaseClaimRef.current && baseClaimCIDRef.current) {
               // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
               refreshClaimStatus(baseClaimCIDRef.current);
@@ -753,6 +773,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           sender.doComplete();
           router.push(collectionUrl);
         } catch (err) {
+          if (claimSubmissionStarted && !claimSubmissionReported) {
+            track(AnalyticsEvents.EditorFlowSubmissionFailed, {
+              ...submissionProps,
+              reason: (err as Error).message || 'Failed to submit claim',
+            });
+          }
           setSubmitting({ active: false, label: '' });
           toast.error((err as Error).message);
           console.error('error', err);

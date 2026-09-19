@@ -16,6 +16,8 @@ import { activateDeckPrefs, hydrateDeckPrefsFromMatrix } from '@utils/deckPrefs'
 import { initLocalCurrency } from '@utils/localCurrency';
 import { fetchMatrixProfile } from '@providers/auth';
 import authConstants from '@constants/auth';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 
 interface BackgroundSetupProviderProps {
   children: ReactNode;
@@ -177,6 +179,8 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
 
         setStatus('success');
         setStatusMessage('Data Store ready');
+        // First-time Data Store bootstrap after a fresh login (reattach on later boots is not this).
+        track(AnalyticsEvents.VaultSetupCompleted);
         fetchMatrixProfile();
         void hydrateDeckPrefsFromMatrix(mxClient).catch((err) => console.warn('Deck prefs hydration failed:', err));
         if (auth.matrixRoomId && auth.address) {

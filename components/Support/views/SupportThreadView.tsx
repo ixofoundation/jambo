@@ -11,6 +11,8 @@ import {
   isThreadReplyFor,
   postThreadReply,
 } from 'lib/matrix/support';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 
 import ChatInput from '../parts/ChatInput';
 import DateDivider from '../parts/DateDivider';
@@ -130,6 +132,7 @@ export default function SupportThreadView({
     setSending(true);
     try {
       await postThreadReply(mxClient, supportRoomId, rootId, lastEventId, text);
+      track(AnalyticsEvents.ChatMessageSent, { roomId: supportRoomId, contentType: 'reply', lengthChars: text.length });
       setReplyText('');
       // The timeline subscription will append the event when sync delivers it.
     } catch (err) {
