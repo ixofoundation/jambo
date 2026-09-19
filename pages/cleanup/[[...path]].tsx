@@ -8,10 +8,11 @@ import { GRADIENT_COLORS } from '@constants/gradientColors';
  *
  * On a deployment where CLEANUP_APP_ORIGIN is set, next.config.js proxies
  * /cleanup and everything below it to the youth app BEFORE any page is
- * considered, so this page never renders there. Where the variable is blank
- * — production, until the campaign is on mainnet — every /cleanup address
- * lands here instead of a 404, and the cleanup deed's door says "soon"
- * rather than opening onto nothing.
+ * considered, so this page never renders there — that is staging and, now
+ * the campaign is on mainnet, production too. Where the variable is blank
+ * (local dev, or any deployment without the youth app wired in) every
+ * /cleanup address lands here instead of a 404, and the cleanup deed's door
+ * says "soon" rather than opening onto nothing.
  */
 export default function CleanupComingSoonPage() {
   return (
