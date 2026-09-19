@@ -7,6 +7,12 @@ import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
+import {
+  CLEANUP_REWARDS_HOLD,
+  CLEANUP_REWARDS_USDC_DUST,
+  cleanupRewardsWithdrawWhen,
+  formatRewardsUsd,
+} from '@constants/cleanup';
 import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
@@ -25,7 +31,7 @@ import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
 import { type OfframpProfile, loadOfframpProfile, saveOfframpProfile } from '@utils/offrampProfile';
-import { getUsdcBalance } from '@utils/usdcBalance';
+import { getWalletBalances } from '@utils/usdcBalance';
 
 import styles from '@styles/Offramp.module.scss';
 
@@ -124,6 +130,9 @@ export default function OfframpScreen() {
 
   const [balance, setBalance] = useState<number | null>(null);
   const [heldDenom, setHeldDenom] = useState<string | undefined>(undefined);
+  // PAY (World Cleanup Day rewards, 1 PAY = 1 USDC) — held, not withdrawable
+  // yet; see constants/cleanup.
+  const [payBalance, setPayBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
   const [amount, setAmount] = useState<string>('');
@@ -180,16 +189,29 @@ export default function OfframpScreen() {
   // Effective KYC gate — forced open when the testing bypass is on.
   const kycGate: boolean | null = BYPASS_KYC_CHECK ? true : hasKyc;
 
-  // Balance (canonical mainnet USDC denom).
+  // World Cleanup Day rewards (PAY) can't leave until the PAY → USDC conversion
+  // ships (constants/cleanup). Decided only once BOTH balances are in, so a
+  // rewards-only youth never sees the KYC gate flash before the hold card
+  // replaces it — and, deliberately, never sees KYC at all while held.
+  const balancesReady = skipBridge || (balance != null && payBalance != null);
+  const hasRewards = CLEANUP_REWARDS_HOLD && !skipBridge && (payBalance ?? 0) > 0;
+  const hasUsdc = (balance ?? 0) >= CLEANUP_REWARDS_USDC_DUST;
+  const payOnlyHold = hasRewards && !hasUsdc;
+  const payBanner = hasRewards && hasUsdc;
+  const showFlow = balancesReady && !payOnlyHold;
+  const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
+
+  // Balances: USDC (canonical mainnet denom) + PAY, over one connection.
   useEffect(() => {
     if (!isMainnet || !address) return;
     let cancelled = false;
     setBalanceLoading(true);
-    getUsdcBalance(address)
+    getWalletBalances(address)
       .then((b) => {
         if (cancelled) return;
-        setBalance(b.amount);
-        setHeldDenom(b.denom);
+        setBalance(b.usdc.amount);
+        setHeldDenom(b.usdc.denom);
+        setPayBalance(b.pay.amount);
       })
       .finally(() => {
         if (!cancelled) setBalanceLoading(false);
@@ -697,6 +719,12 @@ export default function OfframpScreen() {
                   </span>
                   {balanceLoading && <Loader size={16} />}
                 </div>
+              ) : payOnlyHold ? (
+                <div className={styles.balanceRow}>
+                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
+                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
+                  {balanceLoading && <Loader size={16} />}
+                </div>
               ) : (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatUsdc(balance)}</span>
@@ -707,7 +735,36 @@ export default function OfframpScreen() {
               )}
             </div>
 
-            {kycGate === null && (
+            {/* Cleanup rewards held alongside withdrawable USDC: normal flow, plus a heads-up. */}
+            {payBanner && (
+              <div className={styles.alertInfo}>
+                Only your USDC can be withdrawn right now. Your {formatRewardsUsd(payBalance ?? 0)} in Cleanup rewards
+                unlocks for withdrawal {rewardsWhen.when}.
+              </div>
+            )}
+
+            {/* Cleanup rewards only: a friendly hold in place of the KYC gate and the form. */}
+            {payOnlyHold && (
+              <div className={styles.card}>
+                <p className={styles.cardTitle}>Your Cleanup rewards are safe in your wallet</p>
+                <p className={styles.kycGateText}>
+                  Great work at World Cleanup Day! Withdrawals to bank and mobile money open {rewardsWhen.when}. Check
+                  back {rewardsWhen.checkBack} to cash out your {formatRewardsUsd(payBalance ?? 0)}.
+                </p>
+                <div className={styles.actions}>
+                  <Button
+                    label='Back to wallet'
+                    size={BUTTON_SIZE.mediumLarge}
+                    bgColor={BUTTON_BG_COLOR.primary}
+                    borderColor={BUTTON_BORDER_COLOR.primary}
+                    color={BUTTON_COLOR.white}
+                    onClick={() => router.push('/wallet')}
+                  />
+                </div>
+              </div>
+            )}
+
+            {showFlow && kycGate === null && (
               <div className={styles.card}>
                 <div className={styles.balanceRow}>
                   <Loader size={16} />
@@ -716,7 +773,7 @@ export default function OfframpScreen() {
               </div>
             )}
 
-            {kycGate === false && (
+            {showFlow && kycGate === false && (
               <div className={styles.card}>
                 <p className={styles.cardTitle}>Verify your identity first</p>
                 <p className={styles.kycGateText}>
@@ -736,7 +793,7 @@ export default function OfframpScreen() {
               </div>
             )}
 
-            {kycGate === true && (
+            {showFlow && kycGate === true && (
               <>
                 {/* Withdraw form */}
                 <div className={styles.card}>
