@@ -165,11 +165,19 @@ export function identify(distinctId: string, traits?: UserTraits): void {
   withPosthog((client) => client.identify(distinctId, traits as Record<string, unknown> | undefined));
 }
 
-/** Forget the identified user (logout). Safe to call before init. */
+/**
+ * Forget the identified user (logout). Safe to call before init.
+ *
+ * posthog's reset() also wipes the registered super properties, and the page
+ * keeps capturing afterwards (logout flips the auth guard, which route-changes
+ * to /auth before the full-page navigation). Re-register straight away so
+ * those events still carry app / brand / environment.
+ */
 export function resetAnalytics(): void {
   if (!initialized || typeof window === 'undefined') return;
   try {
     posthogClient?.reset();
+    posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
   } catch {
     // posthog may not be fully ready — ignore
   }
@@ -180,6 +188,9 @@ export function grantAnalyticsConsent(): void {
   if (initialized && typeof window !== 'undefined') {
     try {
       posthogClient?.opt_in_capturing?.();
+      // A revoke earlier in this page's life reset() the client, which drops
+      // the super properties — restore them for the re-granted session.
+      posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
     } catch {
       // posthog may not be fully ready; ignore
     }
