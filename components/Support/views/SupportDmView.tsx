@@ -4,6 +4,8 @@ import type { MatrixClient, MatrixEvent, Room } from 'matrix-js-sdk';
 
 import type { MatrixUserProfile } from '@store/slices/matrixProfilesSlice';
 import { RawDmMessage, readDmMessagesFromRoom, sendDmMessage } from 'lib/matrix/support';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 
 import ChatInput from '../parts/ChatInput';
 import DateDivider from '../parts/DateDivider';
@@ -80,6 +82,7 @@ export default function SupportDmView({
     setSending(true);
     try {
       await sendDmMessage(mxClient, dmRoomId, text);
+      track(AnalyticsEvents.ChatMessageSent, { roomId: dmRoomId, contentType: 'text', lengthChars: text.length });
       setReplyText('');
       // The timeline subscription will pick up the echoed event.
     } catch (err) {

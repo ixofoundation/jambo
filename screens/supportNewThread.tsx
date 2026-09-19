@@ -10,6 +10,8 @@ import {
 } from '@constants/support';
 import { useSupportInit } from '@hooks/useSupportInit';
 import { appendSupportThreadId, postThreadRoot } from 'lib/matrix/support';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 
 import ChatInput from '@components/Support/parts/ChatInput';
 import PrivacyAlert from '@components/Support/parts/PrivacyAlert';
@@ -102,6 +104,7 @@ function ReadyNewThread({ mxClient, supportRoomId, userRoomId, entityDid, prompt
     try {
       const finalBody = `${SUPPORT_NEW_THREAD_PREAMBLE}\n\n${text}`;
       const rootId = await postThreadRoot(mxClient, supportRoomId, finalBody);
+      track(AnalyticsEvents.ChatMessageSent, { roomId: supportRoomId, contentType: 'text', lengthChars: text.length });
       await appendSupportThreadId(mxClient, userRoomId, supportRoomId, rootId);
       // Replace, not push — the just-created thread takes the place of this screen so the back
       // button skips the (now empty) compose state and returns straight to the selector.

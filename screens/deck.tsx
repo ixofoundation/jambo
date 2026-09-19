@@ -20,6 +20,8 @@ import {
 } from '@utils/deckPrefs';
 import DeckCard, { DeckCardData, SwipeDir } from '@components/Deck/DeckCard';
 import { isCleanupEntity, openCleanup } from '@constants/cleanup';
+import { track } from 'lib/analytics/client';
+import { AnalyticsEvents } from 'lib/analytics/events';
 import {
   ArrowRightIcon,
   ArrowUpIcon,
@@ -143,8 +145,14 @@ export default function Deck() {
       router.push(`/entities/${encodeURIComponent(top.id)}`);
       return;
     }
-    if (dir === 'save') setSaved(saveCard(top.id));
-    if (dir === 'skip') setSkipped(skipCard(top.id));
+    if (dir === 'save') {
+      setSaved(saveCard(top.id));
+      track(AnalyticsEvents.OpportunitySaved, { entityDid: top.id });
+    }
+    if (dir === 'skip') {
+      setSkipped(skipCard(top.id));
+      track(AnalyticsEvents.OpportunitySkipped, { entityDid: top.id });
+    }
   };
 
   const buttonDecide = (dir: SwipeDir) => {
