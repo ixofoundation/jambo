@@ -62,6 +62,10 @@ Every event is stamped with super properties (`ANALYTICS_SUPER_PROPERTIES`):
 Filter or break down any dashboard by `app` to separate JAMBO from the portal.
 PostHog also adds `$host`, `$current_url`, `$referrer` etc. automatically.
 
+PostHog's `reset()` wipes registered super properties, so `resetAnalytics()`
+re-registers them immediately; otherwise the events captured between logout
+and the navigation to `/auth` would go out untagged.
+
 ## Events (`lib/analytics/events.ts`)
 
 Names are snake_case. Where the meaning matches the portal, the name and
