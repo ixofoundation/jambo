@@ -37,9 +37,12 @@ export function openCleanup(replace = false): void {
  *     place of the KYC gate and the form — deliberately NO KYC, the KYC flow
  *     itself is being reworked before then and we don't want them verifying
  *     against the old one;
- *   - a youth holding PAY and USDC keeps the normal flow, with a banner saying
- *     only the USDC can go out today;
- *   - a youth with no PAY sees no change at all.
+ *   - a youth holding PAY and any USDC at all keeps the normal flow (KYC gate
+ *     first, then the form), with a banner saying only the USDC can go out
+ *     today;
+ *   - a youth holding USDC and no PAY sees no change at all;
+ *   - a youth holding nothing sees a friendly "nothing to withdraw yet" card
+ *     instead of the KYC gate — there is nothing to verify for.
  *
  * The Wallet screen shows the rewards in the total with the same date.
  *
@@ -54,10 +57,6 @@ export const CLEANUP_REWARDS_HOLD = true;
 export const CLEANUP_REWARDS_WITHDRAW_FROM = (
   process.env.NEXT_PUBLIC_CLEANUP_REWARDS_WITHDRAW_FROM || '2026-09-23'
 ).trim();
-
-/** Below this much USDC, leftover cents from a past withdrawal don't count as
- *  "has USDC": a Cleanup-rewards holder with dust still gets the hold card. */
-export const CLEANUP_REWARDS_USDC_DUST = 1;
 
 export interface CleanupRewardsWhen {
   /** Sentence fragment: "on Wednesday 23 September" or "in the next few days". */
