@@ -7,12 +7,7 @@ import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
-import {
-  CLEANUP_REWARDS_HOLD,
-  CLEANUP_REWARDS_USDC_DUST,
-  cleanupRewardsWithdrawWhen,
-  formatRewardsUsd,
-} from '@constants/cleanup';
+import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
@@ -193,12 +188,22 @@ export default function OfframpScreen() {
   // ships (constants/cleanup). Decided only once BOTH balances are in, so a
   // rewards-only youth never sees the KYC gate flash before the hold card
   // replaces it — and, deliberately, never sees KYC at all while held.
+  //
+  // What the screen shows, by what the wallet holds:
+  //   nothing at all      → a friendly "nothing to withdraw yet" card, no KYC
+  //   Cleanup rewards only → the hold card, no KYC (whatever their KYC status)
+  //   any USDC at all     → the normal flow: KYC gate first, then the form
+  //                         (plus the rewards banner when they hold both)
   const balancesReady = skipBridge || (balance != null && payBalance != null);
   const hasRewards = CLEANUP_REWARDS_HOLD && !skipBridge && (payBalance ?? 0) > 0;
-  const hasUsdc = (balance ?? 0) >= CLEANUP_REWARDS_USDC_DUST;
+  const hasUsdc = (balance ?? 0) > 0;
   const payOnlyHold = hasRewards && !hasUsdc;
   const payBanner = hasRewards && hasUsdc;
-  const showFlow = balancesReady && !payOnlyHold;
+  // PAY counts as funds whether or not the hold is on, so this stays right the
+  // day CLEANUP_REWARDS_HOLD is flipped off: a PAY-only wallet then goes
+  // through the normal flow instead of being told it holds nothing.
+  const noFunds = !skipBridge && balancesReady && !hasUsdc && (payBalance ?? 0) <= 0;
+  const showFlow = balancesReady && !payOnlyHold && !noFunds;
   const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
 
   // Balances: USDC (canonical mainnet denom) + PAY, over one connection.
@@ -750,6 +755,26 @@ export default function OfframpScreen() {
                 <p className={styles.kycGateText}>
                   Great work at World Cleanup Day! Withdrawals to bank and mobile money open {rewardsWhen.when}. Check
                   back {rewardsWhen.checkBack} to cash out your {formatRewardsUsd(payBalance ?? 0)}.
+                </p>
+                <div className={styles.actions}>
+                  <Button
+                    label='Back to wallet'
+                    size={BUTTON_SIZE.mediumLarge}
+                    bgColor={BUTTON_BG_COLOR.primary}
+                    borderColor={BUTTON_BORDER_COLOR.primary}
+                    color={BUTTON_COLOR.white}
+                    onClick={() => router.push('/wallet')}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Nothing to withdraw: say so kindly — no KYC gate, no form. */}
+            {noFunds && (
+              <div className={styles.card}>
+                <p className={styles.cardTitle}>Nothing to withdraw yet</p>
+                <p className={styles.kycGateText}>
+                  When you earn rewards or receive USDC, you can cash out here to your bank or mobile money.
                 </p>
                 <div className={styles.actions}>
                   <Button
