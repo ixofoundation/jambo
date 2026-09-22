@@ -9,12 +9,14 @@ import {
   type OfframpDestination,
   type OfframpTransaction,
   type QuoteResult,
+  type RampApiErrorDetails,
   createOfframp,
   fetchPaymentRecordPdf,
   getOfframp,
   listOfframps,
   notifyDeposit,
   quoteOfframp,
+  rampApiErrorDetails,
 } from 'lib/yellowcard/offrampClient';
 import { mintOfframpBearer } from '@utils/ucanYellowcard';
 
@@ -52,9 +54,11 @@ export interface WithdrawParams {
   sourceDenom?: string;
   customer: OfframpCustomer;
   destination: OfframpDestination;
-  /** The user's KYC SD-JWT presentation — the worker verifies it against our
-   *  oracle and binds it to the caller's DID before creating the payout. */
-  kycCredential: string;
+  /** The user's KYC SD-JWT presentation, when they hold one — the worker
+   *  verifies it against our oracle and binds it to the caller's DID. Optional:
+   *  below the worker's volume threshold no credential is needed; leave it
+   *  undefined (never '') and the field is omitted from the request. */
+  kycCredential?: string;
   /** TEMP (testnet): create the YC sell only — skip the Skip Go bridge + deposit
    *  notify (no USDC on testnet). The amount is used as-is (no bridge fee). */
   skipBridge?: boolean;
@@ -81,6 +85,11 @@ export default function useOfframp() {
 
   const [stage, setStage] = useState<OfframpStage>('idle');
   const [error, setError] = useState<string | null>(null);
+  // Machine-readable side of `error` when the worker rejected the call (status,
+  // `code` such as 'kyc_required' | 'expired' | …, and the copy-only threshold
+  // fields). Null for non-worker failures (network, signing, bridge). Set and
+  // cleared together with `error`.
+  const [errorDetails, setErrorDetails] = useState<RampApiErrorDetails | null>(null);
   const [transactions, setTransactions] = useState<OfframpTransaction[]>([]);
   const [active, setActive] = useState<CreateResult | null>(null);
   const [bridgeRoute, setBridgeRoute] = useState<BridgeRoute | null>(null);
@@ -182,6 +191,7 @@ export default function useOfframp() {
   const withdraw = useCallback(
     async (params: WithdrawParams): Promise<CreateResult> => {
       setError(null);
+      setErrorDetails(null);
       try {
         setStage('authorizing');
         const createBearer = await mintBearer();
@@ -214,7 +224,8 @@ export default function useOfframp() {
             network: OFFRAMP_DESTINATION.cryptoNetwork,
             customer: params.customer,
             destination: params.destination,
-            kycCredential: params.kycCredential,
+            // Only when we actually hold one — never an empty string.
+            ...(params.kycCredential ? { kycCredential: params.kycCredential } : {}),
           },
           createBearer,
         );
@@ -253,6 +264,7 @@ export default function useOfframp() {
       } catch (err) {
         setStage('error');
         setError(err instanceof Error ? err.message : 'Withdrawal failed');
+        setErrorDetails(rampApiErrorDetails(err));
         throw err;
       }
     },
@@ -268,6 +280,7 @@ export default function useOfframp() {
       const amountUsdc = tx.send_amount_usdc ?? tx.amount_usd;
       if (amountUsdc == null) throw new Error('Unknown send amount for this withdrawal.');
       setError(null);
+      setErrorDetails(null);
       try {
         const route = await quoteBridge(amountUsdc, sourceDenom);
         const sourceTxHash = await sendBridge({ amountUsdc, destinationAddress: tx.deposit_address, sourceDenom, route });
@@ -278,6 +291,7 @@ export default function useOfframp() {
         await refreshTransactions().catch(() => undefined);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Retry failed');
+        setErrorDetails(rampApiErrorDetails(err));
         throw err;
       }
     },
@@ -301,11 +315,15 @@ export default function useOfframp() {
     [mintBearer],
   );
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    setError(null);
+    setErrorDetails(null);
+  }, []);
 
   return {
     stage,
     error,
+    errorDetails,
     active,
     transactions,
     bridgeRoute,

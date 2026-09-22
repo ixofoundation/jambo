@@ -66,14 +66,96 @@ export interface OfframpTransaction {
   updated_at: number;
 }
 
+/** `code` on a create 403 when the amount needs identity verification and the
+ *  caller presented no credential. The worker decides this (rolling-window
+ *  volume + this amount vs its threshold) — jambo never computes it. */
+export const RAMP_KYC_REQUIRED_CODE = 'kyc_required';
+
+/** `code` values on a create 403 when a credential WAS sent, failed the
+ *  worker's verification, and the amount needs identity verification. */
+export const RAMP_KYC_CREDENTIAL_FAILURE_CODES = [
+  'expired',
+  'name_mismatch',
+  'holder_mismatch',
+  'bad_signature',
+  'malformed',
+  'untrusted_issuer',
+  'wrong_type',
+  'issuer_key_unpublished',
+  'bad_disclosure',
+  'not_yet_valid',
+  'resolver_error',
+  'verify_error',
+] as const;
+
+export type RampKycCredentialFailureCode = (typeof RAMP_KYC_CREDENTIAL_FAILURE_CODES)[number];
+
+export function isRampKycCredentialFailureCode(code: unknown): code is RampKycCredentialFailureCode {
+  return typeof code === 'string' && (RAMP_KYC_CREDENTIAL_FAILURE_CODES as readonly string[]).includes(code);
+}
+
+/** The machine-readable parts of a worker error body, for callers that branch
+ *  on them (the human-readable part stays on `Error.message`). */
+export interface RampApiErrorDetails {
+  /** HTTP status of the response. */
+  status: number;
+  /** Worker `code`, e.g. 'kyc_required' | 'expired' | 'name_mismatch' | … */
+  code?: string;
+}
+
+/**
+ * A non-2xx response from the worker. Still an `Error` whose `message` is
+ * exactly what was thrown before (`body.message || body.error || fallback`),
+ * so callers that only read `.message` are unaffected; the parsed body's
+ * machine-readable fields ride along for callers that need them.
+ */
+export class RampApiError extends Error implements RampApiErrorDetails {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, details: RampApiErrorDetails) {
+    super(message);
+    // Keep `instanceof` reliable if a build ever down-levels classes.
+    Object.setPrototypeOf(this, RampApiError.prototype);
+    this.name = 'RampApiError';
+    this.status = details.status;
+    this.code = details.code;
+  }
+}
+
+/** The machine-readable details of a thrown value, or null when it isn't a
+ *  worker error (network failure, signing error, …). */
+export function rampApiErrorDetails(err: unknown): RampApiErrorDetails | null {
+  if (!(err instanceof RampApiError)) return null;
+  return { status: err.status, code: err.code };
+}
+
+/** Worker responses are JSON, but an edge error page (e.g. a 5xx from the
+ *  network in front of it) is not — never let that surface as a SyntaxError. */
+function parseJsonBody(text: string): any {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function toRampApiError(path: string, status: number, json: any): RampApiError {
+  return new RampApiError(json?.message || json?.error || `Worker ${path} returned ${status}`, {
+    status,
+    code: typeof json?.code === 'string' ? json.code : undefined,
+  });
+}
+
 async function post<T>(path: string, body: unknown, bearer?: string): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
   const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
+  const json = parseJsonBody(text);
   if (!res.ok) {
-    throw new Error(json?.message || json?.error || `Worker ${path} returned ${res.status}`);
+    throw toRampApiError(path, res.status, json);
   }
   return json as T;
 }
@@ -81,9 +163,9 @@ async function post<T>(path: string, body: unknown, bearer?: string): Promise<T>
 async function get<T>(path: string, bearer: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${bearer}` } });
   const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
+  const json = parseJsonBody(text);
   if (!res.ok) {
-    throw new Error(json?.message || json?.error || `Worker ${path} returned ${res.status}`);
+    throw toRampApiError(path, res.status, json);
   }
   return json as T;
 }
@@ -107,6 +189,11 @@ export interface QuoteResult {
   /** Min/max in local currency. */
   transactionLimitMin?: number | null;
   transactionLimitMax?: number | null;
+  /** True when THIS amount would need identity verification for a caller who
+   *  presents no credential. An early hint only — the create call is
+   *  authoritative (it also sums by payout account and ID number, which the
+   *  quote can't see), so a `kyc_required` 403 can still follow a `false`. */
+  kycRequired?: boolean;
 }
 
 export function quoteOfframp(
@@ -152,8 +239,12 @@ export function createOfframp(
     destination: OfframpDestination;
     /** The user's KYC credential as the full canonical SD-JWT presentation
      *  (`<jwt>~<disclosure>~…`). The worker verifies it against our oracle and
-     *  binds it to the caller's DID before creating the payout. */
-    kycCredential: string;
+     *  binds it to the caller's DID before creating the payout. OPTIONAL: send
+     *  it whenever we hold one (verified users skip the worker's volume
+     *  threshold); OMIT the field otherwise — never send an empty string. With
+     *  no credential the create fails with a `kyc_required` 403 once the
+     *  amount crosses the worker's threshold. */
+    kycCredential?: string;
   },
   bearer: string,
 ): Promise<CreateResult> {
@@ -350,6 +441,9 @@ export interface OnrampQuoteResult {
   /** Min/max in local currency. */
   transactionLimitMin?: number | null;
   transactionLimitMax?: number | null;
+  /** Same early hint as the off-ramp quote (deposits have their own counter
+   *  on the worker). */
+  kycRequired?: boolean;
 }
 
 export function quoteOnramp(
@@ -373,8 +467,9 @@ export function createOnramp(
     customer: OfframpCustomer;
     /** Where a hosted payment page (ZA) returns the user to. */
     returnUrl?: string;
-    /** The user's KYC SD-JWT presentation — same gate as the off-ramp. */
-    kycCredential: string;
+    /** The user's KYC SD-JWT presentation — same rules as the off-ramp:
+     *  optional, sent whenever held, omitted (never '') otherwise. */
+    kycCredential?: string;
   },
   bearer: string,
 ): Promise<{ success: true; transaction: OnrampTransaction }> {
