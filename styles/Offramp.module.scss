@@ -297,6 +297,39 @@
   color: var(--yellow-secondary);
 }
 
+// Identity-check notice that takes the action button's place
+// (components/Ramp/KycRequiredCard). Same inset grammar as .quote — a calm next
+// step, deliberately not styled as an error.
+.kycCard {
+  margin-top: 12px;
+  background: var(--card-bg-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kycCardTitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.kycCardText {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+// Inline "Checking your verification…" line above the (disabled) action button.
+.kycChecking {
+  align-items: center;
+  margin-top: 12px;
+}
+
 .alertError {
   background: var(--card-bg-color);
   border-radius: var(--card-border-radius);

@@ -1,4 +1,4 @@
-import { readOfframpProfile, storeOfframpProfile } from '@utils/matrixCredential';
+import { hasOfframpProfileEntry, readOfframpProfile, storeOfframpProfile } from '@utils/matrixCredential';
 
 // Reuse the matrix client type the store/read functions expect, rather than
 // re-importing it from matrix-js-sdk (whose named type export doesn't resolve
@@ -54,6 +54,32 @@ export async function loadOfframpProfile(mxClient: MxClient, roomId: string): Pr
     return raw ? (raw as OfframpProfile) : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * `loadOfframpProfile`, but tolerant of the matrix client still syncing — the
+ * same problem `waitForKycCredential` solves for the credential index. The
+ * profile's index lives in room STATE, which may not be loaded yet right after
+ * login, so a one-shot read at that moment would silently drop a returning
+ * user's remembered details. Polls the cheap, synchronous index check and reads
+ * (fetch + decrypt) exactly once, as soon as an entry appears. Resolves null
+ * when no profile shows up within the window, when it can't be decrypted, or
+ * when cancelled.
+ */
+export async function waitForOfframpProfile(
+  mxClient: MxClient,
+  roomId: string,
+  opts: { timeoutMs?: number; pollIntervalMs?: number; cancelled?: () => boolean } = {},
+): Promise<OfframpProfile | null> {
+  const timeoutMs = opts.timeoutMs ?? 15000;
+  const pollIntervalMs = opts.pollIntervalMs ?? 500;
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (opts.cancelled?.()) return null;
+    if (hasOfframpProfileEntry(mxClient, roomId)) return loadOfframpProfile(mxClient, roomId);
+    if (Date.now() >= deadline) return null;
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
   }
 }
 
