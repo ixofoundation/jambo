@@ -6,10 +6,12 @@ import {
   type OnrampQuoteResult,
   type OnrampSource,
   type OnrampTransaction,
+  type RampApiErrorDetails,
   createOnramp,
   getOnramp,
   listOnramps,
   quoteOnramp,
+  rampApiErrorDetails,
 } from 'lib/yellowcard/offrampClient';
 import { mintOnrampBearer } from '@utils/ucanYellowcard';
 
@@ -27,8 +29,10 @@ export interface DepositParams {
   customer: OfframpCustomer;
   /** Where a hosted payment page (ZA) returns the user to. */
   returnUrl?: string;
-  /** The user's KYC SD-JWT presentation — verified by the worker's gate. */
-  kycCredential: string;
+  /** The user's KYC SD-JWT presentation, when they hold one. Optional: below
+   *  the worker's volume threshold no credential is needed; leave it undefined
+   *  (never '') and the field is omitted from the request. */
+  kycCredential?: string;
 }
 
 /**
@@ -42,6 +46,11 @@ export default function useOnramp() {
 
   const [stage, setStage] = useState<OnrampStage>('idle');
   const [error, setError] = useState<string | null>(null);
+  // Machine-readable side of `error` when the worker rejected the create
+  // (status, `code` such as 'kyc_required' | 'expired' | …, and the copy-only
+  // threshold fields). Null for non-worker failures. Set and cleared together
+  // with `error`.
+  const [errorDetails, setErrorDetails] = useState<RampApiErrorDetails | null>(null);
   const [transactions, setTransactions] = useState<OnrampTransaction[]>([]);
   const [active, setActive] = useState<OnrampTransaction | null>(null);
 
@@ -77,6 +86,7 @@ export default function useOnramp() {
     async (params: DepositParams): Promise<OnrampTransaction> => {
       if (!address) throw new Error('Wallet address not available');
       setError(null);
+      setErrorDetails(null);
       try {
         setStage('authorizing');
         const bearer = await mintBearer();
@@ -91,7 +101,8 @@ export default function useOnramp() {
             source: params.source,
             customer: params.customer,
             returnUrl: params.returnUrl,
-            kycCredential: params.kycCredential,
+            // Only when we actually hold one — never an empty string.
+            ...(params.kycCredential ? { kycCredential: params.kycCredential } : {}),
           },
           bearer,
         );
@@ -102,6 +113,7 @@ export default function useOnramp() {
       } catch (err) {
         setStage('error');
         setError(err instanceof Error ? err.message : 'Deposit failed');
+        setErrorDetails(rampApiErrorDetails(err));
         throw err;
       }
     },
@@ -117,11 +129,15 @@ export default function useOnramp() {
     [mintBearer],
   );
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    setError(null);
+    setErrorDetails(null);
+  }, []);
 
   return {
     stage,
     error,
+    errorDetails,
     active,
     transactions,
     previewDeposit,

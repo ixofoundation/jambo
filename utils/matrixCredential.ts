@@ -404,6 +404,15 @@ function readOfframpProfileEntries(mxClient: MatrixClient, roomId: string): Offr
 }
 
 /**
+ * Whether an off-ramp profile index entry is visible in the room's loaded
+ * state. Cheap and synchronous (no network, no decryption) — safe to poll
+ * while the client is still syncing (see `waitForOfframpProfile`).
+ */
+export function hasOfframpProfileEntry(mxClient: MatrixClient, roomId: string): boolean {
+  return readOfframpProfileEntries(mxClient, roomId).length > 0;
+}
+
+/**
  * Persist the user's off-ramp profile to their matrix room (encrypted timeline
  * event + a single de-duplicated state index entry, latest wins). Throws if the
  * room isn't E2EE so callers (best-effort) can swallow it.

@@ -6,6 +6,10 @@ import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
+import KycRequiredCard, {
+  KycCredentialFailureNotice,
+  resolveKycCredentialStatus,
+} from '@components/Ramp/KycRequiredCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
@@ -19,13 +23,15 @@ import {
   type QuoteResult,
   type YcChannel,
   type YcNetwork,
+  RAMP_KYC_REQUIRED_CODE,
   discoverChannels,
   fetchSupportedCountries,
+  isRampKycCredentialFailureCode,
 } from 'lib/yellowcard/offrampClient';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
-import { type OfframpProfile, loadOfframpProfile, saveOfframpProfile } from '@utils/offrampProfile';
+import { type OfframpProfile, saveOfframpProfile, waitForOfframpProfile } from '@utils/offrampProfile';
 import { getWalletBalances } from '@utils/usdcBalance';
 
 import styles from '@styles/Offramp.module.scss';
@@ -37,11 +43,6 @@ const ID_TYPE_OPTIONS = [
   { value: 'national_id', label: 'National ID' },
   { value: 'drivers_license', label: "Driver's license" },
 ];
-
-// TEMP (testing only): set true to bypass the KYC-credential gate so the
-// withdraw form shows regardless of whether the user holds a KYC credential.
-// Leave false in production — withdrawals require a verified identity.
-const BYPASS_KYC_CHECK = false;
 
 // TEMP (testnet smoke test): enable the off-ramp on testnet (YC sandbox) and
 // skip the Skip Go bridge + on-chain USDC balance — there's no testnet USDC, so
@@ -158,10 +159,22 @@ export default function OfframpScreen() {
   // Best-effort prefill from the user's verified identity (KYC credential + PII).
   // Fields we resolve are locked; the rest stay editable.
   const [prefill, setPrefill] = useState<KycPrefill | null>(null);
-  // KYC gate: null = still checking, true/false = whether they hold a credential.
+  // Background check of the user's Vault: null = still checking, true/false =
+  // whether they hold a KYC credential. It never gates the form — the worker
+  // only asks for identity verification above its volume threshold (see
+  // `needsKyc` below).
   const [hasKyc, setHasKyc] = useState<boolean | null>(null);
-  // The raw KYC SD-JWT presentation, sent to the worker to verify at payout time.
+  // The raw KYC SD-JWT presentation, sent to the worker whenever we hold one.
   const [kycCredentialJwt, setKycCredentialJwt] = useState<string | null>(null);
+  // True once the attempt to open the credential itself has finished (so "found
+  // but still opening" isn't mistaken for "found but unreadable").
+  const [kycCredentialLoaded, setKycCredentialLoaded] = useState(false);
+  // True when the Vault couldn't be reached, so the check can't resolve.
+  const [kycCheckFailed, setKycCheckFailed] = useState(false);
+  // Whether the last create attempt carried a credential. A `kyc_required`
+  // rejection of an attempt WITHOUT one is explained by the identity-check card
+  // (never as an error); with one it would be unexpected, so it stays visible.
+  const [lastAttemptSentCredential, setLastAttemptSentCredential] = useState(false);
   // Remembered fields from a previous withdrawal (editable, overridable). Lower
   // priority than KYC prefill — only fills fields KYC didn't lock.
   const [savedProfile, setSavedProfile] = useState<OfframpProfile | null>(null);
@@ -181,19 +194,19 @@ export default function OfframpScreen() {
   const [skipStatuses, setSkipStatuses] = useState<Record<string, string>>({});
 
   const isNG = kycCountry === 'NG';
-  // Effective KYC gate — forced open when the testing bypass is on.
-  const kycGate: boolean | null = BYPASS_KYC_CHECK ? true : hasKyc;
 
   // World Cleanup Day rewards (PAY) can't leave until the PAY → USDC conversion
   // ships (constants/cleanup). Decided only once BOTH balances are in, so a
-  // rewards-only youth never sees the KYC gate flash before the hold card
-  // replaces it — and, deliberately, never sees KYC at all while held.
+  // rewards-only youth never sees the form flash before the hold card replaces
+  // it — and, deliberately, never sees KYC at all while held.
   //
   // What the screen shows, by what the wallet holds:
   //   nothing at all      → a friendly "nothing to withdraw yet" card, no KYC
   //   Cleanup rewards only → the hold card, no KYC (whatever their KYC status)
-  //   any USDC at all     → the normal flow: KYC gate first, then the form
-  //                         (plus the rewards banner when they hold both)
+  //   any USDC at all     → the normal flow: the form + history (plus the
+  //                         rewards banner when they hold both). Identity
+  //                         verification is only asked for when the worker says
+  //                         this amount needs it (`needsKyc`).
   const balancesReady = skipBridge || (balance != null && payBalance != null);
   const hasRewards = CLEANUP_REWARDS_HOLD && !skipBridge && (payBalance ?? 0) > 0;
   const hasUsdc = (balance ?? 0) > 0;
@@ -226,12 +239,52 @@ export default function OfframpScreen() {
     };
   }, [isMainnet, address]);
 
-  // Best-effort: load the user's verified KYC identity (matrix must be ready).
-  // Any failure (no credential, undecryptable, matrix not ready) just leaves the
-  // fields editable. No "load once" ref guard here on purpose: under React
-  // StrictMode the mount→unmount→remount cycle would otherwise let the first
-  // (cancelled) run win and discard the result. Each run owns its own
-  // `cancelled` flag, and the load is idempotent.
+  // Best-effort, in the BACKGROUND: load the user's verified KYC identity (matrix
+  // must be ready). It never blocks the form — any failure (no credential,
+  // undecryptable, matrix not ready) just leaves the fields editable. No "load
+  // once" ref guard here on purpose: under React StrictMode the
+  // mount→unmount→remount cycle would otherwise let the first (cancelled) run
+  // win and discard the result. Each run owns its own `cancelled` flag, and the
+  // load is idempotent.
+  useEffect(() => {
+    if (!offrampEnabled || !address || !matrixRoomId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await awaitCompletion();
+        const mxClient = getMatrixClient();
+        if (cancelled) return;
+        if (!mxClient) throw new Error('Vault client not available');
+        // Index check first (cheap, unencrypted read), then prefill if they
+        // hold a credential. Waits out a still-syncing client — a one-shot read
+        // right after login can miss room state and wrongly treat a KYC'd user
+        // as unverified.
+        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
+        if (cancelled) return;
+        setHasKyc(owns);
+        if (!owns) return;
+        const result = await loadKycPrefill(mxClient, matrixRoomId);
+        if (!cancelled) setPrefill(result);
+        // The raw SD-JWT to present to the worker with the create call.
+        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
+        if (cancelled) return;
+        setKycCredentialJwt(jwt);
+        setKycCredentialLoaded(true);
+      } catch {
+        // The Vault isn't reachable, so the check can't resolve. Only matters
+        // if the worker asks for identity verification for this amount.
+        if (!cancelled) setKycCheckFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [offrampEnabled, address, matrixRoomId, awaitCompletion, getMatrixClient]);
+
+  // Remembered fields from a previous withdrawal (editable prefill) — for
+  // everyone, verified or not. Runs alongside the credential check rather than
+  // after it: for a user with no credential that check polls its full window
+  // before resolving, and the form is already on screen by then.
   useEffect(() => {
     if (!offrampEnabled || !address || !matrixRoomId) return;
     let cancelled = false;
@@ -240,24 +293,10 @@ export default function OfframpScreen() {
         await awaitCompletion();
         const mxClient = getMatrixClient();
         if (cancelled || !mxClient) return;
-        // Gate first (cheap, unencrypted index read), then prefill if they
-        // qualify. Waits out a still-syncing client — a one-shot read right
-        // after login can miss room state and wrongly gate a KYC'd user.
-        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
-        if (cancelled) return;
-        setHasKyc(owns);
-        // setHasKyc(false);
-        // Remembered fields from a previous withdrawal (editable prefill).
-        const saved = await loadOfframpProfile(mxClient, matrixRoomId);
+        const saved = await waitForOfframpProfile(mxClient, matrixRoomId, { cancelled: () => cancelled });
         if (!cancelled) setSavedProfile(saved);
-        if (!owns) return;
-        const result = await loadKycPrefill(mxClient, matrixRoomId);
-        if (!cancelled) setPrefill(result);
-        // The raw SD-JWT to present to the worker's KYC gate at payout time.
-        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
-        if (!cancelled) setKycCredentialJwt(jwt);
       } catch {
-        /* best-effort — leave the gate "checking" if matrix isn't reachable */
+        /* best-effort — the form simply starts empty */
       }
     })();
     return () => {
@@ -288,18 +327,18 @@ export default function OfframpScreen() {
     if (savedProfile.payoutMethod === 'bank' || savedProfile.payoutMethod === 'momo') {
       setPayoutMethod(savedProfile.payoutMethod);
     }
-    if (savedProfile.accountNumber) setAccountNumber(savedProfile.accountNumber);
-    if (savedProfile.accountName) setAccountName(savedProfile.accountName);
+    if (savedProfile.accountNumber) setAccountNumber((cur) => cur || savedProfile.accountNumber || '');
+    if (savedProfile.accountName) setAccountName((cur) => cur || savedProfile.accountName || '');
     if (savedProfile.networkId) setPendingBankId(savedProfile.networkId);
-    if (savedProfile.bvn) setKycBvn(savedProfile.bvn);
+    if (savedProfile.bvn) setKycBvn((cur) => cur || savedProfile.bvn || '');
     // Contact / identity — only when KYC didn't provide (and lock) them.
-    if (savedProfile.name && !prefill?.name) setKycName(savedProfile.name);
-    if (savedProfile.phone && !prefill?.phone) setKycPhone(savedProfile.phone);
-    if (savedProfile.email && !prefill?.email) setKycEmail(savedProfile.email);
-    if (savedProfile.dob && !prefill?.dob) setKycDob(savedProfile.dob);
+    if (savedProfile.name && !prefill?.name) setKycName((cur) => cur || savedProfile.name || '');
+    if (savedProfile.phone && !prefill?.phone) setKycPhone((cur) => cur || savedProfile.phone || '');
+    if (savedProfile.email && !prefill?.email) setKycEmail((cur) => cur || savedProfile.email || '');
+    if (savedProfile.dob && !prefill?.dob) setKycDob((cur) => cur || savedProfile.dob || '');
     if (savedProfile.nationality && !prefill?.country) setKycCountry(savedProfile.nationality);
     if (savedProfile.idType && !prefill?.idType) setKycIdType(savedProfile.idType);
-    if (savedProfile.idNumber && !prefill?.idNumber) setKycIdNumber(savedProfile.idNumber);
+    if (savedProfile.idNumber && !prefill?.idNumber) setKycIdNumber((cur) => cur || savedProfile.idNumber || '');
   }, [savedProfile, prefill]);
 
   // Apply the saved bank once its country's channels have loaded and it's still
@@ -490,6 +529,30 @@ export default function OfframpScreen() {
   const accountDigits = accountNumber.replace(/\D/g, '');
   const accountNumberValid = isMomo ? accountDigits.length >= 8 : accountNumber.trim().length > 0;
 
+  // Identity verification is only needed when the WORKER says so: the quote's
+  // early hint, or — authoritatively — a `kyc_required` rejection of the last
+  // create attempt (the worker also sums by payout account and ID number, which
+  // the quote can't see, so that can follow a quote that said "not required").
+  // Nothing is computed here, and no used/remaining figures exist client-side.
+  const createErrorCode = offramp.errorDetails?.code;
+  const kycBlocked = createErrorCode === RAMP_KYC_REQUIRED_CODE;
+  const kycCredentialStatus = resolveKycCredentialStatus({
+    hasKyc,
+    credentialJwt: kycCredentialJwt,
+    credentialLoaded: kycCredentialLoaded,
+    checkFailed: kycCheckFailed,
+  });
+  // What the identity-check notice should say, or null when none is needed. A
+  // verified user (credential in hand, 'ready') skips the threshold entirely.
+  const kycNotice =
+    (quote?.kycRequired === true || kycBlocked) && kycCredentialStatus !== 'ready' ? kycCredentialStatus : null;
+  const needsKyc = kycNotice !== null;
+  // A credential WAS sent but the worker couldn't accept it.
+  const credentialFailureCode = isRampKycCredentialFailureCode(createErrorCode) ? createErrorCode : null;
+  // `kyc_required` for an attempt that sent no credential is the card's job —
+  // and once a late-loading credential turns up, there's nothing left to say.
+  const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
+
   const canQuote = !!currency && !!channelType && Number.isFinite(amountNum) && amountNum > 0 && !overBalance;
   const canWithdraw =
     canQuote &&
@@ -505,9 +568,9 @@ export default function OfframpScreen() {
     !!kycCountry &&
     !!kycIdNumber &&
     (!isNG || !!kycBvn) &&
-    // The worker requires the KYC SD-JWT; don't let a payout be attempted
-    // without it (the testing bypass skips this client-side check).
-    (BYPASS_KYC_CHECK || !!kycCredentialJwt);
+    // Covers "still checking the Vault" too: while the worker wants identity
+    // verification and we have no credential to send, don't attempt a payout.
+    !needsKyc;
 
   const busy = offramp.stage !== 'idle' && offramp.stage !== 'submitted' && offramp.stage !== 'error';
 
@@ -598,6 +661,7 @@ export default function OfframpScreen() {
   const onWithdraw = useCallback(async () => {
     if (!canWithdraw) return;
     setFormError(null);
+    setLastAttemptSentCredential(!!kycCredentialJwt);
     try {
       await offramp.withdraw({
         amountUsdc: amountNum,
@@ -605,7 +669,8 @@ export default function OfframpScreen() {
         channelType,
         sourceDenom: heldDenom,
         skipBridge,
-        kycCredential: kycCredentialJwt ?? '',
+        // Sent whenever we hold one; omitted (never '') otherwise.
+        kycCredential: kycCredentialJwt ?? undefined,
         customer: {
           // TEMP (testnet): append the sandbox crypto-receive simulation keyword
           // so YC settles the directSettlement payout (no real crypto on testnet).
@@ -748,7 +813,7 @@ export default function OfframpScreen() {
               </div>
             )}
 
-            {/* Cleanup rewards only: a friendly hold in place of the KYC gate and the form. */}
+            {/* Cleanup rewards only: a friendly hold in place of the form. */}
             {payOnlyHold && (
               <div className={styles.card}>
                 <p className={styles.cardTitle}>Your Cleanup rewards are safe in your wallet</p>
@@ -769,7 +834,7 @@ export default function OfframpScreen() {
               </div>
             )}
 
-            {/* Nothing to withdraw: say so kindly — no KYC gate, no form. */}
+            {/* Nothing to withdraw: say so kindly — no form. */}
             {noFunds && (
               <div className={styles.card}>
                 <p className={styles.cardTitle}>Nothing to withdraw yet</p>
@@ -789,36 +854,7 @@ export default function OfframpScreen() {
               </div>
             )}
 
-            {showFlow && kycGate === null && (
-              <div className={styles.card}>
-                <div className={styles.balanceRow}>
-                  <Loader size={16} />
-                  <span className={styles.balanceUnit}>Checking your verification…</span>
-                </div>
-              </div>
-            )}
-
-            {showFlow && kycGate === false && (
-              <div className={styles.card}>
-                <p className={styles.cardTitle}>Verify your identity first</p>
-                <p className={styles.kycGateText}>
-                  You need to complete identity verification (KYC) before you can withdraw. Check your verification
-                  status on your profile.
-                </p>
-                <div className={styles.actions}>
-                  <Button
-                    label='View verification status'
-                    size={BUTTON_SIZE.mediumLarge}
-                    bgColor={BUTTON_BG_COLOR.primary}
-                    borderColor={BUTTON_BORDER_COLOR.primary}
-                    color={BUTTON_COLOR.white}
-                    onClick={() => router.push('/profile')}
-                  />
-                </div>
-              </div>
-            )}
-
-            {showFlow && kycGate === true && (
+            {showFlow && (
               <>
                 {/* Withdraw form */}
                 <div className={styles.card}>
@@ -1152,35 +1188,50 @@ export default function OfframpScreen() {
 
                       {/* {did && <span className={styles.hint}>Linked to your DID for tracking.</span>} */}
 
-                      <div className={styles.actions}>
-                        {quote ? (
-                          <Button
-                            label={busy ? 'Withdrawing…' : 'Withdraw'}
-                            size={BUTTON_SIZE.mediumLarge}
-                            bgColor={BUTTON_BG_COLOR.primary}
-                            borderColor={BUTTON_BORDER_COLOR.primary}
-                            color={BUTTON_COLOR.white}
-                            disabled={!canWithdraw || busy}
-                            onClick={onWithdraw}
-                          />
-                        ) : (
-                          <Button
-                            label={quoting ? 'Getting quote…' : 'Get quote'}
-                            size={BUTTON_SIZE.mediumLarge}
-                            bgColor={BUTTON_BG_COLOR.primary}
-                            borderColor={BUTTON_BORDER_COLOR.primary}
-                            color={BUTTON_COLOR.white}
-                            disabled={!canQuote || quoting}
-                            onClick={onQuote}
-                          />
-                        )}
-                      </div>
+                      {/* The worker wants identity verification for this amount and we
+                          have none to send: a friendly next step takes the button's
+                          place. While the Vault is still being read, only a small
+                          "checking" line shows and the button stays (disabled). */}
+                      {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
+
+                      {(!kycNotice || kycNotice === 'checking') && (
+                        <div className={styles.actions}>
+                          {quote ? (
+                            <Button
+                              label={busy ? 'Withdrawing…' : 'Withdraw'}
+                              size={BUTTON_SIZE.mediumLarge}
+                              bgColor={BUTTON_BG_COLOR.primary}
+                              borderColor={BUTTON_BORDER_COLOR.primary}
+                              color={BUTTON_COLOR.white}
+                              disabled={!canWithdraw || busy}
+                              onClick={onWithdraw}
+                            />
+                          ) : (
+                            <Button
+                              label={quoting ? 'Getting quote…' : 'Get quote'}
+                              size={BUTTON_SIZE.mediumLarge}
+                              bgColor={BUTTON_BG_COLOR.primary}
+                              borderColor={BUTTON_BORDER_COLOR.primary}
+                              color={BUTTON_COLOR.white}
+                              disabled={!canQuote || quoting}
+                              onClick={onQuote}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {(formError || offramp.error) && (
-                    <div className={styles.alertError}>{formError || offramp.error}</div>
-                  )}
+                  {/* A `kyc_required` rejection is shown by the card above, not as an
+                      error; a rejected credential gets its own friendly line. Any
+                      other failure keeps the plain error. */}
+                  {formError ? (
+                    <div className={styles.alertError}>{formError}</div>
+                  ) : credentialFailureCode ? (
+                    <KycCredentialFailureNotice code={credentialFailureCode} />
+                  ) : offramp.error && !createErrorShownByKycCard ? (
+                    <div className={styles.alertError}>{offramp.error}</div>
+                  ) : null}
                 </div>
 
                 {/* History — only shown once there's at least one withdrawal */}

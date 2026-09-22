@@ -6,6 +6,10 @@ import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import Header from '@components/Header/Header';
 import Loader from '@components/Loader/Loader';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
+import KycRequiredCard, {
+  KycCredentialFailureNotice,
+  resolveKycCredentialStatus,
+} from '@components/Ramp/KycRequiredCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { TERMINAL_ONRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
@@ -14,13 +18,15 @@ import {
   type OnrampQuoteResult,
   type YcChannel,
   type YcNetwork,
+  RAMP_KYC_REQUIRED_CODE,
   discoverChannels,
   fetchSupportedCountries,
+  isRampKycCredentialFailureCode,
 } from 'lib/yellowcard/offrampClient';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
-import { type OfframpProfile, loadOfframpProfile, saveOfframpProfile } from '@utils/offrampProfile';
+import { type OfframpProfile, saveOfframpProfile, waitForOfframpProfile } from '@utils/offrampProfile';
 
 import styles from '@styles/Offramp.module.scss';
 
@@ -152,8 +158,17 @@ export default function OnrampScreen() {
   const [kycBvn, setKycBvn] = useState('');
 
   const [prefill, setPrefill] = useState<KycPrefill | null>(null);
+  // Background check of the user's Vault (same mechanics + meaning as the
+  // withdraw screen): it never gates the form — the worker only asks for
+  // identity verification above its volume threshold (see `needsKyc` below).
   const [hasKyc, setHasKyc] = useState<boolean | null>(null);
   const [kycCredentialJwt, setKycCredentialJwt] = useState<string | null>(null);
+  // True once the attempt to open the credential itself has finished.
+  const [kycCredentialLoaded, setKycCredentialLoaded] = useState(false);
+  // True when the Vault couldn't be reached, so the check can't resolve.
+  const [kycCheckFailed, setKycCheckFailed] = useState(false);
+  // Whether the last create attempt carried a credential (see withdraw screen).
+  const [lastAttemptSentCredential, setLastAttemptSentCredential] = useState(false);
   const [savedProfile, setSavedProfile] = useState<OfframpProfile | null>(null);
   const appliedSavedRef = useRef(false);
   // Monotonic token so a slow channel load for a PREVIOUS country can't apply
@@ -169,8 +184,43 @@ export default function OnrampScreen() {
 
   const isNG = kycCountry === 'NG';
 
-  // Best-effort: load the user's verified KYC identity + remembered profile
-  // (same mechanics as the withdraw screen — see comments there).
+  // Best-effort, in the BACKGROUND: load the user's verified KYC identity (same
+  // mechanics as the withdraw screen — see comments there). Never blocks the form.
+  useEffect(() => {
+    if (!onrampEnabled || !address || !matrixRoomId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await awaitCompletion();
+        const mxClient = getMatrixClient();
+        if (cancelled) return;
+        if (!mxClient) throw new Error('Vault client not available');
+        // Waits out a still-syncing client — a one-shot read right after
+        // login can miss room state and wrongly treat a KYC'd user as unverified.
+        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
+        if (cancelled) return;
+        setHasKyc(owns);
+        if (!owns) return;
+        const result = await loadKycPrefill(mxClient, matrixRoomId);
+        if (!cancelled) setPrefill(result);
+        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
+        if (cancelled) return;
+        setKycCredentialJwt(jwt);
+        setKycCredentialLoaded(true);
+      } catch {
+        // The Vault isn't reachable, so the check can't resolve. Only matters
+        // if the worker asks for identity verification for this amount.
+        if (!cancelled) setKycCheckFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [onrampEnabled, address, matrixRoomId, awaitCompletion, getMatrixClient]);
+
+  // Remembered fields from a previous deposit (editable prefill) — for everyone,
+  // verified or not. Runs alongside the credential check rather than after it
+  // (see the withdraw screen).
   useEffect(() => {
     if (!onrampEnabled || !address || !matrixRoomId) return;
     let cancelled = false;
@@ -179,20 +229,10 @@ export default function OnrampScreen() {
         await awaitCompletion();
         const mxClient = getMatrixClient();
         if (cancelled || !mxClient) return;
-        // Waits out a still-syncing client — a one-shot read right after
-        // login can miss room state and wrongly gate a KYC'd user.
-        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
-        if (cancelled) return;
-        setHasKyc(owns);
-        const saved = await loadOfframpProfile(mxClient, matrixRoomId);
+        const saved = await waitForOfframpProfile(mxClient, matrixRoomId, { cancelled: () => cancelled });
         if (!cancelled) setSavedProfile(saved);
-        if (!owns) return;
-        const result = await loadKycPrefill(mxClient, matrixRoomId);
-        if (!cancelled) setPrefill(result);
-        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
-        if (!cancelled) setKycCredentialJwt(jwt);
       } catch {
-        /* best-effort — leave the gate "checking" if matrix isn't reachable */
+        /* best-effort — the form simply starts empty */
       }
     })();
     return () => {
@@ -220,17 +260,17 @@ export default function OnrampScreen() {
     if (savedProfile.onrampMethod === 'bank' || savedProfile.onrampMethod === 'momo') {
       setPayMethod(savedProfile.onrampMethod);
     }
-    if (savedProfile.onrampMomoNumber) setMomoNumber(savedProfile.onrampMomoNumber);
+    if (savedProfile.onrampMomoNumber) setMomoNumber((cur) => cur || savedProfile.onrampMomoNumber || '');
     if (savedProfile.onrampNetworkId) setPendingNetworkId(savedProfile.onrampNetworkId);
-    if (savedProfile.bvn) setKycBvn(savedProfile.bvn);
+    if (savedProfile.bvn) setKycBvn((cur) => cur || savedProfile.bvn || '');
     // Contact / identity — only when KYC didn't provide (and lock) them.
-    if (savedProfile.name && !prefill?.name) setKycName(savedProfile.name);
-    if (savedProfile.phone && !prefill?.phone) setKycPhone(savedProfile.phone);
-    if (savedProfile.email && !prefill?.email) setKycEmail(savedProfile.email);
-    if (savedProfile.dob && !prefill?.dob) setKycDob(savedProfile.dob);
+    if (savedProfile.name && !prefill?.name) setKycName((cur) => cur || savedProfile.name || '');
+    if (savedProfile.phone && !prefill?.phone) setKycPhone((cur) => cur || savedProfile.phone || '');
+    if (savedProfile.email && !prefill?.email) setKycEmail((cur) => cur || savedProfile.email || '');
+    if (savedProfile.dob && !prefill?.dob) setKycDob((cur) => cur || savedProfile.dob || '');
     if (savedProfile.nationality && !prefill?.country) setKycCountry(savedProfile.nationality);
     if (savedProfile.idType && !prefill?.idType) setKycIdType(savedProfile.idType);
-    if (savedProfile.idNumber && !prefill?.idNumber) setKycIdNumber(savedProfile.idNumber);
+    if (savedProfile.idNumber && !prefill?.idNumber) setKycIdNumber((cur) => cur || savedProfile.idNumber || '');
   }, [savedProfile, prefill]);
 
   // Default the deposit country to the user's own (KYC) country when nothing
@@ -404,6 +444,30 @@ export default function OnrampScreen() {
   const momoDigits = momoNumber.replace(/\D/g, '');
   const momoNumberValid = !isMomo || momoDigits.length >= 8;
 
+  // Identity verification is only needed when the WORKER says so: the quote's
+  // early hint, or — authoritatively — a `kyc_required` rejection of the last
+  // create attempt (which can follow a quote that said "not required"). Nothing
+  // is computed here, and no used/remaining figures exist client-side. Same
+  // derivation as the withdraw screen.
+  const createErrorCode = onramp.errorDetails?.code;
+  const kycBlocked = createErrorCode === RAMP_KYC_REQUIRED_CODE;
+  const kycCredentialStatus = resolveKycCredentialStatus({
+    hasKyc,
+    credentialJwt: kycCredentialJwt,
+    credentialLoaded: kycCredentialLoaded,
+    checkFailed: kycCheckFailed,
+  });
+  // What the identity-check notice should say, or null when none is needed. A
+  // verified user (credential in hand, 'ready') skips the threshold entirely.
+  const kycNotice =
+    (quote?.kycRequired === true || kycBlocked) && kycCredentialStatus !== 'ready' ? kycCredentialStatus : null;
+  const needsKyc = kycNotice !== null;
+  // A credential WAS sent but the worker couldn't accept it.
+  const credentialFailureCode = isRampKycCredentialFailureCode(createErrorCode) ? createErrorCode : null;
+  // `kyc_required` for an attempt that sent no credential is the card's job —
+  // and once a late-loading credential turns up, there's nothing left to say.
+  const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
+
   const canQuote = !!currency && Number.isFinite(amountNum) && amountNum > 0;
   const canDeposit =
     canQuote &&
@@ -422,7 +486,9 @@ export default function OnrampScreen() {
     !!kycCountry &&
     !!kycIdNumber &&
     (!isNG || !!kycBvn) &&
-    !!kycCredentialJwt;
+    // Covers "still checking the Vault" too: while the worker wants identity
+    // verification and we have no credential to send, don't attempt a deposit.
+    !needsKyc;
 
   const busy = onramp.stage !== 'idle' && onramp.stage !== 'submitted' && onramp.stage !== 'error';
 
@@ -505,6 +571,7 @@ export default function OnrampScreen() {
   const onDeposit = useCallback(async () => {
     if (!canDeposit) return;
     setFormError(null);
+    setLastAttemptSentCredential(!!kycCredentialJwt);
     try {
       await onramp.deposit({
         localAmount: amountNum,
@@ -530,7 +597,8 @@ export default function OnrampScreen() {
         // channels haven't been verified to accept the field.
         returnUrl:
           country === 'ZA' && typeof window !== 'undefined' ? `${window.location.origin}/profile/onramp` : undefined,
-        kycCredential: kycCredentialJwt ?? '',
+        // Sent whenever we hold one; omitted (never '') otherwise.
+        kycCredential: kycCredentialJwt ?? undefined,
       });
       persistProfile();
     } catch {
@@ -578,586 +646,562 @@ export default function OnrampScreen() {
 
         {onrampEnabled && (
           <>
-            {hasKyc === null && (
-              <div className={styles.card}>
-                <div className={styles.balanceRow}>
-                  <Loader size={16} />
-                  <span className={styles.balanceUnit}>Checking your verification…</span>
-                </div>
-              </div>
-            )}
+            {/* Deposit form */}
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>Buy USDC</p>
 
-            {hasKyc === false && (
-              <div className={styles.card}>
-                <p className={styles.cardTitle}>Verify your identity first</p>
-                <p className={styles.kycGateText}>
-                  You need to complete identity verification (KYC) before you can deposit. Check your verification
-                  status on your profile.
-                </p>
-                <div className={styles.actions}>
-                  <Button
-                    label='View verification status'
-                    size={BUTTON_SIZE.mediumLarge}
-                    bgColor={BUTTON_BG_COLOR.primary}
-                    borderColor={BUTTON_BORDER_COLOR.primary}
-                    color={BUTTON_COLOR.white}
-                    onClick={() => router.push('/profile')}
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label className={styles.label}>You pay{currency ? ` (${currency})` : ''}</label>
+                  <input
+                    className={`${styles.input}${belowMin || aboveMax ? ` ${styles.inputError}` : ''}`}
+                    type='number'
+                    inputMode='decimal'
+                    min={0}
+                    placeholder='0.00'
+                    value={amount}
+                    onChange={(e) => setAmount(e.currentTarget.value)}
                   />
                 </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Country</label>
+                  <select className={styles.select} value={country} onChange={(e) => setCountry(e.currentTarget.value)}>
+                    {supportedOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            )}
 
-            {hasKyc === true && (
-              <>
-                {/* Deposit form */}
-                <div className={styles.card}>
-                  <p className={styles.cardTitle}>Buy USDC</p>
+              <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
+                <div className={styles.collapseInner}>
+                  {availableMethods.length > 1 && (
+                    <div className={styles.row}>
+                      <div className={styles.field}>
+                        <label className={styles.label}>Payment method</label>
+                        <select
+                          className={styles.select}
+                          value={payMethod}
+                          onChange={(e) => {
+                            setPayMethod(e.currentTarget.value as PayMethod);
+                            setNetworkId('');
+                            setQuote(null);
+                          }}
+                        >
+                          {availableMethods.map((m) => (
+                            <option key={m} value={m}>
+                              {PAY_METHOD_LABEL[m]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {loadingChannels && (
+                    <div className={styles.balanceRow}>
+                      <Loader size={16} />
+                      <span className={styles.balanceUnit}>Loading payment methods…</span>
+                    </div>
+                  )}
+
+                  {!loadingChannels && channels.length === 0 && (
+                    <span className={styles.warnLine}>No payment methods available for this country.</span>
+                  )}
+
+                  {isMomo && (
+                    <div className={styles.row}>
+                      <div className={styles.field}>
+                        <label className={styles.label}>Mobile provider</label>
+                        <select
+                          className={styles.select}
+                          value={networkId}
+                          disabled={loadingChannels || momoNetworks.length === 0}
+                          onChange={(e) => {
+                            setNetworkId(e.currentTarget.value);
+                            setQuote(null);
+                          }}
+                        >
+                          <option value=''>
+                            {loadingChannels
+                              ? 'Loading…'
+                              : momoNetworks.length
+                              ? 'Select your provider'
+                              : 'No providers for this country'}
+                          </option>
+                          {momoNetworks.map((n) => (
+                            <option key={n.id} value={n.id}>
+                              {networkLabel(n)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.label}>Your mobile money number</label>
+                        <div
+                          className={`${styles.inputPrefixWrap}${
+                            momoNumber && !momoNumberValid ? ` ${styles.inputError}` : ''
+                          }`}
+                        >
+                          <span className={styles.inputPrefix}>+</span>
+                          <input
+                            className={styles.bareInput}
+                            inputMode='numeric'
+                            placeholder='254712345678'
+                            value={momoDigits}
+                            onChange={(e) => setMomoNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                          />
+                        </div>
+                        {momoNumber && !momoNumberValid && (
+                          <span className={styles.errorText}>Enter the full number with country code</span>
+                        )}
+                        <span className={styles.hint}>You’ll approve the payment on this phone.</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isMomo && !loadingChannels && channels.length > 0 && (
+                    <span className={styles.hint}>
+                      {country === 'ZA'
+                        ? 'You’ll be sent to a secure payment page to complete the transfer.'
+                        : 'You’ll get the bank account and reference to pay after you continue.'}
+                    </span>
+                  )}
+
+                  <div className={styles.divider}>
+                    <span className={styles.dividerLabel}>
+                      Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
+                    </span>
+                  </div>
 
                   <div className={styles.row}>
                     <div className={styles.field}>
-                      <label className={styles.label}>You pay{currency ? ` (${currency})` : ''}</label>
+                      <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
                       <input
-                        className={`${styles.input}${belowMin || aboveMax ? ` ${styles.inputError}` : ''}`}
-                        type='number'
-                        inputMode='decimal'
-                        min={0}
-                        placeholder='0.00'
-                        value={amount}
-                        onChange={(e) => setAmount(e.currentTarget.value)}
+                        className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
+                        placeholder='First Last'
+                        value={kycName}
+                        readOnly={locked.name}
+                        onChange={(e) => setKycName(e.currentTarget.value)}
                       />
+                      {kycName && !nameValid && <span className={styles.errorText}>Enter first and last name</span>}
                     </div>
                     <div className={styles.field}>
-                      <label className={styles.label}>Country</label>
+                      <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
+                      <input
+                        className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
+                        type='email'
+                        value={kycEmail}
+                        readOnly={locked.email}
+                        onChange={(e) => setKycEmail(e.currentTarget.value)}
+                      />
+                      {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
+                    </div>
+                  </div>
+
+                  <div className={styles.row}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
+                      <div
+                        className={`${styles.inputPrefixWrap}${kycPhone && !phoneValid ? ` ${styles.inputError}` : ''}${
+                          locked.phone ? ` ${styles.lockedWrap}` : ''
+                        }`}
+                      >
+                        <span className={styles.inputPrefix}>+</span>
+                        <input
+                          className={styles.bareInput}
+                          inputMode='numeric'
+                          placeholder='27821234567'
+                          value={kycPhone}
+                          readOnly={locked.phone}
+                          onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                        />
+                      </div>
+                      {kycPhone && !phoneValid && (
+                        <span className={styles.errorText}>Enter full international number</span>
+                      )}
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
+                      <input
+                        className={styles.input}
+                        type='date'
+                        max={new Date().toISOString().slice(0, 10)}
+                        value={kycDob}
+                        readOnly={locked.dob}
+                        onChange={(e) => setKycDob(e.currentTarget.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.row}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
                       <select
                         className={styles.select}
-                        value={country}
-                        onChange={(e) => setCountry(e.currentTarget.value)}
+                        value={kycCountry}
+                        disabled={locked.country}
+                        onChange={(e) => setKycCountry(e.currentTarget.value)}
                       >
-                        {supportedOptions.map((o) => (
+                        {ALL_COUNTRY_OPTIONS.map((o) => (
                           <option key={o.value} value={o.value}>
                             {o.label}
                           </option>
                         ))}
                       </select>
                     </div>
-                  </div>
-
-                  <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
-                    <div className={styles.collapseInner}>
-                      {availableMethods.length > 1 && (
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Payment method</label>
-                            <select
-                              className={styles.select}
-                              value={payMethod}
-                              onChange={(e) => {
-                                setPayMethod(e.currentTarget.value as PayMethod);
-                                setNetworkId('');
-                                setQuote(null);
-                              }}
-                            >
-                              {availableMethods.map((m) => (
-                                <option key={m} value={m}>
-                                  {PAY_METHOD_LABEL[m]}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>ID type{!isNG && locked.idType && <PrefilledMark />}</label>
+                      {isNG ? (
+                        <input className={styles.input} value='NIN' readOnly />
+                      ) : (
+                        <select
+                          className={styles.select}
+                          value={kycIdType}
+                          disabled={locked.idType}
+                          onChange={(e) => setKycIdType(e.currentTarget.value)}
+                        >
+                          {ID_TYPE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
                       )}
-
-                      {loadingChannels && (
-                        <div className={styles.balanceRow}>
-                          <Loader size={16} />
-                          <span className={styles.balanceUnit}>Loading payment methods…</span>
-                        </div>
-                      )}
-
-                      {!loadingChannels && channels.length === 0 && (
-                        <span className={styles.warnLine}>No payment methods available for this country.</span>
-                      )}
-
-                      {isMomo && (
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Mobile provider</label>
-                            <select
-                              className={styles.select}
-                              value={networkId}
-                              disabled={loadingChannels || momoNetworks.length === 0}
-                              onChange={(e) => {
-                                setNetworkId(e.currentTarget.value);
-                                setQuote(null);
-                              }}
-                            >
-                              <option value=''>
-                                {loadingChannels
-                                  ? 'Loading…'
-                                  : momoNetworks.length
-                                  ? 'Select your provider'
-                                  : 'No providers for this country'}
-                              </option>
-                              {momoNetworks.map((n) => (
-                                <option key={n.id} value={n.id}>
-                                  {networkLabel(n)}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Your mobile money number</label>
-                            <div
-                              className={`${styles.inputPrefixWrap}${
-                                momoNumber && !momoNumberValid ? ` ${styles.inputError}` : ''
-                              }`}
-                            >
-                              <span className={styles.inputPrefix}>+</span>
-                              <input
-                                className={styles.bareInput}
-                                inputMode='numeric'
-                                placeholder='254712345678'
-                                value={momoDigits}
-                                onChange={(e) => setMomoNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
-                              />
-                            </div>
-                            {momoNumber && !momoNumberValid && (
-                              <span className={styles.errorText}>Enter the full number with country code</span>
-                            )}
-                            <span className={styles.hint}>You’ll approve the payment on this phone.</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {!isMomo && !loadingChannels && channels.length > 0 && (
-                        <span className={styles.hint}>
-                          {country === 'ZA'
-                            ? 'You’ll be sent to a secure payment page to complete the transfer.'
-                            : 'You’ll get the bank account and reference to pay after you continue.'}
-                        </span>
-                      )}
-
-                      <div className={styles.divider}>
-                        <span className={styles.dividerLabel}>
-                          Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
-                        </span>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
-                          <input
-                            className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
-                            placeholder='First Last'
-                            value={kycName}
-                            readOnly={locked.name}
-                            onChange={(e) => setKycName(e.currentTarget.value)}
-                          />
-                          {kycName && !nameValid && <span className={styles.errorText}>Enter first and last name</span>}
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
-                          <input
-                            className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
-                            type='email'
-                            value={kycEmail}
-                            readOnly={locked.email}
-                            onChange={(e) => setKycEmail(e.currentTarget.value)}
-                          />
-                          {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
-                        </div>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
-                          <div
-                            className={`${styles.inputPrefixWrap}${
-                              kycPhone && !phoneValid ? ` ${styles.inputError}` : ''
-                            }${locked.phone ? ` ${styles.lockedWrap}` : ''}`}
-                          >
-                            <span className={styles.inputPrefix}>+</span>
-                            <input
-                              className={styles.bareInput}
-                              inputMode='numeric'
-                              placeholder='27821234567'
-                              value={kycPhone}
-                              readOnly={locked.phone}
-                              onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
-                            />
-                          </div>
-                          {kycPhone && !phoneValid && (
-                            <span className={styles.errorText}>Enter full international number</span>
-                          )}
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
-                          <input
-                            className={styles.input}
-                            type='date'
-                            max={new Date().toISOString().slice(0, 10)}
-                            value={kycDob}
-                            readOnly={locked.dob}
-                            onChange={(e) => setKycDob(e.currentTarget.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
-                          <select
-                            className={styles.select}
-                            value={kycCountry}
-                            disabled={locked.country}
-                            onChange={(e) => setKycCountry(e.currentTarget.value)}
-                          >
-                            {ALL_COUNTRY_OPTIONS.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>ID type{!isNG && locked.idType && <PrefilledMark />}</label>
-                          {isNG ? (
-                            <input className={styles.input} value='NIN' readOnly />
-                          ) : (
-                            <select
-                              className={styles.select}
-                              value={kycIdType}
-                              disabled={locked.idType}
-                              onChange={(e) => setKycIdType(e.currentTarget.value)}
-                            >
-                              {ID_TYPE_OPTIONS.map((o) => (
-                                <option key={o.value} value={o.value}>
-                                  {o.label}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>
-                            {isNG ? 'NIN' : 'ID number'}
-                            {locked.idNumber && <PrefilledMark />}
-                          </label>
-                          <input
-                            className={styles.input}
-                            value={kycIdNumber}
-                            readOnly={locked.idNumber}
-                            onChange={(e) => setKycIdNumber(e.currentTarget.value)}
-                          />
-                        </div>
-                        {isNG && (
-                          <div className={styles.field}>
-                            <label className={styles.label}>BVN</label>
-                            <input
-                              className={styles.input}
-                              value={kycBvn}
-                              onChange={(e) => setKycBvn(e.currentTarget.value)}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {quote && (
-                        <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
-                          <span className={styles.quoteMain}>
-                            You receive ~{quote.estimatedUsdcReceive ?? '?'} USDC
-                            <InfoIcon label={ESTIMATE_NOTE} />
-                          </span>
-                          {quote.rateLocal != null && (
-                            <span className={styles.hint}>
-                              1 USDC ≈ {quote.rateLocal} {currency} · fees ~$
-                              {(
-                                (quote.serviceFeeUSD ?? 0) +
-                                (quote.partnerFeeUSD ?? 0) +
-                                (quote.networkFeeUSDEstimate ?? 0) +
-                                (quote.bridgeFeeUsd ?? 0)
-                              ).toFixed(2)}
-                            </span>
-                          )}
-                          {(quote.estimatedUsdcReceive ?? 0) <= 0 && (
-                            <span className={styles.warnLine}>
-                              This amount is too small — fees would use it all up. Increase the amount.
-                            </span>
-                          )}
-                          {belowMin && limitMin != null && (
-                            <span className={styles.warnLine}>
-                              Below the {limitMin} {currency} minimum — increase the amount.
-                            </span>
-                          )}
-                          {aboveMax && limitMax != null && (
-                            <span className={styles.warnLine}>
-                              Above the {limitMax} {currency} maximum — reduce the amount.
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className={styles.actions}>
-                        {quote ? (
-                          <Button
-                            label={busy ? 'Creating…' : 'Continue'}
-                            size={BUTTON_SIZE.mediumLarge}
-                            bgColor={BUTTON_BG_COLOR.primary}
-                            borderColor={BUTTON_BORDER_COLOR.primary}
-                            color={BUTTON_COLOR.white}
-                            disabled={!canDeposit || busy}
-                            onClick={onDeposit}
-                          />
-                        ) : (
-                          <Button
-                            label={quoting ? 'Getting quote…' : 'Get quote'}
-                            size={BUTTON_SIZE.mediumLarge}
-                            bgColor={BUTTON_BG_COLOR.primary}
-                            borderColor={BUTTON_BORDER_COLOR.primary}
-                            color={BUTTON_COLOR.white}
-                            disabled={!canQuote || quoting}
-                            onClick={onQuote}
-                          />
-                        )}
-                      </div>
                     </div>
                   </div>
 
-                  {(formError || onramp.error) && <div className={styles.alertError}>{formError || onramp.error}</div>}
+                  <div className={styles.row}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        {isNG ? 'NIN' : 'ID number'}
+                        {locked.idNumber && <PrefilledMark />}
+                      </label>
+                      <input
+                        className={styles.input}
+                        value={kycIdNumber}
+                        readOnly={locked.idNumber}
+                        onChange={(e) => setKycIdNumber(e.currentTarget.value)}
+                      />
+                    </div>
+                    {isNG && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>BVN</label>
+                        <input
+                          className={styles.input}
+                          value={kycBvn}
+                          onChange={(e) => setKycBvn(e.currentTarget.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {quote && (
+                    <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
+                      <span className={styles.quoteMain}>
+                        You receive ~{quote.estimatedUsdcReceive ?? '?'} USDC
+                        <InfoIcon label={ESTIMATE_NOTE} />
+                      </span>
+                      {quote.rateLocal != null && (
+                        <span className={styles.hint}>
+                          1 USDC ≈ {quote.rateLocal} {currency} · fees ~$
+                          {(
+                            (quote.serviceFeeUSD ?? 0) +
+                            (quote.partnerFeeUSD ?? 0) +
+                            (quote.networkFeeUSDEstimate ?? 0) +
+                            (quote.bridgeFeeUsd ?? 0)
+                          ).toFixed(2)}
+                        </span>
+                      )}
+                      {(quote.estimatedUsdcReceive ?? 0) <= 0 && (
+                        <span className={styles.warnLine}>
+                          This amount is too small — fees would use it all up. Increase the amount.
+                        </span>
+                      )}
+                      {belowMin && limitMin != null && (
+                        <span className={styles.warnLine}>
+                          Below the {limitMin} {currency} minimum — increase the amount.
+                        </span>
+                      )}
+                      {aboveMax && limitMax != null && (
+                        <span className={styles.warnLine}>
+                          Above the {limitMax} {currency} maximum — reduce the amount.
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* The worker wants identity verification for this amount and we
+                      have none to send: a friendly next step takes the button's
+                      place. While the Vault is still being read, only a small
+                      "checking" line shows and the button stays (disabled). */}
+                  {kycNotice && <KycRequiredCard ramp='deposit' credentialStatus={kycNotice} />}
+
+                  {(!kycNotice || kycNotice === 'checking') && (
+                    <div className={styles.actions}>
+                      {quote ? (
+                        <Button
+                          label={busy ? 'Creating…' : 'Continue'}
+                          size={BUTTON_SIZE.mediumLarge}
+                          bgColor={BUTTON_BG_COLOR.primary}
+                          borderColor={BUTTON_BORDER_COLOR.primary}
+                          color={BUTTON_COLOR.white}
+                          disabled={!canDeposit || busy}
+                          onClick={onDeposit}
+                        />
+                      ) : (
+                        <Button
+                          label={quoting ? 'Getting quote…' : 'Get quote'}
+                          size={BUTTON_SIZE.mediumLarge}
+                          bgColor={BUTTON_BG_COLOR.primary}
+                          borderColor={BUTTON_BORDER_COLOR.primary}
+                          color={BUTTON_COLOR.white}
+                          disabled={!canQuote || quoting}
+                          onClick={onQuote}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* A `kyc_required` rejection is shown by the card above, not as an
+                  error; a rejected credential gets its own friendly line. Any
+                  other failure keeps the plain error. */}
+              {formError ? (
+                <div className={styles.alertError}>{formError}</div>
+              ) : credentialFailureCode ? (
+                <KycCredentialFailureNotice code={credentialFailureCode} />
+              ) : onramp.error && !createErrorShownByKycCard ? (
+                <div className={styles.alertError}>{onramp.error}</div>
+              ) : null}
+            </div>
+
+            {/* History — instructions for in-flight deposits live here too */}
+            {transactions.length > 0 && (
+              <div className={styles.card}>
+                <div className={styles.historyHeader}>
+                  <p className={styles.cardTitle} style={{ margin: 0 }}>
+                    Your deposits
+                  </p>
+                  <button
+                    type='button'
+                    className={styles.iconButton}
+                    aria-label='Refresh deposits'
+                    onClick={() => void refreshTransactions().catch(() => undefined)}
+                  >
+                    <svg
+                      width={16}
+                      height={16}
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                    >
+                      <polyline points='23 4 23 10 17 10' />
+                      <polyline points='1 20 1 14 7 14' />
+                      <path d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15' />
+                    </svg>
+                  </button>
                 </div>
 
-                {/* History — instructions for in-flight deposits live here too */}
-                {transactions.length > 0 && (
-                  <div className={styles.card}>
-                    <div className={styles.historyHeader}>
-                      <p className={styles.cardTitle} style={{ margin: 0 }}>
-                        Your deposits
-                      </p>
-                      <button
-                        type='button'
-                        className={styles.iconButton}
-                        aria-label='Refresh deposits'
-                        onClick={() => void refreshTransactions().catch(() => undefined)}
-                      >
-                        <svg
-                          width={16}
-                          height={16}
-                          viewBox='0 0 24 24'
-                          fill='none'
-                          stroke='currentColor'
-                          strokeWidth='2'
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                        >
-                          <polyline points='23 4 23 10 17 10' />
-                          <polyline points='1 20 1 14 7 14' />
-                          <path d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15' />
-                        </svg>
+                {transactions.map((tx) => {
+                  const expanded = expandedTxId === tx.id;
+                  const isTerminal = TERMINAL_ONRAMP_STATUSES.has(tx.status);
+                  const good = tx.status === 'delivered' || tx.status === 'refunded';
+                  const awaitingPayment = AWAITING_PAYMENT_STATUSES.has(tx.status);
+                  const expired = tx.expires_at != null && tx.expires_at * 1000 < Date.now();
+                  const txMomo = (tx.channel_type ?? '').toLowerCase() === 'momo';
+                  const bankInfo = tx.bank_info ?? {};
+                  const statusClass = isTerminal ? (good ? styles.statusGreen : styles.statusRed) : styles.statusBlue;
+                  return (
+                    <div key={tx.id} className={styles.txCard}>
+                      <button className={styles.txHead} onClick={() => setExpandedTxId(expanded ? null : tx.id)}>
+                        <span>
+                          <span className={styles.txTitle}>
+                            {tx.local_amount ?? '?'} {tx.currency ?? ''} →{' '}
+                            {tx.net_usdc != null ? formatUsdc(tx.net_usdc) : '?'} USDC
+                          </span>
+                          <br />
+                          <span className={styles.txSub}>
+                            {new Date(tx.created_at * 1000).toLocaleString()} ·{' '}
+                            {txMomo ? 'Mobile money' : 'Bank transfer'}
+                          </span>
+                        </span>
+                        <span className={`${styles.txStatus} ${statusClass}`}>{statusLabel(tx.status)}</span>
                       </button>
-                    </div>
 
-                    {transactions.map((tx) => {
-                      const expanded = expandedTxId === tx.id;
-                      const isTerminal = TERMINAL_ONRAMP_STATUSES.has(tx.status);
-                      const good = tx.status === 'delivered' || tx.status === 'refunded';
-                      const awaitingPayment = AWAITING_PAYMENT_STATUSES.has(tx.status);
-                      const expired = tx.expires_at != null && tx.expires_at * 1000 < Date.now();
-                      const txMomo = (tx.channel_type ?? '').toLowerCase() === 'momo';
-                      const bankInfo = tx.bank_info ?? {};
-                      const statusClass = isTerminal
-                        ? good
-                          ? styles.statusGreen
-                          : styles.statusRed
-                        : styles.statusBlue;
-                      return (
-                        <div key={tx.id} className={styles.txCard}>
-                          <button className={styles.txHead} onClick={() => setExpandedTxId(expanded ? null : tx.id)}>
-                            <span>
-                              <span className={styles.txTitle}>
-                                {tx.local_amount ?? '?'} {tx.currency ?? ''} →{' '}
-                                {tx.net_usdc != null ? formatUsdc(tx.net_usdc) : '?'} USDC
-                              </span>
-                              <br />
-                              <span className={styles.txSub}>
-                                {new Date(tx.created_at * 1000).toLocaleString()} ·{' '}
-                                {txMomo ? 'Mobile money' : 'Bank transfer'}
-                              </span>
+                      {/* Payment instructions — shown while YC awaits the user's fiat */}
+                      {awaitingPayment && !expired && (
+                        <div className={styles.txDetail}>
+                          {txMomo ? (
+                            <span className={styles.hint}>
+                              Approve the payment request sent to your phone
+                              {(tx.source as { accountNumber?: string })?.accountNumber
+                                ? ` (${(tx.source as { accountNumber?: string }).accountNumber})`
+                                : ''}
+                              .
                             </span>
-                            <span className={`${styles.txStatus} ${statusClass}`}>{statusLabel(tx.status)}</span>
-                          </button>
+                          ) : tx.payment_link ? (
+                            <>
+                              <span className={styles.hint}>
+                                Complete your payment of{' '}
+                                <strong>
+                                  {tx.local_amount ?? '?'} {tx.currency ?? ''}
+                                </strong>{' '}
+                                on the secure payment page.
+                              </span>
+                              <div className={styles.actions}>
+                                <Button
+                                  label='Open payment page'
+                                  size={BUTTON_SIZE.small}
+                                  bgColor={BUTTON_BG_COLOR.primary}
+                                  borderColor={BUTTON_BORDER_COLOR.primary}
+                                  color={BUTTON_COLOR.white}
+                                  onClick={() => window.open(tx.payment_link ?? '', '_blank', 'noopener')}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <span className={styles.hint}>
+                                Transfer exactly{' '}
+                                <strong>
+                                  {tx.local_amount ?? '?'} {tx.currency ?? ''}
+                                </strong>{' '}
+                                to this account{tx.reference ? ' and include the reference' : ''}:
+                              </span>
+                              {bankInfo.name && (
+                                <div className={styles.detailRow}>
+                                  <span>Bank</span>
+                                  <span className={styles.detailVal}>{bankInfo.name}</span>
+                                </div>
+                              )}
+                              {bankInfo.accountName && (
+                                <div className={styles.detailRow}>
+                                  <span>Account name</span>
+                                  <span className={styles.detailVal}>{bankInfo.accountName}</span>
+                                </div>
+                              )}
+                              {bankInfo.accountNumber && (
+                                <div className={styles.detailRow}>
+                                  <span>Account number</span>
+                                  <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
+                                    {bankInfo.accountNumber}{' '}
+                                    <button
+                                      type='button'
+                                      className={styles.iconButton}
+                                      aria-label='Copy account number'
+                                      onClick={() => copyToClipboard(`${tx.id}-acc`, bankInfo.accountNumber ?? '')}
+                                    >
+                                      {copied === `${tx.id}-acc` ? '✓' : '⧉'}
+                                    </button>
+                                  </span>
+                                </div>
+                              )}
+                              {tx.reference && (
+                                <div className={styles.detailRow}>
+                                  <span>Reference</span>
+                                  <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
+                                    {tx.reference}{' '}
+                                    <button
+                                      type='button'
+                                      className={styles.iconButton}
+                                      aria-label='Copy reference'
+                                      onClick={() => copyToClipboard(`${tx.id}-ref`, tx.reference ?? '')}
+                                    >
+                                      {copied === `${tx.id}-ref` ? '✓' : '⧉'}
+                                    </button>
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {tx.net_usdc != null && (
+                            <span className={styles.hint}>
+                              You’ll receive <strong>~{formatUsdc(tx.net_usdc)} USDC</strong> on your ixo account.
+                            </span>
+                          )}
+                          {tx.expires_at != null && (
+                            <span className={styles.warnLine}>
+                              Pay before {new Date(tx.expires_at * 1000).toLocaleTimeString()} — the rate expires.
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                          {/* Payment instructions — shown while YC awaits the user's fiat */}
-                          {awaitingPayment && !expired && (
-                            <div className={styles.txDetail}>
-                              {txMomo ? (
-                                <span className={styles.hint}>
-                                  Approve the payment request sent to your phone
-                                  {(tx.source as { accountNumber?: string })?.accountNumber
-                                    ? ` (${(tx.source as { accountNumber?: string }).accountNumber})`
-                                    : ''}
-                                  .
-                                </span>
-                              ) : tx.payment_link ? (
-                                <>
-                                  <span className={styles.hint}>
-                                    Complete your payment of{' '}
-                                    <strong>
-                                      {tx.local_amount ?? '?'} {tx.currency ?? ''}
-                                    </strong>{' '}
-                                    on the secure payment page.
-                                  </span>
-                                  <div className={styles.actions}>
-                                    <Button
-                                      label='Open payment page'
-                                      size={BUTTON_SIZE.small}
-                                      bgColor={BUTTON_BG_COLOR.primary}
-                                      borderColor={BUTTON_BORDER_COLOR.primary}
-                                      color={BUTTON_COLOR.white}
-                                      onClick={() => window.open(tx.payment_link ?? '', '_blank', 'noopener')}
-                                    />
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <span className={styles.hint}>
-                                    Transfer exactly{' '}
-                                    <strong>
-                                      {tx.local_amount ?? '?'} {tx.currency ?? ''}
-                                    </strong>{' '}
-                                    to this account{tx.reference ? ' and include the reference' : ''}:
-                                  </span>
-                                  {bankInfo.name && (
-                                    <div className={styles.detailRow}>
-                                      <span>Bank</span>
-                                      <span className={styles.detailVal}>{bankInfo.name}</span>
-                                    </div>
-                                  )}
-                                  {bankInfo.accountName && (
-                                    <div className={styles.detailRow}>
-                                      <span>Account name</span>
-                                      <span className={styles.detailVal}>{bankInfo.accountName}</span>
-                                    </div>
-                                  )}
-                                  {bankInfo.accountNumber && (
-                                    <div className={styles.detailRow}>
-                                      <span>Account number</span>
-                                      <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
-                                        {bankInfo.accountNumber}{' '}
-                                        <button
-                                          type='button'
-                                          className={styles.iconButton}
-                                          aria-label='Copy account number'
-                                          onClick={() => copyToClipboard(`${tx.id}-acc`, bankInfo.accountNumber ?? '')}
-                                        >
-                                          {copied === `${tx.id}-acc` ? '✓' : '⧉'}
-                                        </button>
-                                      </span>
-                                    </div>
-                                  )}
-                                  {tx.reference && (
-                                    <div className={styles.detailRow}>
-                                      <span>Reference</span>
-                                      <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
-                                        {tx.reference}{' '}
-                                        <button
-                                          type='button'
-                                          className={styles.iconButton}
-                                          aria-label='Copy reference'
-                                          onClick={() => copyToClipboard(`${tx.id}-ref`, tx.reference ?? '')}
-                                        >
-                                          {copied === `${tx.id}-ref` ? '✓' : '⧉'}
-                                        </button>
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                              {tx.net_usdc != null && (
-                                <span className={styles.hint}>
-                                  You’ll receive <strong>~{formatUsdc(tx.net_usdc)} USDC</strong> on your ixo account.
-                                </span>
-                              )}
-                              {tx.expires_at != null && (
-                                <span className={styles.warnLine}>
-                                  Pay before {new Date(tx.expires_at * 1000).toLocaleTimeString()} — the rate expires.
-                                </span>
-                              )}
+                      {expanded && (
+                        <div className={styles.txDetail}>
+                          <div className={styles.detailRow}>
+                            <span>You pay</span>
+                            <span className={styles.detailVal}>
+                              {tx.local_amount ?? '?'} {tx.currency ?? ''}
+                            </span>
+                          </div>
+                          {tx.rate != null && (
+                            <div className={styles.detailRow}>
+                              <span>Rate</span>
+                              <span className={styles.detailVal}>
+                                1 USDC ≈ {tx.rate} {tx.currency ?? ''}
+                              </span>
                             </div>
                           )}
-
-                          {expanded && (
-                            <div className={styles.txDetail}>
-                              <div className={styles.detailRow}>
-                                <span>You pay</span>
-                                <span className={styles.detailVal}>
-                                  {tx.local_amount ?? '?'} {tx.currency ?? ''}
-                                </span>
-                              </div>
-                              {tx.rate != null && (
-                                <div className={styles.detailRow}>
-                                  <span>Rate</span>
-                                  <span className={styles.detailVal}>
-                                    1 USDC ≈ {tx.rate} {tx.currency ?? ''}
-                                  </span>
-                                </div>
-                              )}
-                              <div className={styles.detailRow}>
-                                <span>YellowCard fees</span>
-                                <span className={styles.detailVal}>
-                                  ~$
-                                  {(
-                                    (tx.service_fee_usd ?? 0) +
-                                    (tx.network_fee_usd ?? 0) +
-                                    (tx.partner_fee_usd ?? 0)
-                                  ).toFixed(2)}
-                                </span>
-                              </div>
-                              {tx.bridge_fee_usd != null && (
-                                <div className={styles.detailRow}>
-                                  <span>Delivery fee</span>
-                                  <span className={styles.detailVal}>~${tx.bridge_fee_usd.toFixed(2)}</span>
-                                </div>
-                              )}
-                              <div className={styles.detailRow}>
-                                <span>You receive</span>
-                                <span className={styles.detailVal} style={{ fontWeight: 600 }}>
-                                  {tx.net_usdc != null ? formatUsdc(tx.net_usdc) : '?'} USDC
-                                </span>
-                              </div>
-                              <div className={styles.detailRow}>
-                                <span>Status</span>
-                                <span className={styles.detailVal} style={{ textTransform: 'capitalize' }}>
-                                  {statusLabel(tx.status)}
-                                </span>
-                              </div>
-                              {tx.status === 'bridge_failed' && (
-                                <span className={styles.warnLine}>
-                                  Your payment was received but the delivery to your ixo account needs attention —
-                                  support has been notified and will complete it.
-                                </span>
-                              )}
-                              {tx.error && tx.status !== 'bridge_failed' && (
-                                <span className={styles.errorText}>Error: {tx.error_detail ?? tx.error}</span>
-                              )}
-                              {tx.yc_collection_id && (
-                                <div className={styles.detailRow}>
-                                  <span>YellowCard collection ID</span>
-                                  <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
-                                    {tx.yc_collection_id}
-                                  </span>
-                                </div>
-                              )}
+                          <div className={styles.detailRow}>
+                            <span>YellowCard fees</span>
+                            <span className={styles.detailVal}>
+                              ~$
+                              {(
+                                (tx.service_fee_usd ?? 0) +
+                                (tx.network_fee_usd ?? 0) +
+                                (tx.partner_fee_usd ?? 0)
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                          {tx.bridge_fee_usd != null && (
+                            <div className={styles.detailRow}>
+                              <span>Delivery fee</span>
+                              <span className={styles.detailVal}>~${tx.bridge_fee_usd.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className={styles.detailRow}>
+                            <span>You receive</span>
+                            <span className={styles.detailVal} style={{ fontWeight: 600 }}>
+                              {tx.net_usdc != null ? formatUsdc(tx.net_usdc) : '?'} USDC
+                            </span>
+                          </div>
+                          <div className={styles.detailRow}>
+                            <span>Status</span>
+                            <span className={styles.detailVal} style={{ textTransform: 'capitalize' }}>
+                              {statusLabel(tx.status)}
+                            </span>
+                          </div>
+                          {tx.status === 'bridge_failed' && (
+                            <span className={styles.warnLine}>
+                              Your payment was received but the delivery to your ixo account needs attention — support
+                              has been notified and will complete it.
+                            </span>
+                          )}
+                          {tx.error && tx.status !== 'bridge_failed' && (
+                            <span className={styles.errorText}>Error: {tx.error_detail ?? tx.error}</span>
+                          )}
+                          {tx.yc_collection_id && (
+                            <div className={styles.detailRow}>
+                              <span>YellowCard collection ID</span>
+                              <span className={styles.detailVal} style={{ fontFamily: 'monospace' }}>
+                                {tx.yc_collection_id}
+                              </span>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </>
         )}
