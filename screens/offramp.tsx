@@ -14,12 +14,13 @@ import ConvertRewardsCard from '@components/Ramp/ConvertRewardsCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { PAY_CONVERT_ENABLED } from '@constants/payConvert';
-import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
+import { IXO_CHAIN_ID, IXO_USDC_DENOM, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
 import usePayConvert from '@hooks/usePayConvert';
+import { fetchConvertInfo } from 'lib/payConvert/client';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
 import {
   type OfframpTransaction,
@@ -234,12 +235,21 @@ export default function OfframpScreen() {
   const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
 
   // Balances: USDC (canonical mainnet denom) + PAY, over one connection. Read wherever the
-  // off-ramp is shown — on testnet (test mode) that means PAY, for the conversion step.
+  // off-ramp is shown. Testnet test mode: the conversion oracle pays out IXO in place of USDC
+  // there (no testnet USDC), so the withdrawable balance is read in the oracle's payout denom —
+  // otherwise a conversion would never show up on the screen that triggered it.
   useEffect(() => {
     if (!offrampEnabled || !address) return;
     let cancelled = false;
     setBalanceLoading(true);
-    getWalletBalances(address)
+    const payoutDenom =
+      skipBridge && PAY_CONVERT_ENABLED
+        ? fetchConvertInfo()
+            .then((info) => info.payoutDenom)
+            .catch(() => undefined)
+        : Promise.resolve(undefined);
+    payoutDenom
+      .then((denom) => getWalletBalances(address, denom))
       .then((b) => {
         if (cancelled) return;
         setBalance(b.usdc.amount);
@@ -252,7 +262,7 @@ export default function OfframpScreen() {
     return () => {
       cancelled = true;
     };
-  }, [offrampEnabled, address, balanceRefresh]);
+  }, [offrampEnabled, skipBridge, address, balanceRefresh]);
 
   // Best-effort, in the BACKGROUND: load the user's verified KYC identity (matrix
   // must be ready). It never blocks the form — any failure (no credential,
@@ -815,16 +825,22 @@ export default function OfframpScreen() {
               ) : (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatUsdc(balance)}</span>
-                  <span className={styles.balanceUnit}>USDC</span>
+                  <span className={styles.balanceUnit}>
+                    {heldDenom && heldDenom !== IXO_USDC_DENOM ? 'IXO · stands in for USDC on testnet' : 'USDC'}
+                  </span>
                   {local && <span className={styles.balanceUnit}>{localEstimate(balance, local)}</span>}
                   {balanceLoading && <Loader size={16} />}
                 </div>
               )}
+              {/* USDC and Cleanup rewards side by side: the USDC withdraws below, the rewards convert further down. */}
+              {canConvert && hasUsdc && (
+                <p className={styles.hint}>+ {formatRewardsUsd(payBalance ?? 0)} in Cleanup rewards — convert them below.</p>
+              )}
             </div>
 
-            {/* Cleanup rewards with a conversion oracle on this network: convert first (PAY → USDC),
-                then the normal withdraw flow — the form shows once there is USDC to withdraw. */}
-            {canConvert && (
+            {/* Cleanup rewards ONLY (a conversion oracle on this network): the conversion step in
+                place of the form — the form shows once there is USDC to withdraw. */}
+            {canConvert && !hasUsdc && (
               <ConvertRewardsCard
                 payBalance={payBalance ?? 0}
                 hasUsdc={hasUsdc}
@@ -1454,6 +1470,16 @@ export default function OfframpScreen() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* USDC AND Cleanup rewards: the normal withdraw flow above, the conversion step below it. */}
+            {canConvert && hasUsdc && (
+              <ConvertRewardsCard
+                payBalance={payBalance ?? 0}
+                hasUsdc={hasUsdc}
+                convert={payConvert}
+                onConverted={() => setBalanceRefresh((n) => n + 1)}
+              />
             )}
           </>
         )}

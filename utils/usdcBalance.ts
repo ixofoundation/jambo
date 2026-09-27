@@ -58,11 +58,18 @@ export async function getUsdcBalance(address: string): Promise<UsdcBalance> {
  * Read the user's USDC and PAY balances over one connection. Each side fails
  * to zero on its own, so a PAY query problem can never hide a USDC balance
  * (or the other way round) — the screens fall back to today's USDC-only view.
+ *
+ * `usdcDenom` overrides the withdrawable denom: on a testnet build the
+ * conversion oracle pays out IXO in place of USDC (there is no testnet USDC),
+ * and the off-ramp's test mode reads that denom so the payout shows up.
  */
-export async function getWalletBalances(address: string): Promise<WalletBalances> {
+export async function getWalletBalances(
+  address: string,
+  usdcDenom: string = IXO_USDC_DENOM,
+): Promise<WalletBalances> {
   const queryClient = address ? await connect() : null;
   const [usdc, pay] = await Promise.all([
-    queryBalance(queryClient, address, IXO_USDC_DENOM),
+    queryBalance(queryClient, address, usdcDenom),
     queryBalance(queryClient, address, IXO_PAY_DENOM),
   ]);
   return { usdc, pay };
