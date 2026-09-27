@@ -10,13 +10,16 @@ import KycRequiredCard, {
   KycCredentialFailureNotice,
   resolveKycCredentialStatus,
 } from '@components/Ramp/KycRequiredCard';
+import ConvertRewardsCard from '@components/Ramp/ConvertRewardsCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
+import { PAY_CONVERT_ENABLED } from '@constants/payConvert';
 import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
+import usePayConvert from '@hooks/usePayConvert';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
 import {
   type OfframpTransaction,
@@ -44,11 +47,12 @@ const ID_TYPE_OPTIONS = [
   { value: 'drivers_license', label: "Driver's license" },
 ];
 
-// TEMP (testnet smoke test): enable the off-ramp on testnet (YC sandbox) and
-// skip the Skip Go bridge + on-chain USDC balance — there's no testnet USDC, so
-// we just exercise the YC create / KYC / momo destination flow. The worker still
-// enforces KYC server-side. SET BACK TO false BEFORE PRODUCTION.
-const TESTNET_TEST_MODE = false;
+// Testnet test mode — NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE=true on a TESTNET build only: shows
+// the off-ramp on testnet (YC sandbox) and skips the Skip Go bridge + on-chain USDC balance —
+// there's no testnet USDC, so this exercises the YC create / KYC / momo destination flow and the
+// Cleanup-rewards conversion (which pays out IXO on testnet, so the USDC balance stays 0 there).
+// The worker still enforces KYC server-side. Has no effect on a mainnet build.
+const TESTNET_TEST_MODE = process.env.NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE === 'true';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -116,6 +120,9 @@ export default function OfframpScreen() {
   const local = useLocalCurrency();
   const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
   const offramp = useOfframp();
+  const payConvert = usePayConvert();
+  // Bumped after a conversion lands so the balances below are re-read.
+  const [balanceRefresh, setBalanceRefresh] = useState(0);
 
   const isMainnet = DefaultChainNetwork === CHAIN_NETWORK_TYPE.MAINNET;
   // const isMainnet = true;
@@ -208,20 +215,26 @@ export default function OfframpScreen() {
   //                         verification is only asked for when the worker says
   //                         this amount needs it (`needsKyc`).
   const balancesReady = skipBridge || (balance != null && payBalance != null);
-  const hasRewards = CLEANUP_REWARDS_HOLD && !skipBridge && (payBalance ?? 0) > 0;
+  const hasPay = !skipBridge && (payBalance ?? 0) > 0;
+  // Held: no conversion oracle on this network yet (constants/cleanup).
+  const hasRewards = CLEANUP_REWARDS_HOLD && hasPay;
+  // Convertible: the oracle is configured — PAY becomes USDC one step earlier
+  // in this same screen (components/Ramp/ConvertRewardsCard).
+  const canConvert = PAY_CONVERT_ENABLED && hasPay;
   const hasUsdc = (balance ?? 0) > 0;
   const payOnlyHold = hasRewards && !hasUsdc;
   const payBanner = hasRewards && hasUsdc;
-  // PAY counts as funds whether or not the hold is on, so this stays right the
-  // day CLEANUP_REWARDS_HOLD is flipped off: a PAY-only wallet then goes
-  // through the normal flow instead of being told it holds nothing.
+  const convertOnly = canConvert && !hasUsdc;
+  // PAY counts as funds whether or not the hold is on: a PAY-only wallet is
+  // offered the conversion (or the hold), never told it holds nothing.
   const noFunds = !skipBridge && balancesReady && !hasUsdc && (payBalance ?? 0) <= 0;
-  const showFlow = balancesReady && !payOnlyHold && !noFunds;
+  const showFlow = balancesReady && !payOnlyHold && !convertOnly && !noFunds;
   const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
 
-  // Balances: USDC (canonical mainnet denom) + PAY, over one connection.
+  // Balances: USDC (canonical mainnet denom) + PAY, over one connection. Read wherever the
+  // off-ramp is shown — on testnet (test mode) that means PAY, for the conversion step.
   useEffect(() => {
-    if (!isMainnet || !address) return;
+    if (!offrampEnabled || !address) return;
     let cancelled = false;
     setBalanceLoading(true);
     getWalletBalances(address)
@@ -237,7 +250,7 @@ export default function OfframpScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isMainnet, address]);
+  }, [offrampEnabled, address, balanceRefresh]);
 
   // Best-effort, in the BACKGROUND: load the user's verified KYC identity (matrix
   // must be ready). It never blocks the form — any failure (no credential,
@@ -789,7 +802,7 @@ export default function OfframpScreen() {
                   </span>
                   {balanceLoading && <Loader size={16} />}
                 </div>
-              ) : payOnlyHold ? (
+              ) : payOnlyHold || convertOnly ? (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
                   <span className={styles.balanceUnit}>in Cleanup rewards</span>
@@ -804,6 +817,17 @@ export default function OfframpScreen() {
                 </div>
               )}
             </div>
+
+            {/* Cleanup rewards with a conversion oracle on this network: convert first (PAY → USDC),
+                then the normal withdraw flow — the form shows once there is USDC to withdraw. */}
+            {canConvert && (
+              <ConvertRewardsCard
+                payBalance={payBalance ?? 0}
+                hasUsdc={hasUsdc}
+                convert={payConvert}
+                onConverted={() => setBalanceRefresh((n) => n + 1)}
+              />
+            )}
 
             {/* Cleanup rewards held alongside withdrawable USDC: normal flow, plus a heads-up. */}
             {payBanner && (
