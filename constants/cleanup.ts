@@ -11,6 +11,8 @@
  * NEXT_PUBLIC_CLEANUP_ENTITY_DID names it, one value per network; blank means
  * no deed is special.
  */
+import { PAY_CONVERT_ENABLED } from '@constants/payConvert';
+
 export const CLEANUP_ENTITY_DID = (process.env.NEXT_PUBLIC_CLEANUP_ENTITY_DID || '').trim();
 
 export const CLEANUP_PATH = '/cleanup';
@@ -46,12 +48,15 @@ export function openCleanup(replace = false): void {
  *
  * The Wallet screen shows the rewards in the total with the same date.
  *
- * Flip CLEANUP_REWARDS_HOLD to false when conversion ships (the PAY balance
- * then simply becomes withdrawable money). The date can be moved without a
- * code change via NEXT_PUBLIC_CLEANUP_REWARDS_WITHDRAW_FROM (YYYY-MM-DD,
- * build-time like every NEXT_PUBLIC_ var — redeploy to apply).
+ * The hold lifts by itself on a network where the conversion oracle is
+ * configured (NEXT_PUBLIC_PAY_CONVERT_ORACLE_URL, constants/payConvert): the
+ * Withdraw screen then offers "Convert to USDC" in place of the hold card, and
+ * the PAY becomes withdrawable money one conversion later. Where no oracle is
+ * configured yet, everything below still applies. The date can be moved
+ * without a code change via NEXT_PUBLIC_CLEANUP_REWARDS_WITHDRAW_FROM
+ * (YYYY-MM-DD, build-time like every NEXT_PUBLIC_ var — redeploy to apply).
  */
-export const CLEANUP_REWARDS_HOLD = true;
+export const CLEANUP_REWARDS_HOLD = !PAY_CONVERT_ENABLED;
 
 /** The day withdrawals of Cleanup rewards open, YYYY-MM-DD, local calendar. */
 export const CLEANUP_REWARDS_WITHDRAW_FROM = (
