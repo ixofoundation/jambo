@@ -215,7 +215,9 @@ export default function OfframpScreen() {
   //                         verification is only asked for when the worker says
   //                         this amount needs it (`needsKyc`).
   const balancesReady = skipBridge || (balance != null && payBalance != null);
-  const hasPay = !skipBridge && (payBalance ?? 0) > 0;
+  // Real on every network: testnet test mode skips the USDC bridge, not the PAY the wallet holds —
+  // the conversion is exactly what a testnet build is there to exercise.
+  const hasPay = (payBalance ?? 0) > 0;
   // Held: no conversion oracle on this network yet (constants/cleanup).
   const hasRewards = CLEANUP_REWARDS_HOLD && hasPay;
   // Convertible: the oracle is configured — PAY becomes USDC one step earlier
@@ -791,21 +793,23 @@ export default function OfframpScreen() {
           <>
             {/* Balance */}
             <div className={styles.card}>
-              {skipBridge ? (
+              {payOnlyHold || convertOnly ? (
+                // Rewards first, on every network: a PAY-only wallet sees what it holds and the
+                // conversion step below, in test mode too.
                 <div className={styles.balanceRow}>
-                  <span className={styles.balanceUnit}>Testnet test mode — balance &amp; bridging skipped.</span>
+                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
+                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
+                  {balanceLoading && <Loader size={16} />}
+                </div>
+              ) : skipBridge ? (
+                <div className={styles.balanceRow}>
+                  <span className={styles.balanceUnit}>Testnet test mode — USDC balance &amp; bridging skipped.</span>
                 </div>
               ) : balance == null ? (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceUnit}>
                     {address ? 'Loading USDC balance…' : 'Sign in to see your USDC balance.'}
                   </span>
-                  {balanceLoading && <Loader size={16} />}
-                </div>
-              ) : payOnlyHold || convertOnly ? (
-                <div className={styles.balanceRow}>
-                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
-                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
                   {balanceLoading && <Loader size={16} />}
                 </div>
               ) : (
