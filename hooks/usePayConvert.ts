@@ -20,15 +20,39 @@ import { mintPayConvertBearer } from '@utils/ucanPayConvert';
 /** In-flight stage of a conversion, for UI feedback. */
 export type PayConvertStage = 'idle' | 'preparing' | 'authorizing' | 'signing' | 'confirming' | 'done' | 'error';
 
+/** How a conversion ended, once its transaction is on chain. */
+export type PayConvertOutcome =
+  /** The oracle confirmed the payout landed. */
+  | 'paid'
+  /** The oracle refused it; the PAY comes back on its own. */
+  | 'rejected'
+  /** The oracle could not finish checking it; the PAY is safe. */
+  | 'failed'
+  /** Parked for a human look; the PAY is safe, the USDC follows once cleared. */
+  | 'review'
+  /** Still open when we stopped waiting — the USDC still arrives, a little later. */
+  | 'pending';
+
 export interface PayConvertResult {
   claimId: string;
   txHash: string;
-  /** The oracle confirmed the payout landed. False ⇒ the PAY is sent and the
-   *  claim is filed, but the oracle hadn't paid it out before we stopped
-   *  waiting — the USDC still arrives, a little later. */
+  outcome: PayConvertOutcome;
+  /** `outcome === 'paid'`. Kept for callers that only care whether the USDC is there. */
   settled: boolean;
+  /** Customer-facing wording for any outcome but `paid` (null when paid). Returned here — not only
+   *  set on the hook's `error` — so a caller can act on it in the same tick, without waiting for a
+   *  re-render. */
+  message: string | null;
   receiptCid: string | null;
 }
+
+/** What to tell someone whose conversion is still open, or parked, when we stop waiting. */
+const PENDING_MESSAGE =
+  'Your rewards are still converting — give it a minute, then tap Withdraw again. No new conversion will be needed.';
+const REVIEW_MESSAGE =
+  'Your conversion needs a quick check on our side. Your PAY is safe, and the USDC will be added to your wallet once it clears — come back a little later and tap Withdraw again.';
+const FAILED_MESSAGE =
+  'We couldn’t finish checking this conversion. Your PAY is safe — if it isn’t back in your wallet within a few minutes, please contact support with your wallet address.';
 
 /** How long we wait for the oracle after the transaction before handing the
  *  user back to their wallet with an "on its way" note. */
@@ -52,8 +76,15 @@ export function payConvertErrorMessage(err: unknown): string {
     return 'We couldn’t start the conversion. Nothing was taken from your wallet — please try again.';
   }
   const message = err instanceof Error ? err.message : '';
-  if (/session|sign in|Not authenticated/i.test(message)) return 'Your session needs a refresh — please sign in again and retry.';
-  if (/rejected|denied|cancel/i.test(message)) return 'The conversion was cancelled. Nothing was taken from your wallet.';
+  if (/session|sign in|Not authenticated/i.test(message))
+    return 'Your session needs a refresh — please sign in again and retry.';
+  // The chain allows one open conversion per wallet at a time (claims module: "active intent
+  // found"): the previous one is still being paid out or refunded.
+  if (/active intent/i.test(message)) {
+    return 'Your previous conversion is still going through. Give it a minute, then try again — nothing was taken from your wallet.';
+  }
+  if (/rejected|denied|cancel/i.test(message))
+    return 'The conversion was cancelled. Nothing was taken from your wallet.';
   return 'Something went wrong converting your rewards. Nothing was taken from your wallet — please try again.';
 }
 
@@ -101,7 +132,10 @@ export default function usePayConvert() {
       // nudge is retried on the next loop, never surfaced.
       if (!last || last.stage === 'unknown') await nudgeConvertScan().catch(() => undefined);
       last = await fetchConvertStatus(claimId).catch(() => last);
-      if (last && (last.stage === 'paid' || last.stage === 'rejected' || last.stage === 'failed' || last.stage === 'review')) {
+      if (
+        last &&
+        (last.stage === 'paid' || last.stage === 'rejected' || last.stage === 'failed' || last.stage === 'review')
+      ) {
         return last;
       }
       await new Promise((r) => setTimeout(r, POLL_MS));
@@ -188,27 +222,44 @@ export default function usePayConvert() {
 
       setStage('confirming');
       const status = await awaitPayout(claimId);
-      const settled = status?.stage === 'paid';
-      const out: PayConvertResult = { claimId, txHash, settled, receiptCid: status?.receiptCid ?? null };
-      if (status?.stage === 'rejected') {
-        // The oracle refused the conversion (from this screen that means the PAY sent did not
-        // match the amount claimed). Nothing was converted, and the oracle returns the PAY on
-        // its own — say so, and say whether it has already landed.
-        setStage('error');
-        setError(rejectedMessage(status));
-        setResult(out);
-        return out;
-      }
-      if (status?.stage === 'failed') {
-        setStage('error');
-        setError(
-          'We couldn’t finish checking this conversion. Your PAY is safe — if it isn’t back in your wallet within a few minutes, please contact support with your wallet address.',
-        );
-        setResult(out);
-        return out;
-      }
+      const outcome: PayConvertOutcome =
+        status?.stage === 'paid' ||
+        status?.stage === 'rejected' ||
+        status?.stage === 'failed' ||
+        status?.stage === 'review'
+          ? status.stage
+          : 'pending';
+      // The oracle refused the conversion (from this screen that means the PAY sent did not match
+      // the amount claimed). Nothing was converted, and the oracle returns the PAY on its own — say
+      // so, and say whether it has already landed.
+      const message =
+        outcome === 'paid'
+          ? null
+          : status?.stage === 'rejected'
+          ? rejectedMessage(status)
+          : outcome === 'failed'
+          ? FAILED_MESSAGE
+          : outcome === 'review'
+          ? REVIEW_MESSAGE
+          : PENDING_MESSAGE;
+      const out: PayConvertResult = {
+        claimId,
+        txHash,
+        outcome,
+        settled: outcome === 'paid',
+        message,
+        receiptCid: status?.receiptCid ?? null,
+      };
       setResult(out);
-      setStage('done');
+      if (outcome === 'paid') {
+        setStage('done');
+      } else if (outcome === 'pending' || outcome === 'review') {
+        // Not an error: the conversion is on chain and will finish without the user.
+        setStage('confirming');
+      } else {
+        setStage('error');
+        setError(message);
+      }
       return out;
     },
     [address, did, onSign, awaitPayout],
