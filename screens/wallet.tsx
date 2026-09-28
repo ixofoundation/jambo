@@ -117,7 +117,7 @@ export default function Wallet() {
           )}
           {convertibleRewards && (
             <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
-              Includes {formatRewardsUsd(rewards ?? 0)} in Cleanup rewards — convert them to USDC on Withdraw.
+              Includes {formatRewardsUsd(rewards ?? 0)} in Cleanup rewards — they count towards what you can withdraw.
             </div>
           )}
           <div className='hstack' style={{ gap: 10, marginTop: 16 }}>
@@ -158,7 +158,7 @@ export default function Wallet() {
                 {heldRewards
                   ? `Withdrawable ${rewardsWhen.when}`
                   : convertibleRewards
-                  ? 'Convert to USDC on Withdraw'
+                  ? 'Counts towards withdrawals'
                   : 'World Cleanup Day'}
               </div>
             </div>
