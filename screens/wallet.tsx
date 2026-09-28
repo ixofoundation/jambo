@@ -104,8 +104,10 @@ export default function Wallet() {
             {total === null ? '· · ·' : fmtMoney(total)}
           </div>
           <div className='muted' style={{ fontSize: 14 }}>
-            {heldRewards || convertibleRewards
+            {heldRewards
               ? `Available to withdraw now · ${balance === null ? '…' : fmtUsd(balance)} USDC`
+              : convertibleRewards
+              ? `Available to withdraw · ${total === null ? '…' : fmtUsd(total)} including rewards`
               : local
               ? `Available to withdraw · ≈ of ${balance === null ? '…' : fmtUsd(balance)} USDC`
               : 'Available to withdraw · USD'}

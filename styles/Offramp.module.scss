@@ -84,6 +84,15 @@
   padding-top: 4px;
 }
 
+// Invisible wrapper whose only job is `disabled` — locks every field in one go while a
+// two-step withdrawal runs. Reset the browser's box so the layout is untouched.
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
 .row {
   display: flex;
   gap: 12px;
