@@ -12,11 +12,14 @@ import KycRequiredCard, {
 } from '@components/Ramp/KycRequiredCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
-import { IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
+import { PAY_CONVERT_ENABLED, fromPayBase, toPayBase } from '@constants/payConvert';
+import { IXO_CHAIN_ID, IXO_USDC_DENOM, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
+import usePayConvert, { payConvertErrorMessage } from '@hooks/usePayConvert';
+import { fetchConvertInfo } from 'lib/payConvert/client';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
 import {
   type OfframpTransaction,
@@ -44,11 +47,12 @@ const ID_TYPE_OPTIONS = [
   { value: 'drivers_license', label: "Driver's license" },
 ];
 
-// TEMP (testnet smoke test): enable the off-ramp on testnet (YC sandbox) and
-// skip the Skip Go bridge + on-chain USDC balance — there's no testnet USDC, so
-// we just exercise the YC create / KYC / momo destination flow. The worker still
-// enforces KYC server-side. SET BACK TO false BEFORE PRODUCTION.
-const TESTNET_TEST_MODE = false;
+// Testnet test mode — NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE=true on a TESTNET build only: shows
+// the off-ramp on testnet (YC sandbox) and skips the Skip Go bridge + on-chain USDC balance —
+// there's no testnet USDC, so this exercises the YC create / KYC / momo destination flow and the
+// Cleanup-rewards conversion (which pays out IXO on testnet, so the USDC balance stays 0 there).
+// The worker still enforces KYC server-side. Has no effect on a mainnet build.
+const TESTNET_TEST_MODE = process.env.NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE === 'true';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -116,6 +120,9 @@ export default function OfframpScreen() {
   const local = useLocalCurrency();
   const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
   const offramp = useOfframp();
+  const payConvert = usePayConvert();
+  // Bumped after a conversion lands so the balances below are re-read.
+  const [balanceRefresh, setBalanceRefresh] = useState(0);
 
   const isMainnet = DefaultChainNetwork === CHAIN_NETWORK_TYPE.MAINNET;
   // const isMainnet = true;
@@ -130,6 +137,19 @@ export default function OfframpScreen() {
   // yet; see constants/cleanup.
   const [payBalance, setPayBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // The USDC balance in base units — what the two-step withdraw's arithmetic runs on (exact).
+  const [usdcMicro, setUsdcMicro] = useState<bigint | null>(null);
+  // What the WHOLE wallet (USDC + rewards) would fetch on the chosen rail. Decides whether a rewards
+  // holder can reach the rail's minimum at all ("Almost there") and what "try at least about $X"
+  // says. Null while unknown or not applicable — null never blocks anything.
+  const [capacity, setCapacity] = useState<{
+    amountUsd: number;
+    fiatOut: number;
+    limitMin: number | null;
+    rate: number | null;
+  } | null>(null);
+  // The customer-facing step line while a withdrawal that converts rewards first is running.
+  const [withdrawStep, setWithdrawStep] = useState<string | null>(null);
 
   const [amount, setAmount] = useState<string>('');
   const [country, setCountry] = useState<string>('ZA');
@@ -208,26 +228,45 @@ export default function OfframpScreen() {
   //                         verification is only asked for when the worker says
   //                         this amount needs it (`needsKyc`).
   const balancesReady = skipBridge || (balance != null && payBalance != null);
-  const hasRewards = CLEANUP_REWARDS_HOLD && !skipBridge && (payBalance ?? 0) > 0;
+  // Real on every network: testnet test mode skips the USDC bridge, not the PAY the wallet holds.
+  const hasPay = (payBalance ?? 0) > 0;
+  // Held: no conversion oracle on this network yet (constants/cleanup).
+  const hasRewards = CLEANUP_REWARDS_HOLD && hasPay;
+  // Rewards in play: the oracle is configured, so PAY counts towards what can be withdrawn — it is
+  // turned into USDC as the FIRST STEP of the withdrawal itself, never as a separate action, so a
+  // youth can never convert rewards they cannot cash out (YellowCard's minimums).
+  const rewardsInPlay = PAY_CONVERT_ENABLED && hasPay;
   const hasUsdc = (balance ?? 0) > 0;
   const payOnlyHold = hasRewards && !hasUsdc;
   const payBanner = hasRewards && hasUsdc;
-  // PAY counts as funds whether or not the hold is on, so this stays right the
-  // day CLEANUP_REWARDS_HOLD is flipped off: a PAY-only wallet then goes
-  // through the normal flow instead of being told it holds nothing.
+  /** USDC plus rewards — the most the amount field accepts. */
+  const totalAvailable = (balance ?? 0) + (rewardsInPlay ? payBalance ?? 0 : 0);
+  // PAY counts as funds whether or not the hold is on: a PAY-only wallet is
+  // offered the withdrawal (or the hold), never told it holds nothing.
   const noFunds = !skipBridge && balancesReady && !hasUsdc && (payBalance ?? 0) <= 0;
   const showFlow = balancesReady && !payOnlyHold && !noFunds;
   const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
 
-  // Balances: USDC (canonical mainnet denom) + PAY, over one connection.
+  // Balances: USDC (canonical mainnet denom) + PAY, over one connection. Read wherever the
+  // off-ramp is shown. Testnet test mode: the conversion oracle pays out IXO in place of USDC
+  // there (no testnet USDC), so the withdrawable balance is read in the oracle's payout denom —
+  // otherwise a conversion would never show up on the screen that triggered it.
   useEffect(() => {
-    if (!isMainnet || !address) return;
+    if (!offrampEnabled || !address) return;
     let cancelled = false;
     setBalanceLoading(true);
-    getWalletBalances(address)
+    const payoutDenom =
+      skipBridge && PAY_CONVERT_ENABLED
+        ? fetchConvertInfo()
+            .then((info) => info.payoutDenom)
+            .catch(() => undefined)
+        : Promise.resolve(undefined);
+    payoutDenom
+      .then((denom) => getWalletBalances(address, denom))
       .then((b) => {
         if (cancelled) return;
         setBalance(b.usdc.amount);
+        setUsdcMicro(BigInt(b.usdc.amountMicro));
         setHeldDenom(b.usdc.denom);
         setPayBalance(b.pay.amount);
       })
@@ -237,7 +276,7 @@ export default function OfframpScreen() {
     return () => {
       cancelled = true;
     };
-  }, [isMainnet, address]);
+  }, [offrampEnabled, skipBridge, address, balanceRefresh]);
 
   // Best-effort, in the BACKGROUND: load the user's verified KYC identity (matrix
   // must be ready). It never blocks the form — any failure (no credential,
@@ -508,7 +547,19 @@ export default function OfframpScreen() {
 
   const amountNum = parseFloat(amount);
   const showForm = Number.isFinite(amountNum) && amountNum > 0;
-  const overBalance = Number.isFinite(amountNum) && balance != null && amountNum > balance;
+  const overBalance = Number.isFinite(amountNum) && balance != null && amountNum > totalAvailable + 1e-9;
+  // Rewards this withdrawal needs converted first, in base units — 0n when the USDC covers it.
+  // Exact arithmetic: 1 PAY = 1 USDC in base units, and the oracle pays out exactly what is asked.
+  // (`BigInt(…)` rather than literals: the project's TS target predates ES2020.)
+  const neededPayMicro = useMemo(() => {
+    if (!rewardsInPlay || !Number.isFinite(amountNum) || amountNum <= 0 || usdcMicro == null) return BigInt(0);
+    const short = BigInt(toPayBase(amountNum)) - usdcMicro;
+    return short > BigInt(0) ? short : BigInt(0);
+  }, [rewardsInPlay, amountNum, usdcMicro]);
+  const needsConversion = neededPayMicro > BigInt(0);
+  // The oracle's per-conversion cap (1,000 units); YellowCard's own maxima are lower anyway.
+  const conversionOverCap = neededPayMicro > BigInt(1_000_000_000);
+  const countryLabel = supportedOptions.find((o) => o.value === country)?.label ?? country;
 
   const fiatOut = quote?.fiatReceived != null ? Number(quote.fiatReceived) : null;
   const candidateMins = channelCandidates.map((c) => c.min).filter((n): n is number => typeof n === 'number');
@@ -519,6 +570,75 @@ export default function OfframpScreen() {
   const limitMax = quote?.transactionLimitMax ?? aggMax;
   const belowMin = !!quote && fiatOut != null && limitMin != null && fiatOut < limitMin;
   const aboveMax = !!quote && fiatOut != null && limitMax != null && fiatOut > limitMax;
+
+  // Capacity: one quiet quote for the WHOLE wallet on the chosen rail, whenever rewards are in
+  // play and the rail is known. Its fiat answer against the rail's minimum decides "Almost there"
+  // and the "try at least about $X" hint. It is never shown as a quote, and a failed one means no
+  // gating (null), never a blocked form.
+  const { previewWithdrawal } = offramp;
+  useEffect(() => {
+    if (!rewardsInPlay || !balancesReady || !currency || !channelType || totalAvailable <= 0) {
+      setCapacity(null);
+      return;
+    }
+    let cancelled = false;
+    previewWithdrawal({
+      amountUsdc: totalAvailable,
+      currency,
+      channelType,
+      country,
+      sourceDenom: heldDenom,
+      skipBridge,
+    })
+      .then(({ quote: q }) => {
+        if (cancelled) return;
+        const out = q.fiatReceived != null ? Number(q.fiatReceived) : null;
+        if (out == null || !Number.isFinite(out)) {
+          setCapacity(null);
+          return;
+        }
+        setCapacity({
+          amountUsd: totalAvailable,
+          fiatOut: out,
+          limitMin: q.transactionLimitMin ?? aggMin,
+          // The EFFECTIVE rate (fiat out per dollar in, fees included) — not YellowCard's gross
+          // `rateLocal`, which would make "try at least about $X" land just under the minimum.
+          rate: totalAvailable > 0 && out > 0 ? out / totalAvailable : null,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setCapacity(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    rewardsInPlay,
+    balancesReady,
+    currency,
+    channelType,
+    country,
+    heldDenom,
+    skipBridge,
+    totalAvailable,
+    aggMin,
+    previewWithdrawal,
+  ]);
+
+  // Even the whole wallet is under this rail's minimum — and the user holds rewards, so there is
+  // something to encourage rather than a form to fail at.
+  const almostThere =
+    rewardsInPlay && capacity != null && capacity.limitMin != null && capacity.fiatOut < capacity.limitMin;
+  // The amount typed is under the minimum, but the whole wallet would clear it: say how much to try.
+  const wholeWalletClearsMin = capacity != null && limitMin != null && capacity.fiatOut >= limitMin;
+  // Rounded UP to the cent, so an amount typed from the hint clears the minimum rather than grazing it.
+  const minUsd = capacity?.rate && limitMin != null ? Math.ceil((limitMin / capacity.rate) * 100) / 100 : null;
+
+  // "Almost there" replaces the amount: drop any quote taken before the capacity answer arrived, so
+  // the form never shows "below the minimum — increase the amount" next to a field that is disabled.
+  useEffect(() => {
+    if (almostThere) setQuote(null);
+  }, [almostThere]);
 
   const nameValid = kycName.trim().split(/\s+/).filter(Boolean).length >= 2;
   const emailValid = EMAIL_RE.test(kycEmail);
@@ -553,7 +673,8 @@ export default function OfframpScreen() {
   // and once a late-loading credential turns up, there's nothing left to say.
   const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
 
-  const canQuote = !!currency && !!channelType && Number.isFinite(amountNum) && amountNum > 0 && !overBalance;
+  const canQuote =
+    !!currency && !!channelType && Number.isFinite(amountNum) && amountNum > 0 && !overBalance && !almostThere;
   const canWithdraw =
     canQuote &&
     !!quote &&
@@ -658,11 +779,88 @@ export default function OfframpScreen() {
     }
   }, [canQuote, offramp, amountNum, currency, channelType, country, heldDenom, skipBridge, persistProfile]);
 
+  // After the conversion pays out, wait until the wallet actually shows the USDC before the second
+  // step spends it — a block or two. In test mode gas comes out of the same denom, so allow that.
+  const waitForUsdc = useCallback(
+    async (targetMicro: bigint): Promise<boolean> => {
+      if (!address) return false;
+      const denom =
+        skipBridge && PAY_CONVERT_ENABLED
+          ? await fetchConvertInfo()
+              .then((info) => info.payoutDenom)
+              .catch(() => undefined)
+          : undefined;
+      const slack = skipBridge ? BigInt(100_000) : BigInt(0);
+      for (let i = 0; i < 30; i++) {
+        const b = await getWalletBalances(address, denom).catch(() => null);
+        if (b && BigInt(b.usdc.amountMicro) + slack >= targetMicro) return true;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      return false;
+    },
+    [address, skipBridge],
+  );
+
   const onWithdraw = useCallback(async () => {
     if (!canWithdraw) return;
     setFormError(null);
     setLastAttemptSentCredential(!!kycCredentialJwt);
+    let converted = false;
     try {
+      // Step 1 (only when the USDC does not cover the amount): turn exactly the shortfall of
+      // Cleanup rewards into USDC — one confirmation, the oracle pays out in under a minute.
+      if (needsConversion) {
+        if (conversionOverCap) {
+          setFormError('You can convert up to $1,000 of rewards per withdrawal — try a smaller amount.');
+          return;
+        }
+        const convertUsd = formatRewardsUsd(fromPayBase(neededPayMicro.toString()));
+        setWithdrawStep(
+          `Step 1 of 2 — converting ${convertUsd} of your Cleanup rewards to USDC… this usually takes under a minute.`,
+        );
+        let result: Awaited<ReturnType<typeof payConvert.convert>>;
+        try {
+          result = await payConvert.convert(neededPayMicro.toString());
+        } catch (err) {
+          const message = payConvertErrorMessage(err);
+          setFormError(
+            /paused/i.test(message) && hasUsdc
+              ? `${message} You can still withdraw your USDC now (up to ${formatRewardsUsd(balance ?? 0)}).`
+              : message,
+          );
+          return;
+        }
+        if (!result.settled) {
+          // Refused, failed, parked or still open — the hook's wording for that outcome, read off
+          // the result itself (the hook's `error` state would not have re-rendered into this
+          // closure yet). Re-read the balances: a refund or a late payout may already be there.
+          setFormError(
+            result.message ?? 'Your rewards are still converting — give it a minute, then tap Withdraw again.',
+          );
+          setBalanceRefresh((n) => n + 1);
+          return;
+        }
+        converted = true;
+        const landed = await waitForUsdc((usdcMicro ?? BigInt(0)) + neededPayMicro);
+        setBalanceRefresh((n) => n + 1);
+        if (!landed) {
+          setFormError(
+            'Your rewards were converted, but the USDC is still settling. Give it a minute, then tap Withdraw again — no new conversion is needed.',
+          );
+          return;
+        }
+        setWithdrawStep(`Step 2 of 2 — sending to your ${isMomo ? 'mobile money' : 'bank account'}…`);
+        // The quote aged while step 1 ran: refresh it quietly so what is sent matches YellowCard.
+        const preview = await offramp.previewWithdrawal({
+          amountUsdc: amountNum,
+          currency,
+          channelType,
+          country,
+          sourceDenom: heldDenom,
+          skipBridge,
+        });
+        setQuote(preview.quote);
+      }
       await offramp.withdraw({
         amountUsdc: amountNum,
         currency,
@@ -697,8 +895,17 @@ export default function OfframpScreen() {
         },
       });
       persistProfile();
-    } catch {
-      /* surfaced via offramp.error */
+    } catch (err) {
+      // Step 1 succeeded but step 2 did not: the USDC is theirs already — say so, and that a
+      // retry needs no second conversion. Otherwise the offramp hook's own error shows.
+      if (converted) {
+        const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
+        setFormError(
+          `Your rewards were converted — the USDC is in your wallet — but the withdrawal didn’t go through${detail}. Tap Withdraw again; no new conversion is needed.`,
+        );
+      }
+    } finally {
+      setWithdrawStep(null);
     }
   }, [
     canWithdraw,
@@ -709,6 +916,14 @@ export default function OfframpScreen() {
     heldDenom,
     skipBridge,
     simOutcome,
+    needsConversion,
+    conversionOverCap,
+    neededPayMicro,
+    payConvert,
+    hasUsdc,
+    balance,
+    usdcMicro,
+    waitForUsdc,
     kycCredentialJwt,
     kycName,
     country,
@@ -778,9 +993,23 @@ export default function OfframpScreen() {
           <>
             {/* Balance */}
             <div className={styles.card}>
-              {skipBridge ? (
+              {payOnlyHold ? (
                 <div className={styles.balanceRow}>
-                  <span className={styles.balanceUnit}>Testnet test mode — balance &amp; bridging skipped.</span>
+                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
+                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
+                  {balanceLoading && <Loader size={16} />}
+                </div>
+              ) : rewardsInPlay && balancesReady ? (
+                // Rewards count towards what can be withdrawn: one figure, and how it is made up.
+                <div className={styles.balanceRow}>
+                  <span className={styles.balanceAmount}>{formatRewardsUsd(totalAvailable)}</span>
+                  <span className={styles.balanceUnit}>available to withdraw</span>
+                  {local && <span className={styles.balanceUnit}>{localEstimate(totalAvailable, local)}</span>}
+                  {balanceLoading && <Loader size={16} />}
+                </div>
+              ) : skipBridge ? (
+                <div className={styles.balanceRow}>
+                  <span className={styles.balanceUnit}>Testnet test mode — USDC balance &amp; bridging skipped.</span>
                 </div>
               ) : balance == null ? (
                 <div className={styles.balanceRow}>
@@ -789,21 +1018,51 @@ export default function OfframpScreen() {
                   </span>
                   {balanceLoading && <Loader size={16} />}
                 </div>
-              ) : payOnlyHold ? (
-                <div className={styles.balanceRow}>
-                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
-                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
-                  {balanceLoading && <Loader size={16} />}
-                </div>
               ) : (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatUsdc(balance)}</span>
-                  <span className={styles.balanceUnit}>USDC</span>
+                  <span className={styles.balanceUnit}>
+                    {heldDenom && heldDenom !== IXO_USDC_DENOM ? 'IXO · stands in for USDC on testnet' : 'USDC'}
+                  </span>
                   {local && <span className={styles.balanceUnit}>{localEstimate(balance, local)}</span>}
                   {balanceLoading && <Loader size={16} />}
                 </div>
               )}
+              {rewardsInPlay && balancesReady && (
+                <p className={styles.hint}>
+                  {formatUsdc(balance ?? 0)}{' '}
+                  {heldDenom && heldDenom !== IXO_USDC_DENOM ? 'IXO (USDC on testnet)' : 'USDC'} +{' '}
+                  {formatRewardsUsd(payBalance ?? 0)} Cleanup rewards — rewards turn into USDC automatically when you
+                  withdraw.
+                </p>
+              )}
             </div>
+
+            {/* Rewards in play, but even the whole wallet is under this rail's minimum: encouragement
+                instead of a form to fail at. Country and payout method stay changeable below, in
+                case another rail has a lower minimum. */}
+            {showFlow && almostThere && (
+              <div className={styles.card}>
+                <p className={styles.cardTitle}>Almost there!</p>
+                <p className={styles.kycGateText}>
+                  Withdrawals to {isMomo ? 'mobile money' : 'a bank account'} in {countryLabel} start at{' '}
+                  {capacity?.limitMin} {currency}
+                  {minUsd != null ? ` (about ${formatRewardsUsd(minUsd)})` : ''}. You have{' '}
+                  {formatRewardsUsd(totalAvailable)} so far — keep mapping and making a difference, and come back to
+                  cash out once you’re there.
+                </p>
+                <div className={styles.actions}>
+                  <Button
+                    label='Back to wallet'
+                    size={BUTTON_SIZE.mediumLarge}
+                    bgColor={BUTTON_BG_COLOR.primary}
+                    borderColor={BUTTON_BORDER_COLOR.primary}
+                    color={BUTTON_COLOR.white}
+                    onClick={() => router.push('/wallet')}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Cleanup rewards held alongside withdrawable USDC: normal flow, plus a heads-up. */}
             {payBanner && (
@@ -858,369 +1117,420 @@ export default function OfframpScreen() {
               <>
                 {/* Withdraw form */}
                 <div className={styles.card}>
-                  <p className={styles.cardTitle}>Withdraw USDC</p>
+                  <p className={styles.cardTitle}>{rewardsInPlay ? 'Withdraw' : 'Withdraw USDC'}</p>
 
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Amount (USDC)</label>
-                      <input
-                        className={`${styles.input}${overBalance ? ` ${styles.inputError}` : ''}`}
-                        type='number'
-                        inputMode='decimal'
-                        min={0}
-                        placeholder='0.00'
-                        value={amount}
-                        onChange={(e) => setAmount(e.currentTarget.value)}
-                      />
-                      {overBalance && <span className={styles.errorText}>Exceeds your available USDC</span>}
-                      {!overBalance && local && Number.isFinite(amountNum) && amountNum > 0 && (
-                        <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
-                          {localEstimate(amountNum, local)} at the mid-market rate
-                        </span>
-                      )}
+                  {/* Locked while a withdrawal that converts rewards first is running: the amount and
+                      destination it was confirmed for must not change under it. */}
+                  <fieldset className={styles.fieldset} disabled={!!withdrawStep}>
+                    <div className={styles.row}>
+                      <div className={styles.field}>
+                        <label className={styles.label}>Amount (USD)</label>
+                        <input
+                          className={`${styles.input}${
+                            overBalance || conversionOverCap ? ` ${styles.inputError}` : ''
+                          }`}
+                          type='number'
+                          inputMode='decimal'
+                          min={0}
+                          placeholder='0.00'
+                          value={amount}
+                          disabled={almostThere}
+                          onChange={(e) => setAmount(e.currentTarget.value)}
+                        />
+                        {almostThere && (
+                          <span className={styles.hint}>
+                            Change the country or payout method to see if a lower minimum applies.
+                          </span>
+                        )}
+                        {overBalance && (
+                          <span className={styles.errorText}>
+                            {rewardsInPlay
+                              ? `You can withdraw up to ${formatRewardsUsd(totalAvailable)} including your rewards.`
+                              : `You can withdraw up to ${formatUsdc(totalAvailable)} USDC.`}
+                          </span>
+                        )}
+                        {!overBalance && conversionOverCap && (
+                          <span className={styles.errorText}>
+                            You can convert up to $1,000 of rewards per withdrawal — try a smaller amount.
+                          </span>
+                        )}
+                        {!overBalance && !conversionOverCap && needsConversion && (
+                          <span className={styles.hint}>
+                            We’ll turn {formatRewardsUsd(fromPayBase(neededPayMicro.toString()))} of your Cleanup
+                            rewards into USDC first — one extra confirmation, no fees from Yoma.
+                          </span>
+                        )}
+                        {!overBalance && local && Number.isFinite(amountNum) && amountNum > 0 && (
+                          <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+                            {localEstimate(amountNum, local)} at the mid-market rate
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.label}>Country</label>
+                        <select
+                          className={styles.select}
+                          value={country}
+                          onChange={(e) => setCountry(e.currentTarget.value)}
+                        >
+                          {supportedOptions.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Country</label>
-                      <select
-                        className={styles.select}
-                        value={country}
-                        onChange={(e) => setCountry(e.currentTarget.value)}
-                      >
-                        {supportedOptions.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
-                    <div className={styles.collapseInner}>
-                      {skipBridge && (
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>TEST · simulate settlement</label>
-                            <select
-                              className={styles.select}
-                              value={simOutcome}
-                              onChange={(e) => setSimOutcome(e.currentTarget.value as 'success' | 'failure')}
-                            >
-                              <option value='success'>Success</option>
-                              <option value='failure'>Failure</option>
-                            </select>
-                            <span className={styles.hint}>
-                              Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
-                            </span>
+                    <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
+                      <div className={styles.collapseInner}>
+                        {skipBridge && (
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>TEST · simulate settlement</label>
+                              <select
+                                className={styles.select}
+                                value={simOutcome}
+                                onChange={(e) => setSimOutcome(e.currentTarget.value as 'success' | 'failure')}
+                              >
+                                <option value='success'>Success</option>
+                                <option value='failure'>Failure</option>
+                              </select>
+                              <span className={styles.hint}>
+                                Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {availableMethods.length > 1 && (
+                        {availableMethods.length > 1 && (
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Payout method</label>
+                              <select
+                                className={styles.select}
+                                value={payoutMethod}
+                                onChange={(e) => {
+                                  // Switching rail invalidates the provider + number
+                                  // (and any quote) — start that part of the form fresh.
+                                  setPayoutMethod(e.currentTarget.value as PayoutMethod);
+                                  setNetworkId('');
+                                  setAccountNumber('');
+                                  setQuote(null);
+                                }}
+                              >
+                                {availableMethods.map((m) => (
+                                  <option key={m} value={m}>
+                                    {PAYOUT_METHOD_LABEL[m]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
                         <div className={styles.row}>
                           <div className={styles.field}>
-                            <label className={styles.label}>Payout method</label>
+                            <label className={styles.label}>{isMomo ? 'Mobile provider' : 'Bank'}</label>
                             <select
                               className={styles.select}
-                              value={payoutMethod}
+                              value={networkId}
+                              disabled={loadingBanks || methodNetworks.length === 0}
                               onChange={(e) => {
-                                // Switching rail invalidates the provider + number
-                                // (and any quote) — start that part of the form fresh.
-                                setPayoutMethod(e.currentTarget.value as PayoutMethod);
-                                setNetworkId('');
-                                setAccountNumber('');
+                                setNetworkId(e.currentTarget.value);
                                 setQuote(null);
                               }}
                             >
-                              {availableMethods.map((m) => (
-                                <option key={m} value={m}>
-                                  {PAYOUT_METHOD_LABEL[m]}
+                              <option value=''>
+                                {loadingBanks
+                                  ? 'Loading…'
+                                  : methodNetworks.length
+                                  ? isMomo
+                                    ? 'Select your provider'
+                                    : 'Select your bank'
+                                  : isMomo
+                                  ? 'No providers for this country'
+                                  : 'No banks for this country'}
+                              </option>
+                              {methodNetworks.map((n) => (
+                                <option key={n.id} value={n.id}>
+                                  {networkLabel(n)}
                                 </option>
                               ))}
                             </select>
+                            {currency && (limitMin != null || limitMax != null) && (
+                              <span className={styles.hint}>
+                                Limits {limitMin ?? '?'}–{limitMax ?? '?'} {currency}
+                                {settlementSecs ? ` · ~${settlementSecs}s settlement` : ''}
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      )}
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>{isMomo ? 'Mobile provider' : 'Bank'}</label>
-                          <select
-                            className={styles.select}
-                            value={networkId}
-                            disabled={loadingBanks || methodNetworks.length === 0}
-                            onChange={(e) => {
-                              setNetworkId(e.currentTarget.value);
-                              setQuote(null);
-                            }}
-                          >
-                            <option value=''>
-                              {loadingBanks
-                                ? 'Loading…'
-                                : methodNetworks.length
-                                ? isMomo
-                                  ? 'Select your provider'
-                                  : 'Select your bank'
-                                : isMomo
-                                ? 'No providers for this country'
-                                : 'No banks for this country'}
-                            </option>
-                            {methodNetworks.map((n) => (
-                              <option key={n.id} value={n.id}>
-                                {networkLabel(n)}
-                              </option>
-                            ))}
-                          </select>
-                          {currency && (limitMin != null || limitMax != null) && (
-                            <span className={styles.hint}>
-                              Limits {limitMin ?? '?'}–{limitMax ?? '?'} {currency}
-                              {settlementSecs ? ` · ~${settlementSecs}s settlement` : ''}
-                            </span>
+                          {currency && (
+                            <div className={styles.field}>
+                              <label className={styles.label}>Paid out in</label>
+                              <input className={styles.input} value={currency} readOnly />
+                              <span className={styles.hint}>
+                                {isMomo ? 'Currency this wallet receives' : 'Currency this bank receives'}
+                              </span>
+                            </div>
                           )}
                         </div>
-                        {currency && (
-                          <div className={styles.field}>
-                            <label className={styles.label}>Paid out in</label>
-                            <input className={styles.input} value={currency} readOnly />
-                            <span className={styles.hint}>
-                              {isMomo ? 'Currency this wallet receives' : 'Currency this bank receives'}
-                            </span>
-                          </div>
+
+                        {networkId && channelCandidates.length === 0 && (
+                          <span className={styles.warnLine}>
+                            {isMomo
+                              ? 'No active withdraw channel for this provider.'
+                              : 'No active withdraw channel for this bank.'}
+                          </span>
                         )}
-                      </div>
 
-                      {networkId && channelCandidates.length === 0 && (
-                        <span className={styles.warnLine}>
-                          {isMomo
-                            ? 'No active withdraw channel for this provider.'
-                            : 'No active withdraw channel for this bank.'}
-                        </span>
-                      )}
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>
+                              {isMomo ? 'Mobile money number' : 'Bank account number'}
+                            </label>
+                            {isMomo ? (
+                              <div
+                                className={`${styles.inputPrefixWrap}${
+                                  accountNumber && !accountNumberValid ? ` ${styles.inputError}` : ''
+                                }`}
+                              >
+                                <span className={styles.inputPrefix}>+</span>
+                                <input
+                                  className={styles.bareInput}
+                                  inputMode='numeric'
+                                  placeholder='234801234567'
+                                  value={accountDigits}
+                                  onChange={(e) => setAccountNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                                />
+                              </div>
+                            ) : (
+                              <input
+                                className={styles.input}
+                                value={accountNumber}
+                                onChange={(e) => setAccountNumber(e.currentTarget.value)}
+                              />
+                            )}
+                            {isMomo && accountNumber && !accountNumberValid && (
+                              <span className={styles.errorText}>Enter the full number with country code</span>
+                            )}
+                          </div>
+                          <div className={styles.field}>
+                            <label className={styles.label}>{isMomo ? 'Recipient name' : 'Account holder name'}</label>
+                            <input
+                              className={styles.input}
+                              value={accountName}
+                              onChange={(e) => setAccountName(e.currentTarget.value)}
+                            />
+                          </div>
+                        </div>
 
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>
-                            {isMomo ? 'Mobile money number' : 'Bank account number'}
-                          </label>
-                          {isMomo ? (
+                        <div className={styles.divider}>
+                          <span className={styles.dividerLabel}>
+                            Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
+                          </span>
+                        </div>
+
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
+                            <input
+                              className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
+                              placeholder='First Last'
+                              value={kycName}
+                              readOnly={locked.name}
+                              onChange={(e) => setKycName(e.currentTarget.value)}
+                            />
+                            {kycName && !nameValid && (
+                              <span className={styles.errorText}>Enter first and last name</span>
+                            )}
+                          </div>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
+                            <input
+                              className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
+                              type='email'
+                              value={kycEmail}
+                              readOnly={locked.email}
+                              onChange={(e) => setKycEmail(e.currentTarget.value)}
+                            />
+                            {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
+                          </div>
+                        </div>
+
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
                             <div
                               className={`${styles.inputPrefixWrap}${
-                                accountNumber && !accountNumberValid ? ` ${styles.inputError}` : ''
-                              }`}
+                                kycPhone && !phoneValid ? ` ${styles.inputError}` : ''
+                              }${locked.phone ? ` ${styles.lockedWrap}` : ''}`}
                             >
                               <span className={styles.inputPrefix}>+</span>
                               <input
                                 className={styles.bareInput}
                                 inputMode='numeric'
-                                placeholder='234801234567'
-                                value={accountDigits}
-                                onChange={(e) => setAccountNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                                placeholder='27821234567'
+                                value={kycPhone}
+                                readOnly={locked.phone}
+                                onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
                               />
                             </div>
-                          ) : (
+                            {kycPhone && !phoneValid && (
+                              <span className={styles.errorText}>Enter full international number</span>
+                            )}
+                          </div>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
                             <input
                               className={styles.input}
-                              value={accountNumber}
-                              onChange={(e) => setAccountNumber(e.currentTarget.value)}
-                            />
-                          )}
-                          {isMomo && accountNumber && !accountNumberValid && (
-                            <span className={styles.errorText}>Enter the full number with country code</span>
-                          )}
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>{isMomo ? 'Recipient name' : 'Account holder name'}</label>
-                          <input
-                            className={styles.input}
-                            value={accountName}
-                            onChange={(e) => setAccountName(e.currentTarget.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className={styles.divider}>
-                        <span className={styles.dividerLabel}>
-                          Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
-                        </span>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
-                          <input
-                            className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
-                            placeholder='First Last'
-                            value={kycName}
-                            readOnly={locked.name}
-                            onChange={(e) => setKycName(e.currentTarget.value)}
-                          />
-                          {kycName && !nameValid && <span className={styles.errorText}>Enter first and last name</span>}
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
-                          <input
-                            className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
-                            type='email'
-                            value={kycEmail}
-                            readOnly={locked.email}
-                            onChange={(e) => setKycEmail(e.currentTarget.value)}
-                          />
-                          {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
-                        </div>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
-                          <div
-                            className={`${styles.inputPrefixWrap}${
-                              kycPhone && !phoneValid ? ` ${styles.inputError}` : ''
-                            }${locked.phone ? ` ${styles.lockedWrap}` : ''}`}
-                          >
-                            <span className={styles.inputPrefix}>+</span>
-                            <input
-                              className={styles.bareInput}
-                              inputMode='numeric'
-                              placeholder='27821234567'
-                              value={kycPhone}
-                              readOnly={locked.phone}
-                              onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                              type='date'
+                              max={new Date().toISOString().slice(0, 10)}
+                              value={kycDob}
+                              readOnly={locked.dob}
+                              onChange={(e) => setKycDob(e.currentTarget.value)}
                             />
                           </div>
-                          {kycPhone && !phoneValid && (
-                            <span className={styles.errorText}>Enter full international number</span>
-                          )}
                         </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
-                          <input
-                            className={styles.input}
-                            type='date'
-                            max={new Date().toISOString().slice(0, 10)}
-                            value={kycDob}
-                            readOnly={locked.dob}
-                            onChange={(e) => setKycDob(e.currentTarget.value)}
-                          />
-                        </div>
-                      </div>
 
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
-                          <select
-                            className={styles.select}
-                            value={kycCountry}
-                            disabled={locked.country}
-                            onChange={(e) => setKycCountry(e.currentTarget.value)}
-                          >
-                            {ALL_COUNTRY_OPTIONS.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className={styles.field}>
-                          <label className={styles.label}>ID type{!isNG && locked.idType && <PrefilledMark />}</label>
-                          {isNG ? (
-                            <input className={styles.input} value='NIN' readOnly />
-                          ) : (
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
                             <select
                               className={styles.select}
-                              value={kycIdType}
-                              disabled={locked.idType}
-                              onChange={(e) => setKycIdType(e.currentTarget.value)}
+                              value={kycCountry}
+                              disabled={locked.country}
+                              onChange={(e) => setKycCountry(e.currentTarget.value)}
                             >
-                              {ID_TYPE_OPTIONS.map((o) => (
+                              {ALL_COUNTRY_OPTIONS.map((o) => (
                                 <option key={o.value} value={o.value}>
                                   {o.label}
                                 </option>
                               ))}
                             </select>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className={styles.row}>
-                        <div className={styles.field}>
-                          <label className={styles.label}>
-                            {isNG ? 'NIN' : 'ID number'}
-                            {locked.idNumber && <PrefilledMark />}
-                          </label>
-                          <input
-                            className={styles.input}
-                            value={kycIdNumber}
-                            readOnly={locked.idNumber}
-                            onChange={(e) => setKycIdNumber(e.currentTarget.value)}
-                          />
-                        </div>
-                        {isNG && (
+                          </div>
                           <div className={styles.field}>
-                            <label className={styles.label}>BVN</label>
+                            <label className={styles.label}>ID type{!isNG && locked.idType && <PrefilledMark />}</label>
+                            {isNG ? (
+                              <input className={styles.input} value='NIN' readOnly />
+                            ) : (
+                              <select
+                                className={styles.select}
+                                value={kycIdType}
+                                disabled={locked.idType}
+                                onChange={(e) => setKycIdType(e.currentTarget.value)}
+                              >
+                                {ID_TYPE_OPTIONS.map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={styles.row}>
+                          <div className={styles.field}>
+                            <label className={styles.label}>
+                              {isNG ? 'NIN' : 'ID number'}
+                              {locked.idNumber && <PrefilledMark />}
+                            </label>
                             <input
                               className={styles.input}
-                              value={kycBvn}
-                              onChange={(e) => setKycBvn(e.currentTarget.value)}
+                              value={kycIdNumber}
+                              readOnly={locked.idNumber}
+                              onChange={(e) => setKycIdNumber(e.currentTarget.value)}
                             />
-                            {/* <span className={styles.hint}>Required for Nigeria</span> */}
                           </div>
-                        )}
-                      </div>
-
-                      {quote && (
-                        <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
-                          <span className={styles.quoteMain}>
-                            You receive ~{quote.fiatReceived ?? '?'} {currency}
-                            <InfoIcon label={ESTIMATE_NOTE} />
-                          </span>
-                          {belowMin && limitMin != null && (
-                            <span className={styles.warnLine}>
-                              Below the {limitMin} {currency} minimum — increase the amount.
-                            </span>
-                          )}
-                          {aboveMax && limitMax != null && (
-                            <span className={styles.warnLine}>
-                              Above the {limitMax} {currency} maximum — reduce the amount.
-                            </span>
+                          {isNG && (
+                            <div className={styles.field}>
+                              <label className={styles.label}>BVN</label>
+                              <input
+                                className={styles.input}
+                                value={kycBvn}
+                                onChange={(e) => setKycBvn(e.currentTarget.value)}
+                              />
+                              {/* <span className={styles.hint}>Required for Nigeria</span> */}
+                            </div>
                           )}
                         </div>
-                      )}
 
-                      {/* {did && <span className={styles.hint}>Linked to your DID for tracking.</span>} */}
+                        {quote && (
+                          <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
+                            <span className={styles.quoteMain}>
+                              You receive ~{quote.fiatReceived ?? '?'} {currency}
+                              <InfoIcon label={ESTIMATE_NOTE} />
+                            </span>
+                            {belowMin && limitMin != null && (
+                              <span className={styles.warnLine}>
+                                {rewardsInPlay && wholeWalletClearsMin && minUsd != null
+                                  ? `Below the ${limitMin} ${currency} minimum — try at least about ${formatRewardsUsd(
+                                      minUsd,
+                                    )}. You have ${formatRewardsUsd(totalAvailable)} available including your rewards.`
+                                  : `Below the ${limitMin} ${currency} minimum — increase the amount.`}
+                              </span>
+                            )}
+                            {aboveMax && limitMax != null && (
+                              <span className={styles.warnLine}>
+                                Above the {limitMax} {currency} maximum — reduce the amount.
+                              </span>
+                            )}
+                          </div>
+                        )}
 
-                      {/* The worker wants identity verification for this amount and we
+                        {/* {did && <span className={styles.hint}>Linked to your DID for tracking.</span>} */}
+
+                        {/* The worker wants identity verification for this amount and we
                           have none to send: a friendly next step takes the button's
                           place. While the Vault is still being read, only a small
                           "checking" line shows and the button stays (disabled). */}
-                      {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
+                        {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
 
-                      {(!kycNotice || kycNotice === 'checking') && (
-                        <div className={styles.actions}>
-                          {quote ? (
-                            <Button
-                              label={busy ? 'Withdrawing…' : 'Withdraw'}
-                              size={BUTTON_SIZE.mediumLarge}
-                              bgColor={BUTTON_BG_COLOR.primary}
-                              borderColor={BUTTON_BORDER_COLOR.primary}
-                              color={BUTTON_COLOR.white}
-                              disabled={!canWithdraw || busy}
-                              onClick={onWithdraw}
-                            />
-                          ) : (
-                            <Button
-                              label={quoting ? 'Getting quote…' : 'Get quote'}
-                              size={BUTTON_SIZE.mediumLarge}
-                              bgColor={BUTTON_BG_COLOR.primary}
-                              borderColor={BUTTON_BORDER_COLOR.primary}
-                              color={BUTTON_COLOR.white}
-                              disabled={!canQuote || quoting}
-                              onClick={onQuote}
-                            />
-                          )}
-                        </div>
-                      )}
+                        {/* The two-step withdrawal, while it runs: which step, in plain words. */}
+                        {withdrawStep && (
+                          <div className={styles.balanceRow} style={{ marginTop: 12 }}>
+                            <Loader size={16} />
+                            <span className={styles.balanceUnit}>{withdrawStep}</span>
+                          </div>
+                        )}
+
+                        {(!kycNotice || kycNotice === 'checking') && (
+                          <div className={styles.actions}>
+                            {quote ? (
+                              <Button
+                                label={
+                                  withdrawStep
+                                    ? 'Working…'
+                                    : busy
+                                    ? 'Withdrawing…'
+                                    : needsConversion
+                                    ? 'Convert & withdraw'
+                                    : 'Withdraw'
+                                }
+                                size={BUTTON_SIZE.mediumLarge}
+                                bgColor={BUTTON_BG_COLOR.primary}
+                                borderColor={BUTTON_BORDER_COLOR.primary}
+                                color={BUTTON_COLOR.white}
+                                disabled={!canWithdraw || busy || !!withdrawStep || conversionOverCap}
+                                onClick={onWithdraw}
+                              />
+                            ) : (
+                              <Button
+                                label={quoting ? 'Getting quote…' : 'Get quote'}
+                                size={BUTTON_SIZE.mediumLarge}
+                                bgColor={BUTTON_BG_COLOR.primary}
+                                borderColor={BUTTON_BORDER_COLOR.primary}
+                                color={BUTTON_COLOR.white}
+                                disabled={!canQuote || quoting}
+                                onClick={onQuote}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </fieldset>
 
                   {/* A `kyc_required` rejection is shown by the card above, not as an
                       error; a rejected credential gets its own friendly line. Any
