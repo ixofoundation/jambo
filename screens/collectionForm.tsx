@@ -6,7 +6,7 @@ import { createMatrixBidBotClient, createMatrixClaimBotClient } from '@ixo/matri
 import { Model } from 'survey-core';
 import { Survey } from 'survey-react-ui';
 
-import { fetchCollectionByCollectionId, fetchClaimsByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
+import { fetchCollectionByCollectionId, fetchAllClaimsByCollectionId } from '@utils/claims';
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import { GRADIENT_COLORS } from '@constants/gradientColors';
@@ -42,8 +42,7 @@ import SubclaimModal from '@components/SubclaimModal/SubclaimModal';
 import ApprovePaymentSourceClaimModal from '@components/ApprovePaymentSourceClaimModal/ApprovePaymentSourceClaimModal';
 import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
-import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '@constants/approvePayment';
-import { buildApprovePaymentPrefill, fetchSourceClaimData, loadKycPii } from '@utils/approvePayment';
+import { useApprovePaymentPrefill } from '@hooks/useApprovePaymentPrefill';
 
 const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
 
@@ -111,20 +110,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const requiresBaseClaimRef = useRef(false);
   const parentCollectionIdRef = useRef<string | null>(null);
 
-  // Approve-payment prefetch (source claim from one of the configured
-  // APPROVE_PAYMENT_SOURCE_COLLECTIONS + the user's credential-data PII blob from
-  // their matrix room). Both stashed in refs so the survey-model initialiser can
-  // read them when prefilling the form.
-  const approvePaymentActive = surveyMode === 'claim' && isApprovePaymentCollection(collectionId);
-  const { getMatrixClient } = useBackgroundSetup();
-  const [approvePaymentPrefetching, setApprovePaymentPrefetching] = useState(approvePaymentActive);
-  const [approvePaymentError, setApprovePaymentError] = useState<string | null>(null);
-  const [selectedSourceClaim, setSelectedSourceClaim] = useState<{ claimId: string; collectionId: string } | null>(
-    null,
-  );
-  const sourceClaimDataRef = useRef<Record<string, any> | null>(null);
-  const piiDataRef = useRef<{ eventId: string; pii: Record<string, any> } | null>(null);
-  const approvePaymentPrefillAppliedRef = useRef(false);
+  // Approve-payment prefill: resolves the user's approved base claim + saved KYC
+  // data when this is a configured approve-payment collection, and gates the
+  // survey until both are ready. See hooks/useApprovePaymentPrefill.ts.
+  const approvePayment = useApprovePaymentPrefill({ collectionId, surveyMode, getClaimBotClient });
 
   useEffect(() => {
     baseClaimCIDRef.current = baseClaimCID;
@@ -188,119 +177,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   useEffect(() => {
     loadForm();
   }, []);
-
-  // Approve-payment prefetch — runs once when this is the approve-payment collection.
-  // Resolves the user's source claim across all configured source collections
-  // (auto-select if exactly one, otherwise open the selection modal) AND the user's
-  // credential-data (PII). Both are required.
-  useEffect(() => {
-    if (!approvePaymentActive) return;
-    let cancelled = false;
-    (async () => {
-      setApprovePaymentPrefetching(true);
-      setApprovePaymentError(null);
-      try {
-        if (APPROVE_PAYMENT_SOURCE_COLLECTIONS.length === 0) {
-          throw new Error('Source collections not configured (NEXT_PUBLIC_APPROVE_PAYMENT_SOURCE_COLLECTIONS).');
-        }
-
-        // 1) Fetch the user's claims for each configured source collection in
-        //    parallel. Only approved claims (evaluationByClaimId.status === 1)
-        //    are eligible — pending / rejected / disputed are filtered out.
-        const claimsPerCollection = await Promise.all(
-          APPROVE_PAYMENT_SOURCE_COLLECTIONS.map(async (cid) => {
-            const all: any[] = (await fetchClaimsByCollectionId(cid, address)) || [];
-            const claims = all.filter((c) => c?.evaluationByClaimId?.status === 1);
-            return { cid, claims };
-          }),
-        );
-        if (cancelled) return;
-
-        // 2) Flatten approved claims across collections and auto-select the most
-        //    recently approved one (most recent `evaluationDate`). No picker UI —
-        //    selection is fully automatic.
-        const allApproved = claimsPerCollection.flatMap(({ claims }) => claims);
-        if (allApproved.length === 0) {
-          throw new Error(
-            'You do not have any approved claims in the source collections. Please submit one and wait for approval first.',
-          );
-        }
-        const evalTs = (c: any) => {
-          const raw = c?.evaluationByClaimId?.evaluationDate ?? c?.submissionDate;
-          if (!raw) return 0;
-          const t = new Date(raw).getTime();
-          return Number.isFinite(t) ? t : 0;
-        };
-        allApproved.sort((a, b) => evalTs(b) - evalTs(a));
-        const pick = allApproved[0];
-        setSelectedSourceClaim({ claimId: pick.claimId, collectionId: pick.collectionId });
-
-        // 3) Fetch the user's credential-data (PII) blob from their matrix room. This
-        //    is the raw deed-offer payload saved alongside the verifiable credential
-        //    and is what we use to prefill the personal fields on this form.
-        await awaitCompletion();
-        const mxClient = getMatrixClient();
-        if (!mxClient) throw new Error('Matrix client not ready');
-        const roomId = authContext.matrixRoomId;
-        if (!roomId) throw new Error('User matrix room not available');
-        const pii = await loadKycPii(mxClient, roomId);
-        if (cancelled) return;
-        if (!pii) {
-          throw new Error('Your credential data is not in your Data Store. Please complete and save your KYC first.');
-        }
-        piiDataRef.current = pii;
-      } catch (err: any) {
-        if (cancelled) return;
-        const msg = err?.message || 'Could not prepare this claim form';
-        setApprovePaymentError(msg);
-        toast.error(msg);
-        // Drop the prefetching gate so the error view can render. Without this, the
-        // loader keeps spinning forever and the error message never reaches the screen.
-        setApprovePaymentPrefetching(false);
-      }
-      // Success path keeps the gate up — it's cleared by the data-load effect below
-      // once the chosen claim's data has been fetched (or by the user picking from the
-      // modal). For 2+ claims, the modal stays mounted while the gate is up.
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approvePaymentActive]);
-
-  // Once a source claim is selected (auto or via modal), fetch its data — scoped to
-  // the collection it actually came from — and clear the prefetching gate so the
-  // survey can render.
-  useEffect(() => {
-    if (!approvePaymentActive) return;
-    if (!selectedSourceClaim) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const client = getClaimBotClient();
-        if (!client) throw new Error('Claim service unavailable');
-        const data = await fetchSourceClaimData({
-          client,
-          collectionId: selectedSourceClaim.collectionId,
-          claimId: selectedSourceClaim.claimId,
-          did,
-        });
-        if (cancelled) return;
-        sourceClaimDataRef.current = data;
-        setApprovePaymentPrefetching(false);
-      } catch (err: any) {
-        if (cancelled) return;
-        const msg = err?.message || 'Could not load source claim data';
-        setApprovePaymentError(msg);
-        toast.error(msg);
-        setApprovePaymentPrefetching(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approvePaymentActive, selectedSourceClaim?.claimId, selectedSourceClaim?.collectionId]);
 
   async function loadForm() {
     try {
@@ -597,12 +473,13 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
 
       // Approve-payment prefill: merge values pulled from the user's source claim
-      // and their credential-data (PII) blob into the survey's initial data. Existing
-      // values (from a saved draft) win — we use model.data as the base.
-      if (approvePaymentActive) {
-        const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
+      // and their credential-data (PII) blob into the survey's initial data. The
+      // prefill wins over a saved draft for the fields it covers (same rule as the
+      // hook's applyToSurvey path, so the outcome doesn't depend on load timing).
+      if (approvePayment.active) {
+        const prefill = approvePayment.buildPrefill();
         if (Object.keys(prefill).length > 0) {
-          model.data = { ...prefill, ...model.data };
+          model.data = { ...model.data, ...prefill };
         }
       }
 
@@ -776,31 +653,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     }
   }, [survey, requiresBaseClaim, baseClaimCID]);
 
-  // Apply the approve-payment prefill once both the survey and the prefetched data
-  // are ready. Memos can't depend on refs, so the in-memo prefill misses when the
-  // template loads before the prefetch resolves — this effect catches that case.
-  // Runs at most once per survey instance to avoid clobbering subsequent user edits.
+  // Apply the approve-payment prefill to the built survey once its data is ready
+  // (covers the template loading before the prefetch resolves).
+  const applyApprovePaymentPrefill = approvePayment.applyToSurvey;
   useEffect(() => {
-    if (!approvePaymentActive) return;
-    if (!survey || approvePaymentPrefetching) return;
-    if (approvePaymentPrefillAppliedRef.current) return;
-    const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
-    if (Object.keys(prefill).length === 0) return;
-    Object.entries(prefill).forEach(([key, value]) => {
-      try {
-        survey.setValue(key, value);
-      } catch {
-        // Colon-named keys can trip setValue on some survey-core versions — fall back
-        // to mutating data directly.
-        try {
-          survey.data = { ...survey.data, [key]: value };
-        } catch {
-          // ignore
-        }
-      }
-    });
-    approvePaymentPrefillAppliedRef.current = true;
-  }, [survey, approvePaymentActive, approvePaymentPrefetching]);
+    applyApprovePaymentPrefill(survey);
+  }, [survey, applyApprovePaymentPrefill]);
 
   // Determine if this claim can be evaluated
   const viewedClaim = viewClaimId ? allClaims.find((c: any) => c.claimId === viewClaimId) : null;
@@ -867,7 +725,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         }}
       >
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-secondary)' }}>
-          {formLoading || approvePaymentPrefetching || approvePaymentError ? (
+          {formLoading || approvePayment.prefetching || approvePayment.error ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div
                 style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}
@@ -974,12 +832,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             />
           )}
 
-          {approvePaymentActive && (approvePaymentPrefetching || approvePaymentError) && (
+          {approvePayment.active && (approvePayment.prefetching || approvePayment.error) && (
             <ApprovePaymentSourceClaimModal
               open
               phase={
-                approvePaymentError
-                  ? { kind: 'error', message: approvePaymentError }
+                approvePayment.error
+                  ? { kind: 'error', message: approvePayment.error }
                   : { kind: 'loading', message: 'Loading your approved claims and credential data…' }
               }
               onClose={() => router.push(collectionUrl)}
