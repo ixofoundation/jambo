@@ -16,7 +16,7 @@ import { PAY_CONVERT_ENABLED, fromPayBase, toPayBase } from '@constants/payConve
 import { IXO_CHAIN_ID, IXO_USDC_DENOM, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
-import { localEstimate } from '@utils/localCurrency';
+import { fetchUsdRate, formatCurrency, localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
 import usePayConvert, { payConvertErrorMessage } from '@hooks/usePayConvert';
 import { fetchConvertInfo } from 'lib/payConvert/client';
@@ -461,6 +461,25 @@ export default function OfframpScreen() {
   }, [networkId, bankNetworks, channels, payoutMethod]);
 
   const currency = useMemo(() => channelCandidates.find((c) => c.currency)?.currency ?? '', [channelCandidates]);
+
+  // The rail's channels for the COUNTRY, before any bank or provider is picked: their minimum,
+  // maximum and currency are known from here — which is all the early checks under the amount
+  // need, so nobody fills in a form to learn the amount was too small. Where a country pays a rail
+  // out in more than one currency (Uganda's banks: UGX or USD) the country's own currency wins,
+  // as YellowCard's own routing does.
+  const railChannels = useMemo<YcChannel[]>(() => {
+    const rail = channels.filter((c) => isActiveWithdrawChannel(c) && mapCategory(c.channelType) === payoutMethod);
+    const currencies = Array.from(new Set(rail.map((c) => c.currency).filter((c): c is string => !!c)));
+    if (currencies.length <= 1) return rail;
+    const home = rail.find((c) => c.currency && c.currency === c.countryCurrency)?.currency ?? currencies[0];
+    return rail.filter((c) => c.currency === home);
+  }, [channels, payoutMethod]);
+  // What the early checks quote in: the chosen provider's currency once there is one, else the rail's.
+  const railCurrency = currency || (railChannels.find((c) => c.currency)?.currency ?? '');
+  const methodMins = railChannels.map((c) => c.min).filter((n): n is number => typeof n === 'number' && n > 0);
+  const methodMaxs = railChannels.map((c) => c.max).filter((n): n is number => typeof n === 'number' && n > 0);
+  const methodMin = methodMins.length ? Math.min(...methodMins) : null;
+  const methodMax = methodMaxs.length ? Math.max(...methodMaxs) : null;
   // The rail is the user's explicit choice — no longer inferred from channels.
   const channelType = payoutMethod;
   const settlementSecs = useMemo(
@@ -566,10 +585,44 @@ export default function OfframpScreen() {
   const candidateMaxs = channelCandidates.map((c) => c.max).filter((n): n is number => typeof n === 'number');
   const aggMin = candidateMins.length ? Math.min(...candidateMins) : null;
   const aggMax = candidateMaxs.length ? Math.max(...candidateMaxs) : null;
-  const limitMin = quote?.transactionLimitMin ?? aggMin;
-  const limitMax = quote?.transactionLimitMax ?? aggMax;
+  // The rail's limit window: the chosen provider's channels once there is one, else the country's
+  // channels for the rail — so the window is known as soon as country + method are.
+  const channelMin = aggMin ?? methodMin;
+  const channelMax = aggMax ?? methodMax;
+  const limitMin = quote?.transactionLimitMin ?? channelMin;
+  const limitMax = quote?.transactionLimitMax ?? channelMax;
   const belowMin = !!quote && fiatOut != null && limitMin != null && fiatOut < limitMin;
   const aboveMax = !!quote && fiatOut != null && limitMax != null && fiatOut > limitMax;
+
+  // USD → rail-currency mid-market rate, for the INSTANT minimum hint before any quote is in. The
+  // session's own local currency when it matches; otherwise fetched once per currency and kept.
+  // Null means no hint, never an error.
+  const railRates = useRef(new Map<string, number | null>());
+  const [railRate, setRailRate] = useState<number | null>(null);
+  useEffect(() => {
+    if (!railCurrency) {
+      setRailRate(null);
+      return;
+    }
+    if (local && local.currency === railCurrency) {
+      setRailRate(local.rate);
+      return;
+    }
+    const known = railRates.current.get(railCurrency);
+    if (known !== undefined) {
+      setRailRate(known);
+      return;
+    }
+    let cancelled = false;
+    setRailRate(null);
+    void fetchUsdRate(railCurrency).then((r) => {
+      railRates.current.set(railCurrency, r);
+      if (!cancelled) setRailRate(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [railCurrency, local]);
 
   // Capacity: one quiet quote for the WHOLE wallet on the chosen rail, whenever rewards are in
   // play and the rail is known. Its fiat answer against the rail's minimum decides "Almost there"
@@ -577,14 +630,14 @@ export default function OfframpScreen() {
   // gating (null), never a blocked form.
   const { previewWithdrawal } = offramp;
   useEffect(() => {
-    if (!rewardsInPlay || !balancesReady || !currency || !channelType || totalAvailable <= 0) {
+    if (!rewardsInPlay || !balancesReady || !railCurrency || !channelType || totalAvailable <= 0) {
       setCapacity(null);
       return;
     }
     let cancelled = false;
     previewWithdrawal({
       amountUsdc: totalAvailable,
-      currency,
+      currency: railCurrency,
       channelType,
       country,
       sourceDenom: heldDenom,
@@ -600,7 +653,7 @@ export default function OfframpScreen() {
         setCapacity({
           amountUsd: totalAvailable,
           fiatOut: out,
-          limitMin: q.transactionLimitMin ?? aggMin,
+          limitMin: q.transactionLimitMin ?? channelMin,
           // The EFFECTIVE rate (fiat out per dollar in, fees included) — not YellowCard's gross
           // `rateLocal`, which would make "try at least about $X" land just under the minimum.
           rate: totalAvailable > 0 && out > 0 ? out / totalAvailable : null,
@@ -615,13 +668,13 @@ export default function OfframpScreen() {
   }, [
     rewardsInPlay,
     balancesReady,
-    currency,
+    railCurrency,
     channelType,
     country,
     heldDenom,
     skipBridge,
     totalAvailable,
-    aggMin,
+    channelMin,
     previewWithdrawal,
   ]);
 
@@ -629,16 +682,128 @@ export default function OfframpScreen() {
   // something to encourage rather than a form to fail at.
   const almostThere =
     rewardsInPlay && capacity != null && capacity.limitMin != null && capacity.fiatOut < capacity.limitMin;
-  // The amount typed is under the minimum, but the whole wallet would clear it: say how much to try.
-  const wholeWalletClearsMin = capacity != null && limitMin != null && capacity.fiatOut >= limitMin;
-  // Rounded UP to the cent, so an amount typed from the hint clears the minimum rather than grazing it.
-  const minUsd = capacity?.rate && limitMin != null ? Math.ceil((limitMin / capacity.rate) * 100) / 100 : null;
 
   // "Almost there" replaces the amount: drop any quote taken before the capacity answer arrived, so
   // the form never shows "below the minimum — increase the amount" next to a field that is disabled.
   useEffect(() => {
     if (almostThere) setQuote(null);
   }, [almostThere]);
+
+  // The exact answer, quietly: ~half a second after the amount settles, quote it on the chosen rail
+  // (the very call "Get quote" makes) so "below the minimum" and the real payout show under the
+  // amount before a single detail is filled in. Kept with the amount + rail it was taken for, so a
+  // stale answer is never shown against a new amount. Silent on failure — the instant hint stays.
+  const [liveQuote, setLiveQuote] = useState<{
+    amountUsd: number;
+    currency: string;
+    channelType: string;
+    country: string;
+    fiatOut: number;
+    limitMin: number | null;
+    limitMax: number | null;
+    /** Fiat out per dollar in, fees included. */
+    rate: number | null;
+  } | null>(null);
+  useEffect(() => {
+    const valid = Number.isFinite(amountNum) && amountNum > 0 && !overBalance;
+    if (!valid || !railCurrency || !channelType || almostThere || !showFlow) {
+      setLiveQuote(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      previewWithdrawal({
+        amountUsdc: amountNum,
+        currency: railCurrency,
+        channelType,
+        country,
+        sourceDenom: heldDenom,
+        skipBridge,
+      })
+        .then(({ quote: q }) => {
+          if (cancelled) return;
+          const out = q.fiatReceived != null ? Number(q.fiatReceived) : null;
+          if (out == null || !Number.isFinite(out)) {
+            setLiveQuote(null);
+            return;
+          }
+          setLiveQuote({
+            amountUsd: amountNum,
+            currency: railCurrency,
+            channelType,
+            country,
+            fiatOut: out,
+            limitMin: q.transactionLimitMin ?? null,
+            limitMax: q.transactionLimitMax ?? null,
+            rate: out > 0 ? out / amountNum : null,
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setLiveQuote(null);
+        });
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    amountNum,
+    overBalance,
+    railCurrency,
+    channelType,
+    country,
+    heldDenom,
+    skipBridge,
+    almostThere,
+    showFlow,
+    previewWithdrawal,
+  ]);
+  const liveFresh =
+    liveQuote != null &&
+    liveQuote.amountUsd === amountNum &&
+    liveQuote.currency === railCurrency &&
+    liveQuote.channelType === channelType &&
+    liveQuote.country === country
+      ? liveQuote
+      : null;
+
+  // What the amount would fetch: exact once the quiet quote is in, the mid-market estimate until
+  // then. Against the rail's window that gives the early verdict; the quote box below repeats it
+  // once a full quote is taken.
+  const earlyMin = liveFresh?.limitMin ?? limitMin;
+  const earlyMax = liveFresh?.limitMax ?? limitMax;
+  const earlyFiat =
+    liveFresh != null ? liveFresh.fiatOut : railRate && Number.isFinite(amountNum) ? amountNum * railRate : null;
+  const earlyBelowMin = earlyFiat != null && earlyMin != null && earlyFiat < earlyMin;
+  const earlyAboveMax = earlyFiat != null && earlyMax != null && earlyFiat > earlyMax;
+  // Fiat per dollar, best available: this amount's own quote, the whole-wallet quote, mid-market.
+  const railUsdRate = liveFresh?.rate ?? capacity?.rate ?? railRate;
+  // Rounded UP to the cent, so an amount typed from the hint clears the minimum rather than grazing it.
+  const minUsd = railUsdRate && earlyMin != null ? Math.ceil((earlyMin / railUsdRate) * 100) / 100 : null;
+  const maxUsd = railUsdRate && earlyMax != null ? Math.floor((earlyMax / railUsdRate) * 100) / 100 : null;
+  const railLabel = isMomo ? 'mobile money' : 'bank transfer';
+  const fmtRail = (v: number) => (railCurrency ? formatCurrency(v, railCurrency) : v.toString());
+  // "Below the R 100.00 minimum for bank transfer in South Africa — try at least about $5.70." plus,
+  // for someone who cannot reach it, what they have and what to try instead.
+  const belowMinText = (min: number): string => {
+    const base = `Below the ${fmtRail(min)} minimum for ${railLabel} in ${countryLabel}`;
+    if (minUsd == null) return `${base} — increase the amount.`;
+    if (minUsd > totalAvailable + 1e-9) {
+      return `${base}. The minimum is about ${formatRewardsUsd(minUsd)} and you have ${formatRewardsUsd(
+        totalAvailable,
+      )}${
+        rewardsInPlay ? ' including your rewards' : ''
+      } — a different payout method or country may have a lower minimum.`;
+    }
+    const tryLine = `${base} — try at least about ${formatRewardsUsd(minUsd)}.`;
+    return rewardsInPlay && minUsd > (balance ?? 0)
+      ? `${tryLine} You have ${formatRewardsUsd(totalAvailable)} available including your rewards.`
+      : tryLine;
+  };
+  const aboveMaxText = (max: number): string =>
+    `Above the ${fmtRail(max)} maximum for ${railLabel} in ${countryLabel}${
+      maxUsd != null ? ` — try at most about ${formatRewardsUsd(maxUsd)}.` : ' — reduce the amount.'
+    }`;
 
   const nameValid = kycName.trim().split(/\s+/).filter(Boolean).length >= 2;
   const emailValid = EMAIL_RE.test(kycEmail);
@@ -673,8 +838,16 @@ export default function OfframpScreen() {
   // and once a late-loading credential turns up, there's nothing left to say.
   const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
 
+  // No quote for an amount the quiet quote (the same call) has already found outside the window —
+  // the line under the amount says what to type instead.
   const canQuote =
-    !!currency && !!channelType && Number.isFinite(amountNum) && amountNum > 0 && !overBalance && !almostThere;
+    !!currency &&
+    !!channelType &&
+    Number.isFinite(amountNum) &&
+    amountNum > 0 &&
+    !overBalance &&
+    !almostThere &&
+    !(liveFresh && (earlyBelowMin || earlyAboveMax));
   const canWithdraw =
     canQuote &&
     !!quote &&
@@ -1046,7 +1219,7 @@ export default function OfframpScreen() {
                 <p className={styles.cardTitle}>Almost there!</p>
                 <p className={styles.kycGateText}>
                   Withdrawals to {isMomo ? 'mobile money' : 'a bank account'} in {countryLabel} start at{' '}
-                  {capacity?.limitMin} {currency}
+                  {capacity?.limitMin != null ? fmtRail(capacity.limitMin) : ''}
                   {minUsd != null ? ` (about ${formatRewardsUsd(minUsd)})` : ''}. You have{' '}
                   {formatRewardsUsd(totalAvailable)} so far — keep mapping and making a difference, and come back to
                   cash out once you’re there.
@@ -1127,7 +1300,9 @@ export default function OfframpScreen() {
                         <label className={styles.label}>Amount (USD)</label>
                         <input
                           className={`${styles.input}${
-                            overBalance || conversionOverCap ? ` ${styles.inputError}` : ''
+                            overBalance || conversionOverCap || (showForm && (earlyBelowMin || earlyAboveMax))
+                              ? ` ${styles.inputError}`
+                              : ''
                           }`}
                           type='number'
                           inputMode='decimal'
@@ -1142,6 +1317,13 @@ export default function OfframpScreen() {
                             Change the country or payout method to see if a lower minimum applies.
                           </span>
                         )}
+                        {/* Before an amount is typed: the rail's minimum, so nobody types below it. */}
+                        {!almostThere && !showForm && railCurrency && channelMin != null && (
+                          <span className={styles.hint}>
+                            Minimum {fmtRail(channelMin)} for {railLabel} in {countryLabel}
+                            {minUsd != null ? ` (about ${formatRewardsUsd(minUsd)})` : ''}.
+                          </span>
+                        )}
                         {overBalance && (
                           <span className={styles.errorText}>
                             {rewardsInPlay
@@ -1154,15 +1336,33 @@ export default function OfframpScreen() {
                             You can convert up to $1,000 of rewards per withdrawal — try a smaller amount.
                           </span>
                         )}
-                        {!overBalance && !conversionOverCap && needsConversion && (
+                        {/* The early verdict: instant from the mid-market rate, exact once the quiet
+                            quote is in — either way before a single detail is filled in. */}
+                        {showForm && !overBalance && !conversionOverCap && earlyBelowMin && earlyMin != null && (
+                          <span className={styles.errorText}>{belowMinText(earlyMin)}</span>
+                        )}
+                        {showForm &&
+                          !overBalance &&
+                          !conversionOverCap &&
+                          !earlyBelowMin &&
+                          earlyAboveMax &&
+                          earlyMax != null && <span className={styles.errorText}>{aboveMaxText(earlyMax)}</span>}
+                        {!overBalance && !conversionOverCap && !earlyBelowMin && !earlyAboveMax && needsConversion && (
                           <span className={styles.hint}>
                             We’ll turn {formatRewardsUsd(fromPayBase(neededPayMicro.toString()))} of your Cleanup
                             rewards into USDC first — one extra confirmation, no fees from Yoma.
                           </span>
                         )}
-                        {!overBalance && local && Number.isFinite(amountNum) && amountNum > 0 && (
+                        {/* What it fetches: the real net figure once quoted, the mid-market estimate until then. */}
+                        {showForm && !overBalance && !earlyBelowMin && !earlyAboveMax && (
                           <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
-                            {localEstimate(amountNum, local)} at the mid-market rate
+                            {liveFresh
+                              ? `≈ ${fmtRail(liveFresh.fiatOut)} to your ${railLabel} after fees`
+                              : railRate && railCurrency
+                              ? `≈ ${fmtRail(amountNum * railRate)} at the mid-market rate, before fees`
+                              : local
+                              ? `${localEstimate(amountNum, local)} at the mid-market rate`
+                              : ''}
                           </span>
                         )}
                       </div>
@@ -1182,6 +1382,35 @@ export default function OfframpScreen() {
                       </div>
                     </div>
 
+                    {/* The payout method sits with the country, outside the collapse: the two of them
+                        set the minimum, so both must be reachable before an amount is typed — and while
+                        "Almost there" has the amount locked. */}
+                    {availableMethods.length > 1 && (
+                      <div className={styles.row}>
+                        <div className={styles.field}>
+                          <label className={styles.label}>Payout method</label>
+                          <select
+                            className={styles.select}
+                            value={payoutMethod}
+                            onChange={(e) => {
+                              // Switching rail invalidates the provider + number
+                              // (and any quote) — start that part of the form fresh.
+                              setPayoutMethod(e.currentTarget.value as PayoutMethod);
+                              setNetworkId('');
+                              setAccountNumber('');
+                              setQuote(null);
+                            }}
+                          >
+                            {availableMethods.map((m) => (
+                              <option key={m} value={m}>
+                                {PAYOUT_METHOD_LABEL[m]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
                     <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
                       <div className={styles.collapseInner}>
                         {skipBridge && (
@@ -1199,32 +1428,6 @@ export default function OfframpScreen() {
                               <span className={styles.hint}>
                                 Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
                               </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {availableMethods.length > 1 && (
-                          <div className={styles.row}>
-                            <div className={styles.field}>
-                              <label className={styles.label}>Payout method</label>
-                              <select
-                                className={styles.select}
-                                value={payoutMethod}
-                                onChange={(e) => {
-                                  // Switching rail invalidates the provider + number
-                                  // (and any quote) — start that part of the form fresh.
-                                  setPayoutMethod(e.currentTarget.value as PayoutMethod);
-                                  setNetworkId('');
-                                  setAccountNumber('');
-                                  setQuote(null);
-                                }}
-                              >
-                                {availableMethods.map((m) => (
-                                  <option key={m} value={m}>
-                                    {PAYOUT_METHOD_LABEL[m]}
-                                  </option>
-                                ))}
-                              </select>
                             </div>
                           </div>
                         )}
@@ -1463,18 +1666,10 @@ export default function OfframpScreen() {
                               <InfoIcon label={ESTIMATE_NOTE} />
                             </span>
                             {belowMin && limitMin != null && (
-                              <span className={styles.warnLine}>
-                                {rewardsInPlay && wholeWalletClearsMin && minUsd != null
-                                  ? `Below the ${limitMin} ${currency} minimum — try at least about ${formatRewardsUsd(
-                                      minUsd,
-                                    )}. You have ${formatRewardsUsd(totalAvailable)} available including your rewards.`
-                                  : `Below the ${limitMin} ${currency} minimum — increase the amount.`}
-                              </span>
+                              <span className={styles.warnLine}>{belowMinText(limitMin)}</span>
                             )}
                             {aboveMax && limitMax != null && (
-                              <span className={styles.warnLine}>
-                                Above the {limitMax} {currency} maximum — reduce the amount.
-                              </span>
+                              <span className={styles.warnLine}>{aboveMaxText(limitMax)}</span>
                             )}
                           </div>
                         )}
