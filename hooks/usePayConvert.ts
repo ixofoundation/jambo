@@ -50,9 +50,9 @@ export interface PayConvertResult {
 const PENDING_MESSAGE =
   'Your rewards are still converting — give it a minute, then tap Withdraw again. No new conversion will be needed.';
 const REVIEW_MESSAGE =
-  'Your conversion needs a quick check on our side. Your PAY is safe, and the USDC will be added to your wallet once it clears — come back a little later and tap Withdraw again.';
+  'We’re double-checking this conversion on our side and will sort it out — your rewards are safe. Once the USDC shows in your wallet, tap Withdraw; no new conversion will be needed.';
 const FAILED_MESSAGE =
-  'We couldn’t finish checking this conversion. Your PAY is safe — if it isn’t back in your wallet within a few minutes, please contact support with your wallet address.';
+  'We couldn’t finish checking this conversion. Your rewards are safe — if they aren’t back in your wallet within a few minutes, please contact support with your wallet address.';
 
 /** How long we wait for the oracle after the transaction before handing the
  *  user back to their wallet with an "on its way" note. */
@@ -92,12 +92,12 @@ export function payConvertErrorMessage(err: unknown): string {
 export function rejectedMessage(status: Pick<ConvertStatus, 'refund'>): string {
   const refund = status.refund;
   if (!refund || refund.amountBase === '0' || refund.reason === 'none') {
-    return 'This conversion couldn’t be completed. Nothing was converted and no PAY was taken.';
+    return 'This conversion couldn’t be completed. Nothing was converted and none of your rewards were taken.';
   }
   if (refund.status === 'sent') {
-    return 'This conversion couldn’t be completed, so your PAY has been returned to your wallet. Nothing was converted — you can try again.';
+    return 'This conversion couldn’t be completed, so your rewards have been returned to your wallet. Nothing was converted — you can try again.';
   }
-  return 'This conversion couldn’t be completed. Your PAY is being returned to your wallet automatically — it usually takes a minute. Nothing was converted.';
+  return 'This conversion couldn’t be completed. Your rewards are being returned to your wallet automatically — it usually takes a minute. Nothing was converted.';
 }
 
 /**
