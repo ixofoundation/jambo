@@ -308,6 +308,9 @@ export interface YcNetwork {
 export interface YcChannel {
   id: string;
   currency?: string;
+  /** The country's own currency. A rail can pay out in another one too (Uganda's
+   *  banks: UGX or USD) — the country's own is the one to quote in by default. */
+  countryCurrency?: string;
   accountType?: string;
   channelType?: string;
   rampType?: string;

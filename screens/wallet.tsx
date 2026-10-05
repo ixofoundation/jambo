@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
+import { PAY_CONVERT_ENABLED } from '@constants/payConvert';
 import { getWalletBalances } from '@utils/usdcBalance';
 import { formatCurrency } from '@utils/localCurrency';
 import Header from '@components/Header/Header';
@@ -51,6 +52,8 @@ export default function Wallet() {
   const hasRewards = (rewards ?? 0) > 0;
   // Held rewards: in the total, but not "available to withdraw" yet.
   const heldRewards = CLEANUP_REWARDS_HOLD && hasRewards;
+  // Convertible rewards: one step on Withdraw turns them into USDC.
+  const convertibleRewards = PAY_CONVERT_ENABLED && hasRewards;
   const total = balance === null ? null : balance + (rewards ?? 0);
   const rewardsWhen = cleanupRewardsWithdrawWhen();
   const fmtMoney = (v: number) => (local ? formatCurrency(v * local.rate, local.currency) : fmtUsd(v));
@@ -103,6 +106,8 @@ export default function Wallet() {
           <div className='muted' style={{ fontSize: 14 }}>
             {heldRewards
               ? `Available to withdraw now · ${balance === null ? '…' : fmtUsd(balance)} USDC`
+              : convertibleRewards
+              ? `Available to withdraw · ${total === null ? '…' : fmtUsd(total)} including rewards`
               : local
               ? `Available to withdraw · ≈ of ${balance === null ? '…' : fmtUsd(balance)} USDC`
               : 'Available to withdraw · USD'}
@@ -110,6 +115,11 @@ export default function Wallet() {
           {heldRewards && (
             <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
               Includes {formatRewardsUsd(rewards ?? 0)} in Cleanup rewards, withdrawable {rewardsWhen.when}.
+            </div>
+          )}
+          {convertibleRewards && (
+            <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
+              Includes {formatRewardsUsd(rewards ?? 0)} in Cleanup rewards — they count towards what you can withdraw.
             </div>
           )}
           <div className='hstack' style={{ gap: 10, marginTop: 16 }}>
@@ -147,7 +157,11 @@ export default function Wallet() {
             <div className='status-item__body'>
               <div className='status-item__title'>Cleanup rewards</div>
               <div className='status-item__meta'>
-                {heldRewards ? `Withdrawable ${rewardsWhen.when}` : 'World Cleanup Day'}
+                {heldRewards
+                  ? `Withdrawable ${rewardsWhen.when}`
+                  : convertibleRewards
+                  ? 'Counts towards withdrawals'
+                  : 'World Cleanup Day'}
               </div>
             </div>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{fmtMoney(rewards ?? 0)}</div>

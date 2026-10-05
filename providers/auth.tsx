@@ -276,6 +276,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         return inner.split('.').pop() || 'Transaction';
       }
     }
+    if (typeUrl.includes('MsgClaimIntent')) return 'Convert Cleanup rewards';
     if (typeUrl.includes('MsgAddVerification')) return 'Register Signing Key';
     if (typeUrl.includes('MsgGrantEntityAccountAuthz')) return 'Grant Authorization';
     return typeUrl.split('.').pop() || 'Transaction';
