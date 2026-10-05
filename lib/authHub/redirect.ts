@@ -1,4 +1,4 @@
-import { AUTH_HUB_URL } from './config';
+import { AUTH_HUB_ORGANIZATION_ID, AUTH_HUB_SSO_PROMPT, AUTH_HUB_URL } from './config';
 
 export interface AuthHubSessionData {
   address: string;
@@ -33,6 +33,14 @@ export function loginViaAuthHub(options?: { hideMnemonic?: boolean }) {
   let url = `${AUTH_HUB_URL}/api/auth/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
   if (options?.hideMnemonic ?? true) {
     url += '&hide_mnemonic=true';
+  }
+  // Yoma single sign-on: send the user straight to the Yoma organisation's SSO
+  // connection (Keycloak), where an existing YoID session can be reused.
+  if (AUTH_HUB_ORGANIZATION_ID) {
+    url += `&organization_id=${encodeURIComponent(AUTH_HUB_ORGANIZATION_ID)}`;
+    if (AUTH_HUB_SSO_PROMPT) {
+      url += `&prompt=${encodeURIComponent(AUTH_HUB_SSO_PROMPT)}`;
+    }
   }
   window.location.href = url;
 }
