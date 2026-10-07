@@ -21,6 +21,7 @@ import useOfframp from '@hooks/useOfframp';
 import usePayConvert, { payConvertErrorMessage } from '@hooks/usePayConvert';
 import { fetchConvertInfo } from 'lib/payConvert/client';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
+import { describeBridgeOutcome } from 'lib/yellowcard/bridgeOutcome';
 import {
   type OfframpTransaction,
   type QuoteResult,
@@ -1782,14 +1783,25 @@ export default function OfframpScreen() {
                         bankName?: string;
                       };
                       const txMomo = (tx.channel_type ?? '').toLowerCase() === 'momo';
-                      const statusClass = bridging
+                      // Worker-stamped bridge outcome (e.g. USDC refunded on ixo); null for raw Skip states.
+                      const outcome = describeBridgeOutcome(tx.skip_status);
+                      // Outcomes never lose funds, so even the 'warn' tone stays blue, not red.
+                      const statusClass = outcome
+                        ? outcome.tone === 'good'
+                          ? styles.statusGreen
+                          : styles.statusBlue
+                        : bridging
                         ? styles.statusBlue
                         : isTerminal
                         ? good
                           ? styles.statusGreen
                           : styles.statusRed
                         : styles.statusBlue;
-                      const statusLabel = bridging ? 'bridging' : tx.status.replace(/_/g, ' ');
+                      const statusLabel = outcome
+                        ? outcome.label
+                        : bridging
+                        ? 'bridging'
+                        : tx.status.replace(/_/g, ' ');
                       const inProgress = (offramp.active?.id === tx.id && busy) || retryingId === tx.id;
                       const skipFailed = /ERROR|FAIL|ABANDON/i.test(skipStatuses[tx.id] ?? '');
                       const bridgeIncomplete = !tx.skip_tx_hash || skipFailed;
@@ -1807,7 +1819,11 @@ export default function OfframpScreen() {
                                 {new Date(tx.created_at * 1000).toLocaleString()} · {tx.crypto_network}
                               </span>
                             </span>
-                            <span className={`${styles.txStatus} ${statusClass}`}>{statusLabel}</span>
+                            <span
+                              className={`${styles.txStatus} ${statusClass}${outcome ? ` ${styles.txStatusWrap}` : ''}`}
+                            >
+                              {statusLabel}
+                            </span>
                           </button>
 
                           {canComplete && (
@@ -1870,14 +1886,21 @@ export default function OfframpScreen() {
                               {tx.skip_tx_hash && (
                                 <div className={styles.detailRow}>
                                   <span>Bridge (Skip)</span>
-                                  <span className={`${styles.detailVal}${skipFailed ? ` ${styles.statusRed}` : ''}`}>
-                                    {(skipStatuses[tx.id] ?? 'checking…')
-                                      .replace(/^STATE_/, '')
-                                      .replace(/_/g, ' ')
-                                      .toLowerCase()}
+                                  <span
+                                    className={`${styles.detailVal}${
+                                      skipFailed && !outcome ? ` ${styles.statusRed}` : ''
+                                    }`}
+                                  >
+                                    {outcome
+                                      ? outcome.label
+                                      : (skipStatuses[tx.id] ?? 'checking…')
+                                          .replace(/^STATE_/, '')
+                                          .replace(/_/g, ' ')
+                                          .toLowerCase()}
                                   </span>
                                 </div>
                               )}
+                              {outcome && <p className={styles.hint}>{outcome.detail}</p>}
                               {tx.error && (
                                 <span className={styles.errorText}>Error: {tx.error_detail ?? tx.error}</span>
                               )}
