@@ -3,6 +3,8 @@ import { toHex } from '@cosmjs/encoding';
 import type { MatrixClient } from 'matrix-js-sdk';
 import { EventTimeline } from 'matrix-js-sdk';
 
+import { isRoomEncrypted } from 'lib/matrix/support';
+
 const INDEX_EVENT_TYPE = 'ixo.credential.index';
 const CREDENTIAL_EVENT_TYPE = 'ixo.credential';
 const PII_INDEX_EVENT_TYPE = 'ixo.pii.index';
@@ -153,7 +155,7 @@ export async function storeMatrixCredential({
   if (!mxClient) throw new Error('Matrix client is not available');
   if (!roomId) throw new Error('User Matrix room ID is required');
 
-  if (!mxClient.isRoomEncrypted(roomId)) {
+  if (!isRoomEncrypted(mxClient, roomId)) {
     const msg = `[storeMatrixCredential] Room ${roomId} is not E2EE — credential PII would be written in plaintext`;
     if (REQUIRE_E2EE_CREDENTIALS) throw new Error(msg);
     console.warn(msg);
@@ -300,7 +302,7 @@ export async function storeMatrixPii({
   if (!roomId) throw new Error('User Matrix room ID is required');
   if (!protocolId) throw new Error('protocolId is required');
 
-  if (!mxClient.isRoomEncrypted(roomId)) {
+  if (!isRoomEncrypted(mxClient, roomId)) {
     const msg = `[storeMatrixPii] Room ${roomId} is not E2EE — credential data would be written in plaintext`;
     if (REQUIRE_E2EE_CREDENTIALS) throw new Error(msg);
     console.warn(msg);
@@ -429,7 +431,7 @@ export async function storeOfframpProfile({
   if (!mxClient) throw new Error('Matrix client is not available');
   if (!roomId) throw new Error('User Matrix room ID is required');
 
-  if (!mxClient.isRoomEncrypted(roomId)) {
+  if (!isRoomEncrypted(mxClient, roomId)) {
     const msg = `[storeOfframpProfile] Room ${roomId} is not E2EE — off-ramp profile would be written in plaintext`;
     if (REQUIRE_E2EE_CREDENTIALS) throw new Error(msg);
     console.warn(msg);

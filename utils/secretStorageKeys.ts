@@ -1,7 +1,10 @@
 import { deriveRecoveryKeyFromPassphrase } from 'matrix-js-sdk/lib/crypto-api/key-passphrase';
 import { calculateKeyCheck, trimTrailingEquals } from 'matrix-js-sdk/lib/secret-storage';
 
-const secretStorageKeys = new Map();
+/** Key bytes exactly as the SDK produces/consumes them (`Uint8Array<ArrayBuffer>` on SDK ≥ 41). */
+type SecretStorageKeyBytes = Awaited<ReturnType<typeof deriveRecoveryKeyFromPassphrase>>;
+
+const secretStorageKeys = new Map<string, SecretStorageKeyBytes>();
 
 /**
  * Security phrase for the active session, used to derive a secret-storage key on
@@ -18,7 +21,7 @@ export function setSecurityPhrase(phrase: string | null) {
   currentSecurityPhrase = phrase;
 }
 
-export function storePrivateKey(keyId: string, privateKey: Uint8Array) {
+export function storePrivateKey(keyId: string, privateKey: SecretStorageKeyBytes) {
   if (privateKey instanceof Uint8Array === false) {
     throw new Error('Unable to store, privateKey is invalid.');
   }
@@ -45,7 +48,7 @@ export function clearSecretStorageKeys() {
 
 /** Validate a derived key against a key description's stored MAC/IV. When the
  *  description carries no `mac` we cannot validate, so accept the key (best effort). */
-async function keyMatchesDescription(key: Uint8Array, info: any): Promise<boolean> {
+async function keyMatchesDescription(key: SecretStorageKeyBytes, info: any): Promise<boolean> {
   if (!info?.mac) return true;
   try {
     const { mac } = await calculateKeyCheck(key, info.iv);
@@ -60,7 +63,7 @@ async function keyMatchesDescription(key: Uint8Array, info: any): Promise<boolea
  *  the requested key descriptions, validate it, cache it, and return the match. */
 async function deriveSecretStorageKey(
   keys: Record<string, any>,
-): Promise<[string, Uint8Array] | null> {
+): Promise<[string, SecretStorageKeyBytes] | null> {
   if (!currentSecurityPhrase) return null;
 
   for (const [keyId, info] of Object.entries(keys)) {
@@ -84,12 +87,12 @@ async function deriveSecretStorageKey(
   return null;
 }
 
-export async function getSecretStorageKey({ keys }: { keys: any }): Promise<[string, Uint8Array] | null> {
+export async function getSecretStorageKey({ keys }: { keys: any }): Promise<[string, SecretStorageKeyBytes] | null> {
   const keyIds = Object.keys(keys);
   const cachedKeyId = keyIds.find(hasPrivateKey);
 
   if (cachedKeyId) {
-    return [cachedKeyId, getPrivateKey(cachedKeyId)];
+    return [cachedKeyId, getPrivateKey(cachedKeyId)!];
   }
 
   // Cache miss: derive on demand from the active security phrase. This is the
@@ -102,6 +105,6 @@ export async function getSecretStorageKey({ keys }: { keys: any }): Promise<[str
   return null;
 }
 
-export function cacheSecretStorageKey(keyId: string, _keyInfo: any, privateKey: Uint8Array) {
+export function cacheSecretStorageKey(keyId: string, _keyInfo: any, privateKey: SecretStorageKeyBytes) {
   secretStorageKeys.set(keyId, privateKey);
 }
