@@ -5,6 +5,7 @@ import { useAuth } from '@hooks/useAuth';
 import PinModal from '@components/PinModal/PinModal';
 import { mxLogin, createMatrixClient, generatePasswordFromMnemonic } from '@utils/matrix';
 import { isMatrixEncryptionReady, repairMatrixEncryption, formatEncryptionDiagnostics } from '@utils/matrixEncryptionRepair';
+import { initialiseDehydrationIfEnabled } from '@utils/dehydration';
 import {
   fetchEncryptedMnemonicFromRoomBot,
   fetchEncryptedMnemonicFromRoom,
@@ -138,6 +139,10 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         mxClientRef.current = mxClient;
         setStatus('success');
         setStatusMessage('Data Store ready');
+        // No mnemonic here, so secret storage can't be unlocked: only continue dehydration
+        // when this device already cached the dehydration key. Users without one get it on
+        // their next fresh login (setupMatrix) or PIN recovery (handlePinSubmit).
+        void initialiseDehydrationIfEnabled(mxClient, { onlyIfKeyCached: true, rehydrate: false });
         fetchMatrixProfile();
         void hydrateDeckPrefsFromMatrix(mxClient).catch((err) => console.warn('Deck prefs hydration failed:', err));
         if (auth.matrixRoomId && auth.address) {
@@ -181,6 +186,9 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
         setStatusMessage('Data Store ready');
         // First-time Data Store bootstrap after a fresh login (reattach on later boots is not this).
         track(AnalyticsEvents.VaultSetupCompleted);
+        // Secret storage is unlocked (repair primed the 4S key): rehydrate any existing
+        // dehydrated device and upload a fresh one. Runs in the background, never throws.
+        void initialiseDehydrationIfEnabled(mxClient);
         fetchMatrixProfile();
         void hydrateDeckPrefsFromMatrix(mxClient).catch((err) => console.warn('Deck prefs hydration failed:', err));
         if (auth.matrixRoomId && auth.address) {
@@ -283,6 +291,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
       setStatus('success');
       setStatusMessage('Data Store ready');
       setShowDetails(false);
+      void initialiseDehydrationIfEnabled(mxClientRef.current);
       pending.resolve();
     } catch (err: any) {
       console.error('Matrix encryption repair failed:', err);
