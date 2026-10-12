@@ -37,7 +37,8 @@ export const mxLogin = async (
 
   try {
     const client = createTemporaryClient(mxHomeServerUrl);
-    const response = await client.login('m.login.password', {
+    const response = await client.loginRequest({
+      type: 'm.login.password',
       identifier: {
         type: 'm.id.user',
         user: normalizeUsername(mxUsername),
@@ -553,7 +554,8 @@ export async function createMatrixClient() {
   });
   await indexedDBStore.startup();
   await mxClient.initRustCrypto();
-  mxClient.setGlobalErrorOnUnknownDevices(false);
+  // `setGlobalErrorOnUnknownDevices` was removed in matrix-js-sdk 41: rust crypto never
+  // blocks sends on unknown devices, so there is nothing to switch off.
   mxClient.setMaxListeners(20);
   // const filter = new Filter(userId);
   // filter.setDefinition({
