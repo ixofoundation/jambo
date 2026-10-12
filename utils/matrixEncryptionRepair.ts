@@ -1,5 +1,5 @@
 // cspell:ignore megolm falsey decryptable
-import type { MatrixClient } from 'matrix-js-sdk';
+import type { MatrixClient, SecretStorageAccountDataEvents } from 'matrix-js-sdk';
 import { deriveRecoveryKeyFromPassphrase } from 'matrix-js-sdk/lib/crypto-api/key-passphrase';
 
 import {
@@ -202,8 +202,11 @@ async function waitForActiveKeyBackup(
 
 /** The secrets `isSecretStorageReady` requires to be stored under the default 4S key:
  *  the three cross-signing keys, plus the megolm backup key when a backup is active. */
-async function getRequiredSecretNames(mxClient: MatrixClient): Promise<string[]> {
-  const names = ['m.cross_signing.master', 'm.cross_signing.user_signing', 'm.cross_signing.self_signing'];
+/** Secret-storage secret names as the SDK types them (matrix-js-sdk ≥ 41 keys `isStored`/`get`/`store` on this). */
+type SecretName = keyof SecretStorageAccountDataEvents;
+
+async function getRequiredSecretNames(mxClient: MatrixClient): Promise<SecretName[]> {
+  const names: SecretName[] = ['m.cross_signing.master', 'm.cross_signing.user_signing', 'm.cross_signing.self_signing'];
   const backupActive = await mxClient.getCrypto()?.getActiveSessionBackupVersion();
   if (backupActive) names.push('m.megolm_backup.v1');
   return names;
@@ -236,14 +239,14 @@ async function ensureSecretsUnderDefaultKey(mxClient: MatrixClient, phaseErrors:
 
       const plaintext = await ss.get(name);
       if (!plaintext) {
-        phaseErrors.push({ phase: 'secret-storage', step: `migrate/${name}`, error: 'secret not retrievable to migrate under default key' });
+        phaseErrors.push({ phase: 'secret-storage', step: `migrate/${String(name)}`, error: 'secret not retrievable to migrate under default key' });
         continue;
       }
       // No keys arg → encrypts and stores under the default key.
       await ss.store(name, plaintext);
     } catch (err) {
-      console.warn(`Failed to migrate secret ${name} under default key:`, err);
-      phaseErrors.push(toPhaseDiagnostic('secret-storage', `migrate/${name}`, err));
+      console.warn(`Failed to migrate secret ${String(name)} under default key:`, err);
+      phaseErrors.push(toPhaseDiagnostic('secret-storage', `migrate/${String(name)}`, err));
     }
   }
 }
@@ -259,7 +262,7 @@ async function collectSecretPlacement(mxClient: MatrixClient): Promise<string[]>
       const record = (await ss.isStored(name)) || {};
       const keyIds = Object.keys(record);
       const underDefault = !!defaultKeyId && defaultKeyId in record;
-      lines.push(`${name}: ${keyIds.length ? keyIds.join(',') : 'not stored'}${underDefault ? '' : ' [NOT under default]'}`);
+      lines.push(`${String(name)}: ${keyIds.length ? keyIds.join(',') : 'not stored'}${underDefault ? '' : ' [NOT under default]'}`);
     }
     return lines;
   } catch (err) {
