@@ -10,6 +10,8 @@ const cons = {
     ENCRYPTED_MNEMONIC_LOCAL: 'mx_encrypted_mnemonic_local',
     BACKGROUND_TYPE: 'mx_background_type',
     PIN_PROVIDED: 'mx_pin_provided',
+    // Name prefix of the rust crypto store (IndexedDB) that belongs to the saved device.
+    CRYPTO_DB_PREFIX: 'mx_ixo_crypto_db_prefix',
   },
   DEVICE_DISPLAY_NAME: 'JAMBO CLAIMS',
   IN_IXO_SPACES: 'in.ixo.spaces',
@@ -79,5 +81,20 @@ const cons = {
 };
 
 Object.freeze(cons);
+
+/**
+ * The matrix-js-sdk default rust crypto store prefix (RUST_SDK_STORE_PREFIX). Sessions saved
+ * before the store was named per device have no stored prefix and keep using this one.
+ */
+export const LEGACY_CRYPTO_DB_PREFIX = 'matrix-js-sdk';
+
+/**
+ * Rust crypto store prefix for one Matrix device. The store is bound to one (user, device), so
+ * every device gets its own database name and a new login can never open a store left behind by
+ * an earlier device. Keeps the `matrix-js-sdk` start so the IndexedDB sweeps still match it.
+ */
+export function cryptoDbPrefixForDevice(deviceId: string): string {
+  return `${LEGACY_CRYPTO_DB_PREFIX}-${deviceId}`;
+}
 
 export default cons;
