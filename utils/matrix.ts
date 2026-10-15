@@ -1,15 +1,17 @@
 import md5 from 'md5';
 import { sha256 } from '@cosmjs/crypto';
-import { AuthDict, ClientEvent, createClient, IndexedDBStore, MatrixClient } from 'matrix-js-sdk';
+import { AuthDict, ClientEvent, createClient, IndexedDBStore, MatrixClient, SyncState } from 'matrix-js-sdk';
+import type { SyncStateData } from 'matrix-js-sdk';
 import { CryptoApi } from 'matrix-js-sdk/lib/crypto-api';
 import { encrypt as eciesEncrypt } from 'eciesjs';
 
 import { secureReset, secureSave } from './storage';
-import cons from '@constants/matrix';
+import cons, { cryptoDbPrefixForDevice, LEGACY_CRYPTO_DB_PREFIX } from '@constants/matrix';
 import { isAuthenticated, secret } from './secrets';
 import { cacheSecretStorageKey, clearSecretStorageKeys, getSecretStorageKey } from './secretStorageKeys';
 import { cleanUrlString } from '@utils/url';
 import { delay } from './timestamp';
+import { clearSessionLock } from './sessionLock';
 
 const WELL_KNOWN_URI = '/.well-known/matrix/client';
 
@@ -37,7 +39,8 @@ export const mxLogin = async (
 
   try {
     const client = createTemporaryClient(mxHomeServerUrl);
-    const response = await client.login('m.login.password', {
+    const response = await client.loginRequest({
+      type: 'm.login.password',
       identifier: {
         type: 'm.id.user',
         user: normalizeUsername(mxUsername),
@@ -442,6 +445,9 @@ function updateLocalStore(accessToken: string, deviceId: string, userId: string,
   secureSave(cons.secretKey.DEVICE_ID, deviceId);
   secureSave(cons.secretKey.USER_ID, userId);
   secureSave(cons.secretKey.BASE_URL, baseUrl);
+  // Every device gets its own rust crypto store (see cryptoDbPrefixForDevice).
+  if (deviceId) secureSave(cons.secretKey.CRYPTO_DB_PREFIX, cryptoDbPrefixForDevice(deviceId));
+  else secureReset(cons.secretKey.CRYPTO_DB_PREFIX);
 }
 
 export function clearLocalStore() {
@@ -452,6 +458,7 @@ export function clearLocalStore() {
   secureReset(cons.secretKey.MNEMONIC_BACKUP);
   secureReset(cons.secretKey.ENCRYPTED_MNEMONIC_BACKUP);
   secureReset(cons.secretKey.BACKGROUND_TYPE);
+  secureReset(cons.secretKey.CRYPTO_DB_PREFIX);
 
   // Sweep any stray matrix-js-sdk localStorage entries
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -465,10 +472,77 @@ export function clearLocalStore() {
   }
 }
 
-async function deleteMatrixIndexedDBs() {
+/** The two IndexedDB databases the rust crypto store opens for a prefix. */
+function cryptoDbNames(prefix: string): [string, string] {
+  return [`${prefix}::matrix-sdk-crypto`, `${prefix}::matrix-sdk-crypto-meta`];
+}
+
+/**
+ * Best-effort delete of one IndexedDB database. Resolves on success, error or `blocked` — a
+ * blocked delete is never awaited: WebKit abandons it once the page goes away, Chromium completes
+ * it later (and queues opens of the same name behind it).
+ */
+function deleteIndexedDB(name: string): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const req = indexedDB.deleteDatabase(name);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => {
+        console.warn(`IndexedDB delete of "${name}" is blocked by an open connection (another tab?)`);
+        resolve();
+      };
+    } catch {
+      resolve();
+    }
+  });
+}
+
+/**
+ * Rust crypto store names only: `matrix-js-sdk::matrix-sdk-crypto[-meta]` (legacy) and
+ * `matrix-js-sdk-<deviceId>::matrix-sdk-crypto[-meta]`. The SDK names the sync store
+ * `matrix-js-sdk:matrix-sync-store` (a single colon): it must never match, or the sweep would
+ * delete the sync store `startup()` has just opened.
+ */
+const RUST_CRYPTO_DB_NAME = /^matrix-js-sdk(-[^:]+)?::matrix-sdk-crypto(-meta)?$/;
+
+/**
+ * Fire-and-forget: delete every rust crypto store that does not belong to `currentPrefix`
+ * (stores of earlier devices, or the legacy shared store once a per-device one is in use).
+ * Never touches the current prefix's databases. Needs `indexedDB.databases()`.
+ */
+function sweepStaleCryptoDatabases(currentPrefix: string) {
+  if (typeof indexedDB === 'undefined') return;
+  const anyIndexedDB = indexedDB as any;
+  if (typeof anyIndexedDB.databases !== 'function') return;
+  const keep = new Set<string>(cryptoDbNames(currentPrefix));
+  Promise.resolve()
+    .then(() => anyIndexedDB.databases() as Promise<Array<{ name?: string }>>)
+    .then((dbs) => {
+      for (const db of dbs ?? []) {
+        const name = db?.name;
+        if (name && RUST_CRYPTO_DB_NAME.test(name) && !keep.has(name)) {
+          console.info(`Deleting stale Data Store crypto database "${name}"`);
+          void deleteIndexedDB(name);
+        }
+      }
+    })
+    .catch((err) => console.warn('Stale crypto database sweep failed:', err));
+}
+
+async function deleteMatrixIndexedDBs(extraCryptoPrefixes: Array<string | undefined> = []) {
   if (typeof indexedDB === 'undefined') return;
 
-  const names = new Set<string>(['matrix-sync-store', 'matrix-js-sdk::matrix-sdk-crypto']);
+  // Known names for browsers without indexedDB.databases(): the sync store (the SDK prefixes its
+  // name with `matrix-js-sdk:`), the legacy shared crypto store and the per-device crypto store(s).
+  const names = new Set<string>([
+    'matrix-js-sdk:matrix-sync-store',
+    'matrix-sync-store',
+    ...cryptoDbNames(LEGACY_CRYPTO_DB_PREFIX),
+  ]);
+  for (const prefix of [secret.cryptoDbPrefix, ...extraCryptoPrefixes]) {
+    if (prefix) cryptoDbNames(prefix).forEach((name) => names.add(name));
+  }
 
   // Enumerate all databases when the browser supports it (Chrome/Edge/Safari 15+).
   try {
@@ -485,27 +559,101 @@ async function deleteMatrixIndexedDBs() {
     // best-effort — fall back to the known names
   }
 
-  await Promise.all(
-    Array.from(names).map(
-      (name) =>
-        new Promise<void>((resolve) => {
-          try {
-            const req = indexedDB.deleteDatabase(name);
-            req.onsuccess = () => resolve();
-            req.onerror = () => resolve();
-            req.onblocked = () => resolve();
-          } catch {
-            resolve();
-          }
-        }),
-    ),
-  );
+  await Promise.all(Array.from(names).map((name) => deleteIndexedDB(name)));
 }
 
 // =================================================================================================
 // CLIENT
 // =================================================================================================
-let activeMatrixClient: MatrixClient | null = null;
+/**
+ * Every client `createMatrixClient` created in this tab, with its sync store. A client that failed
+ * to start stays reachable here so it can always be stopped: a running client (or an
+ * initialised OlmMachine) keeps the crypto store open and blocks deleting it at sign-out.
+ */
+interface ManagedClient {
+  client: MatrixClient;
+  store: IndexedDBStore;
+  syncListener?: (state: SyncState, prevState: SyncState | null, data?: SyncStateData) => void;
+  /** Rejects a start that is still waiting for the first sync. */
+  abortStart?: (err: Error) => void;
+  stopped: boolean;
+}
+const managedClients = new Set<ManagedClient>();
+
+/** The Matrix access token was rejected (M_UNKNOWN_TOKEN): the device was signed out server-side. */
+export class MatrixSessionInvalidError extends Error {
+  errcode = 'M_UNKNOWN_TOKEN';
+  constructor(message: string) {
+    super(message);
+    this.name = 'MatrixSessionInvalidError';
+    // Keep `instanceof` working when the class is down-levelled to ES5.
+    Object.setPrototypeOf(this, MatrixSessionInvalidError.prototype);
+  }
+}
+
+export function isMatrixSessionInvalidError(err: unknown): err is MatrixSessionInvalidError {
+  return (
+    err instanceof MatrixSessionInvalidError || (err as { name?: string } | null)?.name === 'MatrixSessionInvalidError'
+  );
+}
+
+/**
+ * The rust crypto store on disk is bound to a different (user, device) than the client:
+ * "the account in the store doesn't match the account in the constructor".
+ */
+export function isCryptoStoreMismatchError(err: unknown): boolean {
+  const message = (err as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && /account in the store doesn.t match/i.test(message);
+}
+
+/**
+ * Stop one managed client and close its stores. Idempotent, and meant to be called again by a
+ * start that was disposed midway: an `initRustCrypto()` or `startup()` that completes after the
+ * first call opens handles that only a second stop/close releases.
+ */
+async function disposeManagedClient(entry: ManagedClient) {
+  managedClients.delete(entry);
+  entry.stopped = true;
+  if (entry.syncListener) {
+    entry.client.removeListener(ClientEvent.Sync, entry.syncListener);
+    entry.syncListener = undefined;
+  }
+  if (entry.abortStart) {
+    entry.abortStart(new Error('Data Store client was stopped while starting'));
+    entry.abortStart = undefined;
+  }
+  try {
+    // Also stops the rust crypto backend, which closes the OlmMachine and its crypto store.
+    entry.client.stopClient();
+  } catch (err) {
+    console.warn('Matrix stopClient error:', err);
+  }
+  try {
+    // destroy() only closes the sync store's IndexedDB connection; deleteAllData() would wipe it.
+    await entry.store.destroy();
+  } catch (err) {
+    console.warn('Matrix sync store close error:', err);
+  }
+}
+
+/** Stop a client created by `createMatrixClient` and close its stores (no server call). */
+export async function stopMatrixClient(client: MatrixClient) {
+  const entry = Array.from(managedClients).find((e) => e.client === client);
+  if (entry) {
+    await disposeManagedClient(entry);
+    return;
+  }
+  try {
+    client.stopClient();
+  } catch (err) {
+    console.warn('Matrix stopClient error:', err);
+  }
+}
+
+/** Stop every client this tab created (running or failed) and close their stores. */
+export async function stopAllMatrixClients() {
+  await Promise.all(Array.from(managedClients).map((entry) => disposeManagedClient(entry)));
+}
 
 /**
  * Creates a temporary matrix client, used for matrix login or registration to get access tokens
@@ -514,22 +662,31 @@ let activeMatrixClient: MatrixClient | null = null;
  */
 export function createTemporaryClient(homeServerUrl: string) {
   if (!homeServerUrl) {
-    throw new Error('Home server URL is required to instantiate matrix client');
+    throw new Error('Data Store server address is missing.');
   }
   return createClient({
     baseUrl: cleanUrlString(homeServerUrl),
   });
 }
 
-export async function createMatrixClient() {
+export async function createMatrixClient(): Promise<MatrixClient> {
+  return createMatrixClientOnce(false);
+}
+
+async function createMatrixClientOnce(isSelfHealRetry: boolean): Promise<MatrixClient> {
   const homeServerUrl = secret.baseUrl;
   const accessToken = secret.accessToken;
   const userId = secret.userId;
   const deviceId = secret.deviceId;
 
   if (!homeServerUrl || !accessToken || !userId || !deviceId) {
-    throw new Error('Login to Matrix account before trying to instantiate Matrix client.');
+    throw new Error('Data Store session is missing. Please sign in again.');
   }
+
+  // Sessions saved before per-device store names have no prefix and keep the legacy shared store.
+  const cryptoDatabasePrefix: string = secret.cryptoDbPrefix ?? LEGACY_CRYPTO_DB_PREFIX;
+  // Garbage-collect crypto stores of earlier devices before opening anything (fire-and-forget).
+  sweepStaleCryptoDatabases(cryptoDatabasePrefix);
 
   const indexedDBStore = new IndexedDBStore({
     indexedDB: global.indexedDB,
@@ -551,66 +708,117 @@ export async function createMatrixClient() {
     },
     verificationMethods: ['m.sas.v1'],
   });
-  await indexedDBStore.startup();
-  await mxClient.initRustCrypto();
-  mxClient.setGlobalErrorOnUnknownDevices(false);
-  mxClient.setMaxListeners(20);
-  // const filter = new Filter(userId);
-  // filter.setDefinition({
-  //   room: {
-  //     state: {
-  //       lazy_load_members: true,
-  //       types: [],
-  //     },
-  //     timeline: {
-  //       types: [],
-  //     },
-  //   },
-  //   // Disable unnecessary features
-  //   presence: {
-  //     types: [], // No presence updates needed
-  //   },
-  //   account_data: {
-  //     types: ['m.cross_signing.master'], // No account data needed
-  //   },
-  // });
-  await mxClient.startClient({
-    lazyLoadMembers: true,
-    // initialSyncLimit: 1,
-    includeArchivedRooms: false,
-    // pollTimeout: 2 * 60 * 1000, // poll every 2 minutes
-    // filter: filter,
-  });
-  await new Promise<void>((resolve, reject) => {
-    const sync = {
-      NULL: () => {
-        console.info('[NULL] state');
-      },
-      SYNCING: () => {
-        void 0;
-      },
-      PREPARED: () => {
-        console.info(`[PREPARED] state: user ${userId}`);
-        resolve();
-      },
-      RECONNECTING: () => {
-        console.info('[RECONNECTING] state');
-      },
-      CATCHUP: () => {
-        console.info('[CATCHUP] state');
-      },
-      ERROR: () => {
-        reject(new Error('[ERROR] state: starting matrix client'));
-      },
-      STOPPED: () => {
-        console.info('[STOPPED] state');
-      },
-    };
-    mxClient.on(ClientEvent.Sync, (state) => {
-      sync[state]();
+  const entry: ManagedClient = { client: mxClient, store: indexedDBStore, stopped: false };
+  managedClients.add(entry);
+  // stopAllMatrixClients() may run while this function awaits (sign-out, lock lost).
+  const throwIfStopped = () => {
+    if (entry.stopped) throw new Error('Data Store client was stopped while starting');
+  };
+
+  try {
+    await indexedDBStore.startup();
+    throwIfStopped();
+    try {
+      await mxClient.initRustCrypto({ cryptoDatabasePrefix });
+    } catch (err) {
+      if (!isSelfHealRetry && isCryptoStoreMismatchError(err)) {
+        const devicePrefix = cryptoDbPrefixForDevice(deviceId);
+        if (devicePrefix !== cryptoDatabasePrefix) {
+          // The store under this name belongs to another device (e.g. a sign-out could not delete
+          // it). Move this device to its own store name and start again. The failed init leaks a
+          // handle on the old store until the page goes away, but the retry opens a different
+          // database, so no reload is needed.
+          console.warn(
+            `Data Store crypto store "${cryptoDatabasePrefix}" belongs to another device; ` +
+              `switching device ${deviceId} to "${devicePrefix}" and retrying once.`,
+            err,
+          );
+          await disposeManagedClient(entry);
+          secureSave(cons.secretKey.CRYPTO_DB_PREFIX, devicePrefix);
+          return await createMatrixClientOnce(true);
+        }
+      }
+      throw err;
+    }
+    throwIfStopped();
+    if (cryptoDatabasePrefix !== LEGACY_CRYPTO_DB_PREFIX) {
+      // This device has its own store: the legacy shared store is dead weight (fire-and-forget,
+      // never awaited — a leaked handle in this tab can keep the delete blocked).
+      cryptoDbNames(LEGACY_CRYPTO_DB_PREFIX).forEach((name) => void deleteIndexedDB(name));
+    }
+    // `setGlobalErrorOnUnknownDevices` was removed in matrix-js-sdk 41: rust crypto never
+    // blocks sends on unknown devices, so there is nothing to switch off.
+    mxClient.setMaxListeners(20);
+    // const filter = new Filter(userId);
+    // filter.setDefinition({
+    //   room: {
+    //     state: {
+    //       lazy_load_members: true,
+    //       types: [],
+    //     },
+    //     timeline: {
+    //       types: [],
+    //     },
+    //   },
+    //   // Disable unnecessary features
+    //   presence: {
+    //     types: [], // No presence updates needed
+    //   },
+    //   account_data: {
+    //     types: ['m.cross_signing.master'], // No account data needed
+    //   },
+    // });
+    const prepared = new Promise<void>((resolve, reject) => {
+      entry.abortStart = reject;
+      entry.syncListener = (state, _prevState, data) => {
+        switch (state) {
+          case SyncState.Prepared:
+            console.info(`[PREPARED] state: user ${userId}`);
+            resolve();
+            break;
+          case SyncState.Error: {
+            const syncError = data?.error as (Error & { errcode?: string }) | undefined;
+            const errcode = syncError?.errcode;
+            const detail = [errcode, syncError?.message].filter(Boolean).join(': ');
+            const message = `Data Store could not start${detail ? ` (${detail})` : ''}`;
+            reject(errcode === 'M_UNKNOWN_TOKEN' ? new MatrixSessionInvalidError(message) : new Error(message));
+            break;
+          }
+          case SyncState.Stopped:
+            console.info('[STOPPED] state');
+            // No-op once PREPARED resolved; rejects a start that was stopped midway.
+            reject(new Error('Data Store client stopped while starting'));
+            break;
+          case SyncState.Reconnecting:
+            console.info('[RECONNECTING] state');
+            break;
+          case SyncState.Catchup:
+            console.info('[CATCHUP] state');
+            break;
+          default:
+            break;
+        }
+      };
+      mxClient.on(ClientEvent.Sync, entry.syncListener);
     });
-  });
-  activeMatrixClient = mxClient;
+    // Avoid an unhandled rejection if startClient() throws before `prepared` is awaited.
+    prepared.catch(() => undefined);
+    await mxClient.startClient({
+      lazyLoadMembers: true,
+      // initialSyncLimit: 1,
+      includeArchivedRooms: false,
+      // pollTimeout: 2 * 60 * 1000, // poll every 2 minutes
+      // filter: filter,
+    });
+    throwIfStopped();
+    await prepared;
+    entry.abortStart = undefined;
+    throwIfStopped();
+  } catch (err) {
+    // Never leave a half-started client behind: it would keep the stores open.
+    await disposeManagedClient(entry);
+    throw err;
+  }
   return mxClient;
 }
 
@@ -640,48 +848,66 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   });
 }
 
+/**
+ * Wipe this browser's Data Store session without any server call: stop every client this tab
+ * created, drop secret-storage keys, delete the Matrix IndexedDB databases (bounded wait) and
+ * clear the saved tokens. Run before every fresh Matrix login so it never opens leftovers.
+ */
+export async function resetLocalMatrixSession() {
+  const cryptoDbPrefix = secret.cryptoDbPrefix;
+  await stopAllMatrixClients();
+  clearSecretStorageKeys();
+  await withTimeout(deleteMatrixIndexedDBs([cryptoDbPrefix]), 3000, undefined);
+  clearLocalStore();
+}
+
 export async function logoutMatrixClient({ mxClient, baseUrl }: { mxClient?: MatrixClient; baseUrl?: string }) {
-  let client = mxClient ?? activeMatrixClient;
+  // Capture the session first: the local store is cleared before any slow step below.
+  const homeServerUrl = secret.baseUrl ?? baseUrl;
+  const accessToken = secret.accessToken;
+  const userId = secret.userId;
+  const deviceId = secret.deviceId;
+  const cryptoDatabasePrefix: string = secret.cryptoDbPrefix ?? LEGACY_CRYPTO_DB_PREFIX;
 
-  // Fall back to a bare client so we can still revoke the access token server-side
-  if (!client) {
-    const homeServerUrl = secret.baseUrl;
-    const accessToken = secret.accessToken;
-    const userId = secret.userId;
-    const deviceId = secret.deviceId;
-    if ((homeServerUrl ?? baseUrl) && accessToken) {
-      client = createClient({
-        baseUrl: cleanUrlString((homeServerUrl ?? baseUrl) || ''),
-        accessToken,
-        userId,
-        deviceId,
-      });
-    }
-  }
-
-  if (client) {
-    try {
-      client.stopClient();
-    } catch (err) {
-      console.warn('Matrix stopClient error:', err);
-    }
-    // Server-side logout — network call, can hang if homeserver is slow/unreachable.
-    await withTimeout(client.logout().catch((err) => console.warn('Matrix logout error:', err)), 4000, undefined);
-    // Local store clear — IndexedDB can stall if locked by another tab.
-    await withTimeout(
-      client.clearStores().catch((err) => console.warn('Matrix clearStores error:', err)),
-      3000,
-      undefined,
-    );
-  }
-
-  activeMatrixClient = null;
+  // Stop every client (running or failed) so nothing in this tab holds the stores open.
+  if (mxClient) await stopMatrixClient(mxClient);
+  await stopAllMatrixClients();
 
   // Drop all in-memory secret-storage material (derived keys + security phrase).
   clearSecretStorageKeys();
 
-  await withTimeout(deleteMatrixIndexedDBs(), 3000, undefined);
+  // Clear the tokens now, so they never survive the auth provider's safety timeout.
   clearLocalStore();
+  // Release the cross-tab lock and tell any other tab still running the client to stop.
+  clearSessionLock();
+
+  // Server-side logout on a bare client — network call, can hang if the homeserver is slow.
+  let bareClient: MatrixClient | null = null;
+  if (homeServerUrl && accessToken) {
+    bareClient = createClient({
+      baseUrl: cleanUrlString(homeServerUrl),
+      accessToken,
+      userId,
+      deviceId,
+    });
+    const client = bareClient;
+    await withTimeout(
+      client.logout().catch((err) => console.warn('Matrix logout error:', err)),
+      4000,
+      undefined,
+    );
+  }
+
+  // Local store deletion — IndexedDB deletes stall while another tab holds a database open.
+  if (bareClient) {
+    const client = bareClient;
+    await withTimeout(
+      client.clearStores({ cryptoDatabasePrefix }).catch((err) => console.warn('Matrix clearStores error:', err)),
+      3000,
+      undefined,
+    );
+  }
+  await withTimeout(deleteMatrixIndexedDBs([cryptoDatabasePrefix]), 3000, undefined);
 }
 
 // =================================================================================================
@@ -914,9 +1140,7 @@ export async function getMatrixOpenIdToken(): Promise<string> {
   if (!baseUrl || !accessToken || !userId) {
     throw new Error('Matrix credentials not available');
   }
-  const url = cleanUrlString(
-    `${baseUrl}/_matrix/client/v3/user/${encodeURIComponent(userId)}/openid/request_token`,
-  );
+  const url = cleanUrlString(`${baseUrl}/_matrix/client/v3/user/${encodeURIComponent(userId)}/openid/request_token`);
   const res = await fetch(url, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -949,9 +1173,7 @@ function isUnauthorizedBotError(err: unknown): boolean {
  * fails with an Unauthorized error, invalidates the cached token, fetches a
  * fresh one, and retries exactly once. All other errors propagate immediately.
  */
-export async function withMatrixOpenIdRetry<T>(
-  call: (openIdToken: string) => Promise<T>,
-): Promise<T> {
+export async function withMatrixOpenIdRetry<T>(call: (openIdToken: string) => Promise<T>): Promise<T> {
   const token = await getMatrixOpenIdToken();
   try {
     return await call(token);
@@ -967,9 +1189,7 @@ export async function withMatrixOpenIdRetry<T>(
  * Same as withMatrixOpenIdRetry but for raw fetch() calls against bot endpoints
  * that don't go through the SDK. Retries once if the response status is 401.
  */
-export async function fetchWithMatrixOpenIdRetry(
-  call: (openIdToken: string) => Promise<Response>,
-): Promise<Response> {
+export async function fetchWithMatrixOpenIdRetry(call: (openIdToken: string) => Promise<Response>): Promise<Response> {
   const token = await getMatrixOpenIdToken();
   const res = await call(token);
   if (res.status !== 401) return res;

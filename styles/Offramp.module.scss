@@ -426,6 +426,13 @@
   white-space: nowrap;
 }
 
+// Bridge-outcome headlines are short sentences; let them wrap instead of
+// pushing the card wider on a phone.
+.txStatusWrap {
+  white-space: normal;
+  text-align: right;
+}
+
 .statusBlue {
   color: var(--blue-secondary);
 }

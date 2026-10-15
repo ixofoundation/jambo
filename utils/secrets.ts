@@ -18,6 +18,10 @@ class Secrets {
   get baseUrl() {
     return getSecret(cons.secretKey.BASE_URL);
   }
+  /** Rust crypto store prefix of the saved device; unset for sessions saved before per-device names. */
+  get cryptoDbPrefix(): string | undefined {
+    return getSecret(cons.secretKey.CRYPTO_DB_PREFIX);
+  }
 }
 
 const secret = new Secrets();
