@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import GuestGuard from '@components/GuestGuard';
-import { LogInIcon, UserRoundPlusIcon } from '@components/Icons/icons';
-import { loginViaAuthHub } from 'lib/authHub/redirect';
+import { LogInIcon } from '@components/Icons/icons';
+import { loginViaAuthHub, YOMA_SSO_AVAILABLE } from 'lib/authHub/redirect';
 import { isDevBypass } from 'lib/authHub/devBypass';
 import { peekYref } from '@utils/yomaLink';
 import { saveReturnTo } from '@utils/returnTo';
@@ -25,9 +25,16 @@ export default function AuthPage() {
     if (typeof back === 'string') saveReturnTo(back);
   }, [router.isReady, router.query.returnTo]);
 
+  // Primary: through the Yoma organisation (YoID) when configured, else the
+  // hub's normal login. Secondary: always the hub's normal IXO login.
   function handleSignIn() {
     setIsRedirecting(true);
     loginViaAuthHub();
+  }
+
+  function handleIxoSignIn() {
+    setIsRedirecting(true);
+    loginViaAuthHub({ viaOrganization: false });
   }
 
   function handleDevLogin() {
@@ -35,7 +42,13 @@ export default function AuthPage() {
   }
 
   const hasError = !!router.query.error;
-  const primaryLabel = isRedirecting ? 'Redirecting...' : hasError ? 'Try Again' : 'Sign in';
+  const primaryLabel = isRedirecting
+    ? 'Redirecting...'
+    : hasError
+    ? 'Try Again'
+    : YOMA_SSO_AVAILABLE
+    ? 'Login with Yoma'
+    : 'Sign in';
 
   return (
     <GuestGuard>
@@ -88,8 +101,17 @@ export default function AuthPage() {
                     marginInline: 'auto',
                   }}
                 >
-                  You&apos;re joining from Yoma — please sign in with the <strong>same email</strong> you use on Yoma so
-                  your progress counts towards your Yoma rewards.
+                  {YOMA_SSO_AVAILABLE ? (
+                    <>
+                      You&apos;re joining from Yoma — log in with your <strong>Yoma account</strong> so your progress
+                      counts towards your Yoma rewards.
+                    </>
+                  ) : (
+                    <>
+                      You&apos;re joining from Yoma — please sign in with the <strong>same email</strong> you use on
+                      Yoma so your progress counts towards your Yoma rewards.
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -101,9 +123,11 @@ export default function AuthPage() {
             <button className='btn btn--primary btn--block' onClick={handleSignIn} disabled={isRedirecting}>
               <LogInIcon size={18} /> {primaryLabel}
             </button>
-            <button className='btn btn--ghost btn--block' onClick={handleSignIn} disabled={isRedirecting}>
-              <UserRoundPlusIcon size={18} /> Create account
-            </button>
+            {YOMA_SSO_AVAILABLE && (
+              <button className='btn btn--text btn--block' onClick={handleIxoSignIn} disabled={isRedirecting}>
+                Login with IXO
+              </button>
+            )}
             {isDevBypass() && (
               <button className='btn btn--light btn--block' onClick={handleDevLogin}>
                 Dev Login (bypass)
