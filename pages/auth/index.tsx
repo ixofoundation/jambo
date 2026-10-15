@@ -11,6 +11,17 @@ import { saveReturnTo } from '@utils/returnTo';
 export default function AuthPage() {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  // Both buttons are disabled while we hand off to the auth hub. If the user
+  // comes back with the browser's back button, Chrome and Safari restore this
+  // page from the back-forward cache with that state still set, leaving dead
+  // buttons. `pageshow` with `persisted` is exactly that restore, so re-enable.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setIsRedirecting(false);
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
   // sessionStorage is browser-only — read after mount to keep SSR happy.
   const [fromYoma, setFromYoma] = useState(false);
   useEffect(() => {
