@@ -16,7 +16,12 @@ import Dock from '@components/Dock/Dock';
 import AnalyticsConsentBanner from '@components/Analytics/AnalyticsConsentBanner';
 import AnalyticsIdentitySync from '@components/Analytics/AnalyticsIdentitySync';
 import { initAnalytics } from 'lib/analytics/client';
+import { captureLandingCampaign } from 'lib/analytics/campaign';
 
+// Before anything can redirect: the auth guard replaces a logged-out visit
+// with /auth, dropping the partner link's utm_* tags. Local only — nothing is
+// sent unless the user accepts the consent banner. See lib/analytics/campaign.
+captureLandingCampaign();
 // No-op on the server, off-mainnet, and until the user has accepted the
 // consent banner (accepting calls initAnalytics() again). See lib/analytics.
 initAnalytics();

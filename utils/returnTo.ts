@@ -1,3 +1,5 @@
+import { stripCampaignParams } from 'lib/analytics/campaign';
+
 const KEY = 'ixo_return_to';
 // Deep links older than this are dropped — a youth who abandoned login
 // yesterday shouldn't be teleported to a stale page on today's sign-in.
@@ -16,8 +18,11 @@ let suppressed = false;
  * /entities/<did>). sessionStorage survives the full-page redirect round trip
  * to the auth hub within the same tab.
  */
-export function saveReturnTo(path: string): void {
+export function saveReturnTo(rawPath: string): void {
   if (suppressed) return;
+  // Campaign tags are held by lib/analytics/campaign, not replayed after
+  // sign-in — and `/?utm_source=…` is still just the home default.
+  const path = stripCampaignParams(rawPath);
   // Internal app paths only (no protocol-relative //host), and never the
   // auth pages themselves or the home default.
   if (!path.startsWith('/') || path.startsWith('//')) return;

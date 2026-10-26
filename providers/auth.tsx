@@ -12,6 +12,7 @@ import { clearReturnTo, saveReturnTo, suppressReturnTo } from '@utils/returnTo';
 import { clearLinkState, clearYref } from '@utils/yomaLink';
 import { writeCleanupSession, clearCleanupSession } from 'lib/cleanupSession';
 import { buildUserTraits, identify, resetAnalytics, track } from 'lib/analytics/client';
+import { clearLandingCampaign } from 'lib/analytics/campaign';
 import { AnalyticsEvents } from 'lib/analytics/events';
 import { consumeFreshLogin, markFreshLogin } from 'lib/analytics/session';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
@@ -336,6 +337,9 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       // computer the next person must not inherit it.
       suppressReturnTo();
       clearYref();
+      // Same for the partner campaign this tab arrived with: the next person
+      // on a shared device did not click that link.
+      clearLandingCampaign();
     }
     // Either way, the per-account Yoma link cache and session-check flag
     // belong to the account signing out — never to the next login.
