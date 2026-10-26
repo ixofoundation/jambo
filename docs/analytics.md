@@ -66,6 +66,43 @@ PostHog's `reset()` wipes registered super properties, so `resetAnalytics()`
 re-registers them immediately; otherwise the events captured between logout
 and the navigation to `/auth` would go out untagged.
 
+## Campaign attribution (`lib/analytics/campaign.ts`)
+
+Partners link to JAMBO with `utm_*` tags, e.g. SA Youth:
+`https://jambo.yoma.world/?utm_source=sayouth&utm_medium=sms&utm_campaign=shonaquip_storytelling`.
+posthog-js only reads tags from the URL it boots on, and JAMBO usually
+changes that URL first: the auth guard `router.replace`s a logged-out visitor
+to `/auth`, consent may come later, sign-in is a full-page round trip to the
+auth hub and back to `/auth/callback`, and a signed-in visitor on `/auth` is
+sent on with `location.replace`. So:
+
+1. `captureLandingCampaign()` runs at module scope in `pages/_app.tsx`, before
+   any redirect, and snapshots `utm_source`, `utm_medium`, `utm_campaign`,
+   `utm_content`, `utm_term` (plus the landing path) into sessionStorage. It
+   is local only until consent; it expires after 24 h, and a newer tagged
+   landing in the same tab replaces it.
+2. When PostHog loads, `loaded` calls `register_for_session(...)` with the tags,
+   so every event of the session, including the initial `$pageview`, carries
+   `utm_source` etc.
+3. `identify()` sends the tags once per person as `$set_once`
+   `first_touch_utm_*` and `first_touch_landing_path`. These are JAMBO's own
+   names because PostHog's `$initial_utm_*` comes from the first URL the SDK
+   saw, which after a guard redirect is the untagged `/auth`.
+4. The deep link saved for after sign-in (`utils/returnTo.ts`) has the tags
+   stripped, so they are not replayed and `/?utm_…` still counts as home.
+5. A clean-break logout clears the snapshot (shared devices); the Yoma
+   "switch account" logout keeps it.
+
+Find sign-ups from a partner with a person filter
+`first_touch_utm_source = sayouth`; find their claims with an event filter
+`utm_source = sayouth` on `editor_flow_submitted` (same session) or by
+breaking claims down by the person property.
+
+Limits: a visitor who declines consent is never counted; a sign-in finished in
+another tab has no `first_touch_*` (its events still merge via the anonymous
+id); the youth app under `/cleanup` is a separate app and does not run this
+code.
+
 ## Events (`lib/analytics/events.ts`)
 
 Names are snake_case. Where the meaning matches the portal, the name and

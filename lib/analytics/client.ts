@@ -9,13 +9,17 @@
  *  - distinct_id is the user's DID; identity traits use the portal's keys;
  *  - every event carries the signed-in user's context read at capture time;
  *  - autocapture and session recording are off (JAMBO holds key material in
- *    obfuscated localStorage — never let the SDK read the DOM or storage).
+ *    obfuscated localStorage — never let the SDK read the DOM or storage);
+ *  - campaign (`utm_*`) tags are snapshotted before any redirect and applied
+ *    here, so attribution survives the auth guard and the auth-hub round trip
+ *    (see `./campaign`).
  */
 import type { PostHog } from 'posthog-js';
 
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { store } from '@store/index';
 
+import { campaignFirstTouchProperties, peekLandingCampaign } from './campaign';
 import { hasAnalyticsConsent, setAnalyticsConsentValue } from './consent';
 import type { TrackingEvent, TrackingProps, UserTraits } from './events';
 
@@ -102,6 +106,18 @@ export function shouldEnablePostHog(): boolean {
   return hasAnalyticsConsent();
 }
 
+/**
+ * Stamps this tab's landing campaign onto every event of the session,
+ * including the initial pageview when called from `loaded`. The SDK only
+ * reads `utm_*` from the URL it boots on, which after a guard redirect or the
+ * auth-hub round trip no longer carries them.
+ */
+function registerLandingCampaign(client: Pick<PostHog, 'register_for_session'>): void {
+  const campaign = peekLandingCampaign();
+  if (!campaign) return;
+  client.register_for_session({ ...campaign.params });
+}
+
 export function initAnalytics(): void {
   if (!shouldEnablePostHog() || initialized) return;
   initialized = true;
@@ -122,6 +138,9 @@ export function initAnalytics(): void {
       autocapture: false,
       capture_pageview: 'history_change',
       capture_pageleave: true,
+      // Runs before the SDK's initial pageview, so that pageview (and the
+      // session's entry source) already carries the campaign.
+      loaded: registerLandingCampaign,
     });
 
     client.register(ANALYTICS_SUPER_PROPERTIES);
@@ -160,9 +179,17 @@ export function buildUserTraits(input: {
   };
 }
 
+/**
+ * Identifies the person by DID. When this tab arrived through a campaign link,
+ * its tags go on the person as `first_touch_*` via `$set_once`, so a sign-up
+ * stays attributed to the placement that brought it even though PostHog's own
+ * `$initial_utm_*` saw only the untagged `/auth`.
+ */
 export function identify(distinctId: string, traits?: UserTraits): void {
   if (!shouldEnablePostHog()) return;
-  withPosthog((client) => client.identify(distinctId, traits as Record<string, unknown> | undefined));
+  const campaign = peekLandingCampaign();
+  const setOnce = campaign ? campaignFirstTouchProperties(campaign) : undefined;
+  withPosthog((client) => client.identify(distinctId, traits as Record<string, unknown> | undefined, setOnce));
 }
 
 /**
@@ -178,6 +205,10 @@ export function resetAnalytics(): void {
   try {
     posthogClient?.reset();
     posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
+    // reset() also drops session properties. A clean-break logout has already
+    // cleared the campaign snapshot, so this only restores it for the
+    // "switch account" logout, where the same visitor signs straight back in.
+    if (posthogClient) registerLandingCampaign(posthogClient);
   } catch {
     // posthog may not be fully ready — ignore
   }
@@ -189,8 +220,10 @@ export function grantAnalyticsConsent(): void {
     try {
       posthogClient?.opt_in_capturing?.();
       // A revoke earlier in this page's life reset() the client, which drops
-      // the super properties — restore them for the re-granted session.
+      // the super properties and the campaign — restore them for the
+      // re-granted session.
       posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
+      if (posthogClient) registerLandingCampaign(posthogClient);
     } catch {
       // posthog may not be fully ready; ignore
     }
