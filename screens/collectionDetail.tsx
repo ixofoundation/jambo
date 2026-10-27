@@ -380,10 +380,11 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 }}
               >
                 <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                  Service agent application pending
+                  Your application is under review
                 </p>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  Your service agent application is being reviewed.
+                  Thanks for applying. Please check back here for an update. You will receive an email once it&apos;s
+                  been processed.
                 </p>
               </div>
             )}
