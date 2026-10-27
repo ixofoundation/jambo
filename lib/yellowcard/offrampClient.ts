@@ -94,13 +94,39 @@ export function isRampKycCredentialFailureCode(code: unknown): code is RampKycCr
   return typeof code === 'string' && (RAMP_KYC_CREDENTIAL_FAILURE_CODES as readonly string[]).includes(code);
 }
 
+/** One rule behind a `decision_rejected` refusal: the rubric's rule code
+ *  (`OFF-101-COUNTRY`, `OFF-102-AMOUNT`, `OFF-FREQ-DAY`, …) and its human
+ *  sentence. */
+export interface RampDecisionReason {
+  code: string;
+  reason: string;
+}
+
 /** The machine-readable parts of a worker error body, for callers that branch
  *  on them (the human-readable part stays on `Error.message`). */
 export interface RampApiErrorDetails {
   /** HTTP status of the response. */
   status: number;
-  /** Worker `code`, e.g. 'kyc_required' | 'expired' | 'name_mismatch' | … */
+  /** Worker `code`, e.g. 'kyc_required' | 'expired' | 'name_mismatch' |
+   *  'decision_rejected' | 'decision_pending' | 'decision_in_review' | … */
   code?: string;
+  /** The body's own human sentence (`message`, else `error`), when it carried
+   *  one — undefined for a body that wasn't JSON (e.g. an edge error page), so
+   *  callers can tell a worker sentence from the generic fallback. */
+  serverMessage?: string;
+  /** `decision_rejected` only: every rule that refused it, in the worker's
+   *  order (the first one is the `message`). Malformed entries are dropped. */
+  reasons?: RampDecisionReason[];
+  /** `decision_rejected` only: the public decision receipt id, when there is
+   *  one (null for a refusal the worker made locally, before the engine). */
+  receiptCid?: string | null;
+  /** Seconds to wait before retrying, in this order: the body's own
+   *  `retryAfterSec` (the 503 `decision_pending` / `decision_in_review`
+   *  bodies) when it is a finite non-negative number, else the `Retry-After`
+   *  header, else undefined. The header may not be exposed to the browser —
+   *  a cross-origin response only shows it when the worker lists it in
+   *  `Access-Control-Expose-Headers` — which is why the body copy wins. */
+  retryAfterSec?: number;
 }
 
 /**
@@ -112,6 +138,10 @@ export interface RampApiErrorDetails {
 export class RampApiError extends Error implements RampApiErrorDetails {
   readonly status: number;
   readonly code?: string;
+  readonly serverMessage?: string;
+  readonly reasons?: RampDecisionReason[];
+  readonly receiptCid?: string | null;
+  readonly retryAfterSec?: number;
 
   constructor(message: string, details: RampApiErrorDetails) {
     super(message);
@@ -120,6 +150,10 @@ export class RampApiError extends Error implements RampApiErrorDetails {
     this.name = 'RampApiError';
     this.status = details.status;
     this.code = details.code;
+    this.serverMessage = details.serverMessage;
+    this.reasons = details.reasons;
+    this.receiptCid = details.receiptCid;
+    this.retryAfterSec = details.retryAfterSec;
   }
 }
 
@@ -127,7 +161,33 @@ export class RampApiError extends Error implements RampApiErrorDetails {
  *  worker error (network failure, signing error, …). */
 export function rampApiErrorDetails(err: unknown): RampApiErrorDetails | null {
   if (!(err instanceof RampApiError)) return null;
-  return { status: err.status, code: err.code };
+  return {
+    status: err.status,
+    code: err.code,
+    serverMessage: err.serverMessage,
+    reasons: err.reasons,
+    receiptCid: err.receiptCid,
+    retryAfterSec: err.retryAfterSec,
+  };
+}
+
+/** `Retry-After` as whole seconds from now (RFC 9110: delta-seconds or an
+ *  HTTP-date), or undefined when absent or unparseable. */
+export function parseRetryAfter(value: string | null | undefined, now: number = Date.now()): number | undefined {
+  if (value == null) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  const at = Date.parse(trimmed);
+  if (Number.isNaN(at)) return undefined;
+  return Math.max(0, Math.ceil((at - now) / 1000));
+}
+
+function parseReasons(value: unknown): RampDecisionReason[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((r): r is RampDecisionReason => typeof r?.code === 'string' && typeof r?.reason === 'string')
+    .map((r) => ({ code: r.code, reason: r.reason }));
 }
 
 /** Worker responses are JSON, but an edge error page (e.g. a 5xx from the
@@ -141,10 +201,23 @@ function parseJsonBody(text: string): any {
   }
 }
 
-function toRampApiError(path: string, status: number, json: any): RampApiError {
-  return new RampApiError(json?.message || json?.error || `Worker ${path} returned ${status}`, {
-    status,
+function toRampApiError(path: string, res: Response, json: any): RampApiError {
+  const serverMessage =
+    typeof json?.message === 'string' && json.message
+      ? json.message
+      : typeof json?.error === 'string' && json.error
+      ? json.error
+      : undefined;
+  return new RampApiError(serverMessage || `Worker ${path} returned ${res.status}`, {
+    status: res.status,
     code: typeof json?.code === 'string' ? json.code : undefined,
+    serverMessage,
+    reasons: parseReasons(json?.reasons),
+    receiptCid: typeof json?.receiptCid === 'string' ? json.receiptCid : json?.receiptCid === null ? null : undefined,
+    retryAfterSec:
+      typeof json?.retryAfterSec === 'number' && Number.isFinite(json.retryAfterSec) && json.retryAfterSec >= 0
+        ? json.retryAfterSec
+        : parseRetryAfter(res.headers.get('Retry-After')),
   });
 }
 
@@ -155,7 +228,7 @@ async function post<T>(path: string, body: unknown, bearer?: string): Promise<T>
   const text = await res.text();
   const json = parseJsonBody(text);
   if (!res.ok) {
-    throw toRampApiError(path, res.status, json);
+    throw toRampApiError(path, res, json);
   }
   return json as T;
 }
@@ -165,7 +238,7 @@ async function get<T>(path: string, bearer: string): Promise<T> {
   const text = await res.text();
   const json = parseJsonBody(text);
   if (!res.ok) {
-    throw toRampApiError(path, res.status, json);
+    throw toRampApiError(path, res, json);
   }
   return json as T;
 }

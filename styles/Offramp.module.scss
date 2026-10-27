@@ -339,6 +339,34 @@
   margin-top: 12px;
 }
 
+// Decision-rail notices (components/Ramp/OfframpDecisionNotice). "Try again in a
+// moment" and "being reviewed" are plain .kycCard — calm, never red. A refusal
+// adds a red edge and title, the same inset grammar as .quoteWarn.
+.decisionRejected {
+  box-shadow: inset 0 0 0 1px var(--error-color);
+}
+
+.decisionRejected .kycCardTitle {
+  color: var(--error-color);
+}
+
+.decisionReasons {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.decisionWait {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 .alertError {
   background: var(--card-bg-color);
   border-radius: var(--card-border-radius);
