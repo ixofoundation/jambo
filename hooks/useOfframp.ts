@@ -18,6 +18,7 @@ import {
   quoteOfframp,
   rampApiErrorDetails,
 } from 'lib/yellowcard/offrampClient';
+import { offrampErrorMessage } from 'lib/yellowcard/offrampDecision';
 import { mintOfframpBearer } from '@utils/ucanYellowcard';
 
 const USDC_DECIMALS = 6;
@@ -192,6 +193,11 @@ export default function useOfframp() {
     async (params: WithdrawParams): Promise<CreateResult> => {
       setError(null);
       setErrorDetails(null);
+      // Flips once the user is asked to sign the bridge transfer. Before that
+      // nothing has left their wallet — a create refusal (incl. the decision
+      // rail's 403/503s) never got past the worker — so the error copy may say
+      // so; after it, it must not.
+      let fundsMayHaveMoved = false;
       try {
         setStage('authorizing');
         const createBearer = await mintBearer();
@@ -245,6 +251,7 @@ export default function useOfframp() {
         }
 
         setStage('bridging');
+        fundsMayHaveMoved = true;
         const sourceTxHash = await sendBridge({
           amountUsdc: params.amountUsdc,
           destinationAddress: created.deposit_address,
@@ -262,8 +269,11 @@ export default function useOfframp() {
         await refreshTransactions().catch(() => undefined);
         return created;
       } catch (err) {
+        // Nothing was created: `active` stays as it was and the caller's form
+        // keeps its values, so the same withdrawal can simply be sent again —
+        // which is how a `decision_pending` / `decision_in_review` resumes.
         setStage('error');
-        setError(err instanceof Error ? err.message : 'Withdrawal failed');
+        setError(offrampErrorMessage(err, { fundsMayHaveMoved }));
         setErrorDetails(rampApiErrorDetails(err));
         throw err;
       }
@@ -290,7 +300,8 @@ export default function useOfframp() {
         }
         await refreshTransactions().catch(() => undefined);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Retry failed');
+        // The bridge leg itself — the user may already have signed the transfer.
+        setError(err instanceof Error ? offrampErrorMessage(err, { fundsMayHaveMoved: true }) : 'Retry failed');
         setErrorDetails(rampApiErrorDetails(err));
         throw err;
       }
