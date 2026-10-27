@@ -10,6 +10,7 @@ import KycRequiredCard, {
   KycCredentialFailureNotice,
   resolveKycCredentialStatus,
 } from '@components/Ramp/KycRequiredCard';
+import OfframpDecisionNotice from '@components/Ramp/OfframpDecisionNotice';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { PAY_CONVERT_ENABLED, fromPayBase, toPayBase } from '@constants/payConvert';
@@ -32,6 +33,7 @@ import {
   fetchSupportedCountries,
   isRampKycCredentialFailureCode,
 } from 'lib/yellowcard/offrampClient';
+import { OFFRAMP_CONVERTED_NOTE, offrampDecisionView, offrampErrorMessage } from 'lib/yellowcard/offrampDecision';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
@@ -113,6 +115,12 @@ function formatDob(value: string): string {
 
 function formatUsdc(amount: number): string {
   return amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
+}
+
+/** Step 1 (rewards → USDC) paid out, step 2 (the withdrawal) didn't. */
+function convertedButNotWithdrawnText(detail: string): string {
+  const reason = detail ? ` (${detail})` : '';
+  return `Your rewards were converted — the USDC is in your wallet — but the withdrawal didn’t go through${reason}. Tap Withdraw again; no new conversion is needed.`;
 }
 
 export default function OfframpScreen() {
@@ -209,6 +217,13 @@ export default function OfframpScreen() {
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Step 1 (rewards → USDC) paid out but the withdrawal call itself then failed:
+  // the failure is shown with a note that no new conversion is needed.
+  const [convertedBeforeError, setConvertedBeforeError] = useState(false);
+  // When a `decision_pending` / `decision_in_review` answer says a retry is
+  // worth it (its Retry-After), and a clock to count down to it. Null = no wait.
+  const [decisionRetryAt, setDecisionRetryAt] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [downloadingRecordId, setDownloadingRecordId] = useState<string | null>(null);
@@ -514,6 +529,7 @@ export default function OfframpScreen() {
   useEffect(() => {
     setQuote(null);
     setFormError(null);
+    setConvertedBeforeError(false);
     clearOfframpError();
   }, [amount, currency, channelType, clearOfframpError]);
 
@@ -839,6 +855,38 @@ export default function OfframpScreen() {
   // and once a late-loading credential turns up, there's nothing left to say.
   const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
 
+  // The decision rail's answer to the last create (lib/yellowcard/offrampDecision):
+  // a refusal shows below the form; "try again in a moment" / "being reviewed"
+  // take the Withdraw button's place with their own retry. None of them means
+  // anything was sent, and the form keeps every value — retrying the same
+  // withdrawal resumes the same decision.
+  const decision = offrampDecisionView(offramp.errorDetails);
+  const decisionWait = decision && decision.kind !== 'rejected' ? decision : null;
+  // An identity card that takes the button's place wins; the "checking" line doesn't.
+  const showDecisionWait = !!decisionWait && (!kycNotice || kycNotice === 'checking');
+  const decisionWaitRetryAfterSec = decisionWait?.retryAfterSec ?? null;
+  useEffect(() => {
+    if (decisionWaitRetryAfterSec == null) {
+      setDecisionRetryAt(null);
+      return;
+    }
+    const now = Date.now();
+    setNowMs(now);
+    setDecisionRetryAt(now + decisionWaitRetryAfterSec * 1000);
+    // `offramp.errorDetails` re-arms the wait for every new answer (a fresh
+    // object), even when the seconds are the same as last time.
+  }, [offramp.errorDetails, decisionWaitRetryAfterSec]);
+  useEffect(() => {
+    if (decisionRetryAt == null || decisionRetryAt <= Date.now()) return;
+    const t = setInterval(() => {
+      const now = Date.now();
+      setNowMs(now);
+      if (now >= decisionRetryAt) clearInterval(t);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [decisionRetryAt]);
+  const decisionRetryWaitSec = decisionRetryAt == null ? 0 : Math.max(0, Math.ceil((decisionRetryAt - nowMs) / 1000));
+
   // No quote for an amount the quiet quote (the same call) has already found outside the window —
   // the line under the amount says what to type instead.
   const canQuote =
@@ -947,7 +995,7 @@ export default function OfframpScreen() {
       persistProfile();
     } catch (err) {
       setQuote(null);
-      setFormError(err instanceof Error ? err.message : 'Quote failed');
+      setFormError(err instanceof Error ? offrampErrorMessage(err, { fundsMayHaveMoved: false }) : 'Quote failed');
     } finally {
       setQuoting(false);
     }
@@ -978,8 +1026,12 @@ export default function OfframpScreen() {
   const onWithdraw = useCallback(async () => {
     if (!canWithdraw) return;
     setFormError(null);
+    setConvertedBeforeError(false);
     setLastAttemptSentCredential(!!kycCredentialJwt);
     let converted = false;
+    // Set once the withdrawal call itself starts: from then on its failure is in
+    // the hook's `error` / `errorDetails` (already in customer wording).
+    let withdrawStarted = false;
     try {
       // Step 1 (only when the USDC does not cover the amount): turn exactly the shortfall of
       // Cleanup rewards into USDC — one confirmation, the oracle pays out in under a minute.
@@ -1035,6 +1087,7 @@ export default function OfframpScreen() {
         });
         setQuote(preview.quote);
       }
+      withdrawStarted = true;
       await offramp.withdraw({
         amountUsdc: amountNum,
         currency,
@@ -1073,10 +1126,14 @@ export default function OfframpScreen() {
       // Step 1 succeeded but step 2 did not: the USDC is theirs already — say so, and that a
       // retry needs no second conversion. Otherwise the offramp hook's own error shows.
       if (converted) {
-        const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
-        setFormError(
-          `Your rewards were converted — the USDC is in your wallet — but the withdrawal didn’t go through${detail}. Tap Withdraw again; no new conversion is needed.`,
-        );
+        if (withdrawStarted) {
+          // Rendered from the hook's error below (with any decision notice).
+          setConvertedBeforeError(true);
+        } else {
+          // The re-quote between the steps failed — before anything was sent.
+          const message = offrampErrorMessage(err, { fundsMayHaveMoved: false });
+          setFormError(convertedButNotWithdrawnText(message));
+        }
       }
     } finally {
       setWithdrawStep(null);
@@ -1691,7 +1748,21 @@ export default function OfframpScreen() {
                           </div>
                         )}
 
-                        {(!kycNotice || kycNotice === 'checking') && (
+                        {/* The decision rail couldn't approve it yet ("try again in a
+                          moment" / "being reviewed"): a calm notice with its own retry
+                          takes the button's place. Its retry sends the same withdrawal
+                          (the form still holds it), which resumes the same decision. */}
+                        {showDecisionWait && decisionWait && (
+                          <OfframpDecisionNotice
+                            view={decisionWait}
+                            retryWaitSec={decisionRetryWaitSec}
+                            onRetry={onWithdraw}
+                            retryDisabled={!canWithdraw || busy || !!withdrawStep || conversionOverCap}
+                            note={convertedBeforeError ? OFFRAMP_CONVERTED_NOTE : undefined}
+                          />
+                        )}
+
+                        {(!kycNotice || kycNotice === 'checking') && !showDecisionWait && (
                           <div className={styles.actions}>
                             {quote ? (
                               <Button
@@ -1729,10 +1800,19 @@ export default function OfframpScreen() {
                   </fieldset>
 
                   {/* A `kyc_required` rejection is shown by the card above, not as an
-                      error; a rejected credential gets its own friendly line. Any
-                      other failure keeps the plain error. */}
+                      error; a rejected credential gets its own friendly line; a
+                      decision-rail refusal gets its own notice (pending / in review
+                      show above, in the button's place). Any other failure keeps the
+                      plain error. */}
                   {formError ? (
                     <div className={styles.alertError}>{formError}</div>
+                  ) : decision?.kind === 'rejected' ? (
+                    <OfframpDecisionNotice
+                      view={decision}
+                      note={convertedBeforeError ? OFFRAMP_CONVERTED_NOTE : undefined}
+                    />
+                  ) : showDecisionWait ? null : convertedBeforeError && offramp.error ? (
+                    <div className={styles.alertError}>{convertedButNotWithdrawnText(offramp.error)}</div>
                   ) : credentialFailureCode ? (
                     <KycCredentialFailureNotice code={credentialFailureCode} />
                   ) : offramp.error && !createErrorShownByKycCard ? (
