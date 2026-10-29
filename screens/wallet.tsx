@@ -41,7 +41,8 @@ export default function Wallet() {
     let cancelled = false;
     void getWalletBalances(address).then((b) => {
       if (cancelled) return;
-      setBalance(b.usdc.amount);
+      // Both ixo USDC denoms (Injective + older Noble) are the user's money.
+      setBalance(b.usdc.amount + b.otherUsdc.amount);
       setRewards(b.pay.amount);
     });
     return () => {

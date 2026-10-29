@@ -4,6 +4,9 @@ import { IXO_CHAIN_ID, IXO_USDC_DENOM, OFFRAMP_DESTINATION, SKIP_API_URL } from 
 
 /**
  * Skip Go bridge — ixo USDC → Base USDC — WITHOUT Skip's `executeRoute`.
+ * Source: Injective USDC (default; ixo → injective-1 → Injective EVM → Base,
+ * CCTP v2) or Noble USDC (ixo → noble-1 → Base, CCTP) — whichever denom the
+ * screen passes. Either way it is ONE ixo tx.
  *
  * ixo accounts are smart accounts: a tx is only valid when jambo's signing
  * client wraps it with the session authenticator (`signAndBroadcastWithSessionKey`,
@@ -86,8 +89,9 @@ interface WireCosmosTx {
 
 /** Convert one Skip cosmos message (proto3-JSON string) into a CosmJS
  *  EncodeObject the ixo signing client can encode. The ixo source tx is a
- *  single IBC `MsgTransfer` (with a CCTP-forward memo); other types fall
- *  through as parsed JSON. */
+ *  single IBC `MsgTransfer` (Noble route: with a CCTP-forward memo; Injective
+ *  route: to Skip's CCTP v2 forwarder on Injective, no memo); other types
+ *  fall through as parsed JSON. */
 function toTrxMsg(m: WireCosmosMsg): TrxMsg {
   const typeUrl = m.msg_type_url ?? m.msgTypeUrl ?? '';
   const v = m.msg ? (JSON.parse(m.msg) as Record<string, any>) : {};
@@ -116,8 +120,9 @@ export interface BridgeTx {
 }
 
 /** Ask Skip for the exact messages to broadcast. `chainIdsToAddresses` must
- *  cover every chain in the path (ixo source, Base dest — CCTP routes through
- *  Noble without needing a Noble address). */
+ *  cover every chain Skip listed in `required_chain_addresses`: ixo source and
+ *  Base dest, plus Injective EVM (`1776`) on the Injective USDC route (the
+ *  Noble route needs no Noble address). */
 export async function buildBridgeTx(params: {
   amountInMicro: string;
   sourceDenom?: string;

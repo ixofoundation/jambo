@@ -62,6 +62,11 @@ export interface OfframpTransaction {
   error: string | null;
   /** Readable meaning of a YC errorCode, mapped server-side from YC's docs. */
   error_detail: string | null;
+  /** Skip chain id → address for an intermediate chain the ixo → Base route
+   *  requires (`1776` Injective EVM on the Injective USDC route = the worker's
+   *  refund wallet, owner of Skip's CCTP v2 forwarder). Absent on an older
+   *  worker, empty when it has no refund wallet. */
+  bridge_addresses?: Record<string, string>;
   created_at: number;
   updated_at: number;
 }
@@ -292,6 +297,11 @@ export interface CreateResult {
   service_fee_usd: number | null;
   partner_fee_usd: number | null;
   expires_at: number | null;
+  /** Skip chain id → address for an intermediate chain the ixo → Base route
+   *  requires (`1776` Injective EVM on the Injective USDC route = the worker's
+   *  refund wallet, owner of Skip's CCTP v2 forwarder). Absent on an older
+   *  worker, empty when it has no refund wallet. */
+  bridge_addresses?: Record<string, string>;
   created_at: number;
 }
 

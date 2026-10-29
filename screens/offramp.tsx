@@ -14,7 +14,7 @@ import OfframpDecisionNotice from '@components/Ramp/OfframpDecisionNotice';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { PAY_CONVERT_ENABLED, fromPayBase, toPayBase } from '@constants/payConvert';
-import { IXO_CHAIN_ID, IXO_USDC_DENOM, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
+import { IXO_CHAIN_ID, IXO_USDC_DENOMS, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { fetchUsdRate, formatCurrency, localEstimate } from '@utils/localCurrency';
@@ -142,6 +142,9 @@ export default function OfframpScreen() {
 
   const [balance, setBalance] = useState<number | null>(null);
   const [heldDenom, setHeldDenom] = useState<string | undefined>(undefined);
+  // The other ixo USDC denom's balance (Noble USDC next to Injective USDC, or
+  // the other way round) — one withdrawal spends one denom.
+  const [otherUsdcBalance, setOtherUsdcBalance] = useState<number>(0);
   // PAY (World Cleanup Day rewards, 1 PAY = 1 USDC) — held, not withdrawable
   // yet; see constants/cleanup.
   const [payBalance, setPayBalance] = useState<number | null>(null);
@@ -284,6 +287,7 @@ export default function OfframpScreen() {
         setBalance(b.usdc.amount);
         setUsdcMicro(BigInt(b.usdc.amountMicro));
         setHeldDenom(b.usdc.denom);
+        setOtherUsdcBalance(b.otherUsdc.amount);
         setPayBalance(b.pay.amount);
       })
       .finally(() => {
@@ -1006,12 +1010,14 @@ export default function OfframpScreen() {
   const waitForUsdc = useCallback(
     async (targetMicro: bigint): Promise<boolean> => {
       if (!address) return false;
+      // Wait on the denom the withdrawal will spend (on mainnet that is the
+      // conversion's payout denom, Injective USDC, whenever rewards are held).
       const denom =
         skipBridge && PAY_CONVERT_ENABLED
           ? await fetchConvertInfo()
               .then((info) => info.payoutDenom)
               .catch(() => undefined)
-          : undefined;
+          : heldDenom;
       const slack = skipBridge ? BigInt(100_000) : BigInt(0);
       for (let i = 0; i < 30; i++) {
         const b = await getWalletBalances(address, denom).catch(() => null);
@@ -1020,7 +1026,7 @@ export default function OfframpScreen() {
       }
       return false;
     },
-    [address, skipBridge],
+    [address, skipBridge, heldDenom],
   );
 
   const onWithdraw = useCallback(async () => {
@@ -1253,16 +1259,22 @@ export default function OfframpScreen() {
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceAmount}>{formatUsdc(balance)}</span>
                   <span className={styles.balanceUnit}>
-                    {heldDenom && heldDenom !== IXO_USDC_DENOM ? 'IXO · stands in for USDC on testnet' : 'USDC'}
+                    {heldDenom && !IXO_USDC_DENOMS.includes(heldDenom) ? 'IXO · stands in for USDC on testnet' : 'USDC'}
                   </span>
                   {local && <span className={styles.balanceUnit}>{localEstimate(balance, local)}</span>}
                   {balanceLoading && <Loader size={16} />}
                 </div>
               )}
+              {balancesReady && otherUsdcBalance > 0 && (
+                <p className={styles.hint}>
+                  You also hold {formatUsdc(otherUsdcBalance)} USDC of another kind — withdraw it in a separate
+                  withdrawal.
+                </p>
+              )}
               {rewardsInPlay && balancesReady && (
                 <p className={styles.hint}>
                   {formatUsdc(balance ?? 0)}{' '}
-                  {heldDenom && heldDenom !== IXO_USDC_DENOM ? 'IXO (USDC on testnet)' : 'USDC'} +{' '}
+                  {heldDenom && !IXO_USDC_DENOMS.includes(heldDenom) ? 'IXO (USDC on testnet)' : 'USDC'} +{' '}
                   {formatRewardsUsd(payBalance ?? 0)} Cleanup rewards — rewards turn into USDC automatically when you
                   withdraw.
                 </p>

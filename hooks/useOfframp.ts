@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { IXO_CHAIN_ID, OFFRAMP_DESTINATION } from '@constants/yellowcard';
+import { INJECTIVE_EVM_SKIP_CHAIN_ID, IXO_CHAIN_ID, OFFRAMP_DESTINATION } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { type BridgeRoute, buildBridgeTx, getBridgeRoute, trackTx } from 'lib/skip/skipBridge';
 import {
@@ -28,15 +28,29 @@ function toMicro(amount: number): string {
 }
 
 /** The address to provide for a chain Skip lists in `requiredChainAddresses`.
- *  ixo USDC → Base only requires ixo + Base (CCTP routes through Noble without
- *  needing a Noble address). We provide only those two and THROW on anything
- *  else — if Skip starts requiring another hop, abort rather than guess an
- *  address. */
-function addressForRequiredChain(chainId: string, ixoAddress: string, destinationAddress: string): string {
+ *  Noble USDC → Base needs ixo + Base only. Injective USDC → Base also needs
+ *  Injective EVM (`1776`, a 0x address: the owner of Skip's CCTP v2 forwarder,
+ *  where USDC that fails to reach Base stays). jambo holds no stable EVM key
+ *  for the user (smart account + rotating session key), so that address comes
+ *  from the worker (`bridge_addresses`, its refund wallet). Anything else, or a
+ *  missing/malformed worker address, THROWS — never guess an address. */
+export function addressForRequiredChain(
+  chainId: string,
+  ixoAddress: string,
+  destinationAddress: string,
+  bridgeAddresses: Record<string, string> = {},
+): string {
   if (chainId === OFFRAMP_DESTINATION.skipChainId) return destinationAddress;
   if (chainId === IXO_CHAIN_ID) return ixoAddress;
+  if (chainId === INJECTIVE_EVM_SKIP_CHAIN_ID) {
+    const addr = bridgeAddresses[chainId];
+    if (addr && /^0x[0-9a-fA-F]{40}$/.test(addr)) return addr;
+    throw new Error(
+      `Skip route requires an Injective EVM address (chain ${chainId}) and the off-ramp service did not provide one. Aborting for safety.`,
+    );
+  }
   throw new Error(
-    `Skip route unexpectedly requires an address for chain "${chainId}" (expected only ${IXO_CHAIN_ID} + ${OFFRAMP_DESTINATION.skipChainId}). Aborting for safety.`,
+    `Skip route unexpectedly requires an address for chain "${chainId}" (expected only ${IXO_CHAIN_ID}, ${INJECTIVE_EVM_SKIP_CHAIN_ID} + ${OFFRAMP_DESTINATION.skipChainId}). Aborting for safety.`,
   );
 }
 
@@ -120,14 +134,26 @@ export default function useOfframp() {
   /** Build the Skip messages, broadcast the ixo tx via the session-key signer,
    *  then register it with Skip's relay. Returns the ixo source tx hash. */
   const sendBridge = useCallback(
-    async (params: { amountUsdc: number; destinationAddress: string; sourceDenom?: string; route?: BridgeRoute }): Promise<string> => {
+    async (params: {
+      amountUsdc: number;
+      destinationAddress: string;
+      sourceDenom?: string;
+      route?: BridgeRoute;
+      /** The worker's `bridge_addresses` for this withdrawal. */
+      bridgeAddresses?: Record<string, string>;
+    }): Promise<string> => {
       if (!address) throw new Error('Wallet address not available');
       const amountInMicro = toMicro(params.amountUsdc);
 
       const r = params.route ?? (await quoteBridge(params.amountUsdc, params.sourceDenom));
       const chainIdsToAddresses: Record<string, string> = {};
       for (const chainId of r.requiredChainAddresses) {
-        chainIdsToAddresses[chainId] = addressForRequiredChain(chainId, address, params.destinationAddress);
+        chainIdsToAddresses[chainId] = addressForRequiredChain(
+          chainId,
+          address,
+          params.destinationAddress,
+          params.bridgeAddresses,
+        );
       }
 
       const { chainId, msgs } = await buildBridgeTx({ amountInMicro, sourceDenom: params.sourceDenom, chainIdsToAddresses });
@@ -257,6 +283,7 @@ export default function useOfframp() {
           destinationAddress: created.deposit_address,
           sourceDenom: params.sourceDenom,
           route,
+          bridgeAddresses: created.bridge_addresses,
         });
 
         if (sourceTxHash) {
@@ -293,7 +320,13 @@ export default function useOfframp() {
       setErrorDetails(null);
       try {
         const route = await quoteBridge(amountUsdc, sourceDenom);
-        const sourceTxHash = await sendBridge({ amountUsdc, destinationAddress: tx.deposit_address, sourceDenom, route });
+        const sourceTxHash = await sendBridge({
+          amountUsdc,
+          destinationAddress: tx.deposit_address,
+          sourceDenom,
+          route,
+          bridgeAddresses: tx.bridge_addresses,
+        });
         if (sourceTxHash) {
           const bearer = await mintBearer();
           await notifyDeposit(tx.id, { skipTxHash: sourceTxHash, skipStatus: 'broadcast' }, bearer);
