@@ -316,6 +316,10 @@ export interface CreateResult {
   expires_at: number | null;
   /** Echo of the create's `sourceDenom` (see `OfframpTransaction.source_denom`). */
   source_denom?: string | null;
+  /** The exact inj1 account the bridge transfer must name as its receiver (Skip's
+   *  forwarding account for this payment). Null/missing when the worker could not
+   *  ask Skip in time — then `getBridgeReceiver` before signing. */
+  bridge_receiver?: string | null;
   created_at: number;
 }
 
@@ -360,6 +364,13 @@ export function notifyDeposit(
   bearer: string,
 ): Promise<{ success: true; transaction: OfframpTransaction }> {
   return post(`/offramp/${id}/deposit`, body, bearer, PRE_SIGN_TIMEOUT_MS);
+}
+
+/** `GET /offramp/{id}/bridge-receiver`: the exact inj1 account this withdrawal's bridge
+ *  transfer must name — bound before signing. Null off mainnet (nothing is bridged);
+ *  a 503 `verification_unavailable` while Skip is down. */
+export function getBridgeReceiver(id: string, bearer: string): Promise<{ success: true; bridge_receiver: string | null }> {
+  return get(`/offramp/${encodeURIComponent(id)}/bridge-receiver`, bearer, PRE_SIGN_TIMEOUT_MS);
 }
 
 /** One USDC denom as the worker's `GET /offramp/config` describes it. */

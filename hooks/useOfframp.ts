@@ -9,7 +9,7 @@ import {
   resolvePreSellChainAddresses,
   routeNeedsRecoveryAddresses,
 } from 'lib/skip/chainAddresses';
-import { type BridgeRoute, buildBridgeTx, getBridgeRoute, trackTx } from 'lib/skip/skipBridge';
+import { BridgeBuildError, type BridgeRoute, buildBridgeTx, getBridgeRoute, trackTx } from 'lib/skip/skipBridge';
 import {
   type DepositStore,
   type PendingDeposits,
@@ -32,6 +32,7 @@ import {
   type QuoteResult,
   type RampApiErrorDetails,
   createOfframp,
+  getBridgeReceiver,
   fetchOfframpConfig,
   fetchPaymentRecordPdf,
   getOfframp,
@@ -247,10 +248,18 @@ export default function useOfframp() {
       amountUsdc: number;
       destinationAddress: string;
       prepared?: PreparedRoute;
+      /** The create response's `bridge_receiver`; asked for again when missing. */
+      bridgeReceiver?: string | null;
       onSigning: () => void;
     }): Promise<string> => {
       if (!address) throw new Error('Wallet address not available');
       const amountInMicro = toMicro(params.amountUsdc);
+
+      // The exact first-hop account this withdrawal may pay into, from the worker —
+      // never taken from the route reply (which could be tampered with).
+      const expectedReceiver =
+        params.bridgeReceiver ?? (await getBridgeReceiver(params.offrampId, await mintBearer())).bridge_receiver;
+      if (!expectedReceiver) throw new BridgeBuildError('the worker named no bridge receiver');
 
       const { route: r, preSell } = params.prepared ?? (await prepareRoute(params.amountUsdc));
       const chainIdsToAddresses = completeChainAddresses({
@@ -264,6 +273,7 @@ export default function useOfframp() {
         quotedAmountOutMicro: r.amountOutMicro,
         userAddress: address,
         chainIdsToAddresses,
+        expectedReceiver,
       });
 
       // jambo's session-key signer wraps the messages with the smart-account
@@ -305,7 +315,7 @@ export default function useOfframp() {
       void trackTx(chainId, hash).catch(() => undefined);
       return hash;
     },
-    [address, onSign, prepareRoute, setPendingDeposits],
+    [address, onSign, prepareRoute, setPendingDeposits, mintBearer],
   );
 
   /** Preview a withdrawal end-to-end: price the bridge, then quote YC on the
@@ -428,6 +438,7 @@ export default function useOfframp() {
           amountUsdc: params.amountUsdc,
           destinationAddress: created.deposit_address,
           prepared,
+          bridgeReceiver: created.bridge_receiver,
           // Only from the signature on may money have moved (not while the route is checked).
           onSigning: () => {
             fundsMayHaveMoved = true;

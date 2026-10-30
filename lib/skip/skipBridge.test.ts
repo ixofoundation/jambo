@@ -23,16 +23,40 @@ function tampered(edit: (msg: any) => void, wrap?: (json: any) => void) {
   return json;
 }
 
+// The forwarding account Skip named in the live answer — what the worker's
+// `bridge_receiver` returns for this payment.
+const FX_RECEIVER: string = JSON.parse(FX.msgs.txs[0].cosmos_tx.msgs[0].msg).receiver;
+
 const expected = {
   userAddress: FX.user,
   amountInMicro: FX.route.amount_in,
   quotedAmountOutMicro: FX.route.amount_out,
+  expectedReceiver: FX_RECEIVER,
   nowMs: FX.requestedAtMs,
 };
 
 function expectAbort(json: any, exp = expected) {
   expect(() => validateBridgeTxs(json, exp)).toThrow(BridgeBuildError);
 }
+
+describe('validateBridgeTxs — the receiver is bound to the worker\'s bridge_receiver', () => {
+  const OTHER_INJ = toBech32('inj', new Uint8Array(20).fill(7));
+
+  it('another well-formed inj1 account → abort (a tampered route cannot redirect the withdrawal)', () =>
+    expectAbort(
+      tampered((m) => {
+        m.receiver = OTHER_INJ;
+      }),
+    ));
+
+  it('the worker named a different account → abort', () =>
+    expectAbort(FX.msgs, { ...expected, expectedReceiver: OTHER_INJ }));
+
+  it('no / malformed expected receiver → abort', () => {
+    expectAbort(FX.msgs, { ...expected, expectedReceiver: '' });
+    expectAbort(FX.msgs, { ...expected, expectedReceiver: 'inj1x' });
+  });
+});
 
 describe('validateBridgeTxs (live msgs_direct answer)', () => {
   it('accepts the live answer and returns its one MsgTransfer', () => {
