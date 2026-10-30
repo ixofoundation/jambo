@@ -177,6 +177,8 @@ export interface BridgeTxExpectation {
   amountInMicro: string;
   /** The quoted arrival (base units) the YellowCard sell was created for. */
   quotedAmountOutMicro: string;
+  /** The ONE inj1 account the transfer may name (the worker's `bridge_receiver`). */
+  expectedReceiver: string;
   /** For the timeout window; defaults to now. */
   nowMs?: number;
 }
@@ -229,6 +231,9 @@ export function validateBridgeTxs(json: any, expect: BridgeTxExpectation): TrxMs
   if (typeof v?.receiver !== 'string' || !OFFRAMP_RECEIVER_RE.test(v.receiver)) {
     throw new BridgeBuildError(`receiver ${v?.receiver} is not an inj1 account`);
   }
+  if (!OFFRAMP_RECEIVER_RE.test(expect.expectedReceiver) || v.receiver !== expect.expectedReceiver) {
+    throw new BridgeBuildError(`receiver ${v.receiver} is not this withdrawal's (${expect.expectedReceiver})`);
+  }
   // msgs_direct re-routes: what is signed must still deliver what the sell was sized on.
   const out = json?.route?.amount_out;
   if (!isBaseUnits(out) || !isBaseUnits(expect.quotedAmountOutMicro)) {
@@ -250,6 +255,7 @@ export async function buildBridgeTx(params: {
   quotedAmountOutMicro: string;
   userAddress: string;
   chainIdsToAddresses: Record<string, string>;
+  expectedReceiver: string;
 }): Promise<BridgeTx> {
   let res: Response;
   try {
@@ -278,6 +284,7 @@ export async function buildBridgeTx(params: {
     userAddress: params.userAddress,
     amountInMicro: params.amountInMicro,
     quotedAmountOutMicro: params.quotedAmountOutMicro,
+    expectedReceiver: params.expectedReceiver,
   });
   return { chainId: IXO_CHAIN_ID, msgs: [msg] };
 }
