@@ -2,6 +2,11 @@ import { createContext } from 'react';
 import { DeliverTxResponse } from '@cosmjs/stargate';
 import type { AuthHubSessionData } from 'lib/authHub/redirect';
 
+export interface OnSignOptions {
+  memo?: string;
+  onSigned?: (txHash: string) => void | Promise<void>;
+}
+
 export interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
@@ -14,7 +19,11 @@ export interface AuthContextType {
   matrixUserId: string | null;
   matrixRoomId: string | null;
   loginWithAuthHub: (data: AuthHubSessionData) => void;
-  onSign: (messages: any[]) => Promise<DeliverTxResponse>;
+  /** `label`: what the signing modal says (defaults to one derived from the message type).
+   *  `options.memo`: the tx memo (shown by wallets/explorers); `options.onSigned`: called with
+   *  the tx hash after signing and BEFORE broadcast (lib/authHub/signAndBroadcast). Failures
+   *  throw `SignBroadcastError` (its `stage` says whether anything may have moved). */
+  onSign: (messages: any[], label?: string, options?: OnSignOptions) => Promise<DeliverTxResponse>;
   /** `preserveReturnTo` = "switch account": keep the deep link + Yoma hand-off marker. */
   logout: (options?: { preserveReturnTo?: boolean }) => Promise<void>;
 }

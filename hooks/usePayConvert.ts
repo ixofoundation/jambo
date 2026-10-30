@@ -44,6 +44,10 @@ export interface PayConvertResult {
    *  re-render. */
   message: string | null;
   receiptCid: string | null;
+  /** The USDC denom this conversion pays out in — the grant's `conversion.payoutDenom`
+   *  (the oracle chooses it per grant; `/convert/info`'s only as a fallback). The
+   *  caller waits for, and bridges from, this denom. */
+  payoutDenom: string;
 }
 
 /** What to tell someone whose conversion is still open, or parked, when we stop waiting. */
@@ -103,7 +107,8 @@ export function rejectedMessage(status: Pick<ConvertStatus, 'refund'>): string {
 /**
  * One PAY → USDC conversion, the way the oracle's door expects it:
  *  1. read the conversion terms (deed admin, denoms);
- *  2. store the claim body (its CID is the claim id) and mint this user's Submit right;
+ *  2. store the claim body (its CID is the claim id) and mint this user's Submit right —
+ *     the grant says which USDC denom this conversion pays out in;
  *  3. sign ONE transaction: an intent for the USDC, the PAY to the deed, and the claim —
  *     all-or-nothing, so the PAY never leaves without its claim;
  *  4. nudge the oracle and wait for the payout.
@@ -151,6 +156,7 @@ export default function usePayConvert() {
       setResult(null);
       let info: ConvertInfo;
       let claimId: string;
+      let payoutDenom: string;
       try {
         setStage('preparing');
         info = await fetchConvertInfo();
@@ -158,7 +164,12 @@ export default function usePayConvert() {
         setStage('authorizing');
         const claim = await storeConvertClaim(await mintPayConvertBearer(did), amountBase);
         claimId = claim.claimId;
-        await requestConvertGrant(await mintPayConvertBearer(did), amountBase);
+        const grant = await requestConvertGrant(await mintPayConvertBearer(did), amountBase);
+        // The oracle names the payout denom per grant (mainnet: Injective USDC, the
+        // withdrawable one); the intent MUST ask for that denom. `/info`'s is only a fallback for an
+        // oracle that does not return it on the grant.
+        payoutDenom = grant?.conversion?.payoutDenom || info.payoutDenom;
+        if (!payoutDenom) throw new Error('The conversion oracle did not say which USDC it pays out in');
       } catch (err) {
         setStage('error');
         setError(payConvertErrorMessage(err));
@@ -174,7 +185,7 @@ export default function usePayConvert() {
             agentDid: did,
             agentAddress: address,
             collectionId: info.collectionId,
-            amount: [{ denom: info.payoutDenom, amount: amountBase }],
+            amount: [{ denom: payoutDenom, amount: amountBase }],
             cw20Payment: [],
             cw1155Payment: [],
           }),
@@ -249,6 +260,7 @@ export default function usePayConvert() {
         settled: outcome === 'paid',
         message,
         receiptCid: status?.receiptCid ?? null,
+        payoutDenom,
       };
       setResult(out);
       if (outcome === 'paid') {

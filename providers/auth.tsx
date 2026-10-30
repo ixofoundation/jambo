@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, HTMLAttributes } from 'react';
 
-import { AuthContext } from '@contexts/auth';
+import { AuthContext, type OnSignOptions } from '@contexts/auth';
 import authConstants from '@constants/auth';
 import { secureSave, secureLoad, secureReset } from '@utils/storage';
 import { secret } from '@utils/secrets';
@@ -283,7 +283,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     return typeUrl.split('.').pop() || 'Transaction';
   }
 
-  const onSign = useCallback(async (messages: any[]) => {
+  const onSign = useCallback(async (messages: any[], labelOverride?: string, options?: OnSignOptions) => {
     const { address: addr, sessionAuthenticatorId: authId } = stateRef.current;
 
     if (!addr || !authId) {
@@ -302,7 +302,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       throw new Error('Session key not found — please sign in again');
     }
 
-    const label = getTxLabel(messages);
+    const label = labelOverride || getTxLabel(messages);
     setSigningState({ visible: true, label });
 
     try {
@@ -311,6 +311,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         messages,
         sessionMnemonic,
         sessionAuthenticatorId: authId,
+        memo: options?.memo,
+        onSigned: options?.onSigned,
       });
 
       setSigningState({ visible: false, label: '' });
@@ -432,9 +434,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
               }}
             />
             <div>
-              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>
-                Signing Transaction
-              </p>
+              <p style={{ color: 'var(--text-primary)', fontSize: 16, fontWeight: 600, margin: 0 }}>Confirming…</p>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '8px 0 0' }}>{signingState.label}</p>
             </div>
           </div>

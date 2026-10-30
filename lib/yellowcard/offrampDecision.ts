@@ -1,4 +1,14 @@
-import { type RampApiErrorDetails, RampApiError, rampApiErrorDetails } from 'lib/yellowcard/offrampClient';
+import { SignBroadcastError } from 'lib/authHub/signAndBroadcast';
+import { UnroutableChainError } from 'lib/skip/chainAddresses';
+import { BridgeBuildError, BridgeQuoteError } from 'lib/skip/skipBridge';
+import {
+  type RampApiErrorDetails,
+  RAMP_KYC_CREDENTIAL_FAILURE_CODES,
+  RAMP_KYC_REQUIRED_CODE,
+  RampApiError,
+  rampApiErrorDetails,
+} from 'lib/yellowcard/offrampClient';
+import { RequestTimeoutError } from '@utils/fetchTimeout';
 
 /**
  * The off-ramp create call's decision-rail refusals, mapped to what the
@@ -27,6 +37,42 @@ import { type RampApiErrorDetails, RampApiError, rampApiErrorDetails } from 'lib
 export const OFFRAMP_DECISION_REJECTED_CODE = 'decision_rejected';
 export const OFFRAMP_DECISION_PENDING_CODE = 'decision_pending';
 export const OFFRAMP_DECISION_IN_REVIEW_CODE = 'decision_in_review';
+
+/** `code` on a create 400 when the withdrawal named a legacy USDC denom. Jambo
+ *  only ever sends the withdrawable USDC, so this should not happen; the screen
+ *  still answers it with the upgrade step (hooks/useUsdcUpgrade). */
+export const OFFRAMP_USDC_UPGRADE_REQUIRED_CODE = 'usdc_upgrade_required';
+const USDC_UPGRADE_REQUIRED_MESSAGE =
+  'Part of your USDC needs a quick upgrade before it can be withdrawn. Nothing was sent — your USDC is safe in your wallet.';
+
+/** The route asked for an address we cannot vouch for (lib/skip/chainAddresses), or the
+ *  transfer to sign failed its checks (lib/skip/skipBridge) — aborted before anything was
+ *  signed. The technical reason goes to the console. */
+const ROUTE_UNAVAILABLE_MESSAGE =
+  'Withdrawals aren’t available for a moment. Nothing was sent — your USDC is safe in your wallet. Please try again later.';
+
+/** Skip could not price the amount (before any sell or signature). */
+const QUOTE_FAILED_MESSAGE =
+  'We couldn’t get a price for this amount right now. Try a different amount, or try again in a few minutes. Nothing was sent — your USDC is safe in your wallet.';
+
+const INSUFFICIENT_FUNDS_MESSAGE = 'Your wallet doesn’t have enough USDC for this amount right now. Nothing was sent.';
+const SESSION_ENDED_MESSAGE = 'Your session has ended. Please sign in again — nothing was sent.';
+
+/** The transfer was refused or failed in its block: nothing moved. */
+export const OFFRAMP_NOT_THROUGH =
+  'The withdrawal didn’t go through, so nothing was sent. Your USDC is safe in your wallet.';
+
+/** The worker would not record the signed transfer (`deposit_mismatch`, …) — it may have moved. */
+export const OFFRAMP_DEPOSIT_UNCONFIRMED =
+  'We couldn’t confirm this transfer. Your USDC isn’t lost — please contact support and we’ll sort it out.';
+
+/** `409 deposit_already_recorded` (yellowcard-worker fix round, 30 Oct 2026). */
+export const OFFRAMP_DEPOSIT_RECORDED_ELSEWHERE =
+  'We’ve already recorded a transfer for this withdrawal. Check “Your withdrawals” before trying again.';
+
+/** Worker codes whose own `message` is shown (they are written for customers); every other
+ *  worker sentence is replaced by our copy and logged. */
+const TRUSTED_SERVER_MESSAGE_CODES: readonly string[] = [RAMP_KYC_REQUIRED_CODE, ...RAMP_KYC_CREDENTIAL_FAILURE_CODES];
 
 /** What the worker sends as its wait today. The last fallback, used only when
  *  the body carries no `retryAfterSec` and the `Retry-After` header is absent
@@ -131,32 +177,54 @@ export function offrampDecisionView(details: RampApiErrorDetails | null | undefi
 }
 
 /** `fetch` itself failed (offline, DNS, CORS, connection reset) — the browser
- *  throws a TypeError whose wording differs per engine. */
+ *  throws a TypeError whose wording differs per engine — or one of our time limits hit. */
 export function isNetworkFailure(err: unknown): boolean {
   return (
-    err instanceof TypeError &&
-    /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(err.message)
+    err instanceof RequestTimeoutError ||
+    (err instanceof TypeError &&
+      /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(err.message))
   );
 }
 
+const SESSION_RE = /session (expired|key not found)|not authenticated|not signed in|signing mnemonic not available/i;
+const INSUFFICIENT_RE = /insufficient funds/i;
+
 /**
- * One customer-facing line for any withdrawal failure — never a raw
- * "Failed to fetch" or a "Worker … returned 502" fallback.
+ * One customer-facing line for any withdrawal failure — never a raw Skip, chain,
+ * wallet or worker string (those go to the console).
  *
- * `fundsMayHaveMoved`: the failure happened at or after the bridge step (the
- * user was asked to sign the transfer), so we must not say nothing was sent.
+ * `fundsMayHaveMoved`: the failure happened after the user was asked to sign the
+ * transfer, so we must not say nothing was sent — unless the signer itself says
+ * the transfer never went out (`SignBroadcastError` `not_sent` / `failed_on_chain`).
  *
- * A worker sentence (`message`) is shown as-is; errors that aren't from the
- * worker or the network (signing, bridge routing) keep their own message.
+ * Only worker sentences written for customers are shown as they are: the
+ * decision rail's reasons and the identity-check codes (`TRUSTED_SERVER_MESSAGE_CODES`).
  */
 export function offrampErrorMessage(err: unknown, opts: { fundsMayHaveMoved: boolean }): string {
+  console.warn(
+    '[offramp] withdrawal failed:',
+    err instanceof BridgeBuildError || err instanceof BridgeQuoteError ? err.detail : err,
+  );
+  if (err instanceof SignBroadcastError) {
+    if (err.stage === 'maybe_sent') return NETWORK_AFTER_SEND;
+    if (SESSION_RE.test(err.message)) return SESSION_ENDED_MESSAGE;
+    if (INSUFFICIENT_RE.test(err.message)) return INSUFFICIENT_FUNDS_MESSAGE;
+    return err.stage === 'failed_on_chain' ? OFFRAMP_NOT_THROUGH : WORKER_BEFORE_SEND;
+  }
+  if (err instanceof UnroutableChainError || err instanceof BridgeBuildError) return ROUTE_UNAVAILABLE_MESSAGE;
+  if (err instanceof BridgeQuoteError) return QUOTE_FAILED_MESSAGE;
   if (err instanceof RampApiError) {
+    if (err.code === OFFRAMP_USDC_UPGRADE_REQUIRED_CODE) return USDC_UPGRADE_REQUIRED_MESSAGE;
     const view = offrampDecisionView(rampApiErrorDetails(err));
     if (view) return view.kind === 'rejected' ? view.message ?? view.reasons.join(' ') : view.message;
-    if (err.serverMessage) return err.serverMessage;
+    if (err.serverMessage && err.code && TRUSTED_SERVER_MESSAGE_CODES.includes(err.code)) return err.serverMessage;
+    if (err.status === 429) return 'Too many withdrawals at once — please try again in a minute. Nothing was sent.';
     return opts.fundsMayHaveMoved ? WORKER_AFTER_SEND : WORKER_BEFORE_SEND;
   }
   if (isNetworkFailure(err)) return opts.fundsMayHaveMoved ? NETWORK_AFTER_SEND : NETWORK_BEFORE_SEND;
-  if (err instanceof Error && err.message) return err.message;
-  return 'Withdrawal failed';
+  const message = err instanceof Error ? err.message : '';
+  if (/was submitted but was not yet found/i.test(message)) return NETWORK_AFTER_SEND;
+  if (SESSION_RE.test(message)) return SESSION_ENDED_MESSAGE;
+  if (!opts.fundsMayHaveMoved && INSUFFICIENT_RE.test(message)) return INSUFFICIENT_FUNDS_MESSAGE;
+  return opts.fundsMayHaveMoved ? WORKER_AFTER_SEND : WORKER_BEFORE_SEND;
 }

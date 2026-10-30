@@ -1,0 +1,140 @@
+// The one-tap USDC upgrade (components/Ramp/UsdcUpgradeCard). Same inset grammar as
+// Offramp's .kycCard — a calm next step, never styled as an error. Used on the wallet
+// (global .card) and withdraw (Offramp.module) screens, so it only relies on the
+// shared tokens in styles/variables.scss.
+
+.notice {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--mint);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.noticeButton {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  padding: 8px 14px;
+  min-height: 36px;
+  background: var(--green-primary);
+  color: var(--button-text-color);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--green-secondary);
+    outline-offset: 2px;
+  }
+}
+
+.card {
+  margin-top: 12px;
+  background: var(--card-bg-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.good {
+  background: var(--mint);
+}
+
+.warn {
+  box-shadow: inset 0 0 0 1px var(--warning-border);
+}
+
+.title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.small {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+// Confirm → Upgrading → Ready.
+.steps {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+}
+
+.step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-nav);
+}
+
+.stepDot {
+  display: block;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--light-grey-color);
+}
+
+.stepActive {
+  color: var(--text-primary);
+
+  .stepDot {
+    background: var(--green-primary);
+    opacity: 0.55;
+  }
+}
+
+.stepDone {
+  color: var(--green-primary);
+
+  .stepDot {
+    background: var(--green-primary);
+  }
+}
+
+// The always-mounted live region that announces the upgrade's state to screen readers.
+.liveRegion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

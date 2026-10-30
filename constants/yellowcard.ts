@@ -1,4 +1,4 @@
-import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
+import { CHAIN_IDS, CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 
 /**
  * YellowCard off-ramp config. The real off-ramp (Skip Go bridge + YC
@@ -21,15 +21,23 @@ export const YELLOWCARD_WORKER_API = (
  *  server-side. */
 export const SKIP_API_URL = `${YELLOWCARD_WORKER_API}/skip`;
 
-/** ixo mainnet chain-id — Skip's `sourceAssetChainId`. The off-ramp only works
- *  on this network. */
-export const IXO_CHAIN_ID = 'ixo-5';
+/** ixo MAINNET chain-id — Skip's `sourceAssetChainId`. Deliberately the mainnet id
+ *  on every build: Skip only routes from mainnet, and the off-ramp bridge only runs
+ *  there (testnet test mode skips it). The USDC it bridges is constants/usdc
+ *  `INJECTIVE_USDC_DENOM`. */
+export const IXO_CHAIN_ID = CHAIN_IDS[CHAIN_NETWORK_TYPE.MAINNET];
 
-/** USDC IBC denom on ixo (Skip's `sourceAssetDenom`). This is the canonical
- *  mainnet USDC, confirmed Skip-routable on ixo-5. A user may instead hold an
- *  alternate USDC denom; the screen passes whichever denom the balance actually
- *  uses, falling back to this. */
-export const IXO_USDC_DENOM = 'ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B';
+/** Skip chain ids the off-ramp's Injective-USDC route may ask an address for (the
+ *  CCTP V2 leg runs from Injective's EVM side, `1776`; `injective-1` in case Skip
+ *  adds it).
+ *  Their address is the YellowCard worker's refund wallet, read from
+ *  `GET /offramp/config` — never derived from the user's ixo key. */
+export const RECOVERY_CHAIN_IDS = ['1776', 'injective-1'] as const;
+
+/** How long the client keeps treating a Skip `STATE_ABANDONED` ("tracking stalled")
+ *  as still in transit before offering to re-send. UX only — the worker's cron is
+ *  authoritative for the bridge outcome. */
+export const BRIDGE_POLL_WINDOW_MS = 10 * 60 * 1000;
 
 /** PAY — ixo's liquid-staking token (native `upay`, 6 decimals, 1 PAY = 1 USDC).
  *  World Cleanup Day rewards are paid in it. Not Skip-routable: the off-ramp

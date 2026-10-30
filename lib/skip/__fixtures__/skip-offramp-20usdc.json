@@ -1,0 +1,245 @@
+{
+ "requestedAtMs": 1793343907376,
+ "user": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0",
+ "chain_ids_to_addresses": {
+  "1776": "0x0404040404040404040404040404040404040404",
+  "8453": "0xabababababababababababababababababababab",
+  "ixo-5": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0"
+ },
+ "route": {
+  "source_asset_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+  "source_asset_chain_id": "ixo-5",
+  "dest_asset_denom": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "dest_asset_chain_id": "8453",
+  "amount_in": "20000000",
+  "amount_out": "19996525",
+  "operations": [
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-31",
+     "from_chain_id": "ixo-5",
+     "to_chain_id": "injective-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+     "denom_out": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "ixo-5",
+     "dest_denom": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a"
+    },
+    "tx_index": 0,
+    "amount_in": "20000000",
+    "amount_out": "20000000"
+   },
+   {
+    "cctp_transfer_v2": {
+     "from_chain_id": "1776",
+     "to_chain_id": "8453",
+     "burn_token": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "denom_in": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "denom_out": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+     "bridge_id": "CCTP_V2",
+     "smart_relay": true,
+     "smart_relay_fee_quote": {
+      "fee_amount": "3475",
+      "relayer_address": "0xfc05aD74C6FE2e7046E091D6Ad4F660D2A159762",
+      "expiration": "2026-10-30T07:35:08Z",
+      "fee_denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "fee_payment_address": "0x400BB58033a7763A834199190B68F66A2661aE73"
+     },
+     "cctp_mint_domain": 6,
+     "finality_threshold": 2000,
+     "max_fee": "0"
+    },
+    "tx_index": 0,
+    "amount_in": "20000000",
+    "amount_out": "19996525"
+   }
+  ],
+  "chain_ids": [
+   "ixo-5",
+   "1776",
+   "8453"
+  ],
+  "does_swap": false,
+  "estimated_amount_out": "19996525",
+  "swap_venues": [],
+  "txs_required": 1,
+  "usd_amount_in": "19.98658",
+  "usd_amount_out": "19.98310733",
+  "estimated_fees": [
+   {
+    "fee_type": "SMART_RELAY",
+    "bridge_id": "CCTP_V2",
+    "amount": "3475",
+    "usd_amount": "0.0034726682749999997",
+    "origin_asset": {
+     "denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "chain_id": "1776",
+     "origin_denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "origin_chain_id": "1776",
+     "trace": "",
+     "is_cw20": false,
+     "is_evm": false,
+     "is_svm": false,
+     "symbol": "USDC.inj",
+     "name": "Injective USDC",
+     "logo_uri": "https://raw.githubusercontent.com/axelarnetwork/axelar-configs/main/images/tokens/usdc.svg",
+     "decimals": 6,
+     "token_contract": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "description": "",
+     "coingecko_id": "usd-coin",
+     "recommended_symbol": "USDC.inj"
+    },
+    "chain_id": "injective-1",
+    "tx_index": 0,
+    "fee_behavior": "FEE_BEHAVIOR_DEDUCTED"
+   }
+  ],
+  "required_chain_addresses": [
+   "ixo-5",
+   "1776",
+   "8453"
+  ],
+  "estimated_route_duration_seconds": 150
+ },
+ "msgs": {
+  "msgs": [
+   {
+    "multi_chain_msg": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "1776"
+     ],
+     "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-31\",\"token\":{\"denom\":\"ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6\",\"amount\":\"20000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"inj1lz7z5at5a5qcjapq3wmew7tv3r8p7q6nmh80t4\",\"timeout_height\":{},\"timeout_timestamp\":1793344214763735463}",
+     "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+    }
+   }
+  ],
+  "route": {
+   "source_asset_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+   "source_asset_chain_id": "ixo-5",
+   "dest_asset_denom": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+   "dest_asset_chain_id": "8453",
+   "amount_in": "20000000",
+   "amount_out": "19996525",
+   "operations": [
+    {
+     "transfer": {
+      "port": "transfer",
+      "channel": "channel-31",
+      "from_chain_id": "ixo-5",
+      "to_chain_id": "injective-1",
+      "pfm_enabled": true,
+      "supports_memo": true,
+      "denom_in": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+      "denom_out": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "bridge_id": "IBC",
+      "smart_relay": false,
+      "chain_id": "ixo-5",
+      "dest_denom": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a"
+     },
+     "tx_index": 0,
+     "amount_in": "20000000",
+     "amount_out": "20000000"
+    },
+    {
+     "cctp_transfer_v2": {
+      "from_chain_id": "1776",
+      "to_chain_id": "8453",
+      "burn_token": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "denom_in": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "denom_out": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "bridge_id": "CCTP_V2",
+      "smart_relay": true,
+      "smart_relay_fee_quote": {
+       "fee_amount": "3475",
+       "relayer_address": "0xfc05aD74C6FE2e7046E091D6Ad4F660D2A159762",
+       "expiration": "2026-10-30T07:35:08Z",
+       "fee_denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+       "fee_payment_address": "0x400BB58033a7763A834199190B68F66A2661aE73"
+      },
+      "cctp_mint_domain": 6,
+      "finality_threshold": 2000,
+      "max_fee": "0"
+     },
+     "tx_index": 0,
+     "amount_in": "20000000",
+     "amount_out": "19996525"
+    }
+   ],
+   "chain_ids": [
+    "ixo-5",
+    "1776",
+    "8453"
+   ],
+   "does_swap": false,
+   "estimated_amount_out": "19996525",
+   "swap_venues": [],
+   "txs_required": 1,
+   "usd_amount_in": "19.98606",
+   "usd_amount_out": "19.98258742",
+   "estimated_fees": [
+    {
+     "fee_type": "SMART_RELAY",
+     "bridge_id": "CCTP_V2",
+     "amount": "3475",
+     "usd_amount": "0.003472577925",
+     "origin_asset": {
+      "denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "chain_id": "1776",
+      "origin_denom": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "origin_chain_id": "1776",
+      "trace": "",
+      "is_cw20": false,
+      "is_evm": false,
+      "is_svm": false,
+      "symbol": "USDC.inj",
+      "name": "Injective USDC",
+      "logo_uri": "https://raw.githubusercontent.com/axelarnetwork/axelar-configs/main/images/tokens/usdc.svg",
+      "decimals": 6,
+      "token_contract": "0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+      "description": "",
+      "coingecko_id": "usd-coin",
+      "recommended_symbol": "USDC.inj"
+     },
+     "chain_id": "injective-1",
+     "tx_index": 0,
+     "fee_behavior": "FEE_BEHAVIOR_DEDUCTED"
+    }
+   ],
+   "required_chain_addresses": [
+    "ixo-5",
+    "1776",
+    "8453"
+   ],
+   "estimated_route_duration_seconds": 150
+  },
+  "txs": [
+   {
+    "cosmos_tx": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "1776"
+     ],
+     "msgs": [
+      {
+       "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-31\",\"token\":{\"denom\":\"ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6\",\"amount\":\"20000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"inj1lz7z5at5a5qcjapq3wmew7tv3r8p7q6nmh80t4\",\"timeout_height\":{},\"timeout_timestamp\":1793344214763735463}",
+       "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+      }
+     ],
+     "signer_address": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0"
+    },
+    "operations_indices": [
+     0,
+     1
+    ]
+   }
+  ],
+  "min_amount_out": "19996525"
+ }
+}

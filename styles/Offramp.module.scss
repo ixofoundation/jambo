@@ -414,6 +414,17 @@
   background: var(--card-bg-hover-color);
 }
 
+// An inline "Try again" in a hint line.
+.textButton {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .txCard {
   background: var(--card-bg-color);
   border-radius: 12px;
