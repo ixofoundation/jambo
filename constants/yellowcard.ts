@@ -39,10 +39,6 @@ export const RECOVERY_CHAIN_IDS = ['1776', 'injective-1'] as const;
  *  authoritative for the bridge outcome. */
 export const BRIDGE_POLL_WINDOW_MS = 10 * 60 * 1000;
 
-/** PAY — ixo's liquid-staking token (native `upay`, 6 decimals, 1 PAY = 1 USDC).
- *  World Cleanup Day rewards are paid in it. Not Skip-routable: the off-ramp
- *  can't move it until the PAY → USDC conversion ships (see constants/cleanup). */
-export const IXO_PAY_DENOM = 'upay';
 
 /**
  * Off-ramp destination: Base (cheapest/fastest EVM CCTP leg YC supports).
