@@ -24,7 +24,7 @@ Every task completed here is simultaneously money (USDC via YellowCard on/off-ra
 
 - Arrival: Yoma 302 → `/entities/<did>?yref=<partnerUserId>` → auth hub sign-in → silent DID↔Yoma email-link (worker `test.sync.yoma.ixo.earth`).
 - Claims flow: entity dashboard → claim collection → SurveyJS form → Ed25519 signing → matrix claim bot; evaluators approve with payment.
-- Money: USDC balance on ixo chain; deposit/withdraw through YellowCard (mobile money / bank).
+- Money: USDC balance on ixo chain; deposit/withdraw through YellowCard (mobile money / bank). Withdrawals, deposits and the rewards conversion use one USDC only (Injective USDC); users only ever see "USDC". Legacy Noble USDC still in a wallet is counted in the one USDC amount and offered as a one-tap "upgrade" (one signature, ~2 min, before 12 Jan 2027) — asked for before a withdrawal only when the amount needs it.
 - Support: Matrix-backed threads and DMs with the org/admins.
 - Data sources: jambo worker (entity whitelist), chain RPC (authz grants, balances), blocksync GraphQL, cellnode/IPFS profile documents, Matrix (credentials, PII, chat).
 

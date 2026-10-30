@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
+import useUsdcUpgrade from '@hooks/useUsdcUpgrade';
 import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
 import { PAY_CONVERT_ENABLED } from '@constants/payConvert';
-import { getWalletBalances } from '@utils/usdcBalance';
+import { type UsdcBalances, fromMicro, getWalletBalances } from '@utils/usdcBalance';
 import { formatCurrency } from '@utils/localCurrency';
 import Header from '@components/Header/Header';
+import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
@@ -23,7 +25,9 @@ const fmtUsd = (v: number) => `$ ${v.toLocaleString('en', { minimumFractionDigit
 const shortAddress = (a: string) => (a.length > 11 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a);
 
 /**
- * Wallet: the user's real money. USDC balance on chain, deposit via the
+ * Wallet: the user's real money. USDC balance on chain — ONE amount, the
+ * withdrawable USDC plus any legacy USDC (constants/usdc), with a calm one-tap
+ * upgrade notice while legacy USDC is held — deposit via the
  * on-ramp, withdraw to mobile money / bank via the off-ramp (YellowCard).
  * World Cleanup Day rewards (PAY, 1 PAY = 1 USDC) count in the total but are
  * held until conversion ships — see constants/cleanup.
@@ -32,22 +36,33 @@ export default function Wallet() {
   const router = useRouter();
   const { address } = useAuth();
   const local = useLocalCurrency();
-  const [balance, setBalance] = useState<number | null>(null);
+  // The last GOOD read: a failed read is unknown, never zero — it keeps these and says so.
+  const [usdcBalances, setUsdcBalances] = useState<UsdcBalances | null>(null);
   const [rewards, setRewards] = useState<number | null>(null);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Bumped when an upgrade settles (or on "Try again"), so the balances are re-read.
+  const [refresh, setRefresh] = useState(0);
+  const onUpgradeSettled = useCallback(() => setRefresh((n) => n + 1), []);
+  const upgrade = useUsdcUpgrade({ balances: usdcBalances, onSettled: onUpgradeSettled });
 
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
     void getWalletBalances(address).then((b) => {
       if (cancelled) return;
-      setBalance(b.usdc.amount);
+      setRefreshFailed(!b.complete);
+      if (!b.complete) return;
+      setUsdcBalances(b.usdc);
       setRewards(b.pay.amount);
     });
     return () => {
       cancelled = true;
     };
-  }, [address]);
+  }, [address, refresh]);
+
+  // The ONE USDC amount: withdrawable + legacy, plus an upgrade on its way back to the wallet.
+  const balance = usdcBalances === null ? null : fromMicro(usdcBalances.totalMicro + upgrade.inTransitMicro);
 
   const hasRewards = (rewards ?? 0) > 0;
   // Held rewards: in the total, but not "available to withdraw" yet.
@@ -122,6 +137,29 @@ export default function Wallet() {
               Includes {formatRewardsUsd(rewards ?? 0)} in Cleanup rewards — they count towards what you can withdraw.
             </div>
           )}
+          {refreshFailed && (
+            <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
+              {balance === null
+                ? 'We couldn’t load your balance just now.'
+                : 'We couldn’t refresh your balance just now.'}{' '}
+              <button
+                type='button'
+                onClick={() => setRefresh((n) => n + 1)}
+                style={{
+                  border: 0,
+                  padding: 0,
+                  background: 'none',
+                  color: 'inherit',
+                  font: 'inherit',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          <UsdcUpgradeCard upgrade={upgrade} variant='notice' />
           <div className='hstack' style={{ gap: 10, marginTop: 16 }}>
             <button
               className='btn btn--primary'

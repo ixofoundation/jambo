@@ -1,4 +1,5 @@
 import { YELLOWCARD_WORKER_API } from '@constants/yellowcard';
+import { PRE_SIGN_TIMEOUT_MS, fetchWithTimeout } from '@utils/fetchTimeout';
 
 /**
  * Thin client for the YellowCard worker's off-ramp AND on-ramp endpoints.
@@ -58,6 +59,10 @@ export interface OfframpTransaction {
   refund_address: string | null;
   skip_tx_hash: string | null;
   skip_status: string | null;
+  /** The ixo USDC denom the bridge spends (`ibc/…`). New withdrawals are always
+   *  Injective USDC; legacy rows may hold Noble USDC or null (the worker treats
+   *  null as Noble). Optional for a worker that does not send it yet. Never shown. */
+  source_denom?: string | null;
   /** YC's raw errorCode (e.g. NAME_MISMATCH) or failure reason. */
   error: string | null;
   /** Readable meaning of a YC errorCode, mapped server-side from YC's docs. */
@@ -210,7 +215,16 @@ function toRampApiError(path: string, res: Response, json: any): RampApiError {
       : undefined;
   return new RampApiError(serverMessage || `Worker ${path} returned ${res.status}`, {
     status: res.status,
-    code: typeof json?.code === 'string' ? json.code : undefined,
+    // Most codes arrive as `code`; `usdc_upgrade_required` and the `/usdc-upgrade`
+    // refusals (`tx_pending`, `tx_failed`, `not_an_upgrade`, …) arrive as the body's
+    // `error` (yellowcard-worker routes/offramp.ts, routes/usdc-upgrade.ts). An `error`
+    // that is a plain HTTP phrase ("Bad Request") is not a code.
+    code:
+      typeof json?.code === 'string'
+        ? json.code
+        : typeof json?.error === 'string' && /^[a-z][a-z0-9_]*$/.test(json.error)
+        ? json.error
+        : undefined,
     serverMessage,
     reasons: parseReasons(json?.reasons),
     receiptCid: typeof json?.receiptCid === 'string' ? json.receiptCid : json?.receiptCid === null ? null : undefined,
@@ -221,10 +235,15 @@ function toRampApiError(path: string, res: Response, json: any): RampApiError {
   });
 }
 
-async function post<T>(path: string, body: unknown, bearer?: string): Promise<T> {
+/** `timeoutMs`: a time limit for calls made before anything is signed (utils/fetchTimeout).
+ *  Omitted for the create call, which the decision rail may hold open by design. */
+async function post<T>(path: string, body: unknown, bearer?: string, timeoutMs?: number): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
-  const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  const init: RequestInit = { method: 'POST', headers, body: JSON.stringify(body) };
+  const res = timeoutMs
+    ? await fetchWithTimeout(`${BASE}${path}`, init, timeoutMs)
+    : await fetch(`${BASE}${path}`, init);
   const text = await res.text();
   const json = parseJsonBody(text);
   if (!res.ok) {
@@ -233,8 +252,11 @@ async function post<T>(path: string, body: unknown, bearer?: string): Promise<T>
   return json as T;
 }
 
-async function get<T>(path: string, bearer: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${bearer}` } });
+async function get<T>(path: string, bearer: string, timeoutMs?: number): Promise<T> {
+  const init: RequestInit = { headers: { Authorization: `Bearer ${bearer}` } };
+  const res = timeoutMs
+    ? await fetchWithTimeout(`${BASE}${path}`, init, timeoutMs)
+    : await fetch(`${BASE}${path}`, init);
   const text = await res.text();
   const json = parseJsonBody(text);
   if (!res.ok) {
@@ -273,7 +295,7 @@ export function quoteOfframp(
   body: { cryptoAmount: number; currency: string; channelType: string; country: string; network?: string },
   bearer: string,
 ): Promise<QuoteResult> {
-  return post<QuoteResult>('/offramp/quote', body, bearer);
+  return post<QuoteResult>('/offramp/quote', body, bearer, PRE_SIGN_TIMEOUT_MS);
 }
 
 export interface CreateResult {
@@ -292,6 +314,8 @@ export interface CreateResult {
   service_fee_usd: number | null;
   partner_fee_usd: number | null;
   expires_at: number | null;
+  /** Echo of the create's `sourceDenom` (see `OfframpTransaction.source_denom`). */
+  source_denom?: string | null;
   created_at: number;
 }
 
@@ -318,6 +342,10 @@ export function createOfframp(
      *  no credential the create fails with a `kyc_required` 403 once the
      *  amount crosses the worker's threshold. */
     kycCredential?: string;
+    /** The ixo USDC denom the bridge will spend — always Injective USDC (the
+     *  worker answers anything else with a 400 `usdc_upgrade_required`). Omitted
+     *  in testnet test mode, which does not bridge. */
+    sourceDenom?: string;
   },
   bearer: string,
 ): Promise<CreateResult> {
@@ -326,10 +354,117 @@ export function createOfframp(
 
 export function notifyDeposit(
   id: string,
-  body: { skipTxHash: string; skipStatus?: string },
+  /** `sourceDenom`: the denom actually bridged. The worker stores it when the row
+   *  has none and 409s when it differs from the one stored at create. */
+  body: { skipTxHash: string; skipStatus?: string; sourceDenom?: string },
   bearer: string,
 ): Promise<{ success: true; transaction: OfframpTransaction }> {
-  return post(`/offramp/${id}/deposit`, body, bearer);
+  return post(`/offramp/${id}/deposit`, body, bearer, PRE_SIGN_TIMEOUT_MS);
+}
+
+/** One USDC denom as the worker's `GET /offramp/config` describes it. */
+export interface OfframpConfigDenom {
+  denom: string;
+  variant: string;
+  symbol: string;
+  label: string;
+  status: string;
+  decimals: number;
+  offramp_priority: number;
+  sunset_at: string | null;
+}
+
+/** `GET /offramp/config` (public, cacheable 5 min).
+ *  - `usdc_denoms`: the ONE withdrawable USDC (Injective); empty off mainnet.
+ *  - `legacy_usdc_denoms`: the legacy USDC denoms the apps offer to upgrade
+ *    (Noble on mainnet); empty elsewhere — and missing from a worker that
+ *    predates the upgrade, which reads as empty (no upgrade offered).
+ *  - `skip_chain_addresses`: the worker's REFUND wallet on every non-ixo chain
+ *    our routes may name (`1776` = 0x…, `injective-1` = inj1…, `noble-1`,
+ *    `osmosis-1`, `phoenix-1`). Empty when the worker has no refund key — a
+ *    route that needs one then aborts before signing (fail closed). */
+export interface OfframpConfig {
+  network: string;
+  usdc_denoms: OfframpConfigDenom[];
+  legacy_usdc_denoms: string[];
+  skip_chain_addresses: Record<string, string>;
+}
+
+/** How long a fetched config is reused (the worker's own `Cache-Control: max-age=300`). */
+export const OFFRAMP_CONFIG_TTL_MS = 5 * 60 * 1000;
+
+// In memory, for at most OFFRAMP_CONFIG_TTL_MS (so a long-open tab picks up a
+// rotated refund wallet). A failed fetch is not cached, so the next call tries again.
+let offrampConfigPromise: Promise<OfframpConfig> | null = null;
+let offrampConfigAt = 0;
+
+/** `fresh`: skip the in-memory copy (used right before signing). */
+export function fetchOfframpConfig(opts: { fresh?: boolean } = {}): Promise<OfframpConfig> {
+  if (offrampConfigPromise && (opts.fresh || Date.now() - offrampConfigAt > OFFRAMP_CONFIG_TTL_MS)) {
+    offrampConfigPromise = null;
+  }
+  if (!offrampConfigPromise) {
+    offrampConfigAt = Date.now();
+    offrampConfigPromise = (async () => {
+      const res = await fetchWithTimeout(`${BASE}/offramp/config`);
+      const json = parseJsonBody(await res.text());
+      if (!res.ok) throw toRampApiError('/offramp/config', res, json);
+      if (!json || typeof json !== 'object' || typeof json.skip_chain_addresses !== 'object') {
+        throw new Error('The withdrawal service returned an unreadable configuration.');
+      }
+      return {
+        network: String(json.network ?? ''),
+        usdc_denoms: Array.isArray(json.usdc_denoms) ? json.usdc_denoms : [],
+        legacy_usdc_denoms: Array.isArray(json.legacy_usdc_denoms)
+          ? json.legacy_usdc_denoms.filter((d: unknown): d is string => typeof d === 'string' && d.length > 0)
+          : [],
+        skip_chain_addresses: (json.skip_chain_addresses ?? {}) as Record<string, string>,
+      };
+    })();
+    const pending = offrampConfigPromise;
+    pending.catch(() => {
+      if (offrampConfigPromise === pending) offrampConfigPromise = null;
+    });
+  }
+  return offrampConfigPromise;
+}
+
+// --- One-tap USDC upgrade (legacy USDC → the withdrawable USDC; hooks/useUsdcUpgrade) ---
+
+/** Worker states of one upgrade. `completed` = the upgraded USDC is in the
+ *  user's wallet; `returning` → `returned` = the route could not finish and the
+ *  worker is sending (has sent) the USDC back to the user's wallet;
+ *  `needs_attention` = the worker could not return it automatically and has
+ *  alerted the team. */
+export const USDC_UPGRADE_STATUSES = ['in_progress', 'completed', 'returning', 'returned', 'needs_attention'] as const;
+
+export type UsdcUpgradeStatus = (typeof USDC_UPGRADE_STATUSES)[number];
+
+export function isUsdcUpgradeStatus(value: unknown): value is UsdcUpgradeStatus {
+  return typeof value === 'string' && (USDC_UPGRADE_STATUSES as readonly string[]).includes(value);
+}
+
+/** `GET /usdc-upgrade/:txHash`. */
+export interface UsdcUpgradeRecord {
+  status: UsdcUpgradeStatus;
+  amount_micro: string;
+  returned_amount_micro?: string | null;
+  updated_at: number | string;
+}
+
+/** `POST /usdc-upgrade` — register the broadcast upgrade tx so the worker can
+ *  track it (and return the USDC automatically if the route cannot finish).
+ *  Same auth as the off-ramp calls; idempotent on `tx_hash`. */
+export function registerUsdcUpgrade(
+  body: { tx_hash: string; amount_micro: string },
+  bearer: string,
+): Promise<{ id: string; status: UsdcUpgradeStatus }> {
+  return post('/usdc-upgrade', body, bearer, PRE_SIGN_TIMEOUT_MS);
+}
+
+/** `GET /usdc-upgrade/:txHash` — the caller's own upgrade only (404 otherwise). */
+export function getUsdcUpgrade(txHash: string, bearer: string): Promise<UsdcUpgradeRecord> {
+  return get(`/usdc-upgrade/${encodeURIComponent(txHash)}`, bearer, PRE_SIGN_TIMEOUT_MS);
 }
 
 /** Download the payment-record PDF for a COMPLETED off-ramp (worker returns
