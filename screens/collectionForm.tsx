@@ -49,6 +49,7 @@ import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '@constants/approvePayment';
 import { buildApprovePaymentPrefill, fetchSourceClaimData, loadKycPii } from '@utils/approvePayment';
+import { baseToDisplay, denomDisplay, displayToBase } from '@utils/denomAmount';
 import { track } from 'lib/analytics/client';
 import { AnalyticsEvents } from 'lib/analytics/events';
 
@@ -469,18 +470,16 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     return claimBotClientRef.current;
   }
 
-  function toDisplayAmount(amount: string, denom: string): { display: string; displayDenom: string } {
-    if (denom === 'uixo') {
-      return { display: (Number(amount) / 1_000_000).toString(), displayDenom: 'IXO' };
-    }
-    return { display: amount, displayDenom: denom };
+  // `customAmount` keeps the ON-CHAIN denom (never rewritten — a Noble-USDC collection keeps
+  // paying Noble USDC) with the amount in DISPLAY units; the symbol/decimals come from
+  // utils/denomAmount (IXO and every accepted USDC denom are 6-decimal).
+  function toDisplayAmount(amount: string, denom: string): { display: string; denom: string } {
+    return { display: baseToDisplay(amount, denomDisplay(denom).decimals), denom };
   }
 
-  function toMinimalAmount(display: string, displayDenom: string): { amount: string; denom: string } {
-    if (displayDenom === 'IXO') {
-      return { amount: Math.round(Number(display) * 1_000_000).toString(), denom: 'uixo' };
-    }
-    return { amount: display, denom: displayDenom };
+  function toMinimalAmount(display: string, denom: string): { amount: string; denom: string } | null {
+    const amount = displayToBase(display, denomDisplay(denom).decimals);
+    return amount == null ? null : { amount, denom };
   }
 
   async function handleApproveClick() {
@@ -494,7 +493,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       setEvalConfirm({
         status: 'approve',
         defaultAmount: defaultAmt,
-        customAmount: displayAmt ? { denom: displayAmt.displayDenom, amount: displayAmt.display } : undefined,
+        customAmount: displayAmt ? { denom: displayAmt.denom, amount: displayAmt.display } : undefined,
         editingAmount: false,
       });
     } catch {
@@ -1342,7 +1341,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                     >
                       <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Payment</span>
                       <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {evalConfirm.customAmount.amount} {evalConfirm.customAmount.denom}
+                        {evalConfirm.customAmount.amount} {denomDisplay(evalConfirm.customAmount.denom).symbol}
                       </span>
                     </div>
                     <button
@@ -1407,7 +1406,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {evalConfirm.customAmount.denom}
+                        {denomDisplay(evalConfirm.customAmount.denom).symbol}
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -1420,7 +1419,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                             ...evalConfirm,
                             editingAmount: false,
                             customAmount: resetAmt
-                              ? { denom: resetAmt.displayDenom, amount: resetAmt.display }
+                              ? { denom: resetAmt.denom, amount: resetAmt.display }
                               : evalConfirm.customAmount,
                           });
                         }}
@@ -1462,6 +1461,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                 onClick={() => {
                   if (evalConfirm.status === 'approve' && evalConfirm.customAmount) {
                     const minimal = toMinimalAmount(evalConfirm.customAmount.amount, evalConfirm.customAmount.denom);
+                    if (!minimal) {
+                      toast.error('Enter a valid payment amount.');
+                      return;
+                    }
                     evaluateClaim('approve', minimal);
                   } else {
                     evaluateClaim(evalConfirm.status);

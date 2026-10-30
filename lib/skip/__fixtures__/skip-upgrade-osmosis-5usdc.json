@@ -1,0 +1,213 @@
+{
+ "requestedAtMs": 1793343889598,
+ "user": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0",
+ "chain_addresses": {
+  "noble-1": "noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y",
+  "osmosis-1": "osmo1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcr2u426e",
+  "injective-1": "inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0"
+ },
+ "route": {
+  "source_asset_denom": "ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B",
+  "source_asset_chain_id": "ixo-5",
+  "dest_asset_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+  "dest_asset_chain_id": "ixo-5",
+  "amount_in": "5000000",
+  "amount_out": "5000000",
+  "operations": [
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-26",
+     "from_chain_id": "ixo-5",
+     "to_chain_id": "noble-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B",
+     "denom_out": "uusdc",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "ixo-5",
+     "dest_denom": "uusdc"
+    },
+    "tx_index": 0,
+    "amount_in": "5000000",
+    "amount_out": "5000000"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-1",
+     "from_chain_id": "noble-1",
+     "to_chain_id": "osmosis-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "uusdc",
+     "denom_out": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "noble-1",
+     "dest_denom": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4"
+    },
+    "tx_index": 0,
+    "amount_in": "5000000",
+    "amount_out": "5000000"
+   },
+   {
+    "swap": {
+     "swap_in": {
+      "swap_venue": {
+       "name": "osmosis-poolmanager",
+       "chain_id": "osmosis-1",
+       "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/osmosis/logo.png"
+      },
+      "swap_operations": [
+       {
+        "pool": "3497",
+        "denom_in": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+        "denom_out": "ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138"
+       }
+      ],
+      "swap_amount_in": "5000000",
+      "price_impact_percent": "0.0000",
+      "estimated_amount_out": "5000000"
+     },
+     "estimated_affiliate_fee": "0ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138",
+     "from_chain_id": "osmosis-1",
+     "chain_id": "osmosis-1",
+     "denom_in": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+     "denom_out": "ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138",
+     "swap_venues": [
+      {
+       "name": "osmosis-poolmanager",
+       "chain_id": "osmosis-1",
+       "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/osmosis/logo.png"
+      }
+     ]
+    },
+    "tx_index": 0,
+    "amount_in": "5000000",
+    "amount_out": "5000000"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-122",
+     "from_chain_id": "osmosis-1",
+     "to_chain_id": "injective-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138",
+     "denom_out": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "osmosis-1",
+     "dest_denom": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a"
+    },
+    "tx_index": 0,
+    "amount_in": "5000000",
+    "amount_out": "5000000"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-502",
+     "from_chain_id": "injective-1",
+     "to_chain_id": "ixo-5",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "denom_out": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "injective-1",
+     "dest_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6"
+    },
+    "tx_index": 0,
+    "amount_in": "5000000",
+    "amount_out": "5000000"
+   }
+  ],
+  "chain_ids": [
+   "ixo-5",
+   "noble-1",
+   "osmosis-1",
+   "injective-1",
+   "ixo-5"
+  ],
+  "does_swap": true,
+  "estimated_amount_out": "5000000",
+  "swap_venues": [
+   {
+    "name": "osmosis-poolmanager",
+    "chain_id": "osmosis-1",
+    "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/osmosis/logo.png"
+   }
+  ],
+  "txs_required": 1,
+  "usd_amount_in": "4.996645",
+  "usd_amount_out": "4.996645",
+  "swap_price_impact_percent": "0.0000",
+  "estimated_fees": [],
+  "required_chain_addresses": [
+   "ixo-5",
+   "noble-1",
+   "osmosis-1",
+   "injective-1",
+   "ixo-5"
+  ],
+  "estimated_route_duration_seconds": 120,
+  "swap_venue": {
+   "name": "osmosis-poolmanager",
+   "chain_id": "osmosis-1",
+   "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/osmosis/logo.png"
+  }
+ },
+ "msgs": {
+  "msgs": [
+   {
+    "multi_chain_msg": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "noble-1",
+      "osmosis-1",
+      "injective-1",
+      "ixo-5"
+     ],
+     "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-26\",\"token\":{\"denom\":\"ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B\",\"amount\":\"5000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y\",\"timeout_height\":{},\"timeout_timestamp\":1793344200636118540,\"memo\":\"{\\\"forward\\\":{\\\"channel\\\":\\\"channel-1\\\",\\\"next\\\":{\\\"wasm\\\":{\\\"contract\\\":\\\"osmo10a3k4hvk37cc4hnxctw4p95fhscd2z6h2rmx0aukc6rm8u9qqx9smfsh7u\\\",\\\"msg\\\":{\\\"swap_and_action\\\":{\\\"affiliates\\\":[],\\\"min_asset\\\":{\\\"native\\\":{\\\"amount\\\":\\\"4975000\\\",\\\"denom\\\":\\\"ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138\\\"}},\\\"post_swap_action\\\":{\\\"ibc_transfer\\\":{\\\"ibc_info\\\":{\\\"memo\\\":\\\"{\\\\\\\"forward\\\\\\\":{\\\\\\\"channel\\\\\\\":\\\\\\\"channel-502\\\\\\\",\\\\\\\"port\\\\\\\":\\\\\\\"transfer\\\\\\\",\\\\\\\"receiver\\\\\\\":\\\\\\\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\\\\\\\",\\\\\\\"retries\\\\\\\":2,\\\\\\\"timeout\\\\\\\":1793344200636133334}}\\\",\\\"receiver\\\":\\\"inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0\\\",\\\"recover_address\\\":\\\"osmo1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcr2u426e\\\",\\\"source_channel\\\":\\\"channel-122\\\"}}},\\\"timeout_timestamp\\\":1793344200636138500,\\\"user_swap\\\":{\\\"swap_exact_asset_in\\\":{\\\"operations\\\":[{\\\"denom_in\\\":\\\"ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4\\\",\\\"denom_out\\\":\\\"ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138\\\",\\\"pool\\\":\\\"3497\\\"}],\\\"swap_venue_name\\\":\\\"osmosis-poolmanager\\\"}}}}}},\\\"port\\\":\\\"transfer\\\",\\\"receiver\\\":\\\"osmo10a3k4hvk37cc4hnxctw4p95fhscd2z6h2rmx0aukc6rm8u9qqx9smfsh7u\\\",\\\"retries\\\":2,\\\"timeout\\\":1793344200636120586}}\"}",
+     "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+    }
+   }
+  ],
+  "txs": [
+   {
+    "cosmos_tx": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "noble-1",
+      "osmosis-1",
+      "injective-1",
+      "ixo-5"
+     ],
+     "msgs": [
+      {
+       "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-26\",\"token\":{\"denom\":\"ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B\",\"amount\":\"5000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y\",\"timeout_height\":{},\"timeout_timestamp\":1793344200636118540,\"memo\":\"{\\\"forward\\\":{\\\"channel\\\":\\\"channel-1\\\",\\\"next\\\":{\\\"wasm\\\":{\\\"contract\\\":\\\"osmo10a3k4hvk37cc4hnxctw4p95fhscd2z6h2rmx0aukc6rm8u9qqx9smfsh7u\\\",\\\"msg\\\":{\\\"swap_and_action\\\":{\\\"affiliates\\\":[],\\\"min_asset\\\":{\\\"native\\\":{\\\"amount\\\":\\\"4975000\\\",\\\"denom\\\":\\\"ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138\\\"}},\\\"post_swap_action\\\":{\\\"ibc_transfer\\\":{\\\"ibc_info\\\":{\\\"memo\\\":\\\"{\\\\\\\"forward\\\\\\\":{\\\\\\\"channel\\\\\\\":\\\\\\\"channel-502\\\\\\\",\\\\\\\"port\\\\\\\":\\\\\\\"transfer\\\\\\\",\\\\\\\"receiver\\\\\\\":\\\\\\\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\\\\\\\",\\\\\\\"retries\\\\\\\":2,\\\\\\\"timeout\\\\\\\":1793344200636133334}}\\\",\\\"receiver\\\":\\\"inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0\\\",\\\"recover_address\\\":\\\"osmo1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcr2u426e\\\",\\\"source_channel\\\":\\\"channel-122\\\"}}},\\\"timeout_timestamp\\\":1793344200636138500,\\\"user_swap\\\":{\\\"swap_exact_asset_in\\\":{\\\"operations\\\":[{\\\"denom_in\\\":\\\"ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4\\\",\\\"denom_out\\\":\\\"ibc/794C7D7F3B857713878A3A1927251FA6AC1EEE520424C1F6FAFE9BA26D476138\\\",\\\"pool\\\":\\\"3497\\\"}],\\\"swap_venue_name\\\":\\\"osmosis-poolmanager\\\"}}}}}},\\\"port\\\":\\\"transfer\\\",\\\"receiver\\\":\\\"osmo10a3k4hvk37cc4hnxctw4p95fhscd2z6h2rmx0aukc6rm8u9qqx9smfsh7u\\\",\\\"retries\\\":2,\\\"timeout\\\":1793344200636120586}}\"}",
+       "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+      }
+     ],
+     "signer_address": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0"
+    },
+    "operations_indices": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   }
+  ],
+  "estimated_fees": [],
+  "min_amount_out": "5000000"
+ }
+}

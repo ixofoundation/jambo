@@ -1,0 +1,226 @@
+{
+ "requestedAtMs": 1793343900850,
+ "user": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0",
+ "chain_addresses": {
+  "noble-1": "noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y",
+  "phoenix-1": "terra1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg99r67rk",
+  "injective-1": "inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0"
+ },
+ "route": {
+  "source_asset_denom": "ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B",
+  "source_asset_chain_id": "ixo-5",
+  "dest_asset_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+  "dest_asset_chain_id": "ixo-5",
+  "amount_in": "1000000",
+  "amount_out": "999094",
+  "operations": [
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-26",
+     "from_chain_id": "ixo-5",
+     "to_chain_id": "noble-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B",
+     "denom_out": "uusdc",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "ixo-5",
+     "dest_denom": "uusdc"
+    },
+    "tx_index": 0,
+    "amount_in": "1000000",
+    "amount_out": "1000000"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-30",
+     "from_chain_id": "noble-1",
+     "to_chain_id": "phoenix-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "uusdc",
+     "denom_out": "ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "noble-1",
+     "dest_denom": "ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB"
+    },
+    "tx_index": 0,
+    "amount_in": "1000000",
+    "amount_out": "1000000"
+   },
+   {
+    "swap": {
+     "swap_in": {
+      "swap_venue": {
+       "name": "terra-astroport",
+       "chain_id": "phoenix-1",
+       "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/astroport/logo.png"
+      },
+      "swap_operations": [
+       {
+        "pool": "terra1dnssvse0fqw4d4gqc8kvchfud5r6e8cr7w9cdpervhl2pgr2eecquujpg6",
+        "denom_in": "ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB",
+        "denom_out": "ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5"
+       },
+       {
+        "pool": "terra1aategw0787y4fyunmwdvdqraxfc8jtxykyed2skx3p5fd3lkgkmsqry7pz",
+        "denom_in": "ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5",
+        "denom_out": "uluna"
+       },
+       {
+        "pool": "terra1mea829xtsnxwv4l9lhzs0tzpnyamjpz5y45a9tpp06jgdhjd48yqc4ales",
+        "denom_in": "uluna",
+        "denom_out": "ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB"
+       },
+       {
+        "pool": "terra18kh9wmswjdspz2wrgax9f4m3j5695nk25c7lack3f42d275gkwzsf45tk4",
+        "denom_in": "ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB",
+        "denom_out": "ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B"
+       }
+      ],
+      "swap_amount_in": "1000000",
+      "estimated_amount_out": "999094"
+     },
+     "estimated_affiliate_fee": "0ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B",
+     "from_chain_id": "phoenix-1",
+     "chain_id": "phoenix-1",
+     "denom_in": "ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB",
+     "denom_out": "ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B",
+     "swap_venues": [
+      {
+       "name": "terra-astroport",
+       "chain_id": "phoenix-1",
+       "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/astroport/logo.png"
+      }
+     ]
+    },
+    "tx_index": 0,
+    "amount_in": "1000000",
+    "amount_out": "999094"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-255",
+     "from_chain_id": "phoenix-1",
+     "to_chain_id": "injective-1",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B",
+     "denom_out": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "phoenix-1",
+     "dest_denom": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a"
+    },
+    "tx_index": 0,
+    "amount_in": "999094",
+    "amount_out": "999094"
+   },
+   {
+    "transfer": {
+     "port": "transfer",
+     "channel": "channel-502",
+     "from_chain_id": "injective-1",
+     "to_chain_id": "ixo-5",
+     "pfm_enabled": true,
+     "supports_memo": true,
+     "denom_in": "erc20:0xa00C59fF5a080D2b954d0c75e46E22a0c371235a",
+     "denom_out": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6",
+     "bridge_id": "IBC",
+     "smart_relay": false,
+     "chain_id": "injective-1",
+     "dest_denom": "ibc/77C12480BD8C29BF0ACEC2143736C15BAF8CD232CA27BAE09336677B828955E6"
+    },
+    "tx_index": 0,
+    "amount_in": "999094",
+    "amount_out": "999094"
+   }
+  ],
+  "chain_ids": [
+   "ixo-5",
+   "noble-1",
+   "phoenix-1",
+   "injective-1",
+   "ixo-5"
+  ],
+  "does_swap": true,
+  "estimated_amount_out": "999094",
+  "swap_venues": [
+   {
+    "name": "terra-astroport",
+    "chain_id": "phoenix-1",
+    "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/astroport/logo.png"
+   }
+  ],
+  "txs_required": 1,
+  "usd_amount_in": "0.99937",
+  "usd_amount_out": "0.9984645707800001",
+  "estimated_fees": [],
+  "required_chain_addresses": [
+   "ixo-5",
+   "noble-1",
+   "phoenix-1",
+   "injective-1",
+   "ixo-5"
+  ],
+  "estimated_route_duration_seconds": 120,
+  "swap_venue": {
+   "name": "terra-astroport",
+   "chain_id": "phoenix-1",
+   "logo_uri": "https://raw.githubusercontent.com/skip-mev/skip-go-registry/main/swap-venues/astroport/logo.png"
+  }
+ },
+ "msgs": {
+  "msgs": [
+   {
+    "multi_chain_msg": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "noble-1",
+      "phoenix-1",
+      "injective-1",
+      "ixo-5"
+     ],
+     "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-26\",\"token\":{\"denom\":\"ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B\",\"amount\":\"1000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y\",\"timeout_height\":{},\"timeout_timestamp\":1793344207311922482,\"memo\":\"{\\\"forward\\\":{\\\"channel\\\":\\\"channel-30\\\",\\\"next\\\":{\\\"wasm\\\":{\\\"contract\\\":\\\"terra13jfx06k2zpajtxymdgq2r6mrezzx3ngrhzfe24gdh9mqs8x67lmspee8lp\\\",\\\"msg\\\":{\\\"swap_and_action\\\":{\\\"affiliates\\\":[],\\\"min_asset\\\":{\\\"native\\\":{\\\"amount\\\":\\\"994099\\\",\\\"denom\\\":\\\"ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B\\\"}},\\\"post_swap_action\\\":{\\\"ibc_transfer\\\":{\\\"ibc_info\\\":{\\\"memo\\\":\\\"{\\\\\\\"forward\\\\\\\":{\\\\\\\"channel\\\\\\\":\\\\\\\"channel-502\\\\\\\",\\\\\\\"port\\\\\\\":\\\\\\\"transfer\\\\\\\",\\\\\\\"receiver\\\\\\\":\\\\\\\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\\\\\\\",\\\\\\\"retries\\\\\\\":2,\\\\\\\"timeout\\\\\\\":1793344207311948661}}\\\",\\\"receiver\\\":\\\"inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0\\\",\\\"recover_address\\\":\\\"terra1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg99r67rk\\\",\\\"source_channel\\\":\\\"channel-255\\\"}}},\\\"timeout_timestamp\\\":1793344207311954400,\\\"user_swap\\\":{\\\"swap_exact_asset_in\\\":{\\\"operations\\\":[{\\\"denom_in\\\":\\\"ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB\\\",\\\"denom_out\\\":\\\"ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5\\\",\\\"pool\\\":\\\"terra1dnssvse0fqw4d4gqc8kvchfud5r6e8cr7w9cdpervhl2pgr2eecquujpg6\\\"},{\\\"denom_in\\\":\\\"ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5\\\",\\\"denom_out\\\":\\\"uluna\\\",\\\"pool\\\":\\\"terra1aategw0787y4fyunmwdvdqraxfc8jtxykyed2skx3p5fd3lkgkmsqry7pz\\\"},{\\\"denom_in\\\":\\\"uluna\\\",\\\"denom_out\\\":\\\"ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB\\\",\\\"pool\\\":\\\"terra1mea829xtsnxwv4l9lhzs0tzpnyamjpz5y45a9tpp06jgdhjd48yqc4ales\\\"},{\\\"denom_in\\\":\\\"ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB\\\",\\\"denom_out\\\":\\\"ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B\\\",\\\"pool\\\":\\\"terra18kh9wmswjdspz2wrgax9f4m3j5695nk25c7lack3f42d275gkwzsf45tk4\\\"}],\\\"swap_venue_name\\\":\\\"terra-astroport\\\"}}}}}},\\\"port\\\":\\\"transfer\\\",\\\"receiver\\\":\\\"terra13jfx06k2zpajtxymdgq2r6mrezzx3ngrhzfe24gdh9mqs8x67lmspee8lp\\\",\\\"retries\\\":2,\\\"timeout\\\":1793344207311925479}}\"}",
+     "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+    }
+   }
+  ],
+  "txs": [
+   {
+    "cosmos_tx": {
+     "chain_id": "ixo-5",
+     "path": [
+      "ixo-5",
+      "noble-1",
+      "phoenix-1",
+      "injective-1",
+      "ixo-5"
+     ],
+     "msgs": [
+      {
+       "msg": "{\"source_port\":\"transfer\",\"source_channel\":\"channel-26\",\"token\":{\"denom\":\"ibc/6BBE9BD4246F8E04948D5A4EEE7164B2630263B9EBB5E7DC5F0A46C62A2FF97B\",\"amount\":\"1000000\"},\"sender\":\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\",\"receiver\":\"noble1qgpqyqszqgpqyqszqgpqyqszqgpqyqszt5jn7y\",\"timeout_height\":{},\"timeout_timestamp\":1793344207311922482,\"memo\":\"{\\\"forward\\\":{\\\"channel\\\":\\\"channel-30\\\",\\\"next\\\":{\\\"wasm\\\":{\\\"contract\\\":\\\"terra13jfx06k2zpajtxymdgq2r6mrezzx3ngrhzfe24gdh9mqs8x67lmspee8lp\\\",\\\"msg\\\":{\\\"swap_and_action\\\":{\\\"affiliates\\\":[],\\\"min_asset\\\":{\\\"native\\\":{\\\"amount\\\":\\\"994099\\\",\\\"denom\\\":\\\"ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B\\\"}},\\\"post_swap_action\\\":{\\\"ibc_transfer\\\":{\\\"ibc_info\\\":{\\\"memo\\\":\\\"{\\\\\\\"forward\\\\\\\":{\\\\\\\"channel\\\\\\\":\\\\\\\"channel-502\\\\\\\",\\\\\\\"port\\\\\\\":\\\\\\\"transfer\\\\\\\",\\\\\\\"receiver\\\\\\\":\\\\\\\"ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0\\\\\\\",\\\\\\\"retries\\\\\\\":2,\\\\\\\"timeout\\\\\\\":1793344207311948661}}\\\",\\\"receiver\\\":\\\"inj1qszqgpqyqszqgpqyqszqgpqyqszqgpqyg7kme0\\\",\\\"recover_address\\\":\\\"terra1q5zs2pg9q5zs2pg9q5zs2pg9q5zs2pg99r67rk\\\",\\\"source_channel\\\":\\\"channel-255\\\"}}},\\\"timeout_timestamp\\\":1793344207311954400,\\\"user_swap\\\":{\\\"swap_exact_asset_in\\\":{\\\"operations\\\":[{\\\"denom_in\\\":\\\"ibc/2C962DAB9F57FE0921435426AE75196009FAA1981BF86991203C8411F8980FDB\\\",\\\"denom_out\\\":\\\"ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5\\\",\\\"pool\\\":\\\"terra1dnssvse0fqw4d4gqc8kvchfud5r6e8cr7w9cdpervhl2pgr2eecquujpg6\\\"},{\\\"denom_in\\\":\\\"ibc/9B19062D46CAB50361CE9B0A3E6D0A7A53AC9E7CB361F32A73CC733144A9A9E5\\\",\\\"denom_out\\\":\\\"uluna\\\",\\\"pool\\\":\\\"terra1aategw0787y4fyunmwdvdqraxfc8jtxykyed2skx3p5fd3lkgkmsqry7pz\\\"},{\\\"denom_in\\\":\\\"uluna\\\",\\\"denom_out\\\":\\\"ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB\\\",\\\"pool\\\":\\\"terra1mea829xtsnxwv4l9lhzs0tzpnyamjpz5y45a9tpp06jgdhjd48yqc4ales\\\"},{\\\"denom_in\\\":\\\"ibc/88386AC48152D48B34B082648DF836F975506F0B57DBBFC10A54213B1BF484CB\\\",\\\"denom_out\\\":\\\"ibc/E8481AD838C31D4FC12A504B10F9B4E2F830F8818D2735C2FFC707579B5FA60B\\\",\\\"pool\\\":\\\"terra18kh9wmswjdspz2wrgax9f4m3j5695nk25c7lack3f42d275gkwzsf45tk4\\\"}],\\\"swap_venue_name\\\":\\\"terra-astroport\\\"}}}}}},\\\"port\\\":\\\"transfer\\\",\\\"receiver\\\":\\\"terra13jfx06k2zpajtxymdgq2r6mrezzx3ngrhzfe24gdh9mqs8x67lmspee8lp\\\",\\\"retries\\\":2,\\\"timeout\\\":1793344207311925479}}\"}",
+       "msg_type_url": "/ibc.applications.transfer.v1.MsgTransfer"
+      }
+     ],
+     "signer_address": "ixo1qyqszqgpqyqszqgpqyqszqgpqyqszqgpdxlvf0"
+    },
+    "operations_indices": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   }
+  ],
+  "estimated_fees": [],
+  "min_amount_out": "999094"
+ }
+}

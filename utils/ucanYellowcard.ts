@@ -56,12 +56,30 @@ const OFFRAMP_CAPABILITY: Capability = { can: 'yellowcard/offramp', with: 'ixo:y
 
 const ONRAMP_CAPABILITY: Capability = { can: 'yellowcard/onramp', with: 'ixo:yellowcard' };
 
+// The signer derived from the stored mnemonic, reused for the page lifetime (the upgrade's
+// status polls mint one invocation each). Keyed by mnemonic + DID, so a re-login or another
+// account derives a fresh one.
+let cachedSigner: { key: string; signer: Promise<Awaited<ReturnType<typeof signerFromMnemonic>>['signer']> } | null =
+  null;
+
+function signerFor(mnemonic: string, userDid: string) {
+  const key = `${userDid}\n${mnemonic}`;
+  if (!cachedSigner || cachedSigner.key !== key) {
+    const signer = signerFromMnemonic(mnemonic, userDid as SupportedDID).then((r) => r.signer);
+    cachedSigner = { key, signer };
+    signer.catch(() => {
+      if (cachedSigner?.key === key) cachedSigner = null;
+    });
+  }
+  return cachedSigner.signer;
+}
+
 async function mintBearer(userDid: string, capability: Capability): Promise<string> {
   const mnemonic = secureLoad(authConstants.secretKey.ED_SIGNING_MNEMONIC);
   if (!mnemonic) throw new Error('Signing mnemonic not available — please sign in again');
 
   const workerDid = await resolveWorkerDid();
-  const { signer } = await signerFromMnemonic(String(mnemonic).trim(), userDid as SupportedDID);
+  const signer = await signerFor(String(mnemonic).trim(), userDid);
 
   const invocation = await createInvocation({
     issuer: signer,
