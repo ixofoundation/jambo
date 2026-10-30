@@ -2,13 +2,12 @@ import { createQueryClient } from '@ixo/impactxclient-sdk';
 
 import { CHAIN_RPC_URL } from '@constants/common';
 import { LEGACY_USDC_DENOMS, USDC_DENOM } from '@constants/usdc';
-import { IXO_PAY_DENOM } from '@constants/yellowcard';
 import { PRE_SIGN_TIMEOUT_MS, withTimeout } from '@utils/fetchTimeout';
 
 export interface TokenBalance {
   /** The denom queried. */
   denom: string;
-  /** Balance in the base unit (6 decimals for both USDC and PAY). */
+  /** Balance in the base unit (6 decimals). */
   amountMicro: string;
   /** Balance in whole tokens. */
   amount: number;
@@ -49,8 +48,6 @@ export const NETWORK_USDC_DENOMS: UsdcDenomSet = { usdc: USDC_DENOM, legacy: LEG
 export interface WalletBalances {
   /** The user's USDC (constants/usdc). */
   usdc: UsdcBalances;
-  /** PAY (`upay`, 1 PAY = 1 USDC) — World Cleanup Day rewards land here. */
-  pay: TokenBalance;
   /** False when any query failed (or the RPC could not be reached): treat these numbers as
    *  unknown — keep the last good read and say it could not be refreshed, never show zero. */
   complete: boolean;
@@ -101,6 +98,17 @@ export function fromMicro(micro: bigint): number {
   return Number(micro) / 1e6;
 }
 
+/** Base units (6 decimals) from a whole amount, as an integer string — exponent form for an
+ *  absurd amount, which callers check for before BigInt(). */
+export function toMicro(amount: number): string {
+  return Math.round(amount * 1e6).toString();
+}
+
+/** "$10.00" — a USD amount as currency, for hints and limits. */
+export function formatUsd(amount: number): string {
+  return new Intl.NumberFormat('en', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
 /** Sum the withdrawable and legacy balances into the shape the screens render. Pure, bigint math. */
 export function summarizeUsdc(usdcMicro: bigint, legacy: readonly LegacyUsdcBalance[]): UsdcBalances {
   let legacyMicro = BigInt(0);
@@ -117,8 +125,7 @@ export async function queryWalletBalances(
 ): Promise<WalletBalances> {
   // No withdrawable denom on this network: a known zero, not a failed read.
   const zero: TokenBalance = { denom: denoms.usdc ?? '', amountMicro: '0', amount: 0, ok: true };
-  const [pay, usdc, ...legacyParts] = await Promise.all([
-    queryBalance(queryClient, address, IXO_PAY_DENOM),
+  const [usdc, ...legacyParts] = await Promise.all([
     denoms.usdc ? queryBalance(queryClient, address, denoms.usdc) : Promise.resolve(zero),
     ...denoms.legacy.map((d) => queryBalance(queryClient, address, d)),
   ]);
@@ -127,19 +134,16 @@ export async function queryWalletBalances(
       BigInt(usdc.amountMicro),
       denoms.legacy.map((denom, i) => ({ denom, micro: BigInt(legacyParts[i].amountMicro) })),
     ),
-    pay,
-    complete: !!queryClient && pay.ok && usdc.ok && legacyParts.every((p) => p.ok),
+    complete: !!queryClient && usdc.ok && legacyParts.every((p) => p.ok),
   };
 }
 
 /**
- * Read the user's USDC (the withdrawable denom + legacy ones) and PAY balances
- * over one connection. Never throws; when any query fails the result is
+ * Read the user's USDC (the withdrawable denom + legacy ones) over one connection. Never throws; when any query fails the result is
  * `complete: false` and its numbers must not be shown as the balance.
  *
- * `denoms` overrides the set: the off-ramp's testnet test mode passes the
- * conversion oracle's payout denom (IXO stands in for USDC there) as `usdc`, so
- * a conversion shows up on the screen that made it.
+ * `denoms` overrides the set: the off-ramp's testnet test mode passes IXO
+ * (`uixo`), which stands in for USDC there, as `usdc`.
  */
 export async function getWalletBalances(
   address: string,

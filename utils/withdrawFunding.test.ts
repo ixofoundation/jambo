@@ -5,21 +5,14 @@ import { planWithdrawalFunding } from '@utils/withdrawFunding';
 const usdc = (n: number) => BigInt(n * 1_000_000);
 
 describe('planWithdrawalFunding', () => {
-  const base = { usdcMicro: usdc(40), payMicro: usdc(10), upgradeableMicro: usdc(50) };
+  const base = { usdcMicro: usdc(40), upgradeableMicro: usdc(60) };
 
   it('direct when the withdrawable USDC covers it (no upgrade asked for)', () => {
     expect(planWithdrawalFunding({ ...base, amountMicro: usdc(40) })).toEqual({ kind: 'direct' });
   });
 
-  it('converts exactly the shortfall of rewards before asking for an upgrade', () => {
-    expect(planWithdrawalFunding({ ...base, amountMicro: usdc(45) })).toEqual({
-      kind: 'convert',
-      neededPayMicro: usdc(5),
-    });
-  });
-
   it('upgrade first when only the legacy USDC makes it reachable', () => {
-    expect(planWithdrawalFunding({ ...base, amountMicro: usdc(51) })).toEqual({ kind: 'upgrade_first' });
+    expect(planWithdrawalFunding({ ...base, amountMicro: usdc(41) })).toEqual({ kind: 'upgrade_first' });
     expect(planWithdrawalFunding({ ...base, amountMicro: usdc(100) })).toEqual({ kind: 'upgrade_first' });
   });
 
@@ -31,9 +24,9 @@ describe('planWithdrawalFunding', () => {
   });
 
   it('no upgrade offered (testnet, old worker): legacy USDC never counts as withdrawable', () => {
-    expect(planWithdrawalFunding({ ...base, upgradeableMicro: BigInt(0), amountMicro: usdc(51) })).toEqual({
+    expect(planWithdrawalFunding({ ...base, upgradeableMicro: BigInt(0), amountMicro: usdc(41) })).toEqual({
       kind: 'insufficient',
-      maxMicro: usdc(50),
+      maxMicro: usdc(40),
     });
   });
 
@@ -48,9 +41,11 @@ describe('planWithdrawalFunding', () => {
       planWithdrawalFunding({
         amountMicro: big,
         usdcMicro: big - BigInt(1),
-        payMicro: BigInt(1),
-        upgradeableMicro: BigInt(0),
+        upgradeableMicro: BigInt(1),
       }),
-    ).toEqual({ kind: 'convert', neededPayMicro: BigInt(1) });
+    ).toEqual({ kind: 'upgrade_first' });
+    expect(planWithdrawalFunding({ amountMicro: big, usdcMicro: big, upgradeableMicro: BigInt(0) })).toEqual({
+      kind: 'direct',
+    });
   });
 });

@@ -13,17 +13,13 @@ import KycRequiredCard, {
 import OfframpDecisionNotice from '@components/Ramp/OfframpDecisionNotice';
 import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
-import { CLEANUP_REWARDS_HOLD, cleanupRewardsWithdrawWhen, formatRewardsUsd } from '@constants/cleanup';
-import { PAY_CONVERT_ENABLED, fromPayBase, toPayBase } from '@constants/payConvert';
 import { USDC_DENOM } from '@constants/usdc';
 import { BRIDGE_POLL_WINDOW_MS, IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { fetchUsdRate, formatCurrency, localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
-import usePayConvert, { payConvertErrorMessage } from '@hooks/usePayConvert';
 import useUsdcUpgrade from '@hooks/useUsdcUpgrade';
-import { fetchConvertInfo } from 'lib/payConvert/client';
 import { getStatus as getSkipStatus } from 'lib/skip/skipBridge';
 import {
   PAYOUT_FAILED_FALLBACK,
@@ -41,12 +37,7 @@ import {
   fetchSupportedCountries,
   isRampKycCredentialFailureCode,
 } from 'lib/yellowcard/offrampClient';
-import {
-  OFFRAMP_CONVERTED_NOTE,
-  OFFRAMP_DEPOSIT_UNCONFIRMED,
-  offrampDecisionView,
-  offrampErrorMessage,
-} from 'lib/yellowcard/offrampDecision';
+import { OFFRAMP_DEPOSIT_UNCONFIRMED, offrampDecisionView, offrampErrorMessage } from 'lib/yellowcard/offrampDecision';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
 import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
 import { loadKycCredentialJwt } from '@utils/approvePayment';
@@ -55,8 +46,10 @@ import {
   type UsdcBalances,
   type UsdcDenomSet,
   NETWORK_USDC_DENOMS,
+  formatUsd,
   fromMicro,
   getWalletBalances,
+  toMicro,
 } from '@utils/usdcBalance';
 import { planWithdrawalFunding } from '@utils/withdrawFunding';
 
@@ -72,10 +65,12 @@ const ID_TYPE_OPTIONS = [
 
 // Testnet test mode — NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE=true on a TESTNET build only: shows
 // the off-ramp on testnet (YC sandbox) and skips the Skip Go bridge + on-chain USDC balance —
-// there's no testnet USDC, so this exercises the YC create / KYC / momo destination flow and the
-// Cleanup-rewards conversion (which pays out IXO on testnet, so the USDC balance stays 0 there).
-// The worker still enforces KYC server-side. Has no effect on a mainnet build.
+// there's no testnet USDC, so this exercises the YC create / KYC / momo destination flow, with
+// IXO standing in for USDC as the balance. The worker still enforces KYC server-side. Has no
+// effect on a mainnet build.
 const TESTNET_TEST_MODE = process.env.NEXT_PUBLIC_OFFRAMP_TESTNET_TEST_MODE === 'true';
+/** What testnet test mode reads as the withdrawable balance: IXO stands in for USDC there. */
+const TESTNET_STAND_IN_DENOM = 'uixo';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -137,19 +132,13 @@ function formatUsdc(amount: number): string {
   return amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
 }
 
-/** Step 1 (rewards → USDC) paid out, step 2 (the withdrawal) didn't. (The technical reason is
- *  logged by offrampErrorMessage, never shown.) */
-const CONVERTED_BUT_NOT_WITHDRAWN =
-  'Your rewards were converted — the USDC is in your wallet — but the withdrawal didn’t go through. Tap Withdraw again; no new conversion is needed.';
-
 export default function OfframpScreen() {
   const router = useRouter();
   const { address, did, matrixRoomId } = useAuth();
   const local = useLocalCurrency();
   const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
   const offramp = useOfframp();
-  const payConvert = usePayConvert();
-  // Bumped after a conversion lands so the balances below are re-read.
+  // Bumped to re-read the balances below (after an upgrade, or on "Try again").
   const [balanceRefresh, setBalanceRefresh] = useState(0);
 
   const isMainnet = DefaultChainNetwork === CHAIN_NETWORK_TYPE.MAINNET;
@@ -162,12 +151,6 @@ export default function OfframpScreen() {
   // The user's USDC (utils/usdcBalance): the withdrawable USDC plus any legacy USDC, shown as
   // ONE amount. Only the withdrawable part is ever bridged; legacy USDC is upgraded first.
   const [usdcBalances, setUsdcBalances] = useState<UsdcBalances | null>(null);
-  // The ONE denom withdrawals spend: the network's USDC, or — testnet test mode — the
-  // conversion oracle's stand-in payout denom (IXO).
-  const [withdrawableDenom, setWithdrawableDenom] = useState<string | null>(USDC_DENOM);
-  // The denom a rewards conversion is EXPECTED to pay out in (`/convert/info`; the
-  // withdrawable USDC when unknown). The grant says the real one; step 2 re-checks it.
-  const [expectedPayoutDenom, setExpectedPayoutDenom] = useState<string | null>(null);
   // "One quick step before you withdraw": the upgrade card in the Withdraw button's place.
   const [upgradeGateOpen, setUpgradeGateOpen] = useState(false);
   // Set when the upgrade in the gate completes: the number of finished balance reads to wait
@@ -177,12 +160,7 @@ export default function OfframpScreen() {
   // then the last good ones — a failed read is unknown, never zero).
   const [balanceLoads, setBalanceLoads] = useState(0);
   const [balanceRefreshFailed, setBalanceRefreshFailed] = useState(false);
-  // PAY (World Cleanup Day rewards, 1 PAY = 1 USDC) — held, not withdrawable
-  // yet; see constants/cleanup.
-  const [payBalance, setPayBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
-  // PAY in base units — what the two-step withdraw's arithmetic runs on (exact).
-  const [payMicro, setPayMicro] = useState<bigint>(BigInt(0));
   // The one-tap USDC upgrade (legacy → withdrawable USDC). Inert off mainnet.
   const upgrade = useUsdcUpgrade({
     balances: usdcBalances,
@@ -192,17 +170,6 @@ export default function OfframpScreen() {
   const usdcMicro = usdcBalances?.usdcMicro ?? null;
   // The ONE amount shown: withdrawable + legacy USDC, plus an upgrade on its way back to the wallet.
   const balance = usdcBalances ? fromMicro(usdcBalances.totalMicro + upgrade.inTransitMicro) : null;
-  // What the WHOLE wallet (USDC + rewards) would fetch on the chosen rail. Decides whether a rewards
-  // holder can reach the rail's minimum at all ("Almost there") and what "try at least about $X"
-  // says. Null while unknown or not applicable — null never blocks anything.
-  const [capacity, setCapacity] = useState<{
-    amountUsd: number;
-    fiatOut: number;
-    limitMin: number | null;
-    rate: number | null;
-  } | null>(null);
-  // The customer-facing step line while a withdrawal that converts rewards first is running.
-  const [withdrawStep, setWithdrawStep] = useState<string | null>(null);
 
   const [amount, setAmount] = useState<string>('');
   const [country, setCountry] = useState<string>('ZA');
@@ -261,9 +228,6 @@ export default function OfframpScreen() {
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  // Step 1 (rewards → USDC) paid out but the withdrawal call itself then failed:
-  // the failure is shown with a note that no new conversion is needed.
-  const [convertedBeforeError, setConvertedBeforeError] = useState(false);
   // When a `decision_pending` / `decision_in_review` answer says a retry is
   // worth it (its Retry-After), and a clock to count down to it. Null = no wait.
   const [decisionRetryAt, setDecisionRetryAt] = useState<number | null>(null);
@@ -275,73 +239,33 @@ export default function OfframpScreen() {
 
   const isNG = kycCountry === 'NG';
 
-  // World Cleanup Day rewards (PAY) can't leave until the PAY → USDC conversion
-  // ships (constants/cleanup). Decided only once BOTH balances are in, so a
-  // rewards-only youth never sees the form flash before the hold card replaces
-  // it — and, deliberately, never sees KYC at all while held.
-  //
-  // What the screen shows, by what the wallet holds:
-  //   nothing at all      → a friendly "nothing to withdraw yet" card, no KYC
-  //   Cleanup rewards only → the hold card, no KYC (whatever their KYC status)
-  //   any USDC at all     → the normal flow: the form + history (plus the
-  //                         rewards banner when they hold both). Identity
-  //                         verification is only asked for when the worker says
-  //                         this amount needs it (`needsKyc`).
-  const balancesReady = skipBridge || (balance != null && payBalance != null);
-  // Real on every network: testnet test mode skips the USDC bridge, not the PAY the wallet holds.
-  const hasPay = (payBalance ?? 0) > 0;
-  // Held: no conversion oracle on this network yet (constants/cleanup).
-  const hasRewards = CLEANUP_REWARDS_HOLD && hasPay;
-  // Rewards in play: the oracle is configured, so PAY counts towards what can be withdrawn — it is
-  // turned into USDC as the FIRST STEP of the withdrawal itself, never as a separate action, so a
-  // youth can never convert rewards they cannot cash out (YellowCard's minimums).
-  const rewardsInPlay = PAY_CONVERT_ENABLED && hasPay;
+  // Decided only once the balance is in, so nobody sees the form flash before the right card.
+  //   nothing at all → a friendly "nothing to withdraw yet" card, no KYC
+  //   any USDC       → the normal flow: the form + history. Identity verification is only asked
+  //                    for when the worker says this amount needs it (`needsKyc`).
+  // (World Cleanup Day rewards — PAY — are not shown or withdrawable here: the PAY → USDC
+  // converter now serves only the IXO / asks world app, Oct 30 2026.)
+  const balancesReady = skipBridge || balance != null;
   const hasUsdc = (balance ?? 0) > 0;
-  const payOnlyHold = hasRewards && !hasUsdc;
-  const payBanner = hasRewards && hasUsdc;
-  /** USDC plus rewards — the most the amount field accepts. */
-  const totalAvailable = (balance ?? 0) + (rewardsInPlay ? payBalance ?? 0 : 0);
-  // PAY counts as funds whether or not the hold is on: a PAY-only wallet is
-  // offered the withdrawal (or the hold), never told it holds nothing.
-  const noFunds = !skipBridge && balancesReady && !hasUsdc && (payBalance ?? 0) <= 0;
-  const showFlow = balancesReady && !payOnlyHold && !noFunds;
-  const rewardsWhen = useMemo(() => cleanupRewardsWithdrawWhen(), []);
+  const noFunds = !skipBridge && balancesReady && !hasUsdc;
+  const showFlow = balancesReady && !noFunds;
 
-  // Balances: USDC (withdrawable + legacy) + PAY, over one connection. Read wherever the
-  // off-ramp is shown. Testnet test mode: the conversion oracle pays out IXO in place of USDC
-  // there (no testnet USDC), so the withdrawable balance is read in the oracle's payout denom —
-  // otherwise a conversion would never show up on the screen that triggered it.
+  // The ONE denom withdrawals spend: the network's USDC, or — testnet test mode — IXO standing in.
+  const withdrawableDenom = skipBridge ? TESTNET_STAND_IN_DENOM : USDC_DENOM;
+
+  // Balances: USDC (withdrawable + legacy), over one connection, wherever the off-ramp is shown.
   useEffect(() => {
     if (!offrampEnabled || !address) return;
     let cancelled = false;
     setBalanceLoading(true);
-    const payoutDenom = PAY_CONVERT_ENABLED
-      ? fetchConvertInfo()
-          .then((info) => info.payoutDenom || null)
-          .catch(() => null)
-      : Promise.resolve(null);
-    void payoutDenom.then((denom) => {
-      if (cancelled) return;
-      // Unknown → assume the withdrawable USDC (what the mainnet oracle pays out); the grant decides.
-      setExpectedPayoutDenom(PAY_CONVERT_ENABLED ? denom ?? (skipBridge ? null : USDC_DENOM) : null);
-    });
-    // Mainnet reads the network's USDC straight away; only test mode waits for the stand-in denom.
-    const denomsReady: Promise<UsdcDenomSet> = skipBridge
-      ? payoutDenom.then((denom) => ({ usdc: denom, legacy: [] }))
-      : Promise.resolve(NETWORK_USDC_DENOMS);
-    denomsReady
-      .then((denoms) => {
-        if (!cancelled) setWithdrawableDenom(denoms.usdc);
-        return getWalletBalances(address, denoms);
-      })
+    const denoms: UsdcDenomSet = skipBridge ? { usdc: TESTNET_STAND_IN_DENOM, legacy: [] } : NETWORK_USDC_DENOMS;
+    getWalletBalances(address, denoms)
       .then((b) => {
         if (cancelled) return;
         setBalanceRefreshFailed(!b.complete);
         // A failed read keeps the last good numbers (unknown is not zero).
         if (!b.complete) return;
         setUsdcBalances(b.usdc);
-        setPayBalance(b.pay.amount);
-        setPayMicro(BigInt(b.pay.amountMicro));
         setBalanceLoads((n) => n + 1);
       })
       .finally(() => {
@@ -587,7 +511,6 @@ export default function OfframpScreen() {
   useEffect(() => {
     setQuote(null);
     setFormError(null);
-    setConvertedBeforeError(false);
     clearOfframpError();
   }, [amount, currency, channelType, clearOfframpError]);
 
@@ -641,20 +564,19 @@ export default function OfframpScreen() {
 
   const amountNum = parseFloat(amount);
   const showForm = Number.isFinite(amountNum) && amountNum > 0;
-  // How this amount is funded (utils/withdrawFunding): the withdrawable USDC, then converted
-  // rewards, then — only if still short — legacy USDC after the one-tap upgrade.
+  // How this amount is funded (utils/withdrawFunding): the withdrawable USDC, then — only if
+  // still short — legacy USDC after the one-tap upgrade.
   // (`BigInt(…)` rather than literals: the project's TS target predates ES2020.)
-  const rewardsMicro = rewardsInPlay ? payMicro : BigInt(0);
   const upgradeableMicro = upgrade.offerMicro;
   const funding = useMemo(() => {
     if (!Number.isFinite(amountNum) || amountNum <= 0 || usdcMicro == null) return null;
-    const base = toPayBase(amountNum);
+    const base = toMicro(amountNum);
     // An absurd amount stringifies in exponent form ("1e+26"), which BigInt() rejects.
     if (!/^\d+$/.test(base)) return { kind: 'insufficient' as const };
-    return planWithdrawalFunding({ amountMicro: BigInt(base), usdcMicro, payMicro: rewardsMicro, upgradeableMicro });
-  }, [amountNum, usdcMicro, rewardsMicro, upgradeableMicro]);
+    return planWithdrawalFunding({ amountMicro: BigInt(base), usdcMicro, upgradeableMicro });
+  }, [amountNum, usdcMicro, upgradeableMicro]);
   // The most one withdrawal can move right now (an upgrade on its way back is not ready yet).
-  const maxWithdrawUsd = fromMicro((usdcMicro ?? BigInt(0)) + rewardsMicro + upgradeableMicro);
+  const maxWithdrawUsd = fromMicro((usdcMicro ?? BigInt(0)) + upgradeableMicro);
   const overBalance = balance != null && funding?.kind === 'insufficient';
   // Covered only once the legacy USDC is upgraded.
   const needsUpgrade = funding?.kind === 'upgrade_first';
@@ -663,12 +585,6 @@ export default function OfframpScreen() {
   // withdrawal starts with the upgrade, then carries on by itself. (While an upgrade is on its way
   // the legacy USDC has left the wallet: what is ready can be withdrawn straight away.)
   const upgradeGateApplies = upgrade.enabled && upgrade.offerMicro > BigInt(0);
-  // Rewards this withdrawal needs converted first, in base units — 0n when the USDC covers it.
-  // Exact arithmetic: 1 PAY = 1 USDC in base units, and the oracle pays out exactly what is asked.
-  const neededPayMicro = funding?.kind === 'convert' ? funding.neededPayMicro : BigInt(0);
-  const needsConversion = neededPayMicro > BigInt(0);
-  // The oracle's per-conversion cap (1,000 units); YellowCard's own maxima are lower anyway.
-  const conversionOverCap = neededPayMicro > BigInt(1_000_000_000);
   const countryLabel = supportedOptions.find((o) => o.value === country)?.label ?? country;
 
   const fiatOut = quote?.fiatReceived != null ? Number(quote.fiatReceived) : null;
@@ -715,68 +631,7 @@ export default function OfframpScreen() {
     };
   }, [railCurrency, local]);
 
-  // Capacity: one quiet quote for the WHOLE wallet on the chosen rail, whenever rewards are in
-  // play and the rail is known. Its fiat answer against the rail's minimum decides "Almost there"
-  // and the "try at least about $X" hint. It is never shown as a quote, and a failed one means no
-  // gating (null), never a blocked form.
   const { previewWithdrawal } = offramp;
-  useEffect(() => {
-    if (!rewardsInPlay || !balancesReady || !railCurrency || !channelType || totalAvailable <= 0) {
-      setCapacity(null);
-      return;
-    }
-    let cancelled = false;
-    previewWithdrawal({
-      amountUsdc: totalAvailable,
-      currency: railCurrency,
-      channelType,
-      country,
-      skipBridge,
-    })
-      .then(({ quote: q }) => {
-        if (cancelled) return;
-        const out = q.fiatReceived != null ? Number(q.fiatReceived) : null;
-        if (out == null || !Number.isFinite(out)) {
-          setCapacity(null);
-          return;
-        }
-        setCapacity({
-          amountUsd: totalAvailable,
-          fiatOut: out,
-          limitMin: q.transactionLimitMin ?? channelMin,
-          // The EFFECTIVE rate (fiat out per dollar in, fees included) — not YellowCard's gross
-          // `rateLocal`, which would make "try at least about $X" land just under the minimum.
-          rate: totalAvailable > 0 && out > 0 ? out / totalAvailable : null,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setCapacity(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    rewardsInPlay,
-    balancesReady,
-    railCurrency,
-    channelType,
-    country,
-    skipBridge,
-    totalAvailable,
-    channelMin,
-    previewWithdrawal,
-  ]);
-
-  // Even the whole wallet is under this rail's minimum — and the user holds rewards, so there is
-  // something to encourage rather than a form to fail at.
-  const almostThere =
-    rewardsInPlay && capacity != null && capacity.limitMin != null && capacity.fiatOut < capacity.limitMin;
-
-  // "Almost there" replaces the amount: drop any quote taken before the capacity answer arrived, so
-  // the form never shows "below the minimum — increase the amount" next to a field that is disabled.
-  useEffect(() => {
-    if (almostThere) setQuote(null);
-  }, [almostThere]);
 
   // The exact answer, quietly: ~half a second after the amount settles, quote it on the chosen rail
   // (the very call "Get quote" makes) so "below the minimum" and the real payout show under the
@@ -795,7 +650,7 @@ export default function OfframpScreen() {
   } | null>(null);
   useEffect(() => {
     const valid = Number.isFinite(amountNum) && amountNum > 0 && !overBalance;
-    if (!valid || !railCurrency || !channelType || almostThere || !showFlow) {
+    if (!valid || !railCurrency || !channelType || !showFlow) {
       setLiveQuote(null);
       return;
     }
@@ -834,17 +689,7 @@ export default function OfframpScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [
-    amountNum,
-    overBalance,
-    railCurrency,
-    channelType,
-    country,
-    skipBridge,
-    almostThere,
-    showFlow,
-    previewWithdrawal,
-  ]);
+  }, [amountNum, overBalance, railCurrency, channelType, country, skipBridge, showFlow, previewWithdrawal]);
   const liveFresh =
     liveQuote != null &&
     liveQuote.amountUsd === amountNum &&
@@ -863,8 +708,8 @@ export default function OfframpScreen() {
     liveFresh != null ? liveFresh.fiatOut : railRate && Number.isFinite(amountNum) ? amountNum * railRate : null;
   const earlyBelowMin = earlyFiat != null && earlyMin != null && earlyFiat < earlyMin;
   const earlyAboveMax = earlyFiat != null && earlyMax != null && earlyFiat > earlyMax;
-  // Fiat per dollar, best available: this amount's own quote, the whole-wallet quote, mid-market.
-  const railUsdRate = liveFresh?.rate ?? capacity?.rate ?? railRate;
+  // Fiat per dollar, best available: this amount's own quote, else mid-market.
+  const railUsdRate = liveFresh?.rate ?? railRate;
   // Rounded UP to the cent, so an amount typed from the hint clears the minimum rather than grazing it.
   const minUsd = railUsdRate && earlyMin != null ? Math.ceil((earlyMin / railUsdRate) * 100) / 100 : null;
   const maxUsd = railUsdRate && earlyMax != null ? Math.floor((earlyMax / railUsdRate) * 100) / 100 : null;
@@ -875,21 +720,16 @@ export default function OfframpScreen() {
   const belowMinText = (min: number): string => {
     const base = `Below the ${fmtRail(min)} minimum for ${railLabel} in ${countryLabel}`;
     if (minUsd == null) return `${base} — increase the amount.`;
-    if (minUsd > totalAvailable + 1e-9) {
-      return `${base}. The minimum is about ${formatRewardsUsd(minUsd)} and you have ${formatRewardsUsd(
-        totalAvailable,
-      )}${
-        rewardsInPlay ? ' including your rewards' : ''
-      } — a different payout method or country may have a lower minimum.`;
+    if (minUsd > maxWithdrawUsd + 1e-9) {
+      return `${base}. The minimum is about ${formatUsd(minUsd)} and you have ${formatUsd(
+        maxWithdrawUsd,
+      )} — a different payout method or country may have a lower minimum.`;
     }
-    const tryLine = `${base} — try at least about ${formatRewardsUsd(minUsd)}.`;
-    return rewardsInPlay && minUsd > (balance ?? 0)
-      ? `${tryLine} You have ${formatRewardsUsd(totalAvailable)} available including your rewards.`
-      : tryLine;
+    return `${base} — try at least about ${formatUsd(minUsd)}.`;
   };
   const aboveMaxText = (max: number): string =>
     `Above the ${fmtRail(max)} maximum for ${railLabel} in ${countryLabel}${
-      maxUsd != null ? ` — try at most about ${formatRewardsUsd(maxUsd)}.` : ' — reduce the amount.'
+      maxUsd != null ? ` — try at most about ${formatUsd(maxUsd)}.` : ' — reduce the amount.'
     }`;
 
   const nameValid = kycName.trim().split(/\s+/).filter(Boolean).length >= 2;
@@ -965,7 +805,6 @@ export default function OfframpScreen() {
     Number.isFinite(amountNum) &&
     amountNum > 0 &&
     !overBalance &&
-    !almostThere &&
     !(liveFresh && (earlyBelowMin || earlyAboveMax));
   const canWithdraw =
     canQuote &&
@@ -1070,22 +909,6 @@ export default function OfframpScreen() {
     }
   }, [canQuote, offramp, amountNum, currency, channelType, country, skipBridge, persistProfile]);
 
-  // After the conversion pays out, wait until the wallet actually shows the USDC before the second
-  // step spends it — a block or two. In test mode gas comes out of the same denom, so allow that.
-  const waitForUsdc = useCallback(
-    async (targetMicro: bigint): Promise<boolean> => {
-      if (!address || !withdrawableDenom) return false;
-      const slack = skipBridge ? BigInt(100_000) : BigInt(0);
-      for (let i = 0; i < 30; i++) {
-        const b = await getWalletBalances(address, { usdc: withdrawableDenom, legacy: [] }).catch(() => null);
-        if (b && b.usdc.usdcMicro + slack >= targetMicro) return true;
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-      return false;
-    },
-    [address, skipBridge, withdrawableDenom],
-  );
-
   // `skipUpgradeGate`: only "Withdraw what's ready now" in the gate (an event object never passes it).
   const onWithdraw = useCallback(
     async (opts?: { skipUpgradeGate?: boolean }) => {
@@ -1098,85 +921,8 @@ export default function OfframpScreen() {
       }
       if (needsUpgrade) return; // only reachable through the gate above
       setFormError(null);
-      setConvertedBeforeError(false);
       setLastAttemptSentCredential(!!kycCredentialJwt);
-      let converted = false;
-      // Set once the withdrawal call itself starts: from then on its failure is in
-      // the hook's `error` / `errorDetails` (already in customer wording).
-      let withdrawStarted = false;
       try {
-        // Step 1 (only when the USDC does not cover the amount): turn exactly the shortfall of
-        // Cleanup rewards into USDC — one confirmation, the oracle pays out in under a minute.
-        if (needsConversion) {
-          if (conversionOverCap) {
-            setFormError('You can convert up to $1,000 of rewards per withdrawal — try a smaller amount.');
-            return;
-          }
-          // The conversion must pay out the USDC this withdrawal sends; anything else could not be
-          // withdrawn in the same go.
-          if (expectedPayoutDenom && withdrawableDenom && expectedPayoutDenom !== withdrawableDenom) {
-            setFormError(
-              `Your Cleanup rewards can’t be converted for a withdrawal right now. You can still withdraw your USDC (up to ${formatRewardsUsd(
-                fromMicro(usdcMicro ?? BigInt(0)),
-              )}).`,
-            );
-            return;
-          }
-          const convertUsd = formatRewardsUsd(fromPayBase(neededPayMicro.toString()));
-          setWithdrawStep(
-            `Step 1 of 2 — converting ${convertUsd} of your Cleanup rewards to USDC… this usually takes under a minute.`,
-          );
-          let result: Awaited<ReturnType<typeof payConvert.convert>>;
-          try {
-            result = await payConvert.convert(neededPayMicro.toString());
-          } catch (err) {
-            const message = payConvertErrorMessage(err);
-            setFormError(
-              /paused/i.test(message) && hasUsdc
-                ? `${message} You can still withdraw your USDC now (up to ${formatRewardsUsd(balance ?? 0)}).`
-                : message,
-            );
-            return;
-          }
-          if (!result.settled) {
-            // Refused, failed, parked or still open — the hook's wording for that outcome, read off
-            // the result itself (the hook's `error` state would not have re-rendered into this
-            // closure yet). Re-read the balances: a refund or a late payout may already be there.
-            setFormError(
-              result.message ?? 'Your rewards are still converting — give it a minute, then tap Withdraw again.',
-            );
-            setBalanceRefresh((n) => n + 1);
-            return;
-          }
-          converted = true;
-          if (result.payoutDenom !== withdrawableDenom) {
-            // Paid out in another USDC than the one withdrawn (the upgrade notice will offer it).
-            setFormError(
-              'Your rewards were converted — the USDC is in your wallet, but it needs a quick upgrade before it can be withdrawn.',
-            );
-            setBalanceRefresh((n) => n + 1);
-            return;
-          }
-          const landed = await waitForUsdc((usdcMicro ?? BigInt(0)) + neededPayMicro);
-          setBalanceRefresh((n) => n + 1);
-          if (!landed) {
-            setFormError(
-              'Your rewards were converted, but the USDC is still settling. Give it a minute, then tap Withdraw again — no new conversion is needed.',
-            );
-            return;
-          }
-          setWithdrawStep(`Step 2 of 2 — sending to your ${isMomo ? 'mobile money' : 'bank account'}…`);
-          // The quote aged while step 1 ran: refresh it quietly so what is sent matches YellowCard.
-          const preview = await offramp.previewWithdrawal({
-            amountUsdc: amountNum,
-            currency,
-            channelType,
-            country,
-            skipBridge,
-          });
-          setQuote(preview.quote);
-        }
-        withdrawStarted = true;
         await offramp.withdraw({
           amountUsdc: amountNum,
           currency,
@@ -1210,21 +956,8 @@ export default function OfframpScreen() {
           },
         });
         persistProfile();
-      } catch (err) {
-        // Step 1 succeeded but step 2 did not: the USDC is theirs already — say so, and that a
-        // retry needs no second conversion. Otherwise the offramp hook's own error shows.
-        if (converted) {
-          if (withdrawStarted) {
-            // Rendered from the hook's error below (with any decision notice).
-            setConvertedBeforeError(true);
-          } else {
-            // The re-quote between the steps failed — before anything was sent (logged there).
-            offrampErrorMessage(err, { fundsMayHaveMoved: false });
-            setFormError(CONVERTED_BUT_NOT_WITHDRAWN);
-          }
-        }
-      } finally {
-        setWithdrawStep(null);
+      } catch {
+        // The offramp hook's own error (customer wording) shows below the form.
       }
     },
     [
@@ -1237,16 +970,6 @@ export default function OfframpScreen() {
       channelType,
       skipBridge,
       simOutcome,
-      needsConversion,
-      conversionOverCap,
-      neededPayMicro,
-      expectedPayoutDenom,
-      withdrawableDenom,
-      usdcMicro,
-      payConvert,
-      hasUsdc,
-      balance,
-      waitForUsdc,
       kycCredentialJwt,
       kycName,
       country,
@@ -1292,11 +1015,11 @@ export default function OfframpScreen() {
 
   // "Back": to the form, always (an upgrade under way keeps going; its progress shows under the balance).
   const onUpgradeBack = useCallback(() => setUpgradeGateOpen(false), []);
-  // "Withdraw what's ready now": the withdrawable USDC (+ rewards), without the upgrade.
-  const readyNowMicro = (usdcMicro ?? BigInt(0)) + rewardsMicro;
+  // "Withdraw what's ready now": the withdrawable USDC, without the upgrade.
+  const readyNowMicro = usdcMicro ?? BigInt(0);
   const onUpgradeReadyNow = useCallback(() => {
     setUpgradeGateOpen(false);
-    const base = Number.isFinite(amountNum) && amountNum > 0 ? toPayBase(amountNum) : '';
+    const base = Number.isFinite(amountNum) && amountNum > 0 ? toMicro(amountNum) : '';
     const wantMicro = /^\d+$/.test(base) ? BigInt(base) : null;
     if (wantMicro != null && wantMicro <= readyNowMicro) {
       void onWithdraw({ skipUpgradeGate: true });
@@ -1310,7 +1033,7 @@ export default function OfframpScreen() {
     async (tx: OfframpTransaction) => {
       const sendUsdc = tx.send_amount_usdc ?? tx.amount_usd;
       // Re-sending spends the withdrawable USDC: check it still covers the amount.
-      const base = sendUsdc == null ? null : toPayBase(sendUsdc);
+      const base = sendUsdc == null ? null : toMicro(sendUsdc);
       const needMicro = base != null && /^\d+$/.test(base) ? BigInt(base) : null;
       if (needMicro != null && usdcMicro != null && usdcMicro < needMicro) {
         setFormError(
@@ -1366,21 +1089,7 @@ export default function OfframpScreen() {
           <>
             {/* Balance */}
             <div className={styles.card}>
-              {payOnlyHold ? (
-                <div className={styles.balanceRow}>
-                  <span className={styles.balanceAmount}>{formatRewardsUsd(payBalance ?? 0)}</span>
-                  <span className={styles.balanceUnit}>in Cleanup rewards</span>
-                  {balanceLoading && <Loader size={16} />}
-                </div>
-              ) : rewardsInPlay && balancesReady ? (
-                // Rewards count towards what can be withdrawn: one figure, and how it is made up.
-                <div className={styles.balanceRow}>
-                  <span className={styles.balanceAmount}>{formatRewardsUsd(totalAvailable)}</span>
-                  <span className={styles.balanceUnit}>available to withdraw</span>
-                  {local && <span className={styles.balanceUnit}>{localEstimate(totalAvailable, local)}</span>}
-                  {balanceLoading && <Loader size={16} />}
-                </div>
-              ) : skipBridge ? (
+              {skipBridge && balance == null ? (
                 <div className={styles.balanceRow}>
                   <span className={styles.balanceUnit}>Testnet test mode — USDC balance &amp; bridging skipped.</span>
                 </div>
@@ -1405,13 +1114,6 @@ export default function OfframpScreen() {
                   {balanceLoading && <Loader size={16} />}
                 </div>
               )}
-              {rewardsInPlay && balancesReady && (
-                <p className={styles.hint}>
-                  {formatUsdc(balance ?? 0)} {skipBridge ? 'IXO (USDC on testnet)' : 'USDC'} +{' '}
-                  {formatRewardsUsd(payBalance ?? 0)} Cleanup rewards — rewards turn into USDC automatically when you
-                  withdraw.
-                </p>
-              )}
               {/* A failed read keeps the last good numbers above (unknown is not zero) and says so. */}
               {!skipBridge && balanceRefreshFailed && !balanceLoading && (
                 <p className={styles.hint}>
@@ -1423,70 +1125,15 @@ export default function OfframpScreen() {
               )}
               {/* Legacy USDC: a calm "quick upgrade" notice under the one amount (and the upgrade's
                   progress once started) — unless the withdraw gate below is showing it. */}
-              {!payOnlyHold && !showUpgradeGate && <UsdcUpgradeCard upgrade={upgrade} variant='notice' />}
+              {!showUpgradeGate && <UsdcUpgradeCard upgrade={upgrade} variant='notice' />}
             </div>
-
-            {/* Rewards in play, but even the whole wallet is under this rail's minimum: encouragement
-                instead of a form to fail at. Country and payout method stay changeable below, in
-                case another rail has a lower minimum. */}
-            {showFlow && almostThere && (
-              <div className={styles.card}>
-                <p className={styles.cardTitle}>Almost there!</p>
-                <p className={styles.kycGateText}>
-                  Withdrawals to {isMomo ? 'mobile money' : 'a bank account'} in {countryLabel} start at{' '}
-                  {capacity?.limitMin != null ? fmtRail(capacity.limitMin) : ''}
-                  {minUsd != null ? ` (about ${formatRewardsUsd(minUsd)})` : ''}. You have{' '}
-                  {formatRewardsUsd(totalAvailable)} so far — keep mapping and making a difference, and come back to
-                  cash out once you’re there.
-                </p>
-                <div className={styles.actions}>
-                  <Button
-                    label='Back to wallet'
-                    size={BUTTON_SIZE.mediumLarge}
-                    bgColor={BUTTON_BG_COLOR.primary}
-                    borderColor={BUTTON_BORDER_COLOR.primary}
-                    color={BUTTON_COLOR.white}
-                    onClick={() => router.push('/wallet')}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Cleanup rewards held alongside withdrawable USDC: normal flow, plus a heads-up. */}
-            {payBanner && (
-              <div className={styles.alertInfo}>
-                Only your USDC can be withdrawn right now. Your {formatRewardsUsd(payBalance ?? 0)} in Cleanup rewards
-                unlocks for withdrawal {rewardsWhen.when}.
-              </div>
-            )}
-
-            {/* Cleanup rewards only: a friendly hold in place of the form. */}
-            {payOnlyHold && (
-              <div className={styles.card}>
-                <p className={styles.cardTitle}>Your Cleanup rewards are safe in your wallet</p>
-                <p className={styles.kycGateText}>
-                  Great work at World Cleanup Day! Withdrawals to bank and mobile money open {rewardsWhen.when}. Check
-                  back {rewardsWhen.checkBack} to cash out your {formatRewardsUsd(payBalance ?? 0)}.
-                </p>
-                <div className={styles.actions}>
-                  <Button
-                    label='Back to wallet'
-                    size={BUTTON_SIZE.mediumLarge}
-                    bgColor={BUTTON_BG_COLOR.primary}
-                    borderColor={BUTTON_BORDER_COLOR.primary}
-                    color={BUTTON_COLOR.white}
-                    onClick={() => router.push('/wallet')}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Nothing to withdraw: say so kindly — no form. */}
             {noFunds && (
               <div className={styles.card}>
                 <p className={styles.cardTitle}>Nothing to withdraw yet</p>
                 <p className={styles.kycGateText}>
-                  When you earn rewards or receive USDC, you can cash out here to your bank or mobile money.
+                  When you receive USDC, you can cash out here to your bank or mobile money.
                 </p>
                 <div className={styles.actions}>
                   <Button
@@ -1505,45 +1152,33 @@ export default function OfframpScreen() {
               <>
                 {/* Withdraw form */}
                 <div className={styles.card}>
-                  <p className={styles.cardTitle}>{rewardsInPlay ? 'Withdraw' : 'Withdraw USDC'}</p>
+                  <p className={styles.cardTitle}>Withdraw USDC</p>
 
-                  {/* Locked while a withdrawal that converts rewards first is running: the amount and
-                      destination it was confirmed for must not change under it. */}
-                  <fieldset className={styles.fieldset} disabled={!!withdrawStep}>
+                  <fieldset className={styles.fieldset}>
                     <div className={styles.row}>
                       <div className={styles.field}>
                         <label className={styles.label}>Amount (USD)</label>
                         <input
                           className={`${styles.input}${
-                            overBalance || conversionOverCap || (showForm && (earlyBelowMin || earlyAboveMax))
-                              ? ` ${styles.inputError}`
-                              : ''
+                            overBalance || (showForm && (earlyBelowMin || earlyAboveMax)) ? ` ${styles.inputError}` : ''
                           }`}
                           type='number'
                           inputMode='decimal'
                           min={0}
                           placeholder='0.00'
                           value={amount}
-                          disabled={almostThere}
                           onChange={(e) => setAmount(e.currentTarget.value)}
                         />
-                        {almostThere && (
-                          <span className={styles.hint}>
-                            Change the country or payout method to see if a lower minimum applies.
-                          </span>
-                        )}
                         {/* Before an amount is typed: the rail's minimum, so nobody types below it. */}
-                        {!almostThere && !showForm && railCurrency && channelMin != null && (
+                        {!showForm && railCurrency && channelMin != null && (
                           <span className={styles.hint}>
                             Minimum {fmtRail(channelMin)} for {railLabel} in {countryLabel}
-                            {minUsd != null ? ` (about ${formatRewardsUsd(minUsd)})` : ''}.
+                            {minUsd != null ? ` (about ${formatUsd(minUsd)})` : ''}.
                           </span>
                         )}
                         {overBalance && (
                           <span className={styles.errorText}>
-                            {rewardsInPlay
-                              ? `You can withdraw up to ${formatRewardsUsd(maxWithdrawUsd)} including your rewards.`
-                              : `You can withdraw up to ${formatUsdc(maxWithdrawUsd)} USDC right now.`}
+                            {`You can withdraw up to ${formatUsdc(maxWithdrawUsd)} USDC right now.`}
                             {upgrade.inTransitMicro > BigInt(0) &&
                               (upgradeKind === 'in_progress'
                                 ? ' The rest is being upgraded and will be ready in about 2 minutes.'
@@ -1552,29 +1187,15 @@ export default function OfframpScreen() {
                                 : '')}
                           </span>
                         )}
-                        {!overBalance && conversionOverCap && (
-                          <span className={styles.errorText}>
-                            You can convert up to $1,000 of rewards per withdrawal — try a smaller amount.
-                          </span>
-                        )}
                         {/* The early verdict: instant from the mid-market rate, exact once the quiet
                             quote is in — either way before a single detail is filled in. */}
-                        {showForm && !overBalance && !conversionOverCap && earlyBelowMin && earlyMin != null && (
+                        {showForm && !overBalance && earlyBelowMin && earlyMin != null && (
                           <span className={styles.errorText}>{belowMinText(earlyMin)}</span>
                         )}
-                        {showForm &&
-                          !overBalance &&
-                          !conversionOverCap &&
-                          !earlyBelowMin &&
-                          earlyAboveMax &&
-                          earlyMax != null && <span className={styles.errorText}>{aboveMaxText(earlyMax)}</span>}
-                        {!overBalance && !conversionOverCap && !earlyBelowMin && !earlyAboveMax && needsConversion && (
-                          <span className={styles.hint}>
-                            We’ll turn {formatRewardsUsd(fromPayBase(neededPayMicro.toString()))} of your Cleanup
-                            rewards into USDC first — one extra confirmation, no fees from Yoma.
-                          </span>
+                        {showForm && !overBalance && !earlyBelowMin && earlyAboveMax && earlyMax != null && (
+                          <span className={styles.errorText}>{aboveMaxText(earlyMax)}</span>
                         )}
-                        {!overBalance && !conversionOverCap && !earlyBelowMin && !earlyAboveMax && needsUpgrade && (
+                        {!overBalance && !earlyBelowMin && !earlyAboveMax && needsUpgrade && (
                           <span className={styles.hint}>
                             Part of this amount needs a quick upgrade first — it takes about 2 minutes.
                           </span>
@@ -1908,14 +1529,6 @@ export default function OfframpScreen() {
                           "checking" line shows and the button stays (disabled). */}
                         {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
 
-                        {/* The two-step withdrawal, while it runs: which step, in plain words. */}
-                        {withdrawStep && (
-                          <div className={styles.balanceRow} style={{ marginTop: 12 }}>
-                            <Loader size={16} />
-                            <span className={styles.balanceUnit}>{withdrawStep}</span>
-                          </div>
-                        )}
-
                         {/* The decision rail couldn't approve it yet ("try again in a
                           moment" / "being reviewed"): a calm notice with its own retry
                           takes the button's place. Its retry sends the same withdrawal
@@ -1925,8 +1538,7 @@ export default function OfframpScreen() {
                             view={decisionWait}
                             retryWaitSec={decisionRetryWaitSec}
                             onRetry={onWithdraw}
-                            retryDisabled={!canWithdraw || busy || !!withdrawStep || conversionOverCap}
-                            note={convertedBeforeError ? OFFRAMP_CONVERTED_NOTE : undefined}
+                            retryDisabled={!canWithdraw || busy}
                           />
                         )}
 
@@ -1948,20 +1560,12 @@ export default function OfframpScreen() {
                           <div className={styles.actions}>
                             {quote ? (
                               <Button
-                                label={
-                                  withdrawStep
-                                    ? 'Working…'
-                                    : busy
-                                    ? 'Withdrawing…'
-                                    : needsConversion
-                                    ? 'Convert & withdraw'
-                                    : 'Withdraw'
-                                }
+                                label={busy ? 'Withdrawing…' : 'Withdraw'}
                                 size={BUTTON_SIZE.mediumLarge}
                                 bgColor={BUTTON_BG_COLOR.primary}
                                 borderColor={BUTTON_BORDER_COLOR.primary}
                                 color={BUTTON_COLOR.white}
-                                disabled={!canWithdraw || busy || !!withdrawStep || conversionOverCap}
+                                disabled={!canWithdraw || busy}
                                 onClick={() => void onWithdraw()}
                               />
                             ) : (
@@ -1989,13 +1593,8 @@ export default function OfframpScreen() {
                   {formError ? (
                     <div className={styles.alertError}>{formError}</div>
                   ) : decision?.kind === 'rejected' ? (
-                    <OfframpDecisionNotice
-                      view={decision}
-                      note={convertedBeforeError ? OFFRAMP_CONVERTED_NOTE : undefined}
-                    />
-                  ) : showDecisionWait ? null : convertedBeforeError && offramp.error ? (
-                    <div className={styles.alertError}>{CONVERTED_BUT_NOT_WITHDRAWN}</div>
-                  ) : credentialFailureCode ? (
+                    <OfframpDecisionNotice view={decision} />
+                  ) : showDecisionWait ? null : credentialFailureCode ? (
                     <KycCredentialFailureNotice code={credentialFailureCode} />
                   ) : offramp.error && !createErrorShownByKycCard ? (
                     <div className={styles.alertError}>{offramp.error}</div>

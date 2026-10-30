@@ -47,7 +47,7 @@ describe('summarizeUsdc', () => {
 });
 
 describe('queryWalletBalances', () => {
-  it('reads the withdrawable USDC, the legacy USDC and PAY', async () => {
+  it('reads the withdrawable USDC and the legacy USDC — never PAY', async () => {
     const b = await queryWalletBalances(
       fakeClient({ [NOBLE]: '50000000', [INJ]: '25000000', upay: '7000000' }),
       'ixo1test',
@@ -56,7 +56,7 @@ describe('queryWalletBalances', () => {
     expect(b.usdc.usdcMicro).toBe(BigInt(25_000_000));
     expect(b.usdc.legacy).toEqual([{ denom: NOBLE, micro: BigInt(50_000_000) }]);
     expect(b.usdc.totalMicro).toBe(BigInt(75_000_000));
-    expect(b.pay.amountMicro).toBe('7000000');
+    expect(b).not.toHaveProperty('pay');
     expect(b.complete).toBe(true);
   });
 
@@ -68,7 +68,6 @@ describe('queryWalletBalances', () => {
     );
     expect(b.complete).toBe(false);
     expect(b.usdc.usdcMicro).toBe(BigInt(25_000_000));
-    expect(b.pay.ok).toBe(true);
   });
 
   it('a malformed amount is a failed read instead of throwing', async () => {
@@ -83,7 +82,7 @@ describe('queryWalletBalances', () => {
     expect(b.usdc.legacy).toHaveLength(1);
   });
 
-  it('testnet shape (no USDC, no legacy): only PAY is read', async () => {
+  it('testnet shape (no USDC, no legacy): nothing is read, a known zero', async () => {
     const asked: string[] = [];
     const client = fakeClient({ upay: '3' });
     const spy: BankQueryClient = {
@@ -99,8 +98,9 @@ describe('queryWalletBalances', () => {
       },
     };
     const b = await queryWalletBalances(spy, 'ixo1test', { usdc: null, legacy: [] });
-    expect(asked).toEqual(['upay']);
+    expect(asked).toEqual([]);
     expect(b.usdc.totalMicro).toBe(BigInt(0));
+    expect(b.complete).toBe(true);
   });
 
   it('the mainnet build reads Injective USDC as withdrawable and Noble USDC as legacy', () => {
