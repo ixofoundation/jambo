@@ -138,6 +138,23 @@ Users can view their past claims in read-only mode:
 4. The same SurveyJS template is loaded in `display` mode with the data pre-filled
 5. The Complete button is hidden (`showCompleteButton: false`); page navigation remains enabled so users can review multi-page claims.
 
+### Reading Claim Media
+
+A file answer's `serviceEndpoint` is written by the claim's submitter, so it is untrusted input, and it is read as soon as the claim opens. `getSurveyFilePreview` and `getSurveyFileBlob` (`lib/matrix/matrixClaims.ts`) treat it like this:
+
+| Link | What it gets |
+| --- | --- |
+| `…/api/fs/cid/…` on the configured VFS host (`VFS_BASE_URL`) | A fresh `fs/read` UCAN for that collection's lane (`lib/vfs/claimMedia.ts`) |
+| Any other https host that publishes its own `did:web` (`did:web:<host>` at `/.well-known/did.json`) | A fresh 5-minute UCAN with that DID as audience, `can: "*"` on `ixo:matrix-claims-bot` (`utils/ucanClaimBot.ts`), no redirects |
+| Any other https host | An unauthenticated read: no token, no cookies, no referrer |
+| Not https | Nothing is fetched |
+
+The viewer's Matrix OpenID token is never sent to these links. It goes only to the bots configured in `NEXT_PUBLIC_MATRIX_*_BOT_URL`.
+
+There is no host allowlist, so claims bots on other homeservers work without configuration. The binding is what keeps a fake host harmless: `utils/serviceDid.ts` accepts a `did.json` (or a cached value) only when it names the link's own host, so a fake host can only ever get a token addressed to itself, which no real service accepts. `*` is used because deployed claims bots accept nothing narrower. They answer any other ability or resource as a guest.
+
+The UCAN is verified against the viewer's IID document, so their ed25519 signing key must be registered on chain. Reads do not register it, because that would need a signed transaction. Without it, or when a read fails for any other reason, SurveyJS shows its file error state. A claims bot served over plain http (a local harness) gets no read.
+
 ## Claim Evaluation
 
 Claim evaluation statuses are displayed as badges:

@@ -59,6 +59,7 @@ jambo-passkey-claims/
     useAuth.ts               Auth context accessor
     useBackgroundSetup.ts    Background setup context accessor
     useProtocolCollections.ts Collection data hook with entity filtering
+    useNames.ts              Names and avatars from the IXO Names worker, see names.md
     useSteps.ts              Step navigation helper for multi-step flows
 
   lib/
@@ -78,6 +79,8 @@ jambo-passkey-claims/
       redirect.ts            Build SSO authorization URL and redirect
       tokens.ts              Token exchange and JWT validation
       pending.ts             Stage SSO data between callback and login
+    names/
+      index.ts               App's IXO Names client (`@ixo/names-client`), see names.md
 
   store/
     index.ts                 Redux store configuration with redux-persist
@@ -227,6 +230,7 @@ ReduxProvider (Redux store + PersistGate)
 | `NEXT_PUBLIC_MATRIX_ROOM_BOT_URL` | Yes | Room Bot service URL |
 | `NEXT_PUBLIC_MATRIX_BID_BOT_URL` | Yes | Bid Bot service URL |
 | `NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL` | Yes | Claim Bot service URL |
+| `NEXT_PUBLIC_NAMES_WORKER_URL` | Yes | Optional. IXO Names worker base URL; default per network (see [names.md](names.md)) |
 | `NEXT_PUBLIC_YOMA_SSO_ISSUER` | Yes | Yoma Keycloak realm URL |
 | `NEXT_PUBLIC_YOMA_SSO_CLIENT_ID` | Yes | OIDC client ID for this app |
 | `NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI` | Yes | OAuth redirect URI (must match Keycloak config) |
@@ -240,6 +244,7 @@ configured via `config.json` or env vars.
 ## Key Constants
 
 - **Chain config** (`constants/common.ts`): Network-dependent RPC URLs, Blocksync GraphQL URLs, chain IDs
+- **Names worker** (`constants/names.ts`): IXO Names worker URL per network, overridable ([names.md](names.md))
 - **Transaction types** (`constants/transaction.ts`): Authz type URLs for `SubmitClaimAuthorization` and `EvaluateClaimAuthorization`
 - **Site config** (`constants/config.json`): Site name, fonts, page metadata
 - **Survey theme** (`constants/surveyTheme.ts`): Custom SurveyJS theme with dark mode support

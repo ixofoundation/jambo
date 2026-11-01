@@ -72,6 +72,7 @@ A mobile-first Next.js application for submitting verifiable claims against IXO 
 | [`@ixo/matrixclient-sdk`](https://www.npmjs.com/package/@ixo/matrixclient-sdk) | Wrapper for IXO Matrix Bots (Claim Bot, Bid Bot, Room Bot). |
 | [`matrix-js-sdk`](https://www.npmjs.com/package/matrix-js-sdk) | Official Matrix client library for registration, login, and homeserver interaction. |
 | [`@ixo/signx-sdk`](https://www.npmjs.com/package/@ixo/signx-sdk) | SignX mobile wallet integration for transaction signing. |
+| [`@ixo/names-client`](https://www.npmjs.com/package/@ixo/names-client) | Client for the IXO Names worker: names, avatars and Matrix user ids. See [Names](docs/names.md). |
 
 ## Project Structure
 
@@ -104,3 +105,4 @@ Detailed documentation is available in the [`docs/`](docs/) directory:
 - [Claims and Collections](docs/claims.md) -- Claim submission, collections, drafts, and evaluation
 - [Agent Application](docs/agent-application.md) -- Bid/agent application flow and authorization
 - [Project Structure](docs/project-structure.md) -- Architecture, routing, store, API routes, and environment variables
+- [Names](docs/names.md) -- IXO Names worker: who is resolved there, what stays local, local worker setup

@@ -13,8 +13,9 @@
  * "mediaAttachment"`, `proof` = content CID, `serviceEndpoint` = fetchable URL) so every
  * existing reader keeps working; the serviceEndpoint is SELF-DESCRIBING — it carries the entity
  * DID and collection id as query params, exactly what a reader needs to mint the lane-scoped
- * read token. Backward compatibility is a URL-shape check: `…/media/collections/…` → claims bot
- * (legacy, Matrix), `…/api/fs/cid/…` → VFS (this module). Old claims stay readable forever.
+ * read token. Backward compatibility: a `…/api/fs/cid/…` URL on the configured VFS host → VFS
+ * (this module); anything else → the legacy path in lib/matrix/matrixClaims.ts. Old claims stay
+ * readable forever.
  *
  * Auth: one fresh single-use UCAN per request — including per resumable-upload part — signed
  * with the user's ed25519 signing key (utils/ucanVfs.ts), scoped to the ONE collection lane.
@@ -38,13 +39,16 @@ export interface VfsClaimMediaTarget {
 
 /**
  * Recognize a VFS claim-media serviceEndpoint and extract what a reader needs to mint the lane
- * token. Returns null for anything else (claims-bot URLs, IPFS gateways, data URLs …) — the
- * caller then keeps the legacy claims-bot path, which is what keeps old claims readable.
+ * token. The URL is written by the claim's submitter and a VFS UCAN is spendable at the real
+ * VFS, so only the configured VFS host counts: the path shape proves nothing. Returns null for
+ * anything else (claims-bot URLs, IPFS gateways, data URLs, lookalikes on another host …) — the
+ * caller then takes the legacy path, which is what keeps old claims readable.
  */
 export function parseVfsClaimMediaUrl(url: unknown): VfsClaimMediaTarget | null {
   if (typeof url !== 'string' || !/^https?:/i.test(url)) return null;
   try {
     const u = new URL(url);
+    if (u.origin !== new URL(VFS_BASE_URL).origin) return null;
     const m = u.pathname.match(/\/api\/fs\/cid\/([^/]+)$/);
     const entityDid = u.searchParams.get('entity');
     const collectionId = u.searchParams.get('collection');
