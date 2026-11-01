@@ -10,6 +10,7 @@ const withTM = require('next-transpile-modules')([
   '@veramo/core-types',
   'react-pdf',
   'pdfjs-dist',
+  '@ixo/names-client',
 ]);
 
 /** @type {import('next').NextConfig} */

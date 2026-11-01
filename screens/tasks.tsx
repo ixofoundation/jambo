@@ -59,6 +59,8 @@ export default function Tasks() {
 
   const [claims, setClaims] = useState<MyClaim[]>([]);
   const [loading, setLoading] = useState(true);
+  // Thumbnails that failed to load fall back to the icon (kept here: Row is re-created every render).
+  const [brokenThumbs, setBrokenThumbs] = useState<ReadonlySet<string>>(() => new Set());
 
   // One query: every claim this agent ever submitted, across all collections.
   useEffect(() => {
@@ -144,9 +146,14 @@ export default function Tasks() {
         style={{ width: '100%', marginBottom: 12 }}
         onClick={() => r.href && router.push(r.href)}
       >
-        {r.thumb ? (
+        {r.thumb && !brokenThumbs.has(r.thumb) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={r.thumb} className='status-item__thumb' alt='' />
+          <img
+            src={r.thumb}
+            className='status-item__thumb'
+            alt=''
+            onError={() => setBrokenThumbs((prev) => new Set(prev).add(r.thumb as string))}
+          />
         ) : (
           <span className='status-item__thumb' style={{ background: 'var(--purple-tint)', display: 'grid', placeItems: 'center', color: 'var(--purple-primary)' }}>
             <FileCheckIcon size={22} />
@@ -154,7 +161,7 @@ export default function Tasks() {
         )}
         <div className='status-item__body'>
           <div className='status-item__title' style={{ fontSize: 15.5 }}>{r.name}</div>
-          <div className='status-item__meta'>
+          <div className='status-item__meta' style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {[r.entityName, meta].filter(Boolean).join(' · ')}
           </div>
         </div>

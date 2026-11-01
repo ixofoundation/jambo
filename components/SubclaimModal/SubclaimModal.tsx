@@ -22,7 +22,8 @@ import { fetchClaimsWithSubclaims } from '@store/thunks/subclaimsThunks';
 import { selectClaimsWithSubclaims } from '@store/selectors/subclaims';
 import { getCollectionLinks } from '../../lib/yomaWorker/client';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
-import { fetchMatrixProfileForAddress, matrixUserIdForAddress } from '@utils/matrixProfile';
+import { useNames } from '@hooks/useNames';
+import { PROFILE_INCLUDE, workerImage } from 'lib/names';
 import { secret } from '@utils/secrets';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
@@ -220,18 +221,15 @@ function ClaimRow({
   onClick?: () => void;
 }) {
   const address = (claim.agentAddress as string) || '';
-  const userId = address ? matrixUserIdForAddress(address) : null;
-  const profile = useAppSelector((s) => (userId ? s.matrixProfiles.byUserId[userId] : undefined));
+  // Name + avatar from the names worker, looked up on the agent's own
+  // homeserver (every row's call is coalesced into one request).
+  const agent = useNames([address], PROFILE_INCLUDE).results[address];
 
-  useEffect(() => {
-    if (address) {
-      fetchMatrixProfileForAddress(address);
-    }
-  }, [address]);
-
-  const displayName =
-    profile?.displayName || (address ? `${address.slice(0, 10)}...${address.slice(-4)}` : 'Unknown agent');
-  const initial = (profile?.displayName || address || '?').charAt(0).toUpperCase();
+  const displayName = agent?.display ?? 'Unknown agent';
+  const avatarUrl = workerImage(agent);
+  // A broken avatar (e.g. a homeserver that switched to authenticated media) shows the initial.
+  const [brokenAvatar, setBrokenAvatar] = useState<string | null>(null);
+  const initial = (agent?.name || address || '?').charAt(0).toUpperCase();
 
   const classes = [styles.row];
   if (selected) classes.push(styles.rowSelected);
@@ -246,7 +244,13 @@ function ClaimRow({
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
     >
-      <div className={styles.avatar}>{profile?.avatarUrl ? <img src={profile.avatarUrl} alt='' /> : initial}</div>
+      <div className={styles.avatar}>
+        {avatarUrl && avatarUrl !== brokenAvatar ? (
+          <img src={avatarUrl} alt='' referrerPolicy='no-referrer' onError={() => setBrokenAvatar(avatarUrl)} />
+        ) : (
+          initial
+        )}
+      </div>
       <div className={styles.rowMain}>
         <div className={styles.rowNameRow}>
           <span className={styles.rowName}>{displayName}</span>

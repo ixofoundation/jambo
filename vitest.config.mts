@@ -11,6 +11,7 @@ export default defineConfig({
       '@constants': r('./constants'),
       '@utils': r('./utils'),
       '@hooks': r('./hooks'),
+      '@store': r('./store'),
       lib: r('./lib'),
     },
   },
