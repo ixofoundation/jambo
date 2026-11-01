@@ -1955,6 +1955,11 @@
     node-fetch "2.7.0"
     whatwg-fetch "3.6.19"
 
+"@ixo/names-client@0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@ixo/names-client/-/names-client-0.2.1.tgz#46dc7e6cf91421999ca159d5981a55dbb661a019"
+  integrity sha512-CZQfGcmpdpTIoBV0lbHjoOXyCwE9/dR6Ia9J5Ya925urtOsvyFvG5dDiuvGkq24osSn96tLn58FP/hx3esVpdA==
+
 "@ixo/signx-sdk@1.3.2":
   version "1.3.2"
   resolved "https://registry.yarnpkg.com/@ixo/signx-sdk/-/signx-sdk-1.3.2.tgz#6c6f01ad952d13c390232ea39531586cb2d6f35e"

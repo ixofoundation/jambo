@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 type UserAvatarProps = {
   userId: string;
@@ -25,7 +25,10 @@ const baseCircleStyle: CSSProperties = {
   userSelect: 'none',
 };
 
-export default function UserAvatar({ userId, displayName, avatarUrl, size = 32 }: UserAvatarProps) {
+export default function UserAvatar({ userId, displayName, avatarUrl: givenUrl, size = 32 }: UserAvatarProps) {
+  // A URL that failed to load (authenticated media, gone) falls back to the initial.
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const avatarUrl = givenUrl && givenUrl !== brokenUrl ? givenUrl : null;
   const style: CSSProperties = {
     ...baseCircleStyle,
     width: size,
@@ -44,6 +47,8 @@ export default function UserAvatar({ userId, displayName, avatarUrl, size = 32 }
         <img
           src={avatarUrl}
           alt=''
+          referrerPolicy='no-referrer'
+          onError={() => setBrokenUrl(avatarUrl)}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </span>

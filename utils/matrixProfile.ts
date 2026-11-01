@@ -5,35 +5,42 @@ import {
   clearMatrixUserProfilePending,
   MatrixUserProfile,
 } from '@store/slices/matrixProfilesSlice';
+import { getNamesClient, resolveMatrixProfile, withinMs } from 'lib/names';
 import { secret } from './secrets';
 import { cleanUrlString } from './url';
-import { generateUsernameFromAddress } from './matrix';
 
 const PROFILE_TTL_MS = 10 * 60 * 1000;
 
-function addressToHomeserverHost(userId: string | null | undefined): string | null {
-  if (!userId) return null;
-  const parts = userId.split(':');
-  if (parts.length < 2) return null;
-  return parts.slice(1).join(':');
+/** How long a sender's name waits for the names worker before the session read starts. */
+export const NAMES_WORKER_WAIT_MS = 3000;
+
+/**
+ * Fill `matrixProfiles` for a Matrix user id seen in a room. `@did-ixo-<address>:<host>`
+ * ids whose host is the address's own homeserver come from the names worker
+ * (batched with every other id asked in the same tick, memoised). The profile is
+ * read with the user's own Matrix session instead when:
+ * - the id is not one the worker can vouch for, or the worker failed;
+ * - the worker has not answered within NAMES_WORKER_WAIT_MS (a stalled worker
+ *   must not keep support names blank until its 15 s timeout).
+ * A complete worker answer is final, including "no name". A late worker answer
+ * is used only when the session read produced nothing.
+ */
+export async function prefetchMatrixProfile(userId: string): Promise<void> {
+  if (!userId) return;
+  const worker = resolveMatrixProfile(getNamesClient(), userId);
+  const fromNames = await withinMs(worker, NAMES_WORKER_WAIT_MS);
+  if (fromNames) {
+    store.dispatch(setMatrixUserProfile({ userId, ...fromNames }));
+    return;
+  }
+  const fromSession = await fetchMatrixProfileByUserId(userId);
+  // `undefined` is the timeout; `null` means the worker settled and cannot vouch.
+  if (fromSession || fromNames === null) return;
+  const late = await worker;
+  if (late) store.dispatch(setMatrixUserProfile({ userId, ...late }));
 }
 
-export function matrixUserIdForAddress(address: string): string | null {
-  if (!address) return null;
-  const homeserverHost = addressToHomeserverHost(secret.userId);
-  if (!homeserverHost) return null;
-  const username = generateUsernameFromAddress(address);
-  return `@${username}:${homeserverHost}`;
-}
-
-export function getCachedMatrixProfile(userId: string): MatrixUserProfile | null {
-  const state = store.getState();
-  const cached = state.matrixProfiles.byUserId[userId];
-  if (!cached) return null;
-  if (Date.now() - cached.fetchedAt > PROFILE_TTL_MS) return cached; // still return stale while refreshing
-  return cached;
-}
-
+/** Read a Matrix profile with the logged-in user's session (10 min TTL in `matrixProfiles`). */
 export async function fetchMatrixProfileByUserId(userId: string): Promise<MatrixUserProfile | null> {
   if (!userId) return null;
 
@@ -69,10 +76,4 @@ export async function fetchMatrixProfileByUserId(userId: string): Promise<Matrix
     store.dispatch(clearMatrixUserProfilePending({ userId }));
     return cached ?? null;
   }
-}
-
-export async function fetchMatrixProfileForAddress(address: string): Promise<MatrixUserProfile | null> {
-  const userId = matrixUserIdForAddress(address);
-  if (!userId) return null;
-  return fetchMatrixProfileByUserId(userId);
 }
