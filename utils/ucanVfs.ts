@@ -31,7 +31,7 @@ export function hasVfsSigner(): boolean {
   return !!secureLoad(authConstants.secretKey.ED_SIGNING_MNEMONIC);
 }
 
-function generateNonce(): string {
+export function generateNonce(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
   const bytes = new Uint8Array(16);
   globalThis.crypto.getRandomValues(bytes);

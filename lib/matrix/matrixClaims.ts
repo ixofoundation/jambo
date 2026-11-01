@@ -1,5 +1,7 @@
 import { fetchWithMatrixOpenIdRetry } from '@utils/matrix';
 import { blobToDataURL } from '@utils/encoding';
+import { resolveBoundServiceDid } from '@utils/serviceDid';
+import { claimBotUcanHeaders } from '@utils/ucanClaimBot';
 
 import { fetchVfsClaimMedia, parseVfsClaimMediaUrl } from '../vfs/claimMedia';
 
@@ -52,6 +54,33 @@ export async function uploadFile(
 }
 
 /**
+ * Reads a legacy (not VFS) claim media link. The serviceEndpoint is written by the claim's
+ * submitter, so it is untrusted: it never gets the viewer's Matrix OpenID token. A host that
+ * presents its own did:web gets a UCAN only that host accepts; there is no host allowlist, so
+ * claims bots on other homeservers keep working. Any other https host is asked with no
+ * credential, and anything else is not asked at all (null).
+ */
+async function fetchLegacyClaimMedia(url: string, did: string): Promise<Response | null> {
+  let protocol: string;
+  try {
+    protocol = new URL(url).protocol;
+  } catch {
+    return null;
+  }
+  if (protocol !== 'https:') return null;
+
+  const serviceDid = await resolveBoundServiceDid(url);
+  const headers = serviceDid ? await claimBotUcanHeaders(did, serviceDid).catch(() => undefined) : undefined;
+  return fetch(url, {
+    headers,
+    credentials: 'omit',
+    referrerPolicy: 'no-referrer',
+    // The token is bound to this host: a real bot serves the bytes itself.
+    redirect: headers ? 'error' : 'follow',
+  });
+}
+
+/**
  * Downloads a file from its serviceEndpoint and returns a data URL
  * suitable for SurveyJS file preview display.
  */
@@ -61,23 +90,15 @@ export async function getSurveyFilePreview(rawContent: string, did: string): Pro
     const url: string | undefined = attachment?.serviceEndpoint;
     if (!url) return '';
 
-    // VFS claims-lane reference (self-describing URL) → fetch from the VFS with a fresh
-    // lane-scoped UCAN; any other URL is a legacy claims-bot (Matrix) reference and keeps the
-    // bot read path, so claims whose media still lives in Matrix stay readable forever.
+    // VFS claims-lane reference on the configured VFS host → fetch from the VFS with a fresh
+    // lane-scoped UCAN; any other URL takes the legacy path, so claims whose media still lives
+    // in Matrix stay readable forever.
     if (parseVfsClaimMediaUrl(url)) {
       return await blobToDataURL(await fetchVfsClaimMedia(url, did));
     }
 
-    const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
-      fetch(url, {
-        headers: {
-          'x-openid-token': openIdToken,
-          'x-did': did,
-        },
-      }),
-    );
-
-    if (!res.ok) return '';
+    const res = await fetchLegacyClaimMedia(url, did);
+    if (!res?.ok) return '';
 
     const blob = await res.blob();
     return await blobToDataURL(blob);
@@ -106,16 +127,8 @@ export async function getSurveyFileBlob(
       return { blob, mediaType: attachment?.mediaType || blob.type || 'application/octet-stream' };
     }
 
-    const res = await fetchWithMatrixOpenIdRetry((openIdToken) =>
-      fetch(url, {
-        headers: {
-          'x-openid-token': openIdToken,
-          'x-did': did,
-        },
-      }),
-    );
-
-    if (!res.ok) return null;
+    const res = await fetchLegacyClaimMedia(url, did);
+    if (!res?.ok) return null;
 
     const blob = await res.blob();
     const mediaType = attachment?.mediaType || blob.type || 'application/octet-stream';
