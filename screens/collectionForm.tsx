@@ -32,6 +32,7 @@ import '../lib/here'; // registers the `map-grid-selector` SurveyJS question typ
 import { secret } from '@utils/secrets';
 import { secureLoad } from '@utils/storage';
 import authConstants from '@constants/auth';
+import { CLAIM_VIEW_MESSAGES, claimViewFallback, type ClaimViewFallback } from '@utils/claimViewError';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { deriveEd25519KeyPairFromMnemonic, createVeramoAgent, signClaimCredential } from '@utils/veramo';
 import { hasEd25519VerificationMethod, buildAddEd25519VerificationMsg } from '@utils/did';
@@ -84,7 +85,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const [viewClaimData, setViewClaimData] = useState<Record<string, any> | null>(null);
   // View mode without a stored claim document (payment claims recorded
   // directly on-chain) — renders the on-chain claim record instead.
-  const [viewFallback, setViewFallback] = useState(false);
+  const [viewFallback, setViewFallback] = useState<ClaimViewFallback | null>(null);
   const [fallbackClaim, setFallbackClaim] = useState<any | null>(null);
   const [viewClaimId, setViewClaimId] = useState<string | null>(claimId ?? null);
   const [formLoading, setFormLoading] = useState(true);
@@ -318,6 +319,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     try {
       setFormLoading(true);
       setFormError(null);
+      setViewFallback(null);
 
       if (surveyMode === 'view' && claimId) {
         try {
@@ -357,11 +359,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             console.log({ surveyTemplate: formData });
             setSurveyTemplate(JSON.stringify(formData));
           }
-        } catch {
-          // The claims bot has no stored document for this claim (payment
-          // claims are recorded directly on-chain and never pass through the
-          // bot) — show the on-chain claim record instead of an error.
-          setViewFallback(true);
+        } catch (err) {
+          // Payment claims are recorded directly on-chain and never pass through
+          // the bot. A refusal or an outage must not read like that, so each case
+          // says what happened, above the on-chain claim record.
+          setViewFallback(claimViewFallback(err));
           void fetchClaimById(claimId)
             .then((c) => setFallbackClaim(c))
             .catch(() => {});
@@ -964,10 +966,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                 }}
               >
                 <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {recordClaim?.evaluationByClaimId?.status === 1 ? 'Approved claim' : 'Claim record'}
+                  {CLAIM_VIEW_MESSAGES[viewFallback].title ??
+                    (recordClaim?.evaluationByClaimId?.status === 1 ? 'Approved claim' : 'Claim record')}
                 </p>
                 <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  This claim was recorded directly on-chain — there’s no form submission to display.
+                  {CLAIM_VIEW_MESSAGES[viewFallback].body}
                 </p>
                 {recordClaim ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -993,6 +996,25 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
                   </div>
                 ) : (
                   <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)' }}>Loading claim record…</p>
+                )}
+                {viewFallback === 'unavailable' && (
+                  <button
+                    onClick={loadForm}
+                    style={{
+                      marginTop: 18,
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: 12,
+                      border: 'none',
+                      backgroundColor: 'var(--accent-color)',
+                      color: '#fff',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Try again
+                  </button>
                 )}
               </div>
             </div>
