@@ -17,6 +17,18 @@ export const YELLOWCARD_WORKER_API = (
   'https://yellowcard.worker.ixo.earth'
 ).trim();
 
+/**
+ * Kill switch for the YellowCard on-ramp and off-ramp (paused Nov 5 2026 during
+ * a YellowCard outage). While true: a banner on the wallet, profile and both ramp
+ * screens; no deposit or withdrawal can start, and nothing re-sends money to
+ * YellowCard (the history's "Complete", a deposit's payment instructions). Past
+ * deposits and withdrawals stay visible. Set to false and release to reopen.
+ */
+export const RAMPS_PAUSED = true;
+
+export const RAMPS_PAUSED_MESSAGE =
+  'We’re experiencing a technical interruption, so withdrawals and top-ups are paused for now. Your money is safe, and we’ll be back online shortly.';
+
 /** Skip Go API base — proxied through the worker so the Skip API key stays
  *  server-side. */
 export const SKIP_API_URL = `${YELLOWCARD_WORKER_API}/skip`;

@@ -8,6 +8,8 @@ import { type UsdcBalances, fromMicro, getWalletBalances } from '@utils/usdcBala
 import { formatCurrency } from '@utils/localCurrency';
 import Header from '@components/Header/Header';
 import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
+import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
+import { RAMPS_PAUSED } from '@constants/yellowcard';
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
@@ -92,6 +94,8 @@ export default function Wallet() {
           <h2>Wallet</h2>
         </div>
 
+        <RampsPausedBanner style={{ marginBottom: 12 }} />
+
         <div className='card' style={{ padding: '20px 18px 18px' }}>
           <div className='muted' style={{ fontSize: 14, fontWeight: 600 }}>
             Total balance
@@ -139,11 +143,17 @@ export default function Wallet() {
             <button
               className='btn btn--primary'
               style={{ flex: 2, whiteSpace: 'nowrap' }}
+              disabled={RAMPS_PAUSED}
               onClick={() => router.push('/profile/offramp')}
             >
               <LandmarkIcon size={18} /> Withdraw
             </button>
-            <button className='btn btn--ghost' style={{ flex: 1 }} onClick={() => router.push('/profile/onramp')}>
+            <button
+              className='btn btn--ghost'
+              style={{ flex: 1 }}
+              disabled={RAMPS_PAUSED}
+              onClick={() => router.push('/profile/onramp')}
+            >
               <ArrowDownLeftIcon size={18} /> Deposit
             </button>
           </div>
