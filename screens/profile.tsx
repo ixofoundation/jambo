@@ -1,14 +1,19 @@
-import { useRef, useState } from 'react';
+import { type CSSProperties, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
 import GradientBand from '@components/GradientBand/GradientBand';
 import KycCredentialsCard from '@components/Credentials/KycCredentialsCard';
+import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
+import { RAMPS_PAUSED } from '@constants/yellowcard';
 import { ArrowDownLeftIcon, CheckIcon, ChevronRightIcon, CopyIcon, LandmarkIcon } from '@components/Icons/icons';
 import { useAuth } from '@hooks/useAuth';
 import { useAppSelector } from '@store/hooks';
 
 const LONG_PRESS_MS = 4000;
+
+/** Deposit / Withdraw while the YellowCard ramps are paused (constants/yellowcard). */
+const PAUSED_ITEM: CSSProperties = { opacity: 0.45, cursor: 'default' };
 
 function shorten(value: string, head = 12, tail = 6) {
   return value.length > head + tail + 3 ? `${value.slice(0, head)}…${value.slice(-tail)}` : value;
@@ -128,7 +133,14 @@ export default function ProfileScreen() {
           Wallet
         </h2>
 
-        <button className='status-item' style={{ width: '100%', marginBottom: 12 }} onClick={() => router.push('/profile/onramp')}>
+        <RampsPausedBanner style={{ marginBottom: 12 }} />
+
+        <button
+          className='status-item'
+          style={{ width: '100%', marginBottom: 12, ...(RAMPS_PAUSED ? PAUSED_ITEM : null) }}
+          disabled={RAMPS_PAUSED}
+          onClick={() => router.push('/profile/onramp')}
+        >
           <span className='notif-ic' style={{ background: 'var(--mint)', color: 'var(--green-primary)' }}>
             <ArrowDownLeftIcon size={20} />
           </span>
@@ -139,7 +151,12 @@ export default function ProfileScreen() {
           <ChevronRightIcon size={18} color='var(--text-secondary)' />
         </button>
 
-        <button className='status-item' style={{ width: '100%' }} onClick={() => router.push('/profile/offramp')}>
+        <button
+          className='status-item'
+          style={{ width: '100%', ...(RAMPS_PAUSED ? PAUSED_ITEM : null) }}
+          disabled={RAMPS_PAUSED}
+          onClick={() => router.push('/profile/offramp')}
+        >
           <span className='notif-ic' style={{ background: '#fdeed8', color: 'var(--coral)' }}>
             <LandmarkIcon size={20} />
           </span>
