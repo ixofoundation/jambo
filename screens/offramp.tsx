@@ -11,10 +11,11 @@ import KycRequiredCard, {
   resolveKycCredentialStatus,
 } from '@components/Ramp/KycRequiredCard';
 import OfframpDecisionNotice from '@components/Ramp/OfframpDecisionNotice';
+import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
 import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { USDC_DENOM } from '@constants/usdc';
-import { BRIDGE_POLL_WINDOW_MS, IXO_CHAIN_ID, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
+import { BRIDGE_POLL_WINDOW_MS, IXO_CHAIN_ID, RAMPS_PAUSED, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { fetchUsdRate, formatCurrency, localEstimate } from '@utils/localCurrency';
@@ -1084,6 +1085,7 @@ export default function OfframpScreen() {
 
       <main className={styles.body}>
         {!offrampEnabled && <div className={styles.alertInfo}>Withdrawals aren’t available on this network.</div>}
+        {offrampEnabled && <RampsPausedBanner />}
 
         {offrampEnabled && (
           <>
@@ -1150,456 +1152,464 @@ export default function OfframpScreen() {
 
             {showFlow && (
               <>
-                {/* Withdraw form */}
-                <div className={styles.card}>
-                  <p className={styles.cardTitle}>Withdraw USDC</p>
+                {/* Withdraw form — none while the ramps are paused (constants/yellowcard). */}
+                {!RAMPS_PAUSED && (
+                  <div className={styles.card}>
+                    <p className={styles.cardTitle}>Withdraw USDC</p>
 
-                  <fieldset className={styles.fieldset}>
-                    <div className={styles.row}>
-                      <div className={styles.field}>
-                        <label className={styles.label}>Amount (USD)</label>
-                        <input
-                          className={`${styles.input}${
-                            overBalance || (showForm && (earlyBelowMin || earlyAboveMax)) ? ` ${styles.inputError}` : ''
-                          }`}
-                          type='number'
-                          inputMode='decimal'
-                          min={0}
-                          placeholder='0.00'
-                          value={amount}
-                          onChange={(e) => setAmount(e.currentTarget.value)}
-                        />
-                        {/* Before an amount is typed: the rail's minimum, so nobody types below it. */}
-                        {!showForm && railCurrency && channelMin != null && (
-                          <span className={styles.hint}>
-                            Minimum {fmtRail(channelMin)} for {railLabel} in {countryLabel}
-                            {minUsd != null ? ` (about ${formatUsd(minUsd)})` : ''}.
-                          </span>
-                        )}
-                        {overBalance && (
-                          <span className={styles.errorText}>
-                            {`You can withdraw up to ${formatUsdc(maxWithdrawUsd)} USDC right now.`}
-                            {upgrade.inTransitMicro > BigInt(0) &&
-                              (upgradeKind === 'in_progress'
-                                ? ' The rest is being upgraded and will be ready in about 2 minutes.'
-                                : upgradeKind === 'returning'
-                                ? ' The rest is on its way back to your wallet.'
-                                : '')}
-                          </span>
-                        )}
-                        {/* The early verdict: instant from the mid-market rate, exact once the quiet
-                            quote is in — either way before a single detail is filled in. */}
-                        {showForm && !overBalance && earlyBelowMin && earlyMin != null && (
-                          <span className={styles.errorText}>{belowMinText(earlyMin)}</span>
-                        )}
-                        {showForm && !overBalance && !earlyBelowMin && earlyAboveMax && earlyMax != null && (
-                          <span className={styles.errorText}>{aboveMaxText(earlyMax)}</span>
-                        )}
-                        {!overBalance && !earlyBelowMin && !earlyAboveMax && needsUpgrade && (
-                          <span className={styles.hint}>
-                            Part of this amount needs a quick upgrade first — it takes about 2 minutes.
-                          </span>
-                        )}
-                        {/* What it fetches: the real net figure once quoted, the mid-market estimate until then. */}
-                        {showForm && !overBalance && !earlyBelowMin && !earlyAboveMax && (
-                          <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
-                            {liveFresh
-                              ? `≈ ${fmtRail(liveFresh.fiatOut)} to your ${railLabel} after fees`
-                              : railRate && railCurrency
-                              ? `≈ ${fmtRail(amountNum * railRate)} at the mid-market rate, before fees`
-                              : local
-                              ? `${localEstimate(amountNum, local)} at the mid-market rate`
-                              : ''}
-                          </span>
-                        )}
-                      </div>
-                      <div className={styles.field}>
-                        <label className={styles.label}>Country</label>
-                        <select
-                          className={styles.select}
-                          value={country}
-                          onChange={(e) => setCountry(e.currentTarget.value)}
-                        >
-                          {supportedOptions.map((o) => (
-                            <option key={o.value} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* The payout method sits with the country, outside the collapse: the two of them
-                        set the minimum, so both must be reachable before an amount is typed — and while
-                        "Almost there" has the amount locked. */}
-                    {availableMethods.length > 1 && (
+                    <fieldset className={styles.fieldset}>
                       <div className={styles.row}>
                         <div className={styles.field}>
-                          <label className={styles.label}>Payout method</label>
+                          <label className={styles.label}>Amount (USD)</label>
+                          <input
+                            className={`${styles.input}${
+                              overBalance || (showForm && (earlyBelowMin || earlyAboveMax))
+                                ? ` ${styles.inputError}`
+                                : ''
+                            }`}
+                            type='number'
+                            inputMode='decimal'
+                            min={0}
+                            placeholder='0.00'
+                            value={amount}
+                            onChange={(e) => setAmount(e.currentTarget.value)}
+                          />
+                          {/* Before an amount is typed: the rail's minimum, so nobody types below it. */}
+                          {!showForm && railCurrency && channelMin != null && (
+                            <span className={styles.hint}>
+                              Minimum {fmtRail(channelMin)} for {railLabel} in {countryLabel}
+                              {minUsd != null ? ` (about ${formatUsd(minUsd)})` : ''}.
+                            </span>
+                          )}
+                          {overBalance && (
+                            <span className={styles.errorText}>
+                              {`You can withdraw up to ${formatUsdc(maxWithdrawUsd)} USDC right now.`}
+                              {upgrade.inTransitMicro > BigInt(0) &&
+                                (upgradeKind === 'in_progress'
+                                  ? ' The rest is being upgraded and will be ready in about 2 minutes.'
+                                  : upgradeKind === 'returning'
+                                  ? ' The rest is on its way back to your wallet.'
+                                  : '')}
+                            </span>
+                          )}
+                          {/* The early verdict: instant from the mid-market rate, exact once the quiet
+                            quote is in — either way before a single detail is filled in. */}
+                          {showForm && !overBalance && earlyBelowMin && earlyMin != null && (
+                            <span className={styles.errorText}>{belowMinText(earlyMin)}</span>
+                          )}
+                          {showForm && !overBalance && !earlyBelowMin && earlyAboveMax && earlyMax != null && (
+                            <span className={styles.errorText}>{aboveMaxText(earlyMax)}</span>
+                          )}
+                          {!overBalance && !earlyBelowMin && !earlyAboveMax && needsUpgrade && (
+                            <span className={styles.hint}>
+                              Part of this amount needs a quick upgrade first — it takes about 2 minutes.
+                            </span>
+                          )}
+                          {/* What it fetches: the real net figure once quoted, the mid-market estimate until then. */}
+                          {showForm && !overBalance && !earlyBelowMin && !earlyAboveMax && (
+                            <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
+                              {liveFresh
+                                ? `≈ ${fmtRail(liveFresh.fiatOut)} to your ${railLabel} after fees`
+                                : railRate && railCurrency
+                                ? `≈ ${fmtRail(amountNum * railRate)} at the mid-market rate, before fees`
+                                : local
+                                ? `${localEstimate(amountNum, local)} at the mid-market rate`
+                                : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.field}>
+                          <label className={styles.label}>Country</label>
                           <select
                             className={styles.select}
-                            value={payoutMethod}
-                            onChange={(e) => {
-                              // Switching rail invalidates the provider + number
-                              // (and any quote) — start that part of the form fresh.
-                              setPayoutMethod(e.currentTarget.value as PayoutMethod);
-                              setNetworkId('');
-                              setAccountNumber('');
-                              setQuote(null);
-                            }}
+                            value={country}
+                            onChange={(e) => setCountry(e.currentTarget.value)}
                           >
-                            {availableMethods.map((m) => (
-                              <option key={m} value={m}>
-                                {PAYOUT_METHOD_LABEL[m]}
+                            {supportedOptions.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
                               </option>
                             ))}
                           </select>
                         </div>
                       </div>
-                    )}
 
-                    <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
-                      <div className={styles.collapseInner}>
-                        {skipBridge && (
-                          <div className={styles.row}>
-                            <div className={styles.field}>
-                              <label className={styles.label}>TEST · simulate settlement</label>
-                              <select
-                                className={styles.select}
-                                value={simOutcome}
-                                onChange={(e) => setSimOutcome(e.currentTarget.value as 'success' | 'failure')}
-                              >
-                                <option value='success'>Success</option>
-                                <option value='failure'>Failure</option>
-                              </select>
-                              <span className={styles.hint}>
-                                Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
+                      {/* The payout method sits with the country, outside the collapse: the two of them
+                        set the minimum, so both must be reachable before an amount is typed — and while
+                        "Almost there" has the amount locked. */}
+                      {availableMethods.length > 1 && (
                         <div className={styles.row}>
                           <div className={styles.field}>
-                            <label className={styles.label}>{isMomo ? 'Mobile provider' : 'Bank'}</label>
+                            <label className={styles.label}>Payout method</label>
                             <select
                               className={styles.select}
-                              value={networkId}
-                              disabled={loadingBanks || methodNetworks.length === 0}
+                              value={payoutMethod}
                               onChange={(e) => {
-                                setNetworkId(e.currentTarget.value);
+                                // Switching rail invalidates the provider + number
+                                // (and any quote) — start that part of the form fresh.
+                                setPayoutMethod(e.currentTarget.value as PayoutMethod);
+                                setNetworkId('');
+                                setAccountNumber('');
                                 setQuote(null);
                               }}
                             >
-                              <option value=''>
-                                {loadingBanks
-                                  ? 'Loading…'
-                                  : methodNetworks.length
-                                  ? isMomo
-                                    ? 'Select your provider'
-                                    : 'Select your bank'
-                                  : isMomo
-                                  ? 'No providers for this country'
-                                  : 'No banks for this country'}
-                              </option>
-                              {methodNetworks.map((n) => (
-                                <option key={n.id} value={n.id}>
-                                  {networkLabel(n)}
+                              {availableMethods.map((m) => (
+                                <option key={m} value={m}>
+                                  {PAYOUT_METHOD_LABEL[m]}
                                 </option>
                               ))}
                             </select>
-                            {currency && (limitMin != null || limitMax != null) && (
-                              <span className={styles.hint}>
-                                Limits {limitMin ?? '?'}–{limitMax ?? '?'} {currency}
-                                {settlementSecs ? ` · ~${settlementSecs}s settlement` : ''}
-                              </span>
-                            )}
                           </div>
-                          {currency && (
-                            <div className={styles.field}>
-                              <label className={styles.label}>Paid out in</label>
-                              <input className={styles.input} value={currency} readOnly />
-                              <span className={styles.hint}>
-                                {isMomo ? 'Currency this wallet receives' : 'Currency this bank receives'}
-                              </span>
+                        </div>
+                      )}
+
+                      <div className={`${styles.collapse}${showForm ? ` ${styles.collapseOpen}` : ''}`}>
+                        <div className={styles.collapseInner}>
+                          {skipBridge && (
+                            <div className={styles.row}>
+                              <div className={styles.field}>
+                                <label className={styles.label}>TEST · simulate settlement</label>
+                                <select
+                                  className={styles.select}
+                                  value={simOutcome}
+                                  onChange={(e) => setSimOutcome(e.currentTarget.value as 'success' | 'failure')}
+                                >
+                                  <option value='success'>Success</option>
+                                  <option value='failure'>Failure</option>
+                                </select>
+                                <span className={styles.hint}>
+                                  Sandbox crypto-receive outcome — appended to the sender name sent to YellowCard.
+                                </span>
+                              </div>
                             </div>
                           )}
-                        </div>
 
-                        {networkId && channelCandidates.length === 0 && (
-                          <span className={styles.warnLine}>
-                            {isMomo
-                              ? 'No active withdraw channel for this provider.'
-                              : 'No active withdraw channel for this bank.'}
-                          </span>
-                        )}
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>{isMomo ? 'Mobile provider' : 'Bank'}</label>
+                              <select
+                                className={styles.select}
+                                value={networkId}
+                                disabled={loadingBanks || methodNetworks.length === 0}
+                                onChange={(e) => {
+                                  setNetworkId(e.currentTarget.value);
+                                  setQuote(null);
+                                }}
+                              >
+                                <option value=''>
+                                  {loadingBanks
+                                    ? 'Loading…'
+                                    : methodNetworks.length
+                                    ? isMomo
+                                      ? 'Select your provider'
+                                      : 'Select your bank'
+                                    : isMomo
+                                    ? 'No providers for this country'
+                                    : 'No banks for this country'}
+                                </option>
+                                {methodNetworks.map((n) => (
+                                  <option key={n.id} value={n.id}>
+                                    {networkLabel(n)}
+                                  </option>
+                                ))}
+                              </select>
+                              {currency && (limitMin != null || limitMax != null) && (
+                                <span className={styles.hint}>
+                                  Limits {limitMin ?? '?'}–{limitMax ?? '?'} {currency}
+                                  {settlementSecs ? ` · ~${settlementSecs}s settlement` : ''}
+                                </span>
+                              )}
+                            </div>
+                            {currency && (
+                              <div className={styles.field}>
+                                <label className={styles.label}>Paid out in</label>
+                                <input className={styles.input} value={currency} readOnly />
+                                <span className={styles.hint}>
+                                  {isMomo ? 'Currency this wallet receives' : 'Currency this bank receives'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
 
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>
-                              {isMomo ? 'Mobile money number' : 'Bank account number'}
-                            </label>
-                            {isMomo ? (
+                          {networkId && channelCandidates.length === 0 && (
+                            <span className={styles.warnLine}>
+                              {isMomo
+                                ? 'No active withdraw channel for this provider.'
+                                : 'No active withdraw channel for this bank.'}
+                            </span>
+                          )}
+
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>
+                                {isMomo ? 'Mobile money number' : 'Bank account number'}
+                              </label>
+                              {isMomo ? (
+                                <div
+                                  className={`${styles.inputPrefixWrap}${
+                                    accountNumber && !accountNumberValid ? ` ${styles.inputError}` : ''
+                                  }`}
+                                >
+                                  <span className={styles.inputPrefix}>+</span>
+                                  <input
+                                    className={styles.bareInput}
+                                    inputMode='numeric'
+                                    placeholder='234801234567'
+                                    value={accountDigits}
+                                    onChange={(e) => setAccountNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                                  />
+                                </div>
+                              ) : (
+                                <input
+                                  className={styles.input}
+                                  value={accountNumber}
+                                  onChange={(e) => setAccountNumber(e.currentTarget.value)}
+                                />
+                              )}
+                              {isMomo && accountNumber && !accountNumberValid && (
+                                <span className={styles.errorText}>Enter the full number with country code</span>
+                              )}
+                            </div>
+                            <div className={styles.field}>
+                              <label className={styles.label}>
+                                {isMomo ? 'Recipient name' : 'Account holder name'}
+                              </label>
+                              <input
+                                className={styles.input}
+                                value={accountName}
+                                onChange={(e) => setAccountName(e.currentTarget.value)}
+                              />
+                            </div>
+                          </div>
+
+                          <div className={styles.divider}>
+                            <span className={styles.dividerLabel}>
+                              Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
+                            </span>
+                          </div>
+
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
+                              <input
+                                className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
+                                placeholder='First Last'
+                                value={kycName}
+                                readOnly={locked.name}
+                                onChange={(e) => setKycName(e.currentTarget.value)}
+                              />
+                              {kycName && !nameValid && (
+                                <span className={styles.errorText}>Enter first and last name</span>
+                              )}
+                            </div>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
+                              <input
+                                className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
+                                type='email'
+                                value={kycEmail}
+                                readOnly={locked.email}
+                                onChange={(e) => setKycEmail(e.currentTarget.value)}
+                              />
+                              {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
+                            </div>
+                          </div>
+
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
                               <div
                                 className={`${styles.inputPrefixWrap}${
-                                  accountNumber && !accountNumberValid ? ` ${styles.inputError}` : ''
-                                }`}
+                                  kycPhone && !phoneValid ? ` ${styles.inputError}` : ''
+                                }${locked.phone ? ` ${styles.lockedWrap}` : ''}`}
                               >
                                 <span className={styles.inputPrefix}>+</span>
                                 <input
                                   className={styles.bareInput}
                                   inputMode='numeric'
-                                  placeholder='234801234567'
-                                  value={accountDigits}
-                                  onChange={(e) => setAccountNumber(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                                  placeholder='27821234567'
+                                  value={kycPhone}
+                                  readOnly={locked.phone}
+                                  onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
                                 />
                               </div>
-                            ) : (
+                              {kycPhone && !phoneValid && (
+                                <span className={styles.errorText}>Enter full international number</span>
+                              )}
+                            </div>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
                               <input
                                 className={styles.input}
-                                value={accountNumber}
-                                onChange={(e) => setAccountNumber(e.currentTarget.value)}
-                              />
-                            )}
-                            {isMomo && accountNumber && !accountNumberValid && (
-                              <span className={styles.errorText}>Enter the full number with country code</span>
-                            )}
-                          </div>
-                          <div className={styles.field}>
-                            <label className={styles.label}>{isMomo ? 'Recipient name' : 'Account holder name'}</label>
-                            <input
-                              className={styles.input}
-                              value={accountName}
-                              onChange={(e) => setAccountName(e.currentTarget.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className={styles.divider}>
-                          <span className={styles.dividerLabel}>
-                            Your details (KYC){hasPrefill && <InfoIcon label={KYC_INFO_LABEL} />}
-                          </span>
-                        </div>
-
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Full name{locked.name && <PrefilledMark />}</label>
-                            <input
-                              className={`${styles.input}${kycName && !nameValid ? ` ${styles.inputError}` : ''}`}
-                              placeholder='First Last'
-                              value={kycName}
-                              readOnly={locked.name}
-                              onChange={(e) => setKycName(e.currentTarget.value)}
-                            />
-                            {kycName && !nameValid && (
-                              <span className={styles.errorText}>Enter first and last name</span>
-                            )}
-                          </div>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Email{locked.email && <PrefilledMark />}</label>
-                            <input
-                              className={`${styles.input}${kycEmail && !emailValid ? ` ${styles.inputError}` : ''}`}
-                              type='email'
-                              value={kycEmail}
-                              readOnly={locked.email}
-                              onChange={(e) => setKycEmail(e.currentTarget.value)}
-                            />
-                            {kycEmail && !emailValid && <span className={styles.errorText}>Invalid email</span>}
-                          </div>
-                        </div>
-
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Phone{locked.phone && <PrefilledMark />}</label>
-                            <div
-                              className={`${styles.inputPrefixWrap}${
-                                kycPhone && !phoneValid ? ` ${styles.inputError}` : ''
-                              }${locked.phone ? ` ${styles.lockedWrap}` : ''}`}
-                            >
-                              <span className={styles.inputPrefix}>+</span>
-                              <input
-                                className={styles.bareInput}
-                                inputMode='numeric'
-                                placeholder='27821234567'
-                                value={kycPhone}
-                                readOnly={locked.phone}
-                                onChange={(e) => setKycPhone(e.currentTarget.value.replace(/[^\d]/g, ''))}
+                                type='date'
+                                max={new Date().toISOString().slice(0, 10)}
+                                value={kycDob}
+                                readOnly={locked.dob}
+                                onChange={(e) => setKycDob(e.currentTarget.value)}
                               />
                             </div>
-                            {kycPhone && !phoneValid && (
-                              <span className={styles.errorText}>Enter full international number</span>
-                            )}
                           </div>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Date of birth{locked.dob && <PrefilledMark />}</label>
-                            <input
-                              className={styles.input}
-                              type='date'
-                              max={new Date().toISOString().slice(0, 10)}
-                              value={kycDob}
-                              readOnly={locked.dob}
-                              onChange={(e) => setKycDob(e.currentTarget.value)}
-                            />
-                          </div>
-                        </div>
 
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
-                            <select
-                              className={styles.select}
-                              value={kycCountry}
-                              disabled={locked.country}
-                              onChange={(e) => setKycCountry(e.currentTarget.value)}
-                            >
-                              {ALL_COUNTRY_OPTIONS.map((o) => (
-                                <option key={o.value} value={o.value}>
-                                  {o.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className={styles.field}>
-                            <label className={styles.label}>ID type{!isNG && locked.idType && <PrefilledMark />}</label>
-                            {isNG ? (
-                              <input className={styles.input} value='NIN' readOnly />
-                            ) : (
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Your country{locked.country && <PrefilledMark />}</label>
                               <select
                                 className={styles.select}
-                                value={kycIdType}
-                                disabled={locked.idType}
-                                onChange={(e) => setKycIdType(e.currentTarget.value)}
+                                value={kycCountry}
+                                disabled={locked.country}
+                                onChange={(e) => setKycCountry(e.currentTarget.value)}
                               >
-                                {ID_TYPE_OPTIONS.map((o) => (
+                                {ALL_COUNTRY_OPTIONS.map((o) => (
                                   <option key={o.value} value={o.value}>
                                     {o.label}
                                   </option>
                                 ))}
                               </select>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className={styles.row}>
-                          <div className={styles.field}>
-                            <label className={styles.label}>
-                              {isNG ? 'NIN' : 'ID number'}
-                              {locked.idNumber && <PrefilledMark />}
-                            </label>
-                            <input
-                              className={styles.input}
-                              value={kycIdNumber}
-                              readOnly={locked.idNumber}
-                              onChange={(e) => setKycIdNumber(e.currentTarget.value)}
-                            />
-                          </div>
-                          {isNG && (
+                            </div>
                             <div className={styles.field}>
-                              <label className={styles.label}>BVN</label>
+                              <label className={styles.label}>
+                                ID type{!isNG && locked.idType && <PrefilledMark />}
+                              </label>
+                              {isNG ? (
+                                <input className={styles.input} value='NIN' readOnly />
+                              ) : (
+                                <select
+                                  className={styles.select}
+                                  value={kycIdType}
+                                  disabled={locked.idType}
+                                  onChange={(e) => setKycIdType(e.currentTarget.value)}
+                                >
+                                  {ID_TYPE_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={styles.row}>
+                            <div className={styles.field}>
+                              <label className={styles.label}>
+                                {isNG ? 'NIN' : 'ID number'}
+                                {locked.idNumber && <PrefilledMark />}
+                              </label>
                               <input
                                 className={styles.input}
-                                value={kycBvn}
-                                onChange={(e) => setKycBvn(e.currentTarget.value)}
+                                value={kycIdNumber}
+                                readOnly={locked.idNumber}
+                                onChange={(e) => setKycIdNumber(e.currentTarget.value)}
                               />
-                              {/* <span className={styles.hint}>Required for Nigeria</span> */}
                             </div>
-                          )}
-                        </div>
-
-                        {quote && (
-                          <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
-                            <span className={styles.quoteMain}>
-                              You receive ~{quote.fiatReceived ?? '?'} {currency}
-                              <InfoIcon label={ESTIMATE_NOTE} />
-                            </span>
-                            {belowMin && limitMin != null && (
-                              <span className={styles.warnLine}>{belowMinText(limitMin)}</span>
-                            )}
-                            {aboveMax && limitMax != null && (
-                              <span className={styles.warnLine}>{aboveMaxText(limitMax)}</span>
+                            {isNG && (
+                              <div className={styles.field}>
+                                <label className={styles.label}>BVN</label>
+                                <input
+                                  className={styles.input}
+                                  value={kycBvn}
+                                  onChange={(e) => setKycBvn(e.currentTarget.value)}
+                                />
+                                {/* <span className={styles.hint}>Required for Nigeria</span> */}
+                              </div>
                             )}
                           </div>
-                        )}
 
-                        {/* {did && <span className={styles.hint}>Linked to your DID for tracking.</span>} */}
+                          {quote && (
+                            <div className={`${styles.quote}${belowMin || aboveMax ? ` ${styles.quoteWarn}` : ''}`}>
+                              <span className={styles.quoteMain}>
+                                You receive ~{quote.fiatReceived ?? '?'} {currency}
+                                <InfoIcon label={ESTIMATE_NOTE} />
+                              </span>
+                              {belowMin && limitMin != null && (
+                                <span className={styles.warnLine}>{belowMinText(limitMin)}</span>
+                              )}
+                              {aboveMax && limitMax != null && (
+                                <span className={styles.warnLine}>{aboveMaxText(limitMax)}</span>
+                              )}
+                            </div>
+                          )}
 
-                        {/* The worker wants identity verification for this amount and we
+                          {/* {did && <span className={styles.hint}>Linked to your DID for tracking.</span>} */}
+
+                          {/* The worker wants identity verification for this amount and we
                           have none to send: a friendly next step takes the button's
                           place. While the Vault is still being read, only a small
                           "checking" line shows and the button stays (disabled). */}
-                        {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
+                          {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
 
-                        {/* The decision rail couldn't approve it yet ("try again in a
+                          {/* The decision rail couldn't approve it yet ("try again in a
                           moment" / "being reviewed"): a calm notice with its own retry
                           takes the button's place. Its retry sends the same withdrawal
                           (the form still holds it), which resumes the same decision. */}
-                        {showDecisionWait && decisionWait && (
-                          <OfframpDecisionNotice
-                            view={decisionWait}
-                            retryWaitSec={decisionRetryWaitSec}
-                            onRetry={onWithdraw}
-                            retryDisabled={!canWithdraw || busy}
-                          />
-                        )}
+                          {showDecisionWait && decisionWait && (
+                            <OfframpDecisionNotice
+                              view={decisionWait}
+                              retryWaitSec={decisionRetryWaitSec}
+                              onRetry={onWithdraw}
+                              retryDisabled={!canWithdraw || busy}
+                            />
+                          )}
 
-                        {/* "One quick step before you withdraw": the upgrade takes the button's place,
+                          {/* "One quick step before you withdraw": the upgrade takes the button's place,
                           then the withdrawal carries on by itself with this same form. "Back" is
                           always there; "Withdraw what's ready now" once the upgrade is slow, needs
                           the team, came back or could not be confirmed. */}
-                        {showUpgradeGate && (
-                          <UsdcUpgradeCard
-                            upgrade={upgrade}
-                            variant='gate'
-                            onBack={onUpgradeBack}
-                            onReadyNow={onUpgradeReadyNow}
-                            readyNow={readyNowMicro > BigInt(0)}
-                          />
-                        )}
+                          {showUpgradeGate && (
+                            <UsdcUpgradeCard
+                              upgrade={upgrade}
+                              variant='gate'
+                              onBack={onUpgradeBack}
+                              onReadyNow={onUpgradeReadyNow}
+                              readyNow={readyNowMicro > BigInt(0)}
+                            />
+                          )}
 
-                        {(!kycNotice || kycNotice === 'checking') && !showDecisionWait && !showUpgradeGate && (
-                          <div className={styles.actions}>
-                            {quote ? (
-                              <Button
-                                label={busy ? 'Withdrawing…' : 'Withdraw'}
-                                size={BUTTON_SIZE.mediumLarge}
-                                bgColor={BUTTON_BG_COLOR.primary}
-                                borderColor={BUTTON_BORDER_COLOR.primary}
-                                color={BUTTON_COLOR.white}
-                                disabled={!canWithdraw || busy}
-                                onClick={() => void onWithdraw()}
-                              />
-                            ) : (
-                              <Button
-                                label={quoting ? 'Getting quote…' : 'Get quote'}
-                                size={BUTTON_SIZE.mediumLarge}
-                                bgColor={BUTTON_BG_COLOR.primary}
-                                borderColor={BUTTON_BORDER_COLOR.primary}
-                                color={BUTTON_COLOR.white}
-                                disabled={!canQuote || quoting}
-                                onClick={onQuote}
-                              />
-                            )}
-                          </div>
-                        )}
+                          {(!kycNotice || kycNotice === 'checking') && !showDecisionWait && !showUpgradeGate && (
+                            <div className={styles.actions}>
+                              {quote ? (
+                                <Button
+                                  label={busy ? 'Withdrawing…' : 'Withdraw'}
+                                  size={BUTTON_SIZE.mediumLarge}
+                                  bgColor={BUTTON_BG_COLOR.primary}
+                                  borderColor={BUTTON_BORDER_COLOR.primary}
+                                  color={BUTTON_COLOR.white}
+                                  disabled={!canWithdraw || busy}
+                                  onClick={() => void onWithdraw()}
+                                />
+                              ) : (
+                                <Button
+                                  label={quoting ? 'Getting quote…' : 'Get quote'}
+                                  size={BUTTON_SIZE.mediumLarge}
+                                  bgColor={BUTTON_BG_COLOR.primary}
+                                  borderColor={BUTTON_BORDER_COLOR.primary}
+                                  color={BUTTON_COLOR.white}
+                                  disabled={!canQuote || quoting}
+                                  onClick={onQuote}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </fieldset>
+                    </fieldset>
 
-                  {/* A `kyc_required` rejection is shown by the card above, not as an
+                    {/* A `kyc_required` rejection is shown by the card above, not as an
                       error; a rejected credential gets its own friendly line; a
                       decision-rail refusal gets its own notice (pending / in review
                       show above, in the button's place). Any other failure keeps the
                       plain error. */}
-                  {formError ? (
-                    <div className={styles.alertError}>{formError}</div>
-                  ) : decision?.kind === 'rejected' ? (
-                    <OfframpDecisionNotice view={decision} />
-                  ) : showDecisionWait ? null : credentialFailureCode ? (
-                    <KycCredentialFailureNotice code={credentialFailureCode} />
-                  ) : offramp.error && !createErrorShownByKycCard ? (
-                    <div className={styles.alertError}>{offramp.error}</div>
-                  ) : null}
-                </div>
+                    {formError ? (
+                      <div className={styles.alertError}>{formError}</div>
+                    ) : decision?.kind === 'rejected' ? (
+                      <OfframpDecisionNotice view={decision} />
+                    ) : showDecisionWait ? null : credentialFailureCode ? (
+                      <KycCredentialFailureNotice code={credentialFailureCode} />
+                    ) : offramp.error && !createErrorShownByKycCard ? (
+                      <div className={styles.alertError}>{offramp.error}</div>
+                    ) : null}
+                  </div>
+                )}
 
                 {/* History — only shown once there's at least one withdrawal */}
                 {transactions.length > 0 && (
@@ -1717,7 +1727,7 @@ export default function OfframpScreen() {
                             </div>
                           )}
 
-                          {canComplete && (
+                          {canComplete && !RAMPS_PAUSED && (
                             <div className={styles.completeBar}>
                               <span className={styles.warnLine}>
                                 Transfer didn’t complete — finish before it expires.
