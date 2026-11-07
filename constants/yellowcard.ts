@@ -18,14 +18,16 @@ export const YELLOWCARD_WORKER_API = (
 ).trim();
 
 /**
- * Kill switch for the YellowCard on-ramp and off-ramp (paused Nov 5 2026 during
- * a YellowCard outage, reopened Nov 7 2026). While true: a banner on the wallet,
- * profile and both ramp screens; no deposit or withdrawal can start, and nothing
- * re-sends money to YellowCard (the history's "Complete", a deposit's payment
- * instructions). Past deposits and withdrawals stay visible. Set to true and
- * release to pause again; false and release to reopen.
+ * Kill switch for the YellowCard on-ramp and off-ramp, from
+ * `NEXT_PUBLIC_YELLOWCARD_RAMPS_PAUSED` (first used during the Nov 5–7 2026
+ * YellowCard outage). `"true"` pauses; anything else, or unset, leaves the ramps
+ * open. While paused: a banner on the wallet, profile and both ramp screens; no
+ * deposit or withdrawal can start, and nothing re-sends money to YellowCard (the
+ * history's "Complete", a deposit's payment instructions). Past deposits and
+ * withdrawals stay visible. A NEXT_PUBLIC_ var is inlined at build time, so
+ * changing it in Vercel takes a redeploy.
  */
-export const RAMPS_PAUSED = false;
+export const RAMPS_PAUSED = process.env.NEXT_PUBLIC_YELLOWCARD_RAMPS_PAUSED?.trim() === 'true';
 
 export const RAMPS_PAUSED_MESSAGE =
   'We’re experiencing a technical interruption, so withdrawals and top-ups are paused for now. Your money is safe, and we’ll be back online shortly.';
