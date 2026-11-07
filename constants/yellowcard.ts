@@ -19,12 +19,13 @@ export const YELLOWCARD_WORKER_API = (
 
 /**
  * Kill switch for the YellowCard on-ramp and off-ramp (paused Nov 5 2026 during
- * a YellowCard outage). While true: a banner on the wallet, profile and both ramp
- * screens; no deposit or withdrawal can start, and nothing re-sends money to
- * YellowCard (the history's "Complete", a deposit's payment instructions). Past
- * deposits and withdrawals stay visible. Set to false and release to reopen.
+ * a YellowCard outage, reopened Nov 7 2026). While true: a banner on the wallet,
+ * profile and both ramp screens; no deposit or withdrawal can start, and nothing
+ * re-sends money to YellowCard (the history's "Complete", a deposit's payment
+ * instructions). Past deposits and withdrawals stay visible. Set to true and
+ * release to pause again; false and release to reopen.
  */
-export const RAMPS_PAUSED = true;
+export const RAMPS_PAUSED = false;
 
 export const RAMPS_PAUSED_MESSAGE =
   'We’re experiencing a technical interruption, so withdrawals and top-ups are paused for now. Your money is safe, and we’ll be back online shortly.';
