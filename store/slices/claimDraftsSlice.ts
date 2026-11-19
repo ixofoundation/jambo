@@ -1,6 +1,10 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface ClaimDraft {
+  // 'kyc' is no longer written (the old KYC form is gone). It stays in the type
+  // because a persisted draft from before may still carry it; such a draft
+  // matches no form mode, so it is never restored (persist v5 deletes them:
+  // store/migrations.ts).
   surveyMode: 'bco' | 'bev' | 'claim' | 'view' | 'kyc';
   surveyTemplate: string;
   surveyData: Record<string, any>;

@@ -152,7 +152,9 @@ async function resolveCountry(mxClient: MxClient, roomId: string): Promise<strin
     // fall through to KYC
   }
   try {
-    const prefill = await loadKycPrefill(mxClient, roomId);
+    // Vault sources only: a display currency is not worth an Auth Hub call
+    // (and a read of the person's full claims) at every session start.
+    const prefill = await loadKycPrefill(mxClient, roomId, undefined, { skipHub: true });
     if (currencyForCountry(prefill.country)) return prefill.country!.trim().toUpperCase();
   } catch {
     // no KYC either

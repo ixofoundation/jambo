@@ -8,6 +8,7 @@ import Loader from '@components/Loader/Loader';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import KycRequiredCard, {
   KycCredentialFailureNotice,
+  isReverifyCredentialFailure,
   resolveKycCredentialStatus,
 } from '@components/Ramp/KycRequiredCard';
 import OfframpDecisionNotice from '@components/Ramp/OfframpDecisionNotice';
@@ -17,6 +18,7 @@ import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { USDC_DENOM } from '@constants/usdc';
 import { BRIDGE_POLL_WINDOW_MS, IXO_CHAIN_ID, RAMPS_PAUSED, TERMINAL_OFFRAMP_STATUSES } from '@constants/yellowcard';
 import { useAuth } from '@hooks/useAuth';
+import { useKyc } from '@hooks/useKyc';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import { fetchUsdRate, formatCurrency, localEstimate } from '@utils/localCurrency';
 import useOfframp from '@hooks/useOfframp';
@@ -40,8 +42,8 @@ import {
 } from 'lib/yellowcard/offrampClient';
 import { OFFRAMP_DEPOSIT_UNCONFIRMED, offrampDecisionView, offrampErrorMessage } from 'lib/yellowcard/offrampDecision';
 import { ALL_COUNTRY_OPTIONS, countryOptions } from '@utils/countries';
-import { type KycPrefill, loadKycPrefill, waitForKycCredential } from '@utils/kycPrefill';
-import { loadKycCredentialJwt } from '@utils/approvePayment';
+import { type KycPrefill, loadKycPrefill, waitForKycCredentialSource } from '@utils/kycPrefill';
+import { noteKycCredentialRejected, selectKycCredentialJwt } from '@utils/approvePayment';
 import { type OfframpProfile, saveOfframpProfile, waitForOfframpProfile } from '@utils/offrampProfile';
 import {
   type UsdcBalances,
@@ -135,7 +137,7 @@ function formatUsdc(amount: number): string {
 
 export default function OfframpScreen() {
   const router = useRouter();
-  const { address, did, matrixRoomId } = useAuth();
+  const { address, did, email, matrixRoomId } = useAuth();
   const local = useLocalCurrency();
   const { getMatrixClient, awaitCompletion } = useContext(BackgroundSetupContext);
   const offramp = useOfframp();
@@ -212,6 +214,20 @@ export default function OfframpScreen() {
   const [kycCredentialLoaded, setKycCredentialLoaded] = useState(false);
   // True when the Vault couldn't be reached, so the check can't resolve.
   const [kycCheckFailed, setKycCheckFailed] = useState(false);
+  // Whether the person is verified at all: the shared state, the same answer
+  // the profile card shows. It decides what an empty Vault means (see
+  // `resolveKycCredentialStatus`).
+  const kyc = useKyc();
+  const kycRefresh = kyc.refresh;
+  // Bumped by "Try again" to read the Vault once more.
+  const [kycReload, setKycReload] = useState(0);
+  const retryKycCheck = useCallback(() => {
+    setHasKyc(null);
+    setKycCredentialLoaded(false);
+    setKycCheckFailed(false);
+    setKycReload((n) => n + 1);
+    void kycRefresh();
+  }, [kycRefresh]);
   // Whether the last create attempt carried a credential. A `kyc_required`
   // rejection of an attempt WITHOUT one is explained by the identity-check card
   // (never as an error); with one it would be unexpected, so it stays visible.
@@ -297,15 +313,29 @@ export default function OfframpScreen() {
         // hold a credential. Waits out a still-syncing client — a one-shot read
         // right after login can miss room state and wrongly treat a KYC'd user
         // as unverified.
-        const owns = await waitForKycCredential(mxClient, matrixRoomId, { cancelled: () => cancelled });
+        // Either credential counts: the legacy one, or the Self one the Auth Hub
+        // copies into the Vault. This reads the credential itself (it is sent
+        // to the worker); whether the user is verified at all comes from `useKyc`.
+        const source = await waitForKycCredentialSource(mxClient, matrixRoomId, { cancelled: () => cancelled });
         if (cancelled) return;
-        setHasKyc(owns);
-        if (!owns) return;
-        const result = await loadKycPrefill(mxClient, matrixRoomId);
-        if (!cancelled) setPrefill(result);
-        // The raw SD-JWT to present to the worker with the create call.
-        const jwt = await loadKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
+        setHasKyc(!!source);
+        if (!source) return;
+        // The raw SD-JWT to present to the worker with the create call, and
+        // which credential it is.
+        const selected = await selectKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
         if (cancelled) return;
+        const jwt = selected?.jwt ?? null;
+        // The form shows the identity of the credential that is sent. Self:
+        // claims from the Auth Hub, email from the session; when they can't be
+        // read nothing is filled, so nothing is locked.
+        const result = await loadKycPrefill(
+          mxClient,
+          matrixRoomId,
+          { userDid: did, email },
+          { source: jwt ? selected?.source : undefined },
+        );
+        if (cancelled) return;
+        setPrefill(result);
         setKycCredentialJwt(jwt);
         setKycCredentialLoaded(true);
       } catch {
@@ -317,7 +347,7 @@ export default function OfframpScreen() {
     return () => {
       cancelled = true;
     };
-  }, [offrampEnabled, address, matrixRoomId, awaitCompletion, getMatrixClient]);
+  }, [offrampEnabled, address, did, email, matrixRoomId, awaitCompletion, getMatrixClient, kycReload]);
 
   // Remembered fields from a previous withdrawal (editable prefill) — for
   // everyone, verified or not. Runs alongside the credential check rather than
@@ -754,6 +784,7 @@ export default function OfframpScreen() {
     credentialJwt: kycCredentialJwt,
     credentialLoaded: kycCredentialLoaded,
     checkFailed: kycCheckFailed,
+    kycStatus: kyc.status,
   });
   // What the identity-check notice should say, or null when none is needed. A
   // verified user (credential in hand, 'ready') skips the threshold entirely.
@@ -762,6 +793,35 @@ export default function OfframpScreen() {
   const needsKyc = kycNotice !== null;
   // A credential WAS sent but the worker couldn't accept it.
   const credentialFailureCode = isRampKycCredentialFailureCode(createErrorCode) ? createErrorCode : null;
+  // The worker refused the credential itself. A person who also holds the Self
+  // credential (they verified again) sends that one on the next try; a valid
+  // legacy credential is never swapped out.
+  useEffect(() => {
+    if (!credentialFailureCode || !isReverifyCredentialFailure(credentialFailureCode)) return;
+    if (!kycCredentialJwt || !matrixRoomId) return;
+    const noted = noteKycCredentialRejected(kycCredentialJwt);
+    const mxClient = getMatrixClient();
+    if (!mxClient) return;
+    let cancelled = false;
+    (async () => {
+      await noted;
+      const selected = await selectKycCredentialJwt(mxClient, matrixRoomId).catch(() => null);
+      if (cancelled || !selected?.jwt || selected.jwt === kycCredentialJwt) return;
+      // The Self credential takes over: the form must show its identity, not
+      // the legacy one (the worker matches the name against the credential).
+      // If it can't be read, the fields are left for the person to edit.
+      const result =
+        selected.source === 'identitylevel1'
+          ? await loadKycPrefill(mxClient, matrixRoomId, { userDid: did, email }, { source: selected.source })
+          : null;
+      if (cancelled) return;
+      if (result) setPrefill(result);
+      setKycCredentialJwt(selected.jwt);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [credentialFailureCode, kycCredentialJwt, matrixRoomId, getMatrixClient, did, email]);
   // `kyc_required` for an attempt that sent no credential is the card's job —
   // and once a late-loading credential turns up, there's nothing left to say.
   const createErrorShownByKycCard = kycBlocked && !lastAttemptSentCredential;
@@ -1536,7 +1596,9 @@ export default function OfframpScreen() {
                           have none to send: a friendly next step takes the button's
                           place. While the Vault is still being read, only a small
                           "checking" line shows and the button stays (disabled). */}
-                          {kycNotice && <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} />}
+                          {kycNotice && (
+                            <KycRequiredCard ramp='withdraw' credentialStatus={kycNotice} onRetry={retryKycCheck} />
+                          )}
 
                           {/* The decision rail couldn't approve it yet ("try again in a
                           moment" / "being reviewed"): a calm notice with its own retry

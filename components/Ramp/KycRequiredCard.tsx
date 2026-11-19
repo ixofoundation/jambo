@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
 import Loader from '@components/Loader/Loader';
 import type { RampKycCredentialFailureCode } from 'lib/yellowcard/offrampClient';
+import { type KycCredentialStatus, resolveKycCredentialStatus } from '@utils/kyc/rampCredentialStatus';
 
 import styles from '@styles/Offramp.module.scss';
 
@@ -19,37 +20,15 @@ import styles from '@styles/Offramp.module.scss';
 
 export type RampKind = 'withdraw' | 'deposit';
 
-/** Where the background read of the user's verification (in their Vault) stands. */
-export type KycCredentialStatus =
-  /** Still looking — the Vault may be syncing. */
-  | 'checking'
-  /** Looked; the user holds no verification. */
-  | 'none'
-  /** Found and loaded — it is sent with the create call. */
-  | 'ready'
-  /** Found, but it couldn't be opened (decrypted) on this device. */
-  | 'unreadable'
-  /** The Vault couldn't be reached, so we don't know. */
-  | 'unavailable';
-
-/** Collapse the screens' loading flags into one status. `hasKyc` is the index
- *  check (null = unresolved); `credentialLoaded` flips once the attempt to open
- *  the credential itself has finished, so "found but still opening" reads as
- *  'checking' rather than flashing 'unreadable'. */
-export function resolveKycCredentialStatus(state: {
-  hasKyc: boolean | null;
-  credentialJwt: string | null;
-  credentialLoaded: boolean;
-  checkFailed: boolean;
-}): KycCredentialStatus {
-  if (state.credentialJwt) return 'ready';
-  if (state.checkFailed) return 'unavailable';
-  if (state.hasKyc === null) return 'checking';
-  if (state.hasKyc === false) return 'none';
-  return state.credentialLoaded ? 'unreadable' : 'checking';
-}
+export { resolveKycCredentialStatus, type KycCredentialStatus };
 
 const KYC_ROUTE = '/profile/credentials/kyc';
+/**
+ * For a verification the worker refused: the identity screen then offers a new
+ * check to a person whose earlier (legacy) verification it would otherwise
+ * show as "verified, nothing more to do".
+ */
+const REVERIFY_ROUTE = `${KYC_ROUTE}?reverify=1`;
 const VERIFICATION_STATUS_ROUTE = '/profile';
 
 const RAMP_VERB: Record<RampKind, string> = {
@@ -59,12 +38,58 @@ const RAMP_VERB: Record<RampKind, string> = {
 
 const VERIFY_LABEL = 'Verify my identity';
 const VIEW_STATUS_LABEL = 'View verification status';
+const CONTINUE_LABEL = 'Continue my identity check';
+const TRY_AGAIN_LABEL = 'Try again';
 
 type KycRequiredCardProps = {
   ramp: RampKind;
   /** Never 'ready' — a user whose verification loaded doesn't see this card. */
   credentialStatus: Exclude<KycCredentialStatus, 'ready'>;
+  /** Re-read the Vault and the shared state ('not_on_device' offers it). */
+  onRetry?: () => void;
 };
+
+type CardCopy = { title: string; text: string; label: string; route: string | null };
+
+function cardCopy(status: Exclude<KycCredentialStatus, 'ready' | 'checking'>, ramp: RampKind): CardCopy {
+  switch (status) {
+    case 'none':
+      return {
+        title: 'Verify your identity to continue',
+        text: `To ${RAMP_VERB[ramp]}, we first need to verify your identity. It takes a few minutes and you only need to do it once.`,
+        label: VERIFY_LABEL,
+        route: KYC_ROUTE,
+      };
+    case 'pending':
+      return {
+        title: 'Your identity check isn’t finished yet',
+        text: `You can ${RAMP_VERB[ramp]} as soon as your identity check is complete.`,
+        label: CONTINUE_LABEL,
+        route: KYC_ROUTE,
+      };
+    case 'not_on_device':
+      return {
+        title: 'Almost ready',
+        text: 'Your identity is verified, but your credential isn’t available on this device yet. Please try again shortly.',
+        label: TRY_AGAIN_LABEL,
+        route: null,
+      };
+    case 'unreadable':
+      return {
+        title: 'Verify your identity to continue',
+        text: 'We found your identity verification but couldn’t open it on this device. Check your verification status to continue.',
+        label: VIEW_STATUS_LABEL,
+        route: VERIFICATION_STATUS_ROUTE,
+      };
+    case 'unavailable':
+      return {
+        title: 'Verify your identity to continue',
+        text: 'We couldn’t check your identity verification right now. Please try again in a moment.',
+        label: VIEW_STATUS_LABEL,
+        route: VERIFICATION_STATUS_ROUTE,
+      };
+  }
+}
 
 /**
  * Shown where the action button would be when the worker says this amount needs
@@ -72,7 +97,7 @@ type KycRequiredCardProps = {
  * exception: a small inline line rendered ABOVE the (disabled) action button
  * while the Vault is still being read.
  */
-export default function KycRequiredCard({ ramp, credentialStatus }: KycRequiredCardProps) {
+export default function KycRequiredCard({ ramp, credentialStatus, onRetry }: KycRequiredCardProps) {
   const router = useRouter();
 
   if (credentialStatus === 'checking') {
@@ -84,28 +109,26 @@ export default function KycRequiredCard({ ramp, credentialStatus }: KycRequiredC
     );
   }
 
-  const verify = credentialStatus === 'none';
+  const copy = cardCopy(credentialStatus, ramp);
+  const { route } = copy;
+  const onClick = route ? () => router.push(route) : onRetry;
 
   return (
     <div className={styles.kycCard} role='status'>
-      <p className={styles.kycCardTitle}>Verify your identity to continue</p>
-      <p className={styles.kycCardText}>
-        {verify
-          ? `To ${RAMP_VERB[ramp]}, we first need to verify your identity. It takes a few minutes and you only need to do it once.`
-          : credentialStatus === 'unreadable'
-          ? 'We found your identity verification but couldn’t open it on this device. Check your verification status to continue.'
-          : 'We couldn’t reach your Vault to check your identity verification. Please try again in a moment.'}
-      </p>
-      <div className={styles.actions}>
-        <Button
-          label={verify ? VERIFY_LABEL : VIEW_STATUS_LABEL}
-          size={BUTTON_SIZE.mediumLarge}
-          bgColor={BUTTON_BG_COLOR.primary}
-          borderColor={BUTTON_BORDER_COLOR.primary}
-          color={BUTTON_COLOR.white}
-          onClick={() => router.push(verify ? KYC_ROUTE : VERIFICATION_STATUS_ROUTE)}
-        />
-      </div>
+      <p className={styles.kycCardTitle}>{copy.title}</p>
+      <p className={styles.kycCardText}>{copy.text}</p>
+      {onClick && (
+        <div className={styles.actions}>
+          <Button
+            label={copy.label}
+            size={BUTTON_SIZE.mediumLarge}
+            bgColor={BUTTON_BG_COLOR.primary}
+            borderColor={BUTTON_BORDER_COLOR.primary}
+            color={BUTTON_COLOR.white}
+            onClick={onClick}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -131,6 +154,12 @@ const TRY_LATER: CredentialFailureCopy = {
   offerVerify: false,
 };
 
+const UNSUPPORTED_TYPE: CredentialFailureCopy = {
+  message:
+    'Your identity is verified, but withdrawals and deposits don’t accept this type of verification yet. Please try again later or contact support.',
+  offerVerify: false,
+};
+
 const CREDENTIAL_FAILURE_COPY: Record<RampKycCredentialFailureCode, CredentialFailureCopy> = {
   expired: { message: 'Your identity verification has expired. Please verify again.', offerVerify: true },
   not_yet_valid: {
@@ -148,14 +177,22 @@ const CREDENTIAL_FAILURE_COPY: Record<RampKycCredentialFailureCode, CredentialFa
   // The verification itself can't be trusted as presented — a fresh one fixes it.
   bad_signature: REVERIFY,
   malformed: REVERIFY,
-  untrusted_issuer: REVERIFY,
-  wrong_type: REVERIFY,
   bad_disclosure: REVERIFY,
+  // A valid verification of a kind the worker does not accept (yet): today, a
+  // Self credential before the YellowCard worker trusts its issuer and type.
+  // Verifying again would produce the same credential, so it is not offered.
+  untrusted_issuer: UNSUPPORTED_TYPE,
+  wrong_type: UNSUPPORTED_TYPE,
   // Our side couldn't complete the check — nothing for the user to redo.
   issuer_key_unpublished: TRY_LATER,
   resolver_error: TRY_LATER,
   verify_error: TRY_LATER,
 };
+
+/** The worker refused the credential itself: verifying again is what fixes it. */
+export function isReverifyCredentialFailure(code: RampKycCredentialFailureCode): boolean {
+  return CREDENTIAL_FAILURE_COPY[code].offerVerify;
+}
 
 export function KycCredentialFailureNotice({ code }: { code: RampKycCredentialFailureCode }) {
   const router = useRouter();
@@ -172,7 +209,7 @@ export function KycCredentialFailureNotice({ code }: { code: RampKycCredentialFa
             bgColor={BUTTON_BG_COLOR.primary}
             borderColor={BUTTON_BORDER_COLOR.primary}
             color={BUTTON_COLOR.white}
-            onClick={() => router.push(KYC_ROUTE)}
+            onClick={() => router.push(REVERIFY_ROUTE)}
           />
         </div>
       )}

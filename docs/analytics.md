@@ -125,7 +125,8 @@ properties are identical so shared tiles pick JAMBO up without changes.
 | `editor_flow_submission_failed`         | claim submit / evaluate threw                                            | same + `reason`                                    |
 
 `flowType` is `claim-submission` (portal value) or `claim-evaluation` (JAMBO
-only). Bid applications and the KYC form do not report.
+only). Bid applications do not report, and neither does the identity check
+(`screens/selfKyc.tsx`): it sends no events at all.
 
 Registration is **not** tracked: the auth hub does not tell JAMBO whether an
 account is new. If that is ever needed it belongs in the auth hub.

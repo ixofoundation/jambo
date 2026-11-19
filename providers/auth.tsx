@@ -27,6 +27,8 @@ import { setMatrixProfile, clearMatrixProfile } from '@store/slices/matrixProfil
 import { clearAllDrafts } from '@store/slices/claimDraftsSlice';
 import { clearProjects } from '@store/slices/projectsSlice';
 import { clearKycData } from '@store/slices/kycSlice';
+import { clearHubCredentialCache } from '@utils/kyc/hubCredentials';
+import { clearRejectedKycCredentials } from '@utils/approvePayment';
 
 const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const AUTH_VERSION = '2'; // Bump to force clean break from passkey-based accounts
@@ -118,6 +120,11 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     // the localStorage fallback must not surface the previous user's deck.
     clearDeckPrefsStorage();
     clearLocalCurrencyStorage();
+    // Identity claims read from the Auth Hub are held in memory only: drop them
+    // with the session.
+    clearHubCredentialCache();
+    // So are the credentials a verifier refused in this session.
+    clearRejectedKycCredentials();
     // Forget the PostHog person with the session (no-op until analytics is on).
     resetAnalytics();
     setIsLoggedIn(false);
