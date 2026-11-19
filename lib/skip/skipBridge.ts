@@ -2,7 +2,7 @@ import { ibc } from '@ixo/impactxclient-sdk';
 
 import { INJECTIVE_USDC_DENOM } from '@constants/usdc';
 import { IXO_CHAIN_ID, OFFRAMP_DESTINATION, SKIP_API_URL } from '@constants/yellowcard';
-import { OFFRAMP_RECEIVER_RE, timeoutProblem } from 'lib/skip/txChecks';
+import { OFFRAMP_RECEIVER_RE, SKIP_TIMEOUT_SECONDS, timeoutProblem } from 'lib/skip/txChecks';
 import { fetchWithTimeout } from '@utils/fetchTimeout';
 
 /**
@@ -273,6 +273,9 @@ export async function buildBridgeTx(params: {
         smart_relay: true,
         allow_multi_tx: false,
         allow_unsafe: true,
+        // Always name the IBC timeout: Skip's own default became 24 h on 18 Nov 2026,
+        // which validateBridgeTxs refuses (more than 2 h ahead). See txChecks.
+        timeout_seconds: SKIP_TIMEOUT_SECONDS,
       }),
     });
   } catch (err) {

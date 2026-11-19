@@ -37,6 +37,21 @@ export const SKIP_ENTRY_CONTRACTS: Readonly<Record<string, string>> = {
 /** The newest `timeout_timestamp` we accept on a signed transfer: now + 2 h (Skip uses ~5 min). */
 export const MAX_TIMEOUT_AHEAD_MS = 2 * 60 * 60 * 1000;
 
+/**
+ * The IBC timeout jambo asks Skip for, in seconds, on every `/v2/fungible/msgs`
+ * and `/msgs_direct` request for a transfer the user signs (the off-ramp bridge
+ * in lib/skip/skipBridge and the USDC upgrade in lib/skip/usdcUpgradeRoute).
+ *
+ * Why it is sent explicitly: between 16:13 and 19:17 UTC on 18 Nov 2026 Skip
+ * changed its default (used when a request names no `timeout_seconds`) from
+ * 5 minutes to 24 hours — its docs still say 5 minutes. `timeoutProblem` below
+ * refuses anything more than 2 h ahead (`MAX_TIMEOUT_AHEAD_MS`), so from then on
+ * no withdrawal or upgrade could be signed. 300 s is the old default, which
+ * Skip honours exactly (receiver and amount out unchanged — checked live
+ * 19 Nov 2026). The check itself is unchanged.
+ */
+export const SKIP_TIMEOUT_SECONDS = '300';
+
 const BECH32_RE = /^[a-z][a-z0-9]{0,82}1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{38,}$/;
 const EVM_RE = /^0x[0-9a-fA-F]{40}$/;
 const HEX32_RE = /^(0x)?[0-9a-fA-F]{64}$/;

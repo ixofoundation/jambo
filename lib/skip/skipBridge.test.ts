@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { toBech32 } from '@cosmjs/encoding';
 
 // Keep the real SDK out of the run: the MsgTransfer encoder is a pass-through here.
@@ -7,7 +7,8 @@ vi.mock('@ixo/impactxclient-sdk', () => ({
 }));
 
 import { INJECTIVE_USDC_DENOM, NOBLE_USDC_DENOM } from '@constants/usdc';
-import { BridgeBuildError, validateBridgeTxs } from './skipBridge';
+import { BridgeBuildError, buildBridgeTx, validateBridgeTxs } from './skipBridge';
+import { SKIP_TIMEOUT_SECONDS } from './txChecks';
 // Live, read-only Skip /v2/fungible/msgs_direct answer (30 Oct 2026, 20 USDC → Base), dummy addresses.
 import FX from './__fixtures__/skip-offramp-20usdc.json';
 
@@ -101,4 +102,45 @@ describe('validateBridgeTxs (live msgs_direct answer)', () => {
         quotedAmountOutMicro: String(BigInt(FX.route.amount_out) + BigInt(10)),
       }),
     ).not.toThrow());
+});
+
+describe('buildBridgeTx — the msgs_direct request names the IBC timeout', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends timeout_seconds "300" and still returns the checked transfer', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(FX.requestedAtMs);
+    const fetchSpy = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify(FX.msgs), { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const tx = await buildBridgeTx({
+      amountInMicro: FX.route.amount_in,
+      quotedAmountOutMicro: FX.route.amount_out,
+      userAddress: FX.user,
+      chainIdsToAddresses: FX.chain_ids_to_addresses,
+      expectedReceiver: FX_RECEIVER,
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toMatch(/\/skip\/v2\/fungible\/msgs_direct$/);
+    const body = JSON.parse(String(init?.body));
+    expect(SKIP_TIMEOUT_SECONDS).toBe('300');
+    expect(body.timeout_seconds).toBe('300');
+    expect(body.amount_in).toBe(FX.route.amount_in);
+    expect(tx.msgs).toHaveLength(1);
+    expect(tx.msgs[0].value.receiver).toBe(FX_RECEIVER);
+  });
+
+  it('an answer timing out 24 h ahead (Skip\'s default since 18 Nov 2026) is still refused', () =>
+    expectAbort(
+      tampered((m) => {
+        m.timeout_timestamp = String(BigInt(FX.requestedAtMs + 86_400_000) * BigInt(1_000_000));
+      }),
+    ));
 });

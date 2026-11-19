@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { toBase64, toBech32 } from '@cosmjs/encoding';
 
 // Keep the real SDK out of the run: the MsgTransfer encoder is a pass-through here.
@@ -11,6 +11,7 @@ import {
   UPGRADE_NOT_AVAILABLE,
   UPGRADE_START_FAILED,
   UsdcUpgradeError,
+  buildUpgradeMsg,
   parseUpgradeRoute,
   upgradeAddressList,
   validateUpgradeTxs,
@@ -18,6 +19,7 @@ import {
 // Live, read-only Skip /v2/fungible/msgs answers (30 Oct 2026), dummy addresses per role.
 import OSMOSIS from './__fixtures__/skip-upgrade-osmosis-5usdc.json';
 import TERRA from './__fixtures__/skip-upgrade-terra-1usdc.json';
+import { SKIP_TIMEOUT_SECONDS } from './txChecks';
 
 const bytes = (n: number) => new Uint8Array(20).fill(n);
 const USER = toBech32('ixo', bytes(1));
@@ -230,4 +232,49 @@ describe('validateUpgradeTxs (live answers)', () => {
     });
     expect(() => validateUpgradeTxs(json, expectFor(TERRA as unknown as Fixture))).not.toThrow();
   });
+});
+
+describe('buildUpgradeMsg — the msgs request names the IBC timeout', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('sends timeout_seconds "300" and still returns the checked transfer', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(OSMOSIS.requestedAtMs);
+    const fetchSpy = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(new Response(JSON.stringify(OSMOSIS.msgs), { status: 200 })),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const route = parseUpgradeRoute(OSMOSIS.route, {
+      sourceDenom: NOBLE_USDC_DENOM,
+      amountMicro: OSMOSIS.route.amount_in,
+    });
+    const chainAddresses = OSMOSIS.chain_addresses as Record<string, string>;
+    const addressList = upgradeAddressList(route.requiredChainAddresses, OSMOSIS.user, chainAddresses);
+    const m = await buildUpgradeMsg(route, addressList, OSMOSIS.user, chainAddresses);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toMatch(/\/skip\/v2\/fungible\/msgs$/);
+    const body = JSON.parse(String(init?.body));
+    expect(SKIP_TIMEOUT_SECONDS).toBe('300');
+    expect(body.timeout_seconds).toBe('300');
+    expect(body.amount_in).toBe(OSMOSIS.route.amount_in);
+    expect(m.value.sender).toBe(OSMOSIS.user);
+  });
+
+  it("an answer timing out 24 h ahead (Skip's default since 18 Nov 2026) is still refused", () =>
+    expectAbort(
+      () =>
+        validateUpgradeTxs(
+          tampered(OSMOSIS, (msg) => {
+            msg.timeout_timestamp = String(BigInt(OSMOSIS.requestedAtMs + 86_400_000) * BigInt(1_000_000));
+          }),
+          expectFor(OSMOSIS),
+        ),
+      'unexpected_msgs',
+    ));
 });

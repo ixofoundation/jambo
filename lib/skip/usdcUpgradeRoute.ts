@@ -3,7 +3,13 @@ import { fromBech32 } from '@cosmjs/encoding';
 import { INJECTIVE_USDC_DENOM } from '@constants/usdc';
 import { IXO_CHAIN_ID, SKIP_API_URL } from '@constants/yellowcard';
 import { type TrxMsg, type WireCosmosMsg, type WireCosmosTx, toTrxMsg } from 'lib/skip/skipBridge';
-import { memoValuesByKey, normAddress, timeoutProblem, upgradeMemoProblem } from 'lib/skip/txChecks';
+import {
+  SKIP_TIMEOUT_SECONDS,
+  memoValuesByKey,
+  normAddress,
+  timeoutProblem,
+  upgradeMemoProblem,
+} from 'lib/skip/txChecks';
 import { RequestTimeoutError, fetchWithTimeout } from '@utils/fetchTimeout';
 
 /**
@@ -333,6 +339,9 @@ export async function buildUpgradeMsg(
     address_list: addressList,
     operations: route.operations,
     slippage_tolerance_percent: SLIPPAGE_PERCENT,
+    // Always name the IBC timeout: Skip's own default became 24 h on 18 Nov 2026,
+    // which validateUpgradeTxs refuses (more than 2 h ahead). See txChecks.
+    timeout_seconds: SKIP_TIMEOUT_SECONDS,
   });
   return validateUpgradeTxs(json, {
     userAddress,
