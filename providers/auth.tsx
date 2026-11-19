@@ -319,6 +319,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         sessionMnemonic,
         sessionAuthenticatorId: authId,
         memo: options?.memo,
+        gas: options?.gas,
         onSigned: options?.onSigned,
       });
 

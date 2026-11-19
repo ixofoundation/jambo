@@ -15,6 +15,11 @@ type SignAndBroadcastParams = {
   feegrantGranter?: string;
   memo?: string;
   /**
+   * Gas limit for the whole transaction, when the default (250,000 × 1.7 per
+   * message) does not fit the message. The fee follows from it at the same price.
+   */
+  gas?: number;
+  /**
    * Called with the tx hash (upper-case hex of sha256(TxRaw bytes)) once the tx
    * is signed and BEFORE it is broadcast, so a caller can remember it first: a
    * reload, a closed tab or a lost connection during the inclusion wait can
@@ -103,9 +108,9 @@ async function findFeegrantGranter(userAddress: string): Promise<string | undefi
   }
 }
 
-const calculateGasFee = (messageCount: number): StdFee => {
+const calculateGasFee = (messageCount: number, gasLimit?: number): StdFee => {
   const gasUsed = messageCount * 250000;
-  const gas = gasUsed * 1.7;
+  const gas = gasLimit && gasLimit > 0 ? gasLimit : gasUsed * 1.7;
   const gasPriceStep = 0.035;
   const feeAmount = Math.round(gas * gasPriceStep);
   return {
@@ -125,6 +130,7 @@ export async function signAndBroadcastWithSessionKey({
   sessionAuthenticatorId,
   feegrantGranter,
   memo = '',
+  gas,
   onSigned,
 }: SignAndBroadcastParams): Promise<DeliverTxResponse> {
   const sessionWallet = await DirectSecp256k1HdWallet.fromMnemonic(sessionMnemonic, { prefix: 'ixo' });
@@ -151,7 +157,7 @@ export async function signAndBroadcastWithSessionKey({
   });
 
   // Calculate fee (chain can't simulate with nonCriticalExtensionOptions)
-  let fee: StdFee = calculateGasFee(messages.length);
+  let fee: StdFee = calculateGasFee(messages.length, gas);
 
   // Check for feegrant if not already provided
   const granter = feegrantGranter ?? (await findFeegrantGranter(address));

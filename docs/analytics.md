@@ -123,10 +123,21 @@ properties are identical so shared tiles pick JAMBO up without changes.
 | `editor_flow_submission_attempted`      | claim submit or evaluate started                                         | `flowType`, `entityDid`, `collectionId`, `claimId?` |
 | `editor_flow_submitted`                 | on-chain claim submit / evaluate succeeded                               | same + `claimId`                                   |
 | `editor_flow_submission_failed`         | claim submit / evaluate threw                                            | same + `reason`                                    |
+| `airtime_swap_started`                  | the user confirmed an amount and a swap was asked for                    | `amountZar`                                        |
+| `airtime_swap_burn_sent`                | the voucher burn was signed and sent                                     | `amountZar`                                        |
+| `airtime_swap_completed`                | the PIN was issued and shown                                             | `amountZar`, `test`                                |
+| `airtime_swap_owed`                     | the burn is verified, the PIN is not issued yet                          | `amountZar`                                        |
+| `airtime_swap_flagged`                  | the service flagged the swap for an operator                             | `amountZar`                                        |
+| `airtime_swap_refused`                  | a refusal was shown                                                      | `stage: request\|burn\|redeem\|read`, `code`       |
+| `airtime_pin_viewed`                    | the PIN of an earlier swap was read again                                | –                                                  |
 
 `flowType` is `claim-submission` (portal value) or `claim-evaluation` (JAMBO
 only). Bid applications do not report, and neither does the identity check
 (`screens/selfKyc.tsx`): it sends no events at all.
+
+The airtime swap events ([airtime-swap.md](airtime-swap.md)) never carry the
+PIN, the swap's reference or id, or a transaction hash. `code` is the airtime
+service's error code, or a local one (`local_*`, `burn_not_sent`, `swap_expired`).
 
 Registration is **not** tracked: the auth hub does not tell JAMBO whether an
 account is new. If that is ever needed it belongs in the auth hub.

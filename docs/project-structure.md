@@ -61,6 +61,7 @@ jambo-passkey-claims/
     useProtocolCollections.ts Collection data hook with entity filtering
     useNames.ts              Names and avatars from the IXO Names worker, see names.md
     useSteps.ts              Step navigation helper for multi-step flows
+    useAirtimeSwap.ts        Airtime swap flow (ask, burn, redeem, resume), see airtime-swap.md
 
   lib/
     auth/
@@ -79,6 +80,8 @@ jambo-passkey-claims/
       redirect.ts            Build SSO authorization URL and redirect
       tokens.ts              Token exchange and JWT validation
       pending.ts             Stage SSO data between callback and login
+    airtimeVoucher/          Airtime voucher worker: typed client, swap token, burn check,
+                             stored swaps, refusal copy (see airtime-swap.md)
     names/
       index.ts               App's IXO Names client (`@ixo/names-client`), see names.md
 
@@ -150,16 +153,17 @@ ReduxProvider (Redux store + PersistGate)
 
 ## Routing
 
-| Route | Page | Guard | Screen |
-| --- | --- | --- | --- |
-| `/` | `index.tsx` | None | Redirects to `/entities/:id` or `/auth` |
-| `/auth` | `auth/index.tsx` | GuestGuard | SSO entry point (Yoma sign-in button) |
-| `/auth/passkey` | `auth/passkey.tsx` | None | SSO callback handler |
-| `/auth/login` | `auth/login.tsx` | GuestGuard | Passkey login |
-| `/auth/register` | `auth/register.tsx` | GuestGuard | Passkey registration |
-| `/entities/[entityId]` | `entities/[entityId]/index.tsx` | AuthGuard | Dashboard |
-| `/entities/[entityId]/claimCollections/[collectionId]` | `entities/[entityId]/claimCollections/[collectionId].tsx` | AuthGuard | Collection detail |
-| `/profile` | `profile.tsx` | AuthGuard | User profile |
+| Route                                                  | Page                                                      | Guard      | Screen                                                                                            |
+| ------------------------------------------------------ | --------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| `/`                                                    | `index.tsx`                                               | None       | Redirects to `/entities/:id` or `/auth`                                                           |
+| `/auth`                                                | `auth/index.tsx`                                          | GuestGuard | SSO entry point (Yoma sign-in button)                                                             |
+| `/auth/passkey`                                        | `auth/passkey.tsx`                                        | None       | SSO callback handler                                                                              |
+| `/auth/login`                                          | `auth/login.tsx`                                          | GuestGuard | Passkey login                                                                                     |
+| `/auth/register`                                       | `auth/register.tsx`                                       | GuestGuard | Passkey registration                                                                              |
+| `/entities/[entityId]`                                 | `entities/[entityId]/index.tsx`                           | AuthGuard  | Dashboard                                                                                         |
+| `/entities/[entityId]/claimCollections/[collectionId]` | `entities/[entityId]/claimCollections/[collectionId].tsx` | AuthGuard  | Collection detail                                                                                 |
+| `/profile`                                             | `profile.tsx`                                             | AuthGuard  | User profile                                                                                      |
+| `/wallet/airtime`                                      | `wallet/airtime.tsx`                                      | AuthGuard  | Get airtime (only with `NEXT_PUBLIC_AIRTIME_VOUCHER_URL`), see [airtime-swap.md](airtime-swap.md) |
 
 ## Redux Store Shape
 
@@ -208,33 +212,34 @@ ReduxProvider (Redux store + PersistGate)
 
 ## API Routes
 
-| Route | Method | Purpose |
-| --- | --- | --- |
-| `/api/auth/initial-challenge` | GET | Generate a WebAuthn authentication challenge |
-| `/api/auth/get-secret` | POST | Retrieve encrypted mnemonic for a passkey-authenticated user |
-| `/api/auth/get-secret-secp` | POST | Retrieve encrypted mnemonic via secp256k1 signature |
-| `/api/feegrant/grant` | POST | Issue a feegrant to a user address (uses server-side `FEEGRANT_API_KEY`) |
-| `/api/matrix/create-user` | POST | Helper for Matrix user registration |
-| `/api/matrix/public-key` | GET | Public key endpoint for Matrix auth verification |
+| Route                         | Method | Purpose                                                                  |
+| ----------------------------- | ------ | ------------------------------------------------------------------------ |
+| `/api/auth/initial-challenge` | GET    | Generate a WebAuthn authentication challenge                             |
+| `/api/auth/get-secret`        | POST   | Retrieve encrypted mnemonic for a passkey-authenticated user             |
+| `/api/auth/get-secret-secp`   | POST   | Retrieve encrypted mnemonic via secp256k1 signature                      |
+| `/api/feegrant/grant`         | POST   | Issue a feegrant to a user address (uses server-side `FEEGRANT_API_KEY`) |
+| `/api/matrix/create-user`     | POST   | Helper for Matrix user registration                                      |
+| `/api/matrix/public-key`      | GET    | Public key endpoint for Matrix auth verification                         |
 
 ## Environment Variables
 
-| Variable | Public | Description |
-| --- | --- | --- |
-| `NEXT_PUBLIC_AUTHN_ORIGIN` | Yes | WebAuthn relying party origin (e.g., `http://localhost:3000`) |
-| `NEXT_PUBLIC_AUTHN_RP_ID` | Yes | WebAuthn relying party ID (e.g., `localhost`) |
-| `NEXT_PUBLIC_CHAIN_NETWORK` | Yes | Blockchain network: `mainnet`, `testnet`, `devnet`, or `local` |
-| `NEXT_PUBLIC_FEEGRANT_URL` | Yes | Feegrant service URL |
-| `FEEGRANT_API_KEY` | No | Server-side API key for feegrant issuance |
-| `NEXT_PUBLIC_MATRIX_HOMESERVER_URL` | Yes | Matrix homeserver base URL |
-| `NEXT_PUBLIC_MATRIX_ROOM_BOT_URL` | Yes | Room Bot service URL |
-| `NEXT_PUBLIC_MATRIX_BID_BOT_URL` | Yes | Bid Bot service URL |
-| `NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL` | Yes | Claim Bot service URL |
-| `NEXT_PUBLIC_NAMES_WORKER_URL` | Yes | Optional. IXO Names worker base URL; default per network (see [names.md](names.md)) |
-| `NEXT_PUBLIC_YOMA_SSO_ISSUER` | Yes | Yoma Keycloak realm URL |
-| `NEXT_PUBLIC_YOMA_SSO_CLIENT_ID` | Yes | OIDC client ID for this app |
-| `NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI` | Yes | OAuth redirect URI (must match Keycloak config) |
-| `NEXT_PUBLIC_YOMA_SSO_SCOPES` | Yes | OIDC scopes (default: `openid email profile`) |
+| Variable                            | Public | Description                                                                                                    |
+| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_AUTHN_ORIGIN`          | Yes    | WebAuthn relying party origin (e.g., `http://localhost:3000`)                                                  |
+| `NEXT_PUBLIC_AUTHN_RP_ID`           | Yes    | WebAuthn relying party ID (e.g., `localhost`)                                                                  |
+| `NEXT_PUBLIC_CHAIN_NETWORK`         | Yes    | Blockchain network: `mainnet`, `testnet`, `devnet`, or `local`                                                 |
+| `NEXT_PUBLIC_FEEGRANT_URL`          | Yes    | Feegrant service URL                                                                                           |
+| `FEEGRANT_API_KEY`                  | No     | Server-side API key for feegrant issuance                                                                      |
+| `NEXT_PUBLIC_MATRIX_HOMESERVER_URL` | Yes    | Matrix homeserver base URL                                                                                     |
+| `NEXT_PUBLIC_MATRIX_ROOM_BOT_URL`   | Yes    | Room Bot service URL                                                                                           |
+| `NEXT_PUBLIC_MATRIX_BID_BOT_URL`    | Yes    | Bid Bot service URL                                                                                            |
+| `NEXT_PUBLIC_MATRIX_CLAIM_BOT_URL`  | Yes    | Claim Bot service URL                                                                                          |
+| `NEXT_PUBLIC_NAMES_WORKER_URL`      | Yes    | Optional. IXO Names worker base URL; default per network (see [names.md](names.md))                            |
+| `NEXT_PUBLIC_AIRTIME_VOUCHER_URL`   | Yes    | Optional. Airtime voucher worker origin; blank hides the airtime swap (see [airtime-swap.md](airtime-swap.md)) |
+| `NEXT_PUBLIC_YOMA_SSO_ISSUER`       | Yes    | Yoma Keycloak realm URL                                                                                        |
+| `NEXT_PUBLIC_YOMA_SSO_CLIENT_ID`    | Yes    | OIDC client ID for this app                                                                                    |
+| `NEXT_PUBLIC_YOMA_SSO_REDIRECT_URI` | Yes    | OAuth redirect URI (must match Keycloak config)                                                                |
+| `NEXT_PUBLIC_YOMA_SSO_SCOPES`       | Yes    | OIDC scopes (default: `openid email profile`)                                                                  |
 
 The list of entities (projects) and the per-entity claim-collection blacklist are
 sourced at runtime from the jambo worker whitelist (`NEXT_PUBLIC_JAMBO_WORKER_URL`),

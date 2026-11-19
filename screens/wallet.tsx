@@ -4,17 +4,20 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
 import { useLocalCurrency } from '@hooks/useLocalCurrency';
 import useUsdcUpgrade from '@hooks/useUsdcUpgrade';
+import useVoucherBalance from '@hooks/useVoucherBalance';
 import { type UsdcBalances, fromMicro, getWalletBalances } from '@utils/usdcBalance';
 import { formatCurrency } from '@utils/localCurrency';
 import Header from '@components/Header/Header';
 import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
 import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
 import { RAMPS_PAUSED } from '@constants/yellowcard';
+import { AIRTIME_SWAP_ENABLED, AIRTIME_SWAP_ROUTE } from '@constants/airtimeVoucher';
 import {
   ArrowDownLeftIcon,
   ArrowUpRightIcon,
   BanknoteIcon,
   CheckIcon,
+  ChevronRightIcon,
   CopyIcon,
   LandmarkIcon,
 } from '@components/Icons/icons';
@@ -44,6 +47,7 @@ export default function Wallet() {
   const [refresh, setRefresh] = useState(0);
   const onUpgradeSettled = useCallback(() => setRefresh((n) => n + 1), []);
   const upgrade = useUsdcUpgrade({ balances: usdcBalances, onSettled: onUpgradeSettled });
+  const voucherBalance = useVoucherBalance(refresh);
 
   useEffect(() => {
     if (!address) return;
@@ -172,6 +176,31 @@ export default function Wallet() {
           </div>
           <div style={{ fontWeight: 800, fontSize: 17 }}>{balance === null ? '· · ·' : fmtMoney(balance)}</div>
         </div>
+        {AIRTIME_SWAP_ENABLED && (
+          <button
+            type='button'
+            className='status-item'
+            style={{ width: '100%', border: 0, textAlign: 'left', font: 'inherit', color: 'inherit', marginBottom: 12 }}
+            onClick={() => router.push(AIRTIME_SWAP_ROUTE)}
+          >
+            <span className='notif-ic' style={{ background: 'var(--mint)', color: 'var(--green-primary)' }}>
+              <ArrowUpRightIcon size={20} />
+            </span>
+            <div className='status-item__body'>
+              <div className='status-item__title'>Get airtime</div>
+              <div className='status-item__meta'>
+                {voucherBalance === null
+                  ? 'Swap airtime vouchers for a PIN'
+                  : voucherBalance > 0
+                  ? `You have R${voucherBalance} in airtime vouchers`
+                  : 'You have no airtime vouchers yet'}
+              </div>
+            </div>
+            <div className='status-item__trailing'>
+              <ChevronRightIcon size={18} />
+            </div>
+          </button>
+        )}
         <div className='section-header'>
           <h2>Receive</h2>
         </div>
