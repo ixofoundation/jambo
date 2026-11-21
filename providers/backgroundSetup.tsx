@@ -211,7 +211,7 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     }
   }, [status, error]);
 
-  const awaitCompletion = useCallback((): Promise<void> => {
+  const awaitCompletion = useCallback((opts?: { quiet?: boolean }): Promise<void> => {
     const current = statusRef.current;
     if (current === 'success' && mxClientRef.current) {
       return Promise.resolve();
@@ -221,7 +221,8 @@ export const BackgroundSetupProvider: FC<BackgroundSetupProviderProps> = ({ chil
     }
     // 'idle' (effect hasn't started yet) or 'running' — wait for the matrix client
     // to be ready. Resolved by the status effect below when status flips to success.
-    setShowDetails(true);
+    // A quiet caller (a passive status read) waits without raising the overlay.
+    if (!opts?.quiet) setShowDetails(true);
     return new Promise<void>((resolve, reject) => {
       awaitersRef.current.push({ resolve, reject });
     });

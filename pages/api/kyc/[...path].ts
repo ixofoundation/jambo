@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+import { isAllowedLegacyKycPatchBody, isAllowedLegacyKycRequest } from '@utils/kyc/legacyProxy';
+
 const KYC_SERVER_URL = (process.env.KYC_SERVER_URL || '').trim().replace(/\/$/, '');
 const ALLOW_INSECURE_TLS = process.env.KYC_PROXY_INSECURE === 'true';
 
@@ -29,6 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const pathParts = (req.query.path as string[] | undefined) ?? [];
+  // The old check can only be finished, never started: forward nothing else.
+  if (!isAllowedLegacyKycRequest(req.method, pathParts)) {
+    res.setHeader('Allow', 'GET, PATCH');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
   const qs = req.url?.includes('?') ? '?' + req.url.split('?')[1] : '';
   const targetUrl = `${KYC_SERVER_URL}/${pathParts.join('/')}${qs}`;
 
@@ -41,6 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const body = await readBody(req);
+    if (req.method === 'PATCH' && !isAllowedLegacyKycPatchBody(body?.toString('utf8'))) {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
     const upstream = await fetch(targetUrl, {
       method: req.method,
       headers,

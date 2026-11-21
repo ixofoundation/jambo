@@ -1,9 +1,15 @@
 import type { MatrixClient } from 'matrix-js-sdk';
 import { createMatrixClaimBotClient } from '@ixo/matrixclient-sdk';
 
-import { KYC_AML_LEVEL1_CREDENTIAL_KEY } from '@constants/approvePayment';
-import { readAllCredentialIndexEntries, readAllPiiIndexEntries } from '@utils/matrixCredential';
+import {
+  APPROVE_PAYMENT_IDENTITY_KEYS,
+  IDENTITY_LEVEL1_CREDENTIAL_KEY,
+  KYC_AML_LEVEL1_CREDENTIAL_KEY,
+} from '@constants/approvePayment';
+import { IDENTITY_LEVEL1_VCT, SELF_ISSUER_DID } from '@constants/self';
+import { type ListedCredential, readAllCredentialIndexEntries, readAllPiiIndexEntries } from '@utils/matrixCredential';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
+import type { KycSource } from 'types/kyc';
 
 /**
  * Fetch and parse a single claim from the claim bot, mirroring the pattern used in
@@ -51,6 +57,27 @@ export function findKycLevel1IndexEntry(mxClient: MatrixClient, roomId: string) 
     entries.find((e) => e.credentialType === KYC_AML_LEVEL1_CREDENTIAL_KEY) ??
     null
   );
+}
+
+/**
+ * Locate the Self `IdentityLevel1` credential the Auth Hub copied into the
+ * user's matrix room. The Hub files it under the state key `identitylevel1`
+ * with `credentialType` = the full vct; match either, in case another writer
+ * used a different state key. Newest entry from this network's Self issuer
+ * first (a re-issued credential replaces the older one).
+ */
+export function findIdentityLevel1IndexEntry(mxClient: MatrixClient, roomId: string): ListedCredential | null {
+  const matches = readAllCredentialIndexEntries(mxClient, roomId).filter(
+    (e) =>
+      e.credentialKey === IDENTITY_LEVEL1_CREDENTIAL_KEY ||
+      e.credentialType === IDENTITY_LEVEL1_VCT ||
+      e.credentialType === IDENTITY_LEVEL1_CREDENTIAL_KEY,
+  );
+  if (matches.length === 0) return null;
+  const fromSelf = (e: ListedCredential) => (e.issuerDid === SELF_ISSUER_DID ? 1 : 0);
+  return [...matches].sort(
+    (a, b) => fromSelf(b) - fromSelf(a) || (b.storedAt || '').localeCompare(a.storedAt || ''),
+  )[0];
 }
 
 /**
@@ -134,6 +161,10 @@ function joinAddressParts(parts: Array<unknown>): string | undefined {
   return clean.length > 0 ? clean.join(', ') : undefined;
 }
 
+/** The identity fields the approve-payment form takes from the normalised
+ *  KYC profile (a structural subset of `KycPrefill` in utils/kycPrefill). */
+export type ApprovePaymentProfile = { name?: string; email?: string; dob?: string; idNumber?: string };
+
 /**
  * Build the field prefill dict for the approve-payment claim form from the source
  * claim data and the user's credential-data (PII / kycamllevel1 fallback). Missing
@@ -143,22 +174,27 @@ function joinAddressParts(parts: Array<unknown>): string | undefined {
 export function buildApprovePaymentPrefill(
   src: Record<string, any> | null | undefined,
   crd: Record<string, any> | null | undefined,
+  /** The normalised identity (`loadKycPrefill`), used only when there is no
+   *  legacy PII blob: a Self-verified user has none. */
+  profile?: ApprovePaymentProfile | null,
 ): Record<string, any> {
   const out: Record<string, any> = {};
   const set = (k: string, v: any) => {
     if (v !== undefined && v !== null && v !== '') out[k] = v;
   };
+  // Legacy users keep exactly the PII-blob values; the profile never mixes in.
+  const fallback = crd ? null : profile;
 
   const given = readPersonalField(crd, 'given_name');
   const family = readPersonalField(crd, 'family_name');
   const name = [given, family].filter(Boolean).join(' ').trim();
-  set('schema:name', name);
+  set('schema:name', fallback ? fallback.name : name);
 
   set('schema:telephone', src?.['org:businessContactNumber']);
-  set('schema:email', readPersonalField(crd, 'email'));
+  set('schema:email', fallback ? fallback.email : readPersonalField(crd, 'email'));
   set('schema:address', buildSourceAddress(src));
-  set('schema:birthDate', readPersonalField(crd, 'birth_date'));
-  set('schema:identityNumber', readPersonalField(crd, 'identifier_1'));
+  set('schema:birthDate', fallback ? fallback.dob : readPersonalField(crd, 'birth_date'));
+  set('schema:identityNumber', fallback ? fallback.idNumber : readPersonalField(crd, 'identifier_1'));
   // Country + currency: only ZA / NG are valid choices on the form. Default to ZA
   // when the source claim doesn't specify (or specifies anything else). The currency
   // is derived directly from the country: ZA → ZAR, NG → NGN. (The template also
@@ -171,6 +207,25 @@ export function buildApprovePaymentPrefill(
   set('schema:accountNumber', src?.['schema:bankAccount']);
   set('org:bankName', src?.['org:bankName']);
 
+  return out;
+}
+
+/**
+ * Survey data without the identity fields the prefill supplies, for the draft
+ * saved to redux-persist: personal data from the credential is kept in memory
+ * only. A field the prefill does not supply (so the person typed it) is kept,
+ * or it would be lost when the draft is restored; the others are filled in
+ * again from the prefill every time the form opens.
+ */
+export function stripPrefilledIdentity(
+  data: Record<string, any> | null | undefined,
+  prefill: Record<string, any> | null | undefined,
+): Record<string, any> {
+  const out: Record<string, any> = { ...(data ?? {}) };
+  for (const key of APPROVE_PAYMENT_IDENTITY_KEYS) {
+    const supplied = prefill?.[key];
+    if (supplied !== undefined && supplied !== null && supplied !== '') delete out[key];
+  }
   return out;
 }
 
@@ -227,19 +282,18 @@ export async function loadKycPii(
   return { eventId: entry.eventId, pii };
 }
 
-export async function loadKycLevel1Credential(
+/** Fetch + decrypt the `ixo.credential` timeline event an index entry points at. */
+async function loadCredentialRecord(
   mxClient: MatrixClient,
   roomId: string,
-): Promise<{ eventId: string; credential: Record<string, any> } | null> {
-  const entry = findKycLevel1IndexEntry(mxClient, roomId);
-  if (!entry) return null;
-
+  eventId: string,
+): Promise<{ eventId: string; credential: Record<string, any> }> {
   const room = mxClient.getRoom(roomId);
   if (!room) throw new Error('Matrix room not loaded');
 
-  let event = room.findEventById(entry.eventId);
+  let event = room.findEventById(eventId);
   if (!event) {
-    const raw = await mxClient.fetchRoomEvent(roomId, entry.eventId);
+    const raw = await mxClient.fetchRoomEvent(roomId, eventId);
     const mapper = mxClient.getEventMapper();
     event = mapper(raw);
   }
@@ -260,22 +314,142 @@ export async function loadKycLevel1Credential(
   } catch {
     throw new Error('KYC credential is not valid JSON');
   }
-  return { eventId: entry.eventId, credential };
+  return { eventId, credential };
+}
+
+export async function loadKycLevel1Credential(
+  mxClient: MatrixClient,
+  roomId: string,
+): Promise<{ eventId: string; credential: Record<string, any> } | null> {
+  const entry = findKycLevel1IndexEntry(mxClient, roomId);
+  if (!entry) return null;
+  return loadCredentialRecord(mxClient, roomId, entry.eventId);
+}
+
+/** The Self `IdentityLevel1` record the Auth Hub wrote to the room (same
+ *  `SdJwtCredentialRecord` shape as the legacy one), or null when absent. */
+export async function loadIdentityLevel1Credential(
+  mxClient: MatrixClient,
+  roomId: string,
+): Promise<{ eventId: string; credential: Record<string, any> } | null> {
+  const entry = findIdentityLevel1IndexEntry(mxClient, roomId);
+  if (!entry?.eventId) return null;
+  return loadCredentialRecord(mxClient, roomId, entry.eventId);
 }
 
 /**
- * The raw KYC SD-JWT presentation string (`<jwt>~<disclosure>~…`) to send to a
- * verifier (e.g. the YellowCard worker's KYC gate). For an SD-JWT record the
- * raw credential lives in the record's `credential` field. Returns null when no
- * credential is held; throws only if it's present but undecryptable.
+ * The raw SD-JWT presentation string (`<jwt>~<disclosure>~…`) of ONE credential
+ * source, to send to a verifier (e.g. the YellowCard worker's KYC gate). For an
+ * SD-JWT record the raw credential, with every disclosure, lives in the
+ * record's `credential` field. Returns null when that credential is not held;
+ * throws only if it's present but undecryptable.
  */
-export async function loadKycCredentialJwt(
+async function loadKycCredentialJwtForSource(
   mxClient: MatrixClient,
   roomId: string,
+  source: KycSource,
 ): Promise<string | null> {
-  const loaded = await loadKycLevel1Credential(mxClient, roomId);
+  const loaded =
+    source === 'identitylevel1'
+      ? await loadIdentityLevel1Credential(mxClient, roomId)
+      : await loadKycLevel1Credential(mxClient, roomId);
   const record = loaded?.credential;
   if (!record) return null;
   const raw = record.credential;
   return typeof raw === 'string' && raw.includes('~') ? raw : null;
+}
+
+/**
+ * When an SD-JWT says it expires (its own `exp`, unix seconds); null when it
+ * names no expiry or can't be read. Read only: the signature is the
+ * verifier's to check.
+ */
+function sdJwtExpiry(sdJwt: string): number | null {
+  try {
+    const payload = sdJwt.split('~')[0].split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const exp = JSON.parse(atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4)))?.exp;
+    return typeof exp === 'number' && Number.isFinite(exp) ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Legacy credentials a verifier refused in this session (memory only, never
+ * stored). Sending the same one again would be refused again. The credential
+ * itself is not kept here, only its SHA-256.
+ */
+const rejectedThisSession = new Set<string>();
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * The verifier could not accept this credential and asked for a new
+ * verification. Resolves once it is noted (await it before choosing the
+ * credential again); never rejects.
+ */
+export async function noteKycCredentialRejected(sdJwt: string | null | undefined): Promise<void> {
+  if (!sdJwt) return;
+  try {
+    rejectedThisSession.add(await sha256Hex(sdJwt));
+  } catch {
+    // No Web Crypto here: the credential is not noted, and is sent as before.
+  }
+}
+
+async function wasRejectedThisSession(sdJwt: string): Promise<boolean> {
+  if (rejectedThisSession.size === 0) return false;
+  try {
+    return rejectedThisSession.has(await sha256Hex(sdJwt));
+  } catch {
+    return false;
+  }
+}
+
+/** Forget the refused credentials (call on sign-out). */
+export function clearRejectedKycCredentials(): void {
+  rejectedThisSession.clear();
+}
+
+/**
+ * The raw KYC SD-JWT to present: the legacy `kycamllevel1` credential when the
+ * user holds one (exactly as before, even when a Self credential also exists),
+ * otherwise the Self `IdentityLevel1` credential.
+ *
+ * One exception, for a user who verified again with Self: when the legacy
+ * credential has expired by its own `exp`, or a verifier refused it in this
+ * session, the Self credential is sent instead if one is held.
+ */
+export async function loadKycCredentialJwt(
+  mxClient: MatrixClient,
+  roomId: string,
+  now: number = Date.now(),
+): Promise<string | null> {
+  return (await selectKycCredentialJwt(mxClient, roomId, now)).jwt;
+}
+
+/**
+ * `loadKycCredentialJwt`, also saying which credential was chosen, so a form
+ * can show the identity of the credential it is about to send.
+ */
+export async function selectKycCredentialJwt(
+  mxClient: MatrixClient,
+  roomId: string,
+  now: number = Date.now(),
+): Promise<{ jwt: string | null; source: KycSource }> {
+  if (!findKycLevel1IndexEntry(mxClient, roomId)) {
+    return { jwt: await loadKycCredentialJwtForSource(mxClient, roomId, 'identitylevel1'), source: 'identitylevel1' };
+  }
+  const legacy = await loadKycCredentialJwtForSource(mxClient, roomId, 'kycamllevel1');
+  if (!legacy) return { jwt: legacy, source: 'kycamllevel1' };
+  const exp = sdJwtExpiry(legacy);
+  const unusable = (exp !== null && exp * 1000 <= now) || (await wasRejectedThisSession(legacy));
+  if (!unusable) return { jwt: legacy, source: 'kycamllevel1' };
+  const self = await loadKycCredentialJwtForSource(mxClient, roomId, 'identitylevel1').catch(() => null);
+  return self ? { jwt: self, source: 'identitylevel1' } : { jwt: legacy, source: 'kycamllevel1' };
 }

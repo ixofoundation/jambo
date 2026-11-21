@@ -20,23 +20,9 @@ async function handleError(res: Response): Promise<never> {
   throw new Error(`KYC server error: ${msg}`);
 }
 
-export interface InitiateKycBody {
-  protocolId: string;
-  claimCollectionId?: string;
-  deedOfferId?: string;
-  address: string;
-  data?: any;
-}
-
-export async function initiateKyc(userDid: string, body: InitiateKycBody): Promise<void> {
-  const headers = await ucanAuthHeaders(userDid);
-  const res = await fetch(`${KYC_API_BASE}/kycaml/${encodeURIComponent(userDid)}`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) await handleError(res);
-}
+// The old identity check (ixo-kyc-server). It can no longer be started: the
+// call that did so is gone. What remains lets a person who is midway through a
+// check finish it (docs/self-kyc-plan.md 4.6).
 
 export interface KycRedirectToken {
   token: string;
@@ -45,6 +31,7 @@ export interface KycRedirectToken {
   ts: number;
 }
 
+/** Reopens the document-scan step of a check that was already started ("Continue verification"). */
 export async function fetchKycRedirect(userDid: string, protocolId: string): Promise<KycRedirectToken> {
   const headers = await ucanAuthHeaders(userDid);
   const res = await fetch(

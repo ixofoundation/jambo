@@ -1,15 +1,19 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 
 import Button, { BUTTON_BG_COLOR, BUTTON_BORDER_COLOR, BUTTON_COLOR, BUTTON_SIZE } from '@components/Button/Button';
-import { KYC_ENTITY_ID, KycStatus, isReadyToSave, isTerminalFailure, isTerminalSuccess } from '@constants/kyc';
+import Loader from '@components/Loader/Loader';
+import { KycStatus, isReadyToSave, isTerminalSuccess } from '@constants/kyc';
+import { SELF_KYC_ENABLED } from '@constants/self';
 import { BackgroundSetupContext } from '@contexts/backgroundSetup';
 import { useAuth } from '@hooks/useAuth';
-import { useKycStatus } from '@hooks/useKycStatus';
-import { useAppDispatch, useAppSelector } from '@store/hooks';
+import { useKyc } from '@hooks/useKyc';
+import { useLegacyKyc } from '@hooks/useLegacyKyc';
+import { useAppDispatch } from '@store/hooks';
 import { setRedirectedAt } from '@store/slices/kycSlice';
-import { loadKycForm } from '@store/thunks/kycThunks';
+import { findIdentityLevel1IndexEntry } from '@utils/approvePayment';
+import { type KycCardView, resolveKycCardView } from '@utils/kyc/legacyCheck';
 import { fetchKycRedirect } from '@utils/kycServer';
 import { readAllCredentialIndexEntries } from '@utils/matrixCredential';
 import SupportIconButton from '@components/Support/SupportIconButton';
@@ -35,8 +39,31 @@ const iconBoxStyle = {
   flex: '0 0 auto',
 } as const;
 
-// Maps each KYC AML server status to a short user-facing description. Includes whether the user
-// needs to do anything next. `undefined` is treated as "no KYC started yet".
+const KYC_ROUTE = '/profile/credentials/kyc';
+
+const VERIFIED_MESSAGE =
+  'Your credential has been successfully issued and securely saved. \nYour verification is complete and no further action is required.';
+
+/** The card's subtitle and message for every state but an old check in flight. */
+const VIEW_COPY: Record<Exclude<KycCardView, 'legacy'>, { subtitle: string; message: string }> = {
+  checking: { subtitle: 'Checking…', message: '' },
+  verified: { subtitle: 'Verified', message: VERIFIED_MESSAGE },
+  start: {
+    subtitle: 'Get started',
+    message: 'Some features need a verified identity. It takes a few minutes and you only need to do it once.',
+  },
+  pending: {
+    subtitle: 'Check in progress',
+    message: 'Your identity check is in progress. Open it to see where it stands or to continue.',
+  },
+  unavailable: {
+    subtitle: 'Couldn’t check',
+    message: 'We couldn’t check your identity verification. Please try again.',
+  },
+  not_available: { subtitle: 'Not available', message: 'Identity verification is not available right now.' },
+};
+
+// Old check only (ixo-kyc-server): maps each server status to a short user-facing description.
 function prettyStatus(status?: KycStatus | null): string {
   switch (status) {
     case KycStatus.Verify:
@@ -100,14 +127,31 @@ function statusLabel(status?: KycStatus): string {
   }
 }
 
+/** What an old check in flight asks of the person next. */
+type LegacyStep = 'continue' | 'save' | 'refresh';
+
+function legacyStep(status: KycStatus | undefined, saved: boolean): LegacyStep {
+  if (status === KycStatus.Verify) return 'continue';
+  // Issued: the app still has to save the credential to the Vault.
+  if (isReadyToSave(status) && !saved) return 'save';
+  return 'refresh';
+}
+
 export default function KycCredentialsCard() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { did, address, matrixRoomId } = useAuth();
+  const { did, matrixRoomId } = useAuth();
   const { getMatrixClient } = useContext(BackgroundSetupContext);
 
-  const protocolId = KYC_ENTITY_ID || null;
+  // The one "is this person verified" state, shared with the ramps.
+  const kyc = useKyc();
+  const kycRefresh = kyc.refresh;
+  // The old check, only for a person known not to be verified.
+  const legacy = useLegacyKyc(kyc.status !== 'checking' && !kyc.verified);
+  const { protocolId } = legacy;
+
   const [redirectBusy, setRedirectBusy] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const { entityDid: supportEntityDid, loading: supportLoading, error: supportError } = useKycSupportEntityDid();
 
   const onSupportClickFallback = useCallback(() => {
@@ -118,18 +162,62 @@ export default function KycCredentialsCard() {
     toast.error(supportError || 'Support is not available right now.');
   }, [supportLoading, supportError]);
 
-  const entry = useAppSelector((state) => (protocolId ? state.kyc.byProtocolId[protocolId] : undefined));
+  // The old check ended with the credential saved: the Vault now holds it, so
+  // re-read the shared state (it answers `legacy` and the card shows verified).
+  const legacyDone =
+    !!protocolId && kyc.status !== 'checking' && !kyc.verified && (isTerminalSuccess(legacy.status) || legacy.saved);
+  const [legacyDoneConfirmed, setLegacyDoneConfirmed] = useState(false);
+  useEffect(() => {
+    if (!legacyDone) return;
+    let cancelled = false;
+    void kycRefresh().finally(() => {
+      if (!cancelled) setLegacyDoneConfirmed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [legacyDone, kycRefresh]);
 
-  const status = entry?.status;
-  const stopPolling = isTerminalSuccess(status) || isTerminalFailure(status);
+  const view: KycCardView =
+    legacyDone && !legacyDoneConfirmed
+      ? 'checking'
+      : resolveKycCardView({
+          kycStatus: kyc.status,
+          legacyInFlight: legacy.inFlight,
+          legacyChecked: legacy.checked,
+          selfEnabled: SELF_KYC_ENABLED,
+        });
 
-  const { loading, saving, saved, error, refresh, saveCredential } = useKycStatus({
-    did,
-    protocolId,
-    address,
-    enabled: !!did && !!protocolId && !stopPolling,
-  });
+  // The Auth Hub copies the Self credential into the Vault; until that copy is
+  // here there is nothing for the credential screen to open.
+  const [selfCredentialCid, setSelfCredentialCid] = useState<string | null>(null);
+  useEffect(() => {
+    if (kyc.status !== 'self') {
+      setSelfCredentialCid(null);
+      return;
+    }
+    // An unencrypted index read: cheap enough to repeat.
+    const read = () => {
+      const mxClient = getMatrixClient();
+      const entry = mxClient && matrixRoomId ? findIdentityLevel1IndexEntry(mxClient, matrixRoomId) : null;
+      setSelfCredentialCid(entry?.cid || null);
+      return !!entry?.cid;
+    };
+    // The copy may sync after the card first read it: look again when the
+    // person comes back to the page, and after every `refresh()` (a new `kyc`).
+    if (read()) return;
+    const onReturn = () => {
+      if (document.visibilityState !== 'hidden') read();
+    };
+    window.addEventListener('focus', onReturn);
+    document.addEventListener('visibilitychange', onReturn);
+    return () => {
+      window.removeEventListener('focus', onReturn);
+      document.removeEventListener('visibilitychange', onReturn);
+    };
+  }, [kyc, getMatrixClient, matrixRoomId]);
 
+  const { saveCredential } = legacy;
   const onSaveClick = useCallback(() => {
     saveCredential().catch((err) => {
       const message = err instanceof Error ? err.message : String(err);
@@ -137,15 +225,7 @@ export default function KycCredentialsCard() {
     });
   }, [saveCredential]);
 
-  useEffect(() => {
-    if (!did || !protocolId) return;
-    dispatch(loadKycForm())
-      .unwrap()
-      .catch(() => {
-        // silent — the KYC page will surface the error if the user navigates there
-      });
-  }, [dispatch, did, protocolId]);
-
+  // Old check only: reopens the ComplyCube step of a check that was already started.
   const redirectToWebview = useCallback(async () => {
     if (!did || !protocolId) return;
     // Open the tab synchronously within the user gesture so Safari doesn't
@@ -171,13 +251,31 @@ export default function KycCredentialsCard() {
     }
   }, [did, dispatch, protocolId]);
 
-  const onAcquireClick = useCallback(() => {
-    router.push('/profile/credentials/kyc');
+  const onOpenCheck = useCallback(() => {
+    router.push(KYC_ROUTE);
   }, [router]);
+
+  // The way out of an old check that is stalled or abandoned: leave it as it
+  // is and do the new check. Not offered once the old credential is issued or
+  // being issued (`legacy.canSkip`): that one is finished here.
+  const { skip: skipLegacy } = legacy;
+  const onUseNewCheck = useCallback(() => {
+    skipLegacy();
+    router.push(KYC_ROUTE);
+  }, [router, skipLegacy]);
+
+  const onRetry = useCallback(() => {
+    setRetrying(true);
+    void kycRefresh().finally(() => setRetrying(false));
+  }, [kycRefresh]);
 
   // Navigate the "Verified" button straight to the most recently stored credential.
   // Falls back to the credentials list when nothing is found or matrix isn't ready.
   const onVerifiedClick = useCallback(() => {
+    if (kyc.status === 'self') {
+      if (selfCredentialCid) router.push(`/profile/credentials/${encodeURIComponent(selfCredentialCid)}`);
+      return;
+    }
     const mxClient = getMatrixClient();
     if (!mxClient || !matrixRoomId) {
       router.push('/profile/credentials');
@@ -190,55 +288,18 @@ export default function KycCredentialsCard() {
     } else {
       router.push('/profile/credentials');
     }
-  }, [getMatrixClient, matrixRoomId, router]);
+  }, [getMatrixClient, kyc.status, matrixRoomId, router, selfCredentialCid]);
 
-  const view = useMemo(() => {
-    if (isTerminalSuccess(status)) {
-      return {
-        variant: 'success' as const,
-        message: statusLabel(KycStatus.Complete),
-      };
-    }
-
-    if (isReadyToSave(status) || (saved && status === KycStatus.Issued)) {
-      // Server has issued the credential; the client still has to save it to the matrix room.
-      // Once saved, the server transitions to Complete on its next poll. Keep showing
-      // ready-to-save here even if local `saved` flipped, in case the next poll hasn't landed.
-      return {
-        variant: saved ? ('success' as const) : ('ready-to-save' as const),
-        message: saved ? statusLabel(KycStatus.Complete) : statusLabel(KycStatus.Issued),
-      };
-    }
-
-    if (isTerminalFailure(status)) {
-      return {
-        variant: 'failure' as const,
-        message: statusLabel(status) || 'Your KYC verification could not be completed.',
-      };
-    }
-
-    if (status === KycStatus.Verify) {
-      return {
-        variant: 'verify-retry' as const,
-        message: statusLabel(KycStatus.Verify),
-      };
-    }
-
-    if (status && status !== KycStatus.Unknown) {
-      return {
-        variant: 'in-progress' as const,
-        message: statusLabel(status) || 'KYC verification in progress…',
-      };
-    }
-
-    return {
-      variant: 'idle' as const,
-      message: 'Some features require a KYC Credential. Press the button below to begin verification.',
-    };
-  }, [saved, status]);
-
-  if (!KYC_ENTITY_ID) return null;
   if (!did) return null;
+
+  const step = view === 'legacy' ? legacyStep(legacy.status, legacy.saved) : null;
+  const subtitle = view === 'legacy' ? prettyStatus(legacy.status) : VIEW_COPY[view].subtitle;
+  const message =
+    view === 'legacy'
+      ? legacy.saved && isReadyToSave(legacy.status)
+        ? statusLabel(KycStatus.Complete)
+        : statusLabel(legacy.status) || 'Your verification is in progress…'
+      : VIEW_COPY[view].message;
 
   return (
     <div style={cardStyle}>
@@ -270,13 +331,15 @@ export default function KycCredentialsCard() {
         <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: '15px', fontWeight: 500, lineHeight: 1.25 }}>Identity Credential</span>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary, #777)', lineHeight: 1.25, marginTop: '2px' }}>
-            {prettyStatus(status)}
+            {subtitle}
           </span>
         </div>
         {/* Help lives here (not in the dock): visible until the credential is
-            actually obtained — anyone still without it can reach support. */}
+            actually obtained — anyone still without it can reach support. The
+            support room belongs to the KYC protocol entity, so it needs that id. */}
         {protocolId &&
-          view.variant !== 'success' &&
+          view !== 'verified' &&
+          view !== 'checking' &&
           (supportEntityDid ? (
             <SupportLauncher entityDid={supportEntityDid} />
           ) : (
@@ -284,23 +347,30 @@ export default function KycCredentialsCard() {
           ))}
       </div>
 
-      <p
-        style={{
-          margin: '0 0 16px',
-          fontSize: '14px',
-          lineHeight: 1.5,
-          color: 'var(--text-primary)',
-          whiteSpace: 'pre-line',
-        }}
-      >
-        {view.message}
-      </p>
+      {view === 'checking' ? (
+        <div role='status' style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '24px' }}>
+          <Loader size={16} />
+          <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Checking your verification…</span>
+        </div>
+      ) : (
+        <p
+          style={{
+            margin: view === 'not_available' ? 0 : '0 0 16px',
+            fontSize: '14px',
+            lineHeight: 1.5,
+            color: view === 'not_available' ? 'var(--text-secondary)' : 'var(--text-primary)',
+            whiteSpace: 'pre-line',
+          }}
+        >
+          {message}
+        </p>
+      )}
 
-      {view.variant === 'idle' && (
+      {view === 'start' && (
         <Button
-          label='Acquire Credential'
+          label='Verify my identity'
           prefixIcon={<span>→</span>}
-          onClick={onAcquireClick}
+          onClick={onOpenCheck}
           bgColor={BUTTON_BG_COLOR.primary}
           borderColor={BUTTON_BORDER_COLOR.primary}
           color={BUTTON_COLOR.white}
@@ -309,7 +379,33 @@ export default function KycCredentialsCard() {
         />
       )}
 
-      {view.variant === 'verify-retry' && (
+      {view === 'pending' && (
+        <Button
+          label='Continue'
+          prefixIcon={<span>→</span>}
+          onClick={onOpenCheck}
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
+      )}
+
+      {view === 'unavailable' && (
+        <Button
+          label={retrying ? 'Checking…' : 'Try again'}
+          onClick={onRetry}
+          disabled={retrying}
+          bgColor={BUTTON_BG_COLOR.primary}
+          borderColor={BUTTON_BORDER_COLOR.primary}
+          color={BUTTON_COLOR.white}
+          size={BUTTON_SIZE.mediumLarge}
+          style={actionButtonStyle}
+        />
+      )}
+
+      {step === 'continue' && (
         <Button
           label={redirectBusy ? 'Opening…' : 'Continue verification'}
           prefixIcon={<span>→</span>}
@@ -323,11 +419,11 @@ export default function KycCredentialsCard() {
         />
       )}
 
-      {view.variant === 'in-progress' && (
+      {step === 'refresh' && (
         <Button
-          label={loading ? 'Checking…' : 'Refresh status'}
-          onClick={() => void refresh()}
-          disabled={loading}
+          label={legacy.loading ? 'Checking…' : 'Refresh status'}
+          onClick={() => void legacy.refresh()}
+          disabled={legacy.loading}
           bgColor={BUTTON_BG_COLOR.primary}
           borderColor={BUTTON_BORDER_COLOR.primary}
           color={BUTTON_COLOR.white}
@@ -336,24 +432,11 @@ export default function KycCredentialsCard() {
         />
       )}
 
-      {view.variant === 'failure' && (
+      {step === 'save' && (
         <Button
-          label={loading ? 'Checking…' : 'Refresh'}
-          onClick={() => void refresh()}
-          disabled={loading}
-          bgColor={BUTTON_BG_COLOR.primary}
-          borderColor={BUTTON_BORDER_COLOR.primary}
-          color={BUTTON_COLOR.white}
-          size={BUTTON_SIZE.mediumLarge}
-          style={actionButtonStyle}
-        />
-      )}
-
-      {view.variant === 'ready-to-save' && (
-        <Button
-          label={saving ? 'Saving…' : 'Save Credential'}
+          label={legacy.saving ? 'Saving…' : 'Save Credential'}
           onClick={onSaveClick}
-          disabled={saving}
+          disabled={legacy.saving}
           bgColor={BUTTON_BG_COLOR.primary}
           borderColor={BUTTON_BORDER_COLOR.primary}
           color={BUTTON_COLOR.white}
@@ -362,18 +445,49 @@ export default function KycCredentialsCard() {
         />
       )}
 
-      {view.variant === 'success' && (
-        <Button
-          label='✓ Verified'
-          onClick={onVerifiedClick}
-          color={BUTTON_COLOR.primary}
-          borderColor={BUTTON_BORDER_COLOR.primary}
-          size={BUTTON_SIZE.mediumLarge}
-          style={actionButtonStyle}
-        />
+      {view === 'legacy' && SELF_KYC_ENABLED && legacy.canSkip && (
+        <>
+          <Button
+            label='Use the new identity check instead'
+            onClick={onUseNewCheck}
+            color={BUTTON_COLOR.primary}
+            borderColor={BUTTON_BORDER_COLOR.primary}
+            size={BUTTON_SIZE.mediumLarge}
+            style={{ ...actionButtonStyle, marginTop: '10px' }}
+          />
+          <p style={{ margin: '8px 0 0', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+            Your earlier check will be left as it is.
+          </p>
+        </>
       )}
 
-      {error && view.variant !== 'idle' && (
+      {view === 'verified' &&
+        (kyc.status === 'self' && !selfCredentialCid ? (
+          // Verified through the Auth Hub, but the Vault copy is not on this device (yet): nothing to open.
+          <p
+            style={{
+              ...actionButtonStyle,
+              margin: 0,
+              textAlign: 'center',
+              color: 'var(--green-primary)',
+              border: '1px solid var(--border-color)',
+              boxSizing: 'border-box',
+            }}
+          >
+            ✓ Verified
+          </p>
+        ) : (
+          <Button
+            label='✓ Verified'
+            onClick={onVerifiedClick}
+            color={BUTTON_COLOR.primary}
+            borderColor={BUTTON_BORDER_COLOR.primary}
+            size={BUTTON_SIZE.mediumLarge}
+            style={actionButtonStyle}
+          />
+        ))}
+
+      {legacy.error && view === 'legacy' && (
         <p
           style={{
             marginTop: '12px',
@@ -381,7 +495,7 @@ export default function KycCredentialsCard() {
             color: 'var(--error-color)',
           }}
         >
-          {error}
+          {legacy.error}
         </p>
       )}
     </div>
