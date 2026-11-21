@@ -143,7 +143,7 @@ export function refusalCopy(err: unknown, context: RefusalContext): RefusalCopy 
       return {
         code,
         title: 'Airtime is not available right now',
-        body: `The airtime account must be topped up before this swap can be made. ${NOTHING_TAKEN} Please try again later, or try a smaller amount.`,
+        body: `The airtime account must be topped up before this swap can be made. ${NOTHING_TAKEN} Please try again later, or try a different amount.`,
         action: 'amount',
       };
     case 'swap_reserve_full':
