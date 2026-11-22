@@ -26,8 +26,7 @@ const ITEMS = [
  *  chat composers pinned to the bottom of the screen). */
 const HIDDEN_ON = [
   /^\/auth/,
-  /^\/entities\/[^/]+\/claimCollections\/[^/]+\/(vct|bco|bev|kyc)/,
-  /^\/profile\/credentials\/kyc\b/,
+  /^\/entities\/[^/]+\/claimCollections\/[^/]+\/(vct|bco|bev)/,
   /^\/profile\/support\/[^/]+\/(thread|new|dm)\b/,
 ];
 

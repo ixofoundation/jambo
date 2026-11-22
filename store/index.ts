@@ -25,6 +25,7 @@ import kycReducer from './slices/kycSlice';
 import subclaimsReducer from './slices/subclaimsSlice';
 import emailSubscriptionReducer from './slices/emailSubscriptionSlice';
 import { KycStatus } from '@constants/kyc';
+import { removePersistedIdentityDrafts } from './migrations';
 
 const rootReducer = combineReducers({
   account: accountReducer,
@@ -75,11 +76,16 @@ const migrations: Record<number, (state: any) => any> = {
       },
     };
   },
+  // v5: personal data leaves the persisted drafts. Drafts of the old KYC form
+  // (name, ID number, address) can no longer be opened or cleared, and
+  // approve-payment drafts saved before identity fields were kept out of them
+  // still carry those fields.
+  5: removePersistedIdentityDrafts,
 };
 
 const persistConfig = {
   key: 'jambo-cache',
-  version: 4,
+  version: 5,
   storage,
   whitelist: ['account', 'entities', 'collections', 'protocols', 'profiles', 'matrixProfile', 'claimDrafts', 'projects', 'kyc'],
   migrate: createMigrate(migrations, { debug: false }),

@@ -4,6 +4,8 @@ import type { AuthHubSessionData } from 'lib/authHub/redirect';
 
 export interface OnSignOptions {
   memo?: string;
+  /** Gas limit for the transaction, when the default does not fit the message. */
+  gas?: number;
   onSigned?: (txHash: string) => void | Promise<void>;
 }
 

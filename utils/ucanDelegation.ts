@@ -35,6 +35,12 @@ export interface MintDelegationArgs {
   audience: string;
   capabilities: Capability[];
   ttlSeconds: number;
+  /**
+   * The time the expiry is counted from, unix seconds. Defaults to this
+   * device's clock; pass the server's time (utils/self/serverTime.ts) when the
+   * receiver is strict about the lifetime.
+   */
+  nowSeconds?: number;
 }
 
 /**
@@ -45,6 +51,7 @@ export async function mintDelegation({
   audience,
   capabilities,
   ttlSeconds,
+  nowSeconds,
 }: MintDelegationArgs): Promise<string> {
   const mnemonic = loadSigningMnemonic();
   const { signer } = await signerFromMnemonic(mnemonic, userDid as SupportedDID);
@@ -53,7 +60,7 @@ export async function mintDelegation({
     issuer: signer,
     audience,
     capabilities,
-    expiration: Math.floor(Date.now() / 1000) + ttlSeconds,
+    expiration: (nowSeconds ?? Math.floor(Date.now() / 1000)) + ttlSeconds,
   });
 
   return serializeDelegation(delegation);

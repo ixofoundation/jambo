@@ -1,4 +1,14 @@
-import { findKycLevel1IndexEntry, loadKycLevel1Credential, loadKycPii } from '@utils/approvePayment';
+import authConstants from '@constants/auth';
+import {
+  findIdentityLevel1IndexEntry,
+  findKycLevel1IndexEntry,
+  loadKycLevel1Credential,
+  loadKycPii,
+} from '@utils/approvePayment';
+import { alpha3ToAlpha2 } from '@utils/kyc/countryCodes';
+import { loadSelfClaims } from '@utils/kyc/hubCredentials';
+import { secureLoad } from '@utils/storage';
+import type { KycSource as KycCredentialSource } from 'types/kyc';
 
 // Reuse the matrix client type the credential loaders already expect, rather
 // than re-importing it from matrix-js-sdk (whose named type export doesn't
@@ -40,6 +50,39 @@ export async function waitForKycCredential(
 }
 
 /**
+ * Which identity credential the user's matrix room indexes: the legacy
+ * `kycamllevel1` one when present, else the Self `IdentityLevel1` copy the
+ * Auth Hub writes, else null. Unencrypted index read, like `hasKycCredential`.
+ */
+function findKycCredentialSource(mxClient: MxClient, roomId: string): KycCredentialSource | null {
+  if (findKycLevel1IndexEntry(mxClient, roomId)) return 'kycamllevel1';
+  if (findIdentityLevel1IndexEntry(mxClient, roomId)) return 'identitylevel1';
+  return null;
+}
+
+/**
+ * `waitForKycCredential` for either credential: resolves with the source as
+ * soon as one is indexed, or null after the full window. The ramps use it so
+ * a Self-verified user counts as holding a credential.
+ */
+export async function waitForKycCredentialSource(
+  mxClient: MxClient,
+  roomId: string,
+  opts: { timeoutMs?: number; pollIntervalMs?: number; cancelled?: () => boolean } = {},
+): Promise<KycCredentialSource | null> {
+  const timeoutMs = opts.timeoutMs ?? 15000;
+  const pollIntervalMs = opts.pollIntervalMs ?? 500;
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (opts.cancelled?.()) return null;
+    const source = findKycCredentialSource(mxClient, roomId);
+    if (source) return source;
+    if (Date.now() >= deadline) return null;
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+  }
+}
+
+/**
  * Best-effort auto-fill for the off-ramp KYC form from the user's stored identity.
  *
  * Design: each SOURCE declares its own `fields` map — exactly which keys (or a
@@ -52,11 +95,16 @@ export async function waitForKycCredential(
  * — it's about the form's expected shape, not the source — and applied after a
  * source's raw value is extracted.
  *
- * Current sources, both already saved in the user's encrypted matrix room:
+ * Legacy sources, both already saved in the user's encrypted matrix room:
  *  - the KYCAMLLevel1 verifiable credential — authoritative identity (name, DOB,
  *    nationality, document type). Claims are an SD-JWT-style map `{ key: { value } }`.
  *  - the raw KYC PII blob — flat form data with fields the credential omits /
  *    selectively discloses (document number, email, …).
+ *
+ * Self source (`identitylevel1`), for users with no legacy credential: the
+ * `IdentityLevel1` claims read from the user's Auth Hub wallet, plus the Auth
+ * Hub session email (the credential carries no email or phone). Held in
+ * memory only. It is never consulted for a legacy user.
  *
  * Any field we resolve is treated as verified and locked in the form; anything
  * we can't resolve is left for the user to fill in.
@@ -86,9 +134,48 @@ export interface KycSource {
   name: string;
   /** Return the source's raw record, or null when absent / unreadable. Must be
    *  best-effort: never throw (a missing source must not block the others). */
-  load: (mxClient: MxClient, roomId: string) => Promise<Record<string, any> | null>;
+  load: (mxClient: MxClient, roomId: string, ctx?: KycPrefillContext) => Promise<Record<string, any> | null>;
   /** Per-source field mapping. Omit a field this source doesn't carry. */
   fields: Partial<Record<FieldKey, Extractor>>;
+  /** Loaded only when the user has no legacy credential or PII (see `loadKycPrefill`). */
+  onlyWithoutLegacy?: boolean;
+}
+
+/** Who is signed in, for sources outside the matrix room. Both default to the
+ *  stored Auth Hub session, so non-hook callers can omit them. */
+export interface KycPrefillContext {
+  userDid?: string | null;
+  /** Auth Hub session email (`useAuth().email`). */
+  email?: string | null;
+  /** Called when the Auth Hub wallet could not be read (unreachable, refused, odd answer). */
+  onHubError?: () => void;
+}
+
+/** Stored-session value, or undefined (no storage in SSR/tests, nothing saved). */
+function sessionValue(key: string): string | undefined {
+  try {
+    const value = secureLoad(key);
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A Hub claim value: plain, or the SD-JWT record form `{ value }`. */
+function claimValue(raw: unknown): unknown {
+  return raw && typeof raw === 'object' && 'value' in raw ? (raw as { value: unknown }).value : raw;
+}
+
+/** First of `keys` that converts to an alpha-2 country (Self claims are alpha-3). */
+function alpha2From(keys: string[]) {
+  return (record: Record<string, any>): string | undefined => {
+    for (const key of keys) {
+      const raw = readKeys(record, [key]);
+      const alpha2 = ok(raw) ? alpha3ToAlpha2(String(raw)) : null;
+      if (alpha2) return alpha2;
+    }
+    return undefined;
+  };
 }
 
 const ok = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -228,14 +315,71 @@ export const KYC_SOURCES: KycSource[] = [
       phone: ['phone_number', 'phone', 'telephone', 'mobile', 'mobile_number', 'msisdn', 'contact_number'],
     },
   },
+  {
+    name: 'identitylevel1',
+    onlyWithoutLegacy: true,
+    load: async (_c, _r, ctx) => {
+      try {
+        const userDid = ctx?.userDid || sessionValue(authConstants.secretKey.DID);
+        if (!userDid) return null;
+        // Hub unreachable / unauthorised = no prefill, same as no credential.
+        const claims = await loadSelfClaims(userDid);
+        if (!claims) return null;
+        const record: Record<string, any> = {};
+        for (const [key, raw] of Object.entries(claims)) record[key] = claimValue(raw);
+        // Not a claim: the credential has no email, the Hub session does.
+        const email = ctx?.email || sessionValue(authConstants.secretKey.EMAIL);
+        if (email) record.session_email = email;
+        return record;
+      } catch {
+        ctx?.onHubError?.();
+        return null;
+      }
+    },
+    // Self claim names. No phone: the user types it.
+    fields: {
+      name: composeName(['given_name'], ['family_name'], ['full_name']),
+      dob: ['birth_date'],
+      country: alpha2From(['nationality', 'issuing_country']),
+      idType: ['document_type'],
+      idNumber: ['document_number', 'personal_number'],
+      email: ['session_email'],
+    },
+  },
 ];
 
-export async function loadKycPrefill(mxClient: MxClient, roomId: string): Promise<KycPrefill> {
-  // Load every source in priority order (best-effort; failures become null).
+export async function loadKycPrefill(
+  mxClient: MxClient,
+  roomId: string,
+  ctx?: KycPrefillContext,
+  /**
+   * `skipHub`: use only what is in the matrix room; never call the Auth Hub.
+   * `source: 'identitylevel1'`: the Self credential is the one being presented
+   * (a legacy user who verified again), so read the identity from it alone and
+   * never from the legacy records: the form must match the credential sent.
+   */
+  opts: { skipHub?: boolean; source?: KycCredentialSource } = {},
+): Promise<KycPrefill> {
+  const selfOnly = opts.source === 'identitylevel1';
+  // Load every legacy source in priority order (best-effort; failures become null).
   const records = await Promise.all(
-    KYC_SOURCES.map(async (src) => ({ src, record: await src.load(mxClient, roomId).catch(() => null) })),
+    KYC_SOURCES.filter((src) => !!src.onlyWithoutLegacy === selfOnly).map(async (src) => ({
+      src,
+      record: await src.load(mxClient, roomId, selfOnly ? ctx : undefined).catch(() => null),
+    })),
   );
-  if (records.every((r) => !r.record)) return {};
+  if (records.every((r) => !r.record)) {
+    if (selfOnly) return {};
+    // A legacy user whose credential can't be opened here stays as before: no
+    // prefill, and no Hub call.
+    if (findKycLevel1IndexEntry(mxClient, roomId)) return {};
+    // The remaining sources read the Auth Hub wallet.
+    if (opts.skipHub) return {};
+    for (const src of KYC_SOURCES.filter((s) => s.onlyWithoutLegacy)) {
+      records.push({ src, record: await src.load(mxClient, roomId, ctx).catch(() => null) });
+    }
+    if (records.every((r) => !r.record)) return {};
+  }
 
   const out: KycPrefill = {};
   for (const field of FIELD_ORDER) {
@@ -253,4 +397,41 @@ export async function loadKycPrefill(mxClient: MxClient, roomId: string): Promis
     }
   }
   return out;
+}
+
+/**
+ * The identity behind the approve-payment form's personal fields, for
+ * `buildApprovePaymentPrefill`: the legacy PII blob when the user has one
+ * (exactly as before), otherwise the normalised profile: of a legacy
+ * credential saved without its PII blob (name and date of birth from the
+ * credential; the person fills in the rest), or of a Self-verified user.
+ *
+ * - `null`: the person holds no identity credential (not verified).
+ * - `{ pii: null, profile: null }`: the identity details can't be read right
+ *   now: a held credential is not readable here, or the Auth Hub could not be
+ *   asked (so a Self credential is not ruled out).
+ *
+ * Throws, as `loadKycPii` does, when the legacy blob exists but can't be
+ * opened on this device.
+ */
+export async function loadApprovePaymentIdentity(
+  mxClient: MxClient,
+  roomId: string,
+  ctx?: KycPrefillContext,
+): Promise<
+  { pii: Record<string, any>; profile: null } | { pii: null; profile: KycPrefill } | { pii: null; profile: null } | null
+> {
+  const legacy = await loadKycPii(mxClient, roomId);
+  if (legacy) return { pii: legacy.pii, profile: null };
+  // A legacy user never reaches the Hub here (see `loadKycPrefill`).
+  let hubFailed = false;
+  const profile = await loadKycPrefill(mxClient, roomId, { ...ctx, onHubError: () => (hubFailed = true) });
+  if (findKycLevel1IndexEntry(mxClient, roomId)) {
+    return profile.name && profile.dob ? { pii: null, profile } : { pii: null, profile: null };
+  }
+  // The name is the one field every Self credential yields; without it there
+  // is no verified identity to fill the form from.
+  if (profile.name) return { pii: null, profile };
+  // "Not verified" is only answered when the Hub actually said so.
+  return findIdentityLevel1IndexEntry(mxClient, roomId) || hubFailed ? { pii: null, profile: null } : null;
 }

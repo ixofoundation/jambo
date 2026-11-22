@@ -56,7 +56,31 @@ export type ClaimFlowEvents = {
   editor_flow_submission_failed: ClaimFlowProps & { reason: string };
 };
 
-export type EventRegistry = AuthEvents & YomaEvents & DeckEvents & ChatEvents & ClaimFlowEvents;
+/** Where in the airtime swap something happened. */
+export type AirtimeSwapStage = 'request' | 'burn' | 'redeem' | 'read';
+
+/**
+ * The airtime swap (docs/airtime-swap.md). Amounts are whole rands. Never the
+ * PIN, the swap's reference or id, or a transaction hash.
+ */
+export type AirtimeSwapEvents = {
+  /** The user confirmed an amount and the swap was asked for. */
+  airtime_swap_started: { amountZar: number };
+  /** The burn was signed and sent (its outcome may still be unknown). */
+  airtime_swap_burn_sent: { amountZar: number };
+  /** The PIN was issued and shown. `test` = a test PIN, not real airtime. */
+  airtime_swap_completed: { amountZar: number; test: boolean };
+  /** The burn is verified and the PIN is not issued yet. */
+  airtime_swap_owed: { amountZar: number };
+  /** The service flagged the swap for an operator. */
+  airtime_swap_flagged: { amountZar: number };
+  /** A refusal was shown. `code` is the service's error code, or a local one. */
+  airtime_swap_refused: { stage: AirtimeSwapStage; code: string };
+  /** A PIN of an earlier swap was read again. */
+  airtime_pin_viewed: undefined;
+};
+
+export type EventRegistry = AuthEvents & YomaEvents & DeckEvents & ChatEvents & ClaimFlowEvents & AirtimeSwapEvents;
 
 export type TrackingEvent = keyof EventRegistry;
 
@@ -81,6 +105,13 @@ export const AnalyticsEvents = defineEventNames({
   EditorFlowSubmissionAttempted: 'editor_flow_submission_attempted',
   EditorFlowSubmitted: 'editor_flow_submitted',
   EditorFlowSubmissionFailed: 'editor_flow_submission_failed',
+  AirtimeSwapStarted: 'airtime_swap_started',
+  AirtimeSwapBurnSent: 'airtime_swap_burn_sent',
+  AirtimeSwapCompleted: 'airtime_swap_completed',
+  AirtimeSwapOwed: 'airtime_swap_owed',
+  AirtimeSwapFlagged: 'airtime_swap_flagged',
+  AirtimeSwapRefused: 'airtime_swap_refused',
+  AirtimePinViewed: 'airtime_pin_viewed',
 } as const);
 
 /** Person properties set on identify(). Same keys as the portal. */

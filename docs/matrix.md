@@ -58,7 +58,9 @@ Issued credentials (e.g. KYC) are stored in the user's personal room using a two
 - **Timeline event** `ixo.credential` — content `{ credential: JSON.stringify(credential) }` (double-stringified to sidestep Matrix's float restrictions). Auto-encrypted by Megolm because the room has E2EE enabled, so credential PII never leaves the encrypted timeline.
 - **State event** `ixo.credential.index` (state key = credential type) — content `{ entries: IndexEntry[] }` where each entry is `{ eventId, cid, storedAt, issuerDid, holderDid, credentialType, format }`. Plaintext, no PII; used for discovery and duplicate detection by CID.
 
-Implementation: `utils/matrixCredential.ts` (`storeMatrixCredential`, `computeCredentialCid`). Called from `hooks/useKycStatus.ts` after KYC reaches a terminal success state.
+Implementation: `utils/matrixCredential.ts` (`storeMatrixCredential`, `computeCredentialCid`). The app itself only writes here from `hooks/useKycStatus.ts`, when a user finishes an old KYC check (state key `kycamllevel1`, plus the `ixo.pii` / `ixo.pii.index` pair holding the form data). That flow can no longer be started.
+
+The Self identity check (`IdentityLevel1`) is written by the Auth Hub, not by this app: the same `ixo.credential` timeline event, indexed under the state key `identitylevel1` (`credentialType` = the full type URL). No PII event is written for it. The app reads it with `findIdentityLevel1IndexEntry` / `loadIdentityLevel1Credential` in `utils/approvePayment.ts`: the ramps send the raw SD-JWT to the YellowCard worker, and the credential screens list and open it like any other entry. Whether a user is verified is decided by `hooks/useKyc.ts` (the `kycamllevel1` index entry, else the Auth Hub's credential list), not by this copy.
 
 ## Cross-Signing
 

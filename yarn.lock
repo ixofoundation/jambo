@@ -1968,10 +1968,10 @@
     "@babel/runtime" "7.19.4"
     axios "1.3.4"
 
-"@ixo/ucan@1.2.2":
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/@ixo/ucan/-/ucan-1.2.2.tgz#f68a6197110835c023dcdd44444ed15811316816"
-  integrity sha512-ifVz7k6VCZD564OFaV4nTtMveBWgbJSNbYmuIo1my5cYVonG3UC494fgsW8md02POts8nwgBWdHk2MfWUXMhvw==
+"@ixo/ucan@2.4.0":
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/@ixo/ucan/-/ucan-2.4.0.tgz#6cdd8334677f8ad9f1723eccf67d74fa88169567"
+  integrity sha512-mdt/h+Cn9Nc3QAr6/rgWW41LxHGTVcW2ZotfVBP0ZtuiqTz2QqyfWTFv2fmaxYdXtSHPDhixn7dMQZVONlDh/Q==
   dependencies:
     "@ucanto/client" "9.0.2"
     "@ucanto/core" "10.4.6"

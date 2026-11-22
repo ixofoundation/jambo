@@ -4,10 +4,12 @@ export type SupportPromptKey = 'kyc';
 // (`?prompts=<key>`). Unknown / missing keys → no quick options, only the free-form
 // "write your own message" path renders.
 export const SUPPORT_QUICK_MESSAGES_BY_PROMPT: Record<SupportPromptKey, readonly string[]> = {
+  // Identity check (Self). The key stays 'kyc': it is what `?prompts=` links carry.
   kyc: [
-    'My verification was rejected — could you help me understand why?',
-    "My documents weren't accepted. What format should I retry with?",
-    "I can't complete the liveness check on this device.",
+    "I can't open the identity check link.",
+    "My identity check didn't pass. Could you help me understand why?",
+    'My identity check has been under review for a long time.',
+    "I finished the identity check, but I'm not showing as verified.",
   ],
 };
 

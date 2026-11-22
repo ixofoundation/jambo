@@ -12,7 +12,11 @@ export interface BackgroundSetupContextType {
   errorDetails: string | null;
   showDetails: boolean;
   setShowDetails: (show: boolean) => void;
-  awaitCompletion: () => Promise<void>;
+  /**
+   * Resolves when the Data Store is ready. While it is still being set up this
+   * opens the "setting up" details overlay; `{ quiet: true }` waits without it.
+   */
+  awaitCompletion: (opts?: { quiet?: boolean }) => Promise<void>;
   getMatrixClient: () => MatrixClient | null;
   /**
    * Ensure matrix E2EE / cross-signing / key backup is fully set up. If something is

@@ -41,15 +41,14 @@ import base58 from 'bs58';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { saveDraft, clearDraft } from '@store/slices/claimDraftsSlice';
 import { setVctTemplate, setBcoTemplate, setBevTemplate } from '@store/slices/protocolsSlice';
-import { setRedirectedAt } from '@store/slices/kycSlice';
-import { initiateKyc, fetchKycRedirect } from '@utils/kycServer';
 import { toast } from 'react-toastify';
 import SubclaimModal from '@components/SubclaimModal/SubclaimModal';
 import ApprovePaymentSourceClaimModal from '@components/ApprovePaymentSourceClaimModal/ApprovePaymentSourceClaimModal';
 import { templateRequiresBaseClaim } from '@utils/surveyTemplate';
 import { registerSubclaimLinkage, refreshClaimStatus } from '../lib/yomaWorker/client';
 import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '@constants/approvePayment';
-import { buildApprovePaymentPrefill, fetchSourceClaimData, loadKycPii } from '@utils/approvePayment';
+import { buildApprovePaymentPrefill, fetchSourceClaimData, stripPrefilledIdentity } from '@utils/approvePayment';
+import { type KycPrefill, loadApprovePaymentIdentity } from '@utils/kycPrefill';
 import { baseToDisplay, denomDisplay, displayToBase } from '@utils/denomAmount';
 import { track } from 'lib/analytics/client';
 import { AnalyticsEvents } from 'lib/analytics/events';
@@ -59,7 +58,7 @@ const BASE_CLAIM_CID_FIELD = 'ixo:baseClaimCID';
 interface CollectionFormProps {
   entityDid: string;
   collectionId: string;
-  formType: 'vct' | 'bco' | 'bev' | 'view' | 'kyc';
+  formType: 'vct' | 'bco' | 'bev' | 'view';
   claimId?: string;
   closeUrl?: string;
 }
@@ -74,9 +73,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
   const onSign = authContext.onSign;
 
   const draft = useAppSelector((state) => state.claimDrafts.byCollectionId[collectionId]);
-  const kycSurveyTemplate = useAppSelector((state) => state.kyc.surveyTemplate);
-  const kycDeedOfferId = useAppSelector((state) => state.kyc.deedOfferId);
-  const kycClaimCollectionId = useAppSelector((state) => state.kyc.claimCollectionId);
 
   // Map formType to surveyMode
   const surveyMode = formType === 'vct' ? 'claim' : formType === 'view' ? 'view' : formType;
@@ -136,7 +132,10 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     null,
   );
   const sourceClaimDataRef = useRef<Record<string, any> | null>(null);
-  const piiDataRef = useRef<{ eventId: string; pii: Record<string, any> } | null>(null);
+  const piiDataRef = useRef<{ pii: Record<string, any> } | null>(null);
+  // Self-verified users have no PII blob: their identity comes from the Auth Hub
+  // (in memory only, via the normalised KYC profile).
+  const kycProfileRef = useRef<KycPrefill | null>(null);
   const approvePaymentPrefillAppliedRef = useRef(false);
 
   useEffect(() => {
@@ -248,20 +247,28 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         const pick = allApproved[0];
         setSelectedSourceClaim({ claimId: pick.claimId, collectionId: pick.collectionId });
 
-        // 3) Fetch the user's credential-data (PII) blob from their matrix room. This
-        //    is the raw deed-offer payload saved alongside the verifiable credential
-        //    and is what we use to prefill the personal fields on this form.
+        // 3) Fetch the user's verified identity to prefill the personal fields on
+        //    this form: the credential-data (PII) blob in their matrix room (legacy
+        //    KYC), or their Self credential's claims from the Auth Hub.
         await awaitCompletion();
         const mxClient = getMatrixClient();
         if (!mxClient) throw new Error('Matrix client not ready');
         const roomId = authContext.matrixRoomId;
         if (!roomId) throw new Error('User matrix room not available');
-        const pii = await loadKycPii(mxClient, roomId);
+        const identity = await loadApprovePaymentIdentity(mxClient, roomId, {
+          userDid: authContext.did,
+          email: authContext.email,
+        });
         if (cancelled) return;
-        if (!pii) {
-          throw new Error('Your credential data is not in your Data Store. Please complete and save your KYC first.');
+        if (!identity) {
+          throw new Error('Please verify your identity first');
         }
-        piiDataRef.current = pii;
+        if (!identity.pii && !identity.profile) {
+          // The details can't be read right now (credential unreadable here, or the Auth Hub unreachable).
+          throw new Error('Your identity details aren’t available right now. Please try again, or contact support.');
+        }
+        piiDataRef.current = identity.pii ? { pii: identity.pii } : null;
+        kycProfileRef.current = identity.profile;
       } catch (err: any) {
         if (cancelled) return;
         const msg = err?.message || 'Could not prepare this claim form';
@@ -367,16 +374,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           void fetchClaimById(claimId)
             .then((c) => setFallbackClaim(c))
             .catch(() => {});
-        }
-      } else if (surveyMode === 'kyc') {
-        if (hasDraft && draft) {
-          console.log({ surveyTemplate: draft.surveyTemplate });
-          setSurveyTemplate(draft.surveyTemplate);
-          surveyHasChangesRef.current = true;
-        } else {
-          if (!kycSurveyTemplate) throw new Error('KYC form not loaded');
-          console.log({ surveyTemplate: kycSurveyTemplate });
-          setSurveyTemplate(JSON.stringify(kycSurveyTemplate));
         }
       } else if (surveyMode === 'claim') {
         if (hasDraft && draft) {
@@ -569,20 +566,33 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     (sender: any) => {
       surveyHasChangesRef.current = true;
       if (surveyTemplate && surveyMode) {
+        // Drafts are persisted (redux-persist). The identity fields the
+        // approve-payment form takes from the person's verified identity stay
+        // out of them: they are filled in again each time the form opens.
+        const surveyData = approvePaymentActive
+          ? stripPrefilledIdentity(
+              sender.data,
+              buildApprovePaymentPrefill(
+                sourceClaimDataRef.current,
+                piiDataRef.current?.pii ?? null,
+                kycProfileRef.current,
+              ),
+            )
+          : { ...sender.data };
         dispatch(
           saveDraft({
             collectionId,
             draft: {
               surveyMode,
               surveyTemplate,
-              surveyData: { ...sender.data },
+              surveyData,
               updatedAt: Date.now(),
             },
           }),
         );
       }
     },
-    [collectionId, surveyTemplate, surveyMode, dispatch],
+    [collectionId, surveyTemplate, surveyMode, approvePaymentActive, dispatch],
   );
 
   const survey = useMemo(() => {
@@ -596,7 +606,7 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       }
       const model = new Model(templateData);
       // The app is a mobile-width column even on desktop — SurveyJS's TOC
-      // sidebar (a desktop pattern some templates enable, e.g. the KYC form)
+      // sidebar (a desktop pattern some templates enable)
       // would crush the form into a sliver. Page progress stays available via
       // showProgressBar.
       model.showTOC = false;
@@ -638,7 +648,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       // and their credential-data (PII) blob into the survey's initial data. Existing
       // values (from a saved draft) win — we use model.data as the base.
       if (approvePaymentActive) {
-        const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
+        const prefill = buildApprovePaymentPrefill(
+          sourceClaimDataRef.current,
+          piiDataRef.current?.pii ?? null,
+          kycProfileRef.current,
+        );
         if (Object.keys(prefill).length > 0) {
           model.data = { ...prefill, ...model.data };
         }
@@ -663,32 +677,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
         model.completeText = 'Submitting...';
         setSubmitting({ active: true, label: 'Preparing submission...' });
         // Analytics (portal-compatible claim-flow events). Only the on-chain
-        // claim branch reports; the KYC and bid branches are not claims.
+        // claim branch reports; the bid branch is not a claim.
         const submissionProps = { flowType: 'claim-submission' as const, entityDid, collectionId };
         let claimSubmissionStarted = false;
         let claimSubmissionReported = false;
         try {
           await awaitCompletion();
-          if (surveyMode === 'kyc') {
-            setSubmitting({ active: true, label: 'Initiating verification...' });
-            const protocolId = entityDid;
-            await initiateKyc(did, {
-              protocolId,
-              claimCollectionId: kycClaimCollectionId ?? undefined,
-              deedOfferId: kycDeedOfferId ?? undefined,
-              address,
-              data: sender.data,
-            });
-
-            setSubmitting({ active: true, label: 'Redirecting to verification...' });
-            const { url } = await fetchKycRedirect(did, protocolId);
-            dispatch(setRedirectedAt({ protocolId, at: Date.now() }));
-            model.onValueChanged.remove(handleSurveyValueChanged);
-            dispatch(clearDraft(collectionId));
-            window.open(url, '_blank', 'noopener,noreferrer');
-            router.push('/profile');
-            return;
-          }
           if (surveyMode === 'bco' || surveyMode === 'bev') {
             setSubmitting({ active: true, label: 'Submitting application...' });
             const client = getBidBotClient();
@@ -837,7 +831,11 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     if (!approvePaymentActive) return;
     if (!survey || approvePaymentPrefetching) return;
     if (approvePaymentPrefillAppliedRef.current) return;
-    const prefill = buildApprovePaymentPrefill(sourceClaimDataRef.current, piiDataRef.current?.pii ?? null);
+    const prefill = buildApprovePaymentPrefill(
+      sourceClaimDataRef.current,
+      piiDataRef.current?.pii ?? null,
+      kycProfileRef.current,
+    );
     if (Object.keys(prefill).length === 0) return;
     Object.entries(prefill).forEach(([key, value]) => {
       try {
@@ -905,10 +903,6 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
     ? 'Apply as Service Agent'
     : surveyMode === 'bev'
     ? 'Apply as Evaluation Agent'
-    : surveyMode === 'kyc'
-    ? hasDraft
-      ? 'Continue KYC Verification'
-      : 'KYC Verification'
     : hasDraft
     ? 'Continue Claim'
     : 'New Claim';
