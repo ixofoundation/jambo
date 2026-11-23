@@ -38,14 +38,23 @@ export default function AuthPage() {
 
   // Primary: through the Yoma organisation (YoID) when configured, else the
   // hub's normal login. Secondary: always the hub's normal IXO login.
-  function handleSignIn() {
+  // A sign-in that cannot be secured (no WebCrypto / storage) does not start.
+  const [startFailed, setStartFailed] = useState(false);
+  function startSignIn(options?: { viaOrganization?: boolean }) {
     setIsRedirecting(true);
-    loginViaAuthHub();
+    setStartFailed(false);
+    loginViaAuthHub(options).catch(() => {
+      setIsRedirecting(false);
+      setStartFailed(true);
+    });
+  }
+
+  function handleSignIn() {
+    startSignIn();
   }
 
   function handleIxoSignIn() {
-    setIsRedirecting(true);
-    loginViaAuthHub({ viaOrganization: false });
+    startSignIn({ viaOrganization: false });
   }
 
   function handleDevLogin() {
@@ -96,9 +105,12 @@ export default function AuthPage() {
               >
                 Real tasks. Real pay. A CV that proves it.
               </p>
-              {hasError && (
-                <p style={{ color: 'var(--error-color)', fontSize: 14, marginTop: 16, lineHeight: 1.5 }}>
-                  {router.query.error_description?.toString() || router.query.error?.toString()}
+              {/* A fixed line: the query string is anyone's to craft, so its text is never shown. */}
+              {(hasError || startFailed) && (
+                <p role='alert' style={{ color: 'var(--error-color)', fontSize: 14, marginTop: 16, lineHeight: 1.5 }}>
+                  {startFailed
+                    ? "Sign-in couldn't start in this browser. Please try again, or use another browser."
+                    : "Sign-in didn't complete. Please try again."}
                 </p>
               )}
               {fromYoma && (

@@ -1,12 +1,16 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
 
 import config from '@constants/config.json';
+import { AUTH_CALLBACK_CAPTURE_SCRIPT } from 'lib/authHub/callbackUrl';
 
 class MyDocument extends Document {
   render() {
     return (
       <Html>
         <Head>
+          {/* First, before Next and analytics read the address: removes the
+              auth hub's one-time code from /auth/callback URLs (lib/authHub/callbackUrl). */}
+          <script dangerouslySetInnerHTML={{ __html: AUTH_CALLBACK_CAPTURE_SCRIPT }} />
           <meta name='description' content={config.siteDescriptionMeta} />
           <link rel='icon' href='/favicon.ico' />
           <link rel='apple-touch-icon' href='/favicon.ico' />

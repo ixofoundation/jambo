@@ -14,10 +14,11 @@
  *    here, so attribution survives the auth guard and the auth-hub round trip
  *    (see `./campaign`).
  */
-import type { PostHog } from 'posthog-js';
+import type { CaptureResult, PostHog } from 'posthog-js';
 
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { store } from '@store/index';
+import { redactAuthCallbackUrl } from 'lib/authHub/callbackUrl';
 
 import { campaignFirstTouchProperties, peekLandingCampaign } from './campaign';
 import { hasAnalyticsConsent, setAnalyticsConsentValue } from './consent';
@@ -118,6 +119,22 @@ function registerLandingCampaign(client: Pick<PostHog, 'register_for_session'>):
   client.register_for_session({ ...campaign.params });
 }
 
+function redactProperties(properties: Record<string, unknown> | undefined): void {
+  if (!properties) return;
+  for (const [key, value] of Object.entries(properties)) {
+    if (typeof value === 'string') properties[key] = redactAuthCallbackUrl(value);
+  }
+}
+
+/** PostHog `before_send`: strips auth-hub callback parameters from every URL-like string. */
+export function redactAuthCallbackEvent(event: CaptureResult | null): CaptureResult | null {
+  if (!event) return event;
+  redactProperties(event.properties as Record<string, unknown> | undefined);
+  redactProperties(event.$set as Record<string, unknown> | undefined);
+  redactProperties(event.$set_once as Record<string, unknown> | undefined);
+  return event;
+}
+
 export function initAnalytics(): void {
   if (!shouldEnablePostHog() || initialized) return;
   initialized = true;
@@ -141,6 +158,9 @@ export function initAnalytics(): void {
       // Runs before the SDK's initial pageview, so that pageview (and the
       // session's entry source) already carries the campaign.
       loaded: registerLandingCampaign,
+      // The callback URL is cleaned before PostHog loads; this is the second
+      // line: no auth-hub code or state ever leaves in an event.
+      before_send: redactAuthCallbackEvent,
     });
 
     client.register(ANALYTICS_SUPER_PROPERTIES);
