@@ -18,9 +18,15 @@ export default function AuthPage() {
     setFromYoma(peekYref() !== null);
   }, []);
 
+  // A sign-in that cannot be secured (no WebCrypto / storage) does not start.
+  const [startFailed, setStartFailed] = useState(false);
   function handleSignIn() {
     setIsRedirecting(true);
-    loginViaAuthHub();
+    setStartFailed(false);
+    loginViaAuthHub().catch(() => {
+      setIsRedirecting(false);
+      setStartFailed(true);
+    });
   }
 
   function handleDevLogin() {
@@ -60,9 +66,12 @@ export default function AuthPage() {
             margin: '0 auto',
           }}
         >
-          {hasError && (
-            <p style={{ color: 'var(--error-color)', fontSize: '14px', textAlign: 'center', margin: 0 }}>
-              {router.query.error_description?.toString() || router.query.error?.toString()}
+          {/* A fixed line: the query string is anyone's to craft, so its text is never shown. */}
+          {(hasError || startFailed) && (
+            <p role='alert' style={{ color: 'var(--error-color)', fontSize: '14px', textAlign: 'center', margin: 0 }}>
+              {startFailed
+                ? "Sign-in couldn't start in this browser. Please try again, or use another browser."
+                : "Sign-in didn't complete. Please try again."}
             </p>
           )}
 
