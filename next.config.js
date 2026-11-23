@@ -40,6 +40,12 @@ const nextConfig = {
       ],
     };
   },
+  // The auth hub's return lands on /auth/callback with a one-time code in the
+  // URL. The page removes it at once (lib/authHub/callbackUrl); this makes
+  // sure no request from that page ever sends the URL as a referrer.
+  async headers() {
+    return [{ source: '/auth/callback', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] }];
+  },
   swcMinify: false,
   experimental: {
     esmExternals: 'loose',
