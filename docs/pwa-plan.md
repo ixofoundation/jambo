@@ -18,6 +18,8 @@ Built. How it works: `docs/pwa.md`. Still needed: the real 1024px icon and the p
 
 ## Phase 2: Fast and cheap on data
 
+Built. See "Offline data" in `docs/pwa.md`. Not done: smaller images (needs an image-resizing service).
+
 - Opportunity images and IPFS content cached on the phone, with a size cap. Opportunity and task lists show instantly from saved data, then refresh in the background.
 - Save-Data mode: smaller images, no prefetching.
 - Never cached: balances, YellowCard, KYC, auth hub, signing, Matrix PII. Balances show "as of <time>" from redux-persist.

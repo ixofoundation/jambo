@@ -58,9 +58,9 @@ export async function fetchProtocolEntities(ids: string[], force = false) {
 }
 
 export async function fetchProtocolEntity(id: string, force = false) {
+  const state = store.getState();
+  const cached = state.entities.byId[id];
   if (!force) {
-    const state = store.getState();
-    const cached = state.entities.byId[id];
     const fetchedAt = state.entities.fetchedAt[id];
     if (cached && fetchedAt && Date.now() - fetchedAt < STALENESS_THRESHOLD) {
       return cached;
@@ -88,6 +88,9 @@ export async function fetchProtocolEntity(id: string, force = false) {
     }
   `;
   const result = await gqlQuery(BLOCKSYNC_URL, query);
+  // No connection (or blocksync down): an older saved copy beats nothing, so a
+  // claim form can still open offline (docs/pwa.md). Entities change rarely.
+  if (result.error && cached) return cached;
   // @ts-ignore
   const protocolEntity = result.data?.data?.entities?.nodes?.[0];
   if (protocolEntity?.id) {

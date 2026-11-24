@@ -13,6 +13,14 @@
  *                           no copy. Pages are static shells (no
  *                           getServerSideProps), so they hold no user data.
  *  - /images, /icons, fonts stale-while-revalidate, capped.
+ *  - images from other sites  (opportunity photos on IPFS / cellnode) saved
+ *                           copy first, refreshed in the background, capped.
+ *                           Fetched in CORS mode so the browser doesn't pad
+ *                           each one to ~7MB of storage quota; a site that
+ *                           refuses CORS is simply not cached.
+ *
+ * At install it also saves the main pages (WARM_PAGES), so the home-screen
+ * app opens offline even on a page the user never opened in it.
  *
  * Never touched (straight to the network, as if there were no worker):
  *  /api, /auth (one-time sign-in codes), /cleanup (another app with its own
@@ -27,13 +35,19 @@ const SHELL_CACHE = `jambo-shell-${VERSION}`;
 const STATIC_CACHE = 'jambo-static-v1';
 const PAGES_CACHE = 'jambo-pages-v1';
 const ASSETS_CACHE = 'jambo-assets-v1';
-const OWN_CACHES = [SHELL_CACHE, STATIC_CACHE, PAGES_CACHE, ASSETS_CACHE];
+// Wiped on logout (lib/pwa/userData.ts): it can hold the user's own avatar.
+const IMAGES_CACHE = 'jambo-images-v1';
+const OWN_CACHES = [SHELL_CACHE, STATIC_CACHE, PAGES_CACHE, ASSETS_CACHE, IMAGES_CACHE];
 
 const OFFLINE_URL = '/offline.html';
 const SHELL_FILES = [OFFLINE_URL, '/icons/icon-192.png', '/manifest.webmanifest'];
 
 // Most entries each cache keeps. Oldest go first.
-const LIMITS = { [STATIC_CACHE]: 250, [PAGES_CACHE]: 40, [ASSETS_CACHE]: 80 };
+const LIMITS = { [STATIC_CACHE]: 250, [PAGES_CACHE]: 40, [ASSETS_CACHE]: 80, [IMAGES_CACHE]: 150 };
+
+// Pages saved at install. Page HTML is the same for every user (no
+// getServerSideProps), and each is only a few KB.
+const WARM_PAGES = ['/', '/tasks', '/wallet', '/profile'];
 
 // A cached page is shown when the network has not answered a page request in
 // this long. 2G in a poor area often takes longer than this to give up.
@@ -45,7 +59,19 @@ const FONT_ORIGINS = ['https://fonts.googleapis.com', 'https://fonts.gstatic.com
 self.addEventListener('install', (event) => {
   // No skipWaiting here: a new version waits until the user taps "Update"
   // (see the message handler), so it never swaps under an open claim form.
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_FILES)));
+  event.waitUntil(
+    (async () => {
+      await (await caches.open(SHELL_CACHE)).addAll(SHELL_FILES);
+      // Best effort: a page that fails to load must not stop the install.
+      const pages = await caches.open(PAGES_CACHE);
+      await Promise.allSettled(
+        WARM_PAGES.map(async (path) => {
+          const response = await fetch(path, { credentials: 'same-origin' });
+          if (response.ok && response.type === 'basic') await pages.put(pageKey(self.location.origin + path), response);
+        }),
+      );
+    })(),
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -82,7 +108,29 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (FONT_ORIGINS.includes(url.origin)) return event.respondWith(staleWhileRevalidate(event, ASSETS_CACHE));
+  if (request.destination === 'image' && url.protocol === 'https:') return event.respondWith(remoteImage(event));
 });
+
+async function remoteImage(event) {
+  const { request } = event;
+  const cache = await caches.open(IMAGES_CACHE);
+  const cached = await cache.match(request.url);
+  const network = fetch(request.url, { mode: 'cors', credentials: 'omit' })
+    .then(async (response) => {
+      if (response.ok) {
+        await cache.put(request.url, response.clone());
+        trim(IMAGES_CACHE);
+      }
+      return response;
+    })
+    // No CORS on that site (or offline): load it the normal way, uncached.
+    .catch(() => fetch(request).catch(() => undefined));
+  if (cached) {
+    event.waitUntil(network);
+    return cached;
+  }
+  return (await network) || Response.error();
+}
 
 async function page(event) {
   const { request } = event;

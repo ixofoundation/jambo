@@ -13,6 +13,7 @@ import { clearLinkState, clearYref } from '@utils/yomaLink';
 import { writeCleanupSession, clearCleanupSession } from 'lib/cleanupSession';
 import { buildUserTraits, identify, resetAnalytics, track } from 'lib/analytics/client';
 import { clearLandingCampaign } from 'lib/analytics/campaign';
+import { clearPwaUserData } from 'lib/pwa/userData';
 import { AnalyticsEvents } from 'lib/analytics/events';
 import { consumeFreshLogin, markFreshLogin } from 'lib/analytics/session';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
@@ -120,6 +121,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     // the localStorage fallback must not surface the previous user's deck.
     clearDeckPrefsStorage();
     clearLocalCurrencyStorage();
+    // Saved balance, saved collection roles and cached images (lib/pwa/userData).
+    clearPwaUserData();
     // Identity claims read from the Auth Hub are held in memory only: drop them
     // with the session.
     clearHubCredentialCache();

@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/router';
 
 import { ShareIcon, SquarePlusIcon } from '@components/Icons/icons';
+import { useAuth } from '@hooks/useAuth';
 import { AnalyticsEvents } from 'lib/analytics/events';
 import { track } from 'lib/analytics/client';
 import {
@@ -14,6 +15,7 @@ import {
   subscribeInstall,
 } from 'lib/pwa/install';
 import { applyUpdate, isUpdateWaiting, startServiceWorker, subscribeUpdate } from 'lib/pwa/serviceWorker';
+import { warmUpRoutes } from 'lib/pwa/warmUp';
 import styles from './Pwa.module.scss';
 
 // Pages where nothing may pop up or reload: the sign-in steps, and the claim form.
@@ -26,10 +28,16 @@ function useQuietRoute(): boolean {
 
 /** Mounted once in _app: starts the service worker and shows the update toast and install sheet. See docs/pwa.md. */
 export default function Pwa() {
+  const router = useRouter();
+  const { isLoggedIn } = useAuth();
+
   useEffect(() => {
     listenForInstall();
     startServiceWorker();
   }, []);
+
+  // Signed-in screens are the ones worth having offline.
+  useEffect(() => (isLoggedIn ? warmUpRoutes(router) : undefined), [isLoggedIn, router]);
 
   return (
     <>

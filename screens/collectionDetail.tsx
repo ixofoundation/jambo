@@ -13,6 +13,7 @@ import { useProtocolCollections } from '@hooks/useProtocolCollections';
 import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
+import { loadCollectionAuths, rememberCollectionAuths } from 'lib/pwa/userData';
 import { secret } from '@utils/secrets';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { useAppSelector } from '@store/hooks';
@@ -128,8 +129,12 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
       const hasSubmit = grants?.find((g) => grantMatchesCollection(g, TRANSACTION_TYPES.SubmitClaimAuthorization));
       if (hasSubmit) addAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
       else removeAuth(TRANSACTION_TYPES.SubmitClaimAuthorization);
+      if (address) rememberCollectionAuths(address, targetCollectionId, authsRef.current);
     } catch {
-      // silent fail
+      // No connection: fall back to the roles last confirmed on chain, so an agent
+      // can still start or continue a claim offline. The chain checks again when
+      // the claim is sent (lib/pwa/userData).
+      if (address) loadCollectionAuths(address, claimCollectionIdRef.current).forEach(addAuth);
     } finally {
       if (!cancelledRef.current) {
         setAuthzLoading(false);

@@ -1,6 +1,6 @@
 # Installable app (PWA)
 
-How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this is Phase 1.
+How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this covers Phases 1 and 2.
 
 ## Files
 
@@ -14,7 +14,9 @@ How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this 
 | `sw/kill-switch.js` | Worker that removes itself and every JAMBO cache. See "Kill switch". |
 | `lib/pwa/serviceWorker.ts` | Registers the worker, tracks a waiting update. |
 | `lib/pwa/install.ts` | Install offer state (Android prompt, iOS instructions, "Not now" pause). |
-| `components/Pwa/Pwa.tsx` | Mounted in `_app`: "A new version is ready" pill and the install sheet. |
+| `components/Pwa/Pwa.tsx` | Mounted in `_app`: "A new version is ready" pill, the install sheet, and the route warm-up. |
+| `lib/pwa/userData.ts` | Last balance and last confirmed collection roles, saved per account, wiped on logout. |
+| `lib/pwa/warmUp.ts` | After sign-in, downloads the main screens' code while the phone is idle. |
 
 ## What is cached
 
@@ -23,11 +25,27 @@ How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this 
 | `/_next/static/*` | Cache first. File names are hashed, so each chunk downloads once, across deploys. Max 250. |
 | Page loads | Network first. If the network fails, or takes over 6 seconds, the last saved copy of that page; with no copy, `offline.html`. Max 40 pages. One copy per path; the query string is ignored. |
 | `/images/*`, `/icons/*`, `/favicon.ico`, Google Fonts | Saved copy at once, refreshed in the background. Max 80. |
+| Images from other sites (opportunity photos on IPFS, cellnode) | Saved copy at once, refreshed in the background. Max 150. Fetched in CORS mode; a site that refuses CORS is loaded normally and not saved (an opaque copy would take ~7MB of the phone's storage quota each). Wiped on logout. |
 | Everything else | Not touched. |
+
+At install, the worker also saves `/`, `/tasks`, `/wallet` and `/profile`, so the home-screen app opens offline on those even if the user never opened them.
 
 Never touched, on purpose: `/api/*`, `/auth/*` (one-time sign-in codes), `/cleanup/*` (the World Cleanup Day app, which has its own worker), `/ingest/*` (analytics), and every other origin. Chain, Matrix, YellowCard, KYC and balance calls all fall here, so none of them are cached.
 
 Pages are safe to cache because none use `getServerSideProps`: the HTML is the same for every user, and user data loads afterwards in the browser.
+
+## Offline data (Phase 2)
+
+Data comes from redux-persist (`jambo-cache` in localStorage), not the worker: opportunities, collections, protocol entities, form templates, profiles and drafts were already saved there. Phase 2 makes the app use them when the network fails:
+
+- **Claim forms open offline.** `fetchProtocolEntity` (`utils/entity.ts`) treats a saved entity as stale after 5 minutes. When the refresh fails, it now returns the saved copy instead of nothing. Collections and form templates were already read from the saved copy.
+- **"New Claim" shows offline.** The collection page checks the user's permission on chain every 5 seconds. Each successful check is saved per account and collection; when the check fails, the last saved permission is used. The chain still checks for real when the claim is sent.
+- **Balance shows offline.** The wallet saves the last good total and shows it with "As of 10:42" until a live read arrives. Only the display uses it: the USDC upgrade logic and withdrawals still get live numbers only.
+- **Screens load offline.** After sign-in, while idle, the app downloads the code for Deck, Tasks, Wallet, Profile, the collection page and the claim form. Code a screen loads later on its own (the survey styles, maps, the PDF viewer) is saved the first time that screen is opened online.
+
+**Save-Data.** When the phone asks to save data (Chrome "Lite mode", Android Data Saver) or the connection is 2G, the warm-up is skipped. Next.js already skips its own link prefetching in the same cases. Smaller images are not possible yet: images come straight from IPFS and cellnode, which don't resize.
+
+**Logout** (`clearAllState` in `providers/auth.tsx`) removes the saved balance, every saved collection permission and the remote-image cache. App code and page caches stay: they hold no user data, and keeping them saves the next user's data.
 
 ## Updates
 
