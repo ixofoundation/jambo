@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
+import { WaitingClaims } from '@components/Pwa/Outbox';
 
 import { useAuth } from '@hooks/useAuth';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
@@ -189,6 +190,9 @@ export default function Tasks() {
         <div className='section-header' style={{ marginTop: 4 }}>
           <h2>Tasks</h2>
         </div>
+
+        {/* Claims saved on this phone while offline (lib/pwa/outbox). */}
+        <WaitingClaims />
 
         {loading && claims.length === 0 && draftEntries.length === 0 && (
           <p className='muted' style={{ fontSize: 14.5 }}>Loading your work…</p>

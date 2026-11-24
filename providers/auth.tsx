@@ -14,6 +14,7 @@ import { writeCleanupSession, clearCleanupSession } from 'lib/cleanupSession';
 import { buildUserTraits, identify, resetAnalytics, track } from 'lib/analytics/client';
 import { clearLandingCampaign } from 'lib/analytics/campaign';
 import { clearPwaUserData } from 'lib/pwa/userData';
+import { clearAll as clearOutbox } from 'lib/pwa/outbox/db';
 import { AnalyticsEvents } from 'lib/analytics/events';
 import { consumeFreshLogin, markFreshLogin } from 'lib/analytics/session';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
@@ -334,7 +335,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     }
   }, []);
 
-  const logout = useCallback(async (options?: { preserveReturnTo?: boolean }) => {
+  const logout = useCallback(async (options?: { preserveReturnTo?: boolean; keepQueuedClaims?: boolean }) => {
     const preserveReturnTo = options?.preserveReturnTo ?? false;
     if (preserveReturnTo) {
       // "Switch account" logout (Yoma wrong-account prompt): the next sign-in
@@ -373,6 +374,17 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     await Promise.race([matrixCleanup, safety]);
 
     clearAllState();
+    // Claims and photos saved on this phone to send later (lib/pwa/outbox). Wiped here,
+    // not in clearAllState(): that also runs when the 24-hour session expires, and those
+    // claims must survive it to be sent after the user signs back in. Kept, too, for a
+    // logout the user signs straight back in from (keepQueuedClaims).
+    if (!options?.keepQueuedClaims) {
+      try {
+        await Promise.race([clearOutbox(), new Promise<void>((resolve) => setTimeout(resolve, 2000))]);
+      } catch (err) {
+        console.warn('outbox clear failed (continuing):', err);
+      }
+    }
     try {
       await Promise.race([persistor.purge(), new Promise<void>((resolve) => setTimeout(resolve, 2000))]);
     } catch (err) {

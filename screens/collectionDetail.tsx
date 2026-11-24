@@ -14,6 +14,7 @@ import { CHAIN_RPC_URL } from '@constants/common';
 import { TRANSACTION_TYPES } from '@constants/transaction';
 import { fetchProtocolEntity } from '@utils/entity';
 import { loadCollectionAuths, rememberCollectionAuths } from 'lib/pwa/userData';
+import { WaitingClaims } from '@components/Pwa/Outbox';
 import { secret } from '@utils/secrets';
 import { withMatrixOpenIdRetry } from '@utils/matrix';
 import { useAppSelector } from '@store/hooks';
@@ -428,6 +429,9 @@ export default function CollectionDetail({ entityDid, collectionId }: Collection
                 </p>
               </div>
             )}
+
+            {/* Claims for this collection saved on this phone while offline (lib/pwa/outbox). */}
+            <WaitingClaims collectionId={collectionId} />
 
             {/* The user's own claims: shown to current service agents AND to
                 anyone who has submitted claims here before (e.g. payment

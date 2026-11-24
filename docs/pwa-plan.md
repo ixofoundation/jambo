@@ -28,6 +28,8 @@ Built. See "Offline data" in `docs/pwa.md`. Not done: smaller images (needs an i
 
 ## Phase 3: Claims with no signal
 
+Built. See "Offline claims" in `docs/pwa.md`. Decided while building: claims are signed at send time; queued claims send only while the app is open (no Background Sync: the keys are not reachable from the service worker); sub-claims and approve-payment claims are left out.
+
 ### What the code does today (checked 24 Nov 2026)
 
 `submitForm` in `screens/collectionForm.tsx` runs these steps in this order:

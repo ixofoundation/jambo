@@ -99,6 +99,10 @@ export type PwaEvents = {
   pwa_installed: undefined;
   /** The user tapped "Update" on the new-version toast. */
   pwa_update_accepted: undefined;
+  /** A claim was saved on the phone to send later (offline, or photos still waiting to upload). */
+  pwa_claim_queued: { collectionId: string; entityDid: string; heldFiles: number };
+  /** A photo was kept on the phone because there was no connection to upload it. */
+  pwa_file_held: { collectionId: string };
 };
 
 export type EventRegistry = AuthEvents &
@@ -144,6 +148,8 @@ export const AnalyticsEvents = defineEventNames({
   PwaInstallPromptDismissed: 'pwa_install_prompt_dismissed',
   PwaInstalled: 'pwa_installed',
   PwaUpdateAccepted: 'pwa_update_accepted',
+  PwaClaimQueued: 'pwa_claim_queued',
+  PwaFileHeld: 'pwa_file_held',
 } as const);
 
 /** Person properties set on identify(). Same keys as the portal. */

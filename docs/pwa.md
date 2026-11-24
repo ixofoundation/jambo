@@ -1,6 +1,6 @@
 # Installable app (PWA)
 
-How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this covers Phases 1 and 2.
+How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this covers Phases 1 to 3.
 
 ## Files
 
@@ -17,6 +17,8 @@ How the home-screen app works today. The roadmap is in `docs/pwa-plan.md`; this 
 | `components/Pwa/Pwa.tsx` | Mounted in `_app`: "A new version is ready" pill, the install sheet, and the route warm-up. |
 | `lib/pwa/userData.ts` | Last balance and last confirmed collection roles, saved per account, wiped on logout. |
 | `lib/pwa/warmUp.ts` | After sign-in, downloads the main screens' code while the phone is idle. |
+| `lib/pwa/outbox/` | Offline claims: photos and claims kept in IndexedDB (`db.ts`, `heldFiles.ts`) and the sender (`claims.ts`). |
+| `components/Pwa/Outbox.tsx` | Runs the sender; the "Waiting to send" list on Tasks and the collection page. |
 
 ## What is cached
 
@@ -46,6 +48,33 @@ Data comes from redux-persist (`jambo-cache` in localStorage), not the worker: o
 **Save-Data.** When the phone asks to save data (Chrome "Lite mode", Android Data Saver) or the connection is 2G, the warm-up is skipped. Next.js already skips its own link prefetching in the same cases. Smaller images are not possible yet: images come straight from IPFS and cellnode, which don't resize.
 
 **Logout** (`clearAllState` in `providers/auth.tsx`) removes the saved balance, every saved collection permission and the remote-image cache. App code and page caches stay: they hold no user data, and keeping them saves the next user's data.
+
+## Offline claims (Phase 3)
+
+A youth can do a task with no signal, submit it, and it sends itself later.
+
+**Photos.** In a plain claim form, a photo picked with no connection is compressed as usual and kept on the phone (IndexedDB, `jambo-outbox`). The answer gets a placeholder, `{"jamboHeldFile": "<id>", …}`, and the form previews the photo from the phone. A photo whose upload fails *because the connection dropped* is held the same way; one the server refuses still fails as before. Files over 100MB are not held.
+
+**Submit.** A plain claim submitted offline, or with photos still waiting, is saved to the outbox instead of being sent: the draft is cleared, the user goes back to the collection, and a toast says it will send when they are back online. `submitForm` in `screens/collectionForm.tsx` is unchanged; the only change there is the branch before it. Any other form (sub-claims, approve-payment, applications) still needs a connection, and is blocked with a message if it holds a photo that hasn't uploaded.
+
+**Sending** (`lib/pwa/outbox/claims.ts`) runs in the page, not the service worker: the signing keys and Matrix login are in the page's storage, which a worker can't read. So claims go out when the app is open and online: on sign-in, when the connection returns, when the app comes back to the front, every 2 minutes while any are waiting, or on "Send now". Not with the app closed.
+
+The steps match `submitForm`'s, with the photo uploads first. Progress is saved after each step, so a retry resumes:
+
+1. Upload each held photo (VFS, or the Claim Bot if VFS isn't available), save its reference.
+2. Register the signing key on the DID, if missing.
+3. Sign the credential, **once**. The claim ID is the hash of the signed credential, so re-signing would make a different claim.
+4. Save to the Claim Bot, save the claim ID.
+5. If blocksync already has that claim ID, stop: an earlier attempt landed.
+6. Sign and broadcast `MsgSubmitClaim`; the tx hash is saved before broadcast.
+
+A lost connection stops the run and keeps everything. A refusal is saved on that claim and shown ("Not sent: …"); the others still go. A broadcast that isn't confirmed in time shows "Sent. Waiting for the chain to confirm it" and is finished on the next round. A refusal from the chain is double-checked against blocksync before it counts.
+
+The claim is signed when it is **sent**, not when it was filled in, so the credential's issue date is the send date.
+
+**Sessions and logout.** Queued claims belong to the account that made them and only send when that account is signed in. They survive the 24-hour session expiry. Settings → Logout deletes them, after a warning and a second tap. The deck's "Log out & try again" (Vault recovery) keeps them.
+
+**Not covered:** sending with the app closed; sub-claims and approve-payment claims offline; claim-form code that was never loaded online on that phone (see "Screens load offline" above).
 
 ## Updates
 

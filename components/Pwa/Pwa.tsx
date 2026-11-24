@@ -16,6 +16,7 @@ import {
 } from 'lib/pwa/install';
 import { applyUpdate, isUpdateWaiting, startServiceWorker, subscribeUpdate } from 'lib/pwa/serviceWorker';
 import { warmUpRoutes } from 'lib/pwa/warmUp';
+import { OutboxRunner } from './Outbox';
 import styles from './Pwa.module.scss';
 
 // Pages where nothing may pop up or reload: the sign-in steps, and the claim form.
@@ -43,6 +44,7 @@ export default function Pwa() {
     <>
       <UpdateToast />
       <InstallSheet />
+      <OutboxRunner />
     </>
   );
 }

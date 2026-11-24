@@ -27,7 +27,11 @@ export interface AuthContextType {
    *  throw `SignBroadcastError` (its `stage` says whether anything may have moved). */
   onSign: (messages: any[], label?: string, options?: OnSignOptions) => Promise<DeliverTxResponse>;
   /** `preserveReturnTo` = "switch account": keep the deep link + Yoma hand-off marker. */
-  logout: (options?: { preserveReturnTo?: boolean }) => Promise<void>;
+  /**
+   * `keepQueuedClaims`: leave claims saved on this phone to send later (lib/pwa/outbox).
+   * For a logout the user signs straight back in from; a normal logout deletes them.
+   */
+  logout: (options?: { preserveReturnTo?: boolean; keepQueuedClaims?: boolean }) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
