@@ -1,0 +1,99 @@
+// "A new version is ready": the same quiet dark top pill as the toasts
+// (styles/globals.scss, .Toastify__toast), with one action.
+.update {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-sheet);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(92vw, calc(var(--max-width) - 24px));
+  padding: 6px 6px 6px 16px;
+  border-radius: var(--r-pill);
+  background: rgba(43, 33, 51, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-soft);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  animation: fade-in 0.25s ease-out backwards;
+}
+
+.updateButton {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--green-primary);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.icon {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.lead {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+  }
+}
+
+.stepIcon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--purple-tint);
+  color: var(--purple-primary);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.later {
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

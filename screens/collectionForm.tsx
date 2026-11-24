@@ -50,6 +50,7 @@ import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '
 import { buildApprovePaymentPrefill, fetchSourceClaimData, stripPrefilledIdentity } from '@utils/approvePayment';
 import { type KycPrefill, loadApprovePaymentIdentity } from '@utils/kycPrefill';
 import { baseToDisplay, denomDisplay, displayToBase } from '@utils/denomAmount';
+import { markInstallMoment } from 'lib/pwa/install';
 import { track } from 'lib/analytics/client';
 import { AnalyticsEvents } from 'lib/analytics/events';
 
@@ -755,6 +756,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             await onSign([message]);
             track(AnalyticsEvents.EditorFlowSubmitted, { ...submissionProps, claimId: response.data.cid as string });
             claimSubmissionReported = true;
+            // A good moment to offer the home-screen app. Only flags it; the sheet
+            // waits until the user has left this form (components/Pwa).
+            markInstallMoment();
             if (requiresBaseClaimRef.current && baseClaimCIDRef.current) {
               // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
               refreshClaimStatus(baseClaimCIDRef.current);

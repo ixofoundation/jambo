@@ -19,6 +19,7 @@ import type { CaptureResult, PostHog } from 'posthog-js';
 import { CHAIN_NETWORK_TYPE, DefaultChainNetwork } from '@constants/common';
 import { store } from '@store/index';
 import { redactAuthCallbackUrl } from 'lib/authHub/callbackUrl';
+import { displayMode } from 'lib/pwa/displayMode';
 
 import { campaignFirstTouchProperties, peekLandingCampaign } from './campaign';
 import { hasAnalyticsConsent, setAnalyticsConsentValue } from './consent';
@@ -42,6 +43,11 @@ export const ANALYTICS_SUPER_PROPERTIES = {
   brand: 'yoma',
   environment: DefaultChainNetwork,
 } as const;
+
+/** The fixed super properties plus `display_mode` (installed app or browser tab), read when registered. */
+function superProperties() {
+  return { ...ANALYTICS_SUPER_PROPERTIES, display_mode: displayMode() };
+}
 
 const MATRIX_HOMESERVER_DOMAIN: string | undefined = (() => {
   try {
@@ -163,7 +169,7 @@ export function initAnalytics(): void {
       before_send: redactAuthCallbackEvent,
     });
 
-    client.register(ANALYTICS_SUPER_PROPERTIES);
+    client.register(superProperties());
 
     posthogClient = client;
     pendingCalls.splice(0).forEach((fn) => fn(client));
@@ -224,7 +230,7 @@ export function resetAnalytics(): void {
   if (!initialized || typeof window === 'undefined') return;
   try {
     posthogClient?.reset();
-    posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
+    posthogClient?.register(superProperties());
     // reset() also drops session properties. A clean-break logout has already
     // cleared the campaign snapshot, so this only restores it for the
     // "switch account" logout, where the same visitor signs straight back in.
@@ -242,7 +248,7 @@ export function grantAnalyticsConsent(): void {
       // A revoke earlier in this page's life reset() the client, which drops
       // the super properties and the campaign — restore them for the
       // re-granted session.
-      posthogClient?.register(ANALYTICS_SUPER_PROPERTIES);
+      posthogClient?.register(superProperties());
       if (posthogClient) registerLandingCampaign(posthogClient);
     } catch {
       // posthog may not be fully ready; ignore

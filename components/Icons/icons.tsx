@@ -360,3 +360,18 @@ export const SlidersIcon: FC<IconProps> = (p) => (
     <circle cx='14' cy='20' r='2' />
   </Icon>
 );
+
+export const SmartphoneIcon: FC<IconProps> = (p) => (
+  <Icon {...p}>
+    <rect width='14' height='20' x='5' y='2' rx='2' ry='2' />
+    <path d='M12 18h.01' />
+  </Icon>
+);
+
+export const SquarePlusIcon: FC<IconProps> = (p) => (
+  <Icon {...p}>
+    <rect width='18' height='18' x='3' y='3' rx='2' />
+    <path d='M8 12h8' />
+    <path d='M12 8v8' />
+  </Icon>
+);

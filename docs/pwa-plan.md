@@ -8,6 +8,8 @@ Play Store listing (Trusted Web Activity) is out of scope for now.
 
 ## Phase 1: Installable
 
+Built. How it works: `docs/pwa.md`. Still needed: the real 1024px icon and the production domain check.
+
 - Manifest with proper icons, a maskable icon, and shortcuts (Wallet, Tasks, Support).
 - Our own install prompt, shown after a good moment (first claim submitted), not on first visit. A short "add to home screen" sheet on iPhone.
 - Service worker that caches the app shell and shows a branded offline screen.

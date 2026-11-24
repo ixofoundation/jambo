@@ -15,6 +15,7 @@ import EmailNotificationPrompt from '@components/EmailNotifier/EmailNotification
 import Dock from '@components/Dock/Dock';
 import AnalyticsConsentBanner from '@components/Analytics/AnalyticsConsentBanner';
 import AnalyticsIdentitySync from '@components/Analytics/AnalyticsIdentitySync';
+import Pwa from '@components/Pwa/Pwa';
 import { initAnalytics } from 'lib/analytics/client';
 import { captureLandingCampaign } from 'lib/analytics/campaign';
 
@@ -39,6 +40,7 @@ function MyApp({ Component, pageProps }: AppProps) {
               <EmailNotificationPrompt />
               <AnalyticsConsentBanner />
               <ToastContainer />
+              <Pwa />
             </YomaLinkProvider>
           </BackgroundSetupProvider>
         </AuthProvider>

@@ -13,7 +13,16 @@ class MyDocument extends Document {
           <script dangerouslySetInnerHTML={{ __html: AUTH_CALLBACK_CAPTURE_SCRIPT }} />
           <meta name='description' content={config.siteDescriptionMeta} />
           <link rel='icon' href='/favicon.ico' />
-          <link rel='apple-touch-icon' href='/favicon.ico' />
+          <link rel='apple-touch-icon' href='/icons/apple-touch-icon.png' />
+
+          {/* Installable app (docs/pwa.md). Colours match --bg-primary. */}
+          <link rel='manifest' href='/manifest.webmanifest' />
+          <meta name='theme-color' content='#f7f5eb' />
+          <meta name='application-name' content='yoma' />
+          <meta name='mobile-web-app-capable' content='yes' />
+          <meta name='apple-mobile-web-app-capable' content='yes' />
+          <meta name='apple-mobile-web-app-title' content='yoma' />
+          <meta name='apple-mobile-web-app-status-bar-style' content='default' />
 
           {/* social */}
           <link rel='canonical' href={config.siteUrl} />
