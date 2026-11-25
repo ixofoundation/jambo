@@ -1,4 +1,4 @@
-import { type CSSProperties, useRef, useState } from 'react';
+import { type CSSProperties, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -6,9 +6,17 @@ import GradientBand from '@components/GradientBand/GradientBand';
 import KycCredentialsCard from '@components/Credentials/KycCredentialsCard';
 import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
 import { RAMPS_PAUSED } from '@constants/yellowcard';
-import { ArrowDownLeftIcon, CheckIcon, ChevronRightIcon, CopyIcon, LandmarkIcon } from '@components/Icons/icons';
+import {
+  ArrowDownLeftIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  LandmarkIcon,
+  SmartphoneIcon,
+} from '@components/Icons/icons';
 import { useAuth } from '@hooks/useAuth';
 import { useAppSelector } from '@store/hooks';
+import { getInstallState, getServerInstallState, openInstallSheet, subscribeInstall } from 'lib/pwa/install';
 
 const LONG_PRESS_MS = 4000;
 
@@ -166,8 +174,33 @@ export default function ProfileScreen() {
           </span>
           <ChevronRightIcon size={18} color='var(--text-secondary)' />
         </button>
+
+        <InstallAppRow />
       </main>
     </div>
+  );
+}
+
+/** "Install the app": only when this phone can install it and hasn't (docs/pwa.md). */
+function InstallAppRow() {
+  const { platform } = useSyncExternalStore(subscribeInstall, getInstallState, getServerInstallState);
+  if (!platform) return null;
+  return (
+    <>
+      <h2 className='h2' style={{ margin: '24px 0 12px' }}>
+        App
+      </h2>
+      <button className='status-item' style={{ width: '100%' }} onClick={openInstallSheet}>
+        <span className='notif-ic' style={{ background: 'var(--purple-tint)', color: 'var(--purple-primary)' }}>
+          <SmartphoneIcon size={20} />
+        </span>
+        <span className='status-item__body'>
+          <span className='status-item__title' style={{ display: 'block' }}>Install the app</span>
+          <span className='status-item__meta' style={{ display: 'block' }}>Open yoma from your home screen in one tap</span>
+        </span>
+        <ChevronRightIcon size={18} color='var(--text-secondary)' />
+      </button>
+    </>
   );
 }
 

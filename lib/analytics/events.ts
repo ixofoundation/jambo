@@ -80,7 +80,38 @@ export type AirtimeSwapEvents = {
   airtime_pin_viewed: undefined;
 };
 
-export type EventRegistry = AuthEvents & YomaEvents & DeckEvents & ChatEvents & ClaimFlowEvents & AirtimeSwapEvents;
+/** Where the install offer was shown and on what kind of phone (docs/pwa.md). */
+export type PwaInstallPlatform = 'android' | 'ios';
+export type PwaInstallTrigger = 'claim_submitted' | 'profile';
+
+/**
+ * The installable app (docs/pwa.md). Every event also carries the
+ * `display_mode` super property: 'standalone' when opened from the home screen.
+ */
+export type PwaEvents = {
+  /** The install sheet was shown. */
+  pwa_install_prompt_shown: { platform: PwaInstallPlatform; trigger: PwaInstallTrigger };
+  /** Android: the answer to the browser's install dialog. iOS has no dialog, only instructions. */
+  pwa_install_prompt_result: { outcome: 'accepted' | 'dismissed' };
+  /** The user closed the install sheet with "Not now". */
+  pwa_install_prompt_dismissed: { platform: PwaInstallPlatform; trigger: PwaInstallTrigger };
+  /** The browser reports the app was installed (Android / desktop Chrome only). */
+  pwa_installed: undefined;
+  /** The user tapped "Update" on the new-version toast. */
+  pwa_update_accepted: undefined;
+  /** A claim was saved on the phone to send later (offline, or photos still waiting to upload). */
+  pwa_claim_queued: { collectionId: string; entityDid: string; heldFiles: number };
+  /** A photo was kept on the phone because there was no connection to upload it. */
+  pwa_file_held: { collectionId: string };
+};
+
+export type EventRegistry = AuthEvents &
+  YomaEvents &
+  DeckEvents &
+  ChatEvents &
+  ClaimFlowEvents &
+  AirtimeSwapEvents &
+  PwaEvents;
 
 export type TrackingEvent = keyof EventRegistry;
 
@@ -112,6 +143,13 @@ export const AnalyticsEvents = defineEventNames({
   AirtimeSwapFlagged: 'airtime_swap_flagged',
   AirtimeSwapRefused: 'airtime_swap_refused',
   AirtimePinViewed: 'airtime_pin_viewed',
+  PwaInstallPromptShown: 'pwa_install_prompt_shown',
+  PwaInstallPromptResult: 'pwa_install_prompt_result',
+  PwaInstallPromptDismissed: 'pwa_install_prompt_dismissed',
+  PwaInstalled: 'pwa_installed',
+  PwaUpdateAccepted: 'pwa_update_accepted',
+  PwaClaimQueued: 'pwa_claim_queued',
+  PwaFileHeld: 'pwa_file_held',
 } as const);
 
 /** Person properties set on identify(). Same keys as the portal. */

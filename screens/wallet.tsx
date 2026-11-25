@@ -7,6 +7,7 @@ import useUsdcUpgrade from '@hooks/useUsdcUpgrade';
 import useVoucherBalance from '@hooks/useVoucherBalance';
 import { type UsdcBalances, fromMicro, getWalletBalances } from '@utils/usdcBalance';
 import { formatCurrency } from '@utils/localCurrency';
+import { formatSavedAt, loadBalance, rememberBalance } from 'lib/pwa/userData';
 import Header from '@components/Header/Header';
 import UsdcUpgradeCard from '@components/Ramp/UsdcUpgradeCard';
 import RampsPausedBanner from '@components/Ramp/RampsPausedBanner';
@@ -48,23 +49,39 @@ export default function Wallet() {
   const onUpgradeSettled = useCallback(() => setRefresh((n) => n + 1), []);
   const upgrade = useUsdcUpgrade({ balances: usdcBalances, onSettled: onUpgradeSettled });
   const voucherBalance = useVoucherBalance(refresh);
+  // The last good total saved on this phone, shown with its time until a live read
+  // arrives (offline, or a slow connection). Display only: `usdcBalances` above,
+  // which drives the upgrade, stays live-only (lib/pwa/userData).
+  const [saved, setSaved] = useState<{ totalMicro: bigint; at: number } | null>(null);
+
+  useEffect(() => {
+    setSaved(address ? loadBalance(address) : null);
+  }, [address]);
 
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
-    void getWalletBalances(address).then((b) => {
-      if (cancelled) return;
-      setRefreshFailed(!b.complete);
-      if (!b.complete) return;
-      setUsdcBalances(b.usdc);
-    });
+    getWalletBalances(address)
+      .then((b) => {
+        if (cancelled) return;
+        setRefreshFailed(!b.complete);
+        if (!b.complete) return;
+        setUsdcBalances(b.usdc);
+        rememberBalance(address, b.usdc.totalMicro);
+      })
+      // No connection at all: same as an incomplete read.
+      .catch(() => {
+        if (!cancelled) setRefreshFailed(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [address, refresh]);
 
   // The ONE USDC amount: withdrawable + legacy, plus an upgrade on its way back to the wallet.
-  const balance = usdcBalances === null ? null : fromMicro(usdcBalances.totalMicro + upgrade.inTransitMicro);
+  const liveBalance = usdcBalances === null ? null : fromMicro(usdcBalances.totalMicro + upgrade.inTransitMicro);
+  const showingSaved = liveBalance === null && saved !== null;
+  const balance = liveBalance ?? (saved ? fromMicro(saved.totalMicro) : null);
 
   const fmtMoney = (v: number) => (local ? formatCurrency(v * local.rate, local.currency) : fmtUsd(v));
 
@@ -120,6 +137,12 @@ export default function Wallet() {
               ? `Available to withdraw · ≈ of ${balance === null ? '…' : fmtUsd(balance)} USDC`
               : 'Available to withdraw · USD'}
           </div>
+          {showingSaved && saved && (
+            <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
+              As of {formatSavedAt(saved.at)}
+              {refreshFailed ? '' : ' · checking for the latest…'}
+            </div>
+          )}
           {refreshFailed && (
             <div className='muted' style={{ fontSize: 13.5, marginTop: 4 }}>
               {balance === null

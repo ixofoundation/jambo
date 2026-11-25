@@ -50,6 +50,17 @@ import { APPROVE_PAYMENT_SOURCE_COLLECTIONS, isApprovePaymentCollection } from '
 import { buildApprovePaymentPrefill, fetchSourceClaimData, stripPrefilledIdentity } from '@utils/approvePayment';
 import { type KycPrefill, loadApprovePaymentIdentity } from '@utils/kycPrefill';
 import { baseToDisplay, denomDisplay, displayToBase } from '@utils/denomAmount';
+import { markInstallMoment } from 'lib/pwa/install';
+import { enqueueClaim } from 'lib/pwa/outbox/claims';
+import { findHeldFileIds } from 'lib/pwa/outbox/heldFiles';
+
+// Once per page load: the first photo kept on the phone explains what happened.
+let heldNoticeShown = false;
+function notifyFileHeld() {
+  if (heldNoticeShown) return;
+  heldNoticeShown = true;
+  toast.info('No connection. The photo is saved on your phone and uploads when you are back online.');
+}
 import { track } from 'lib/analytics/client';
 import { AnalyticsEvents } from 'lib/analytics/events';
 
@@ -631,6 +642,12 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
       // registered (once) before the first upload, not only at submission.
       createAttachUploadHandler(collectionId, did, {
         ensureVfsSigner: () => ensureEd25519VerificationMethod({ did, address, onSign }),
+        // No connection: keep photos on the phone (lib/pwa/outbox). Only where the
+        // offline queue can send the claim; see canQueueOffline below.
+        holdWhenOffline:
+          surveyMode === 'claim' && !approvePaymentActive
+            ? { address, onHeld: notifyFileHeld }
+            : undefined,
       })(model);
       createAttachDownloadHandler(did)(model);
 
@@ -669,7 +686,52 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
           );
           return;
         }
+        // Offline claims (docs/pwa.md). A plain claim submitted with no connection, or
+        // with photos still waiting to upload, is saved on the phone and sent later by
+        // lib/pwa/outbox, which uploads the photos before signing. Every other form
+        // goes through submitForm, untouched, and must not carry a held photo.
+        const heldFiles = findHeldFileIds(sender.data).length;
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        const canQueueOffline = surveyMode === 'claim' && !requiresBaseClaimRef.current && !approvePaymentActive;
+        if (canQueueOffline && (offline || heldFiles > 0)) {
+          void queueForLater(sender);
+          return;
+        }
+        if (heldFiles > 0) {
+          toast.error('Some photos are still waiting to upload. Connect to the internet and try again.');
+          return;
+        }
         submitForm(sender);
+      }
+
+      async function queueForLater(sender: any) {
+        model.onCompleting.remove(preventComplete);
+        try {
+          await enqueueClaim({
+            address,
+            did,
+            entityDid,
+            collectionId,
+            title: model.title || 'Claim',
+            surveyData: sender.data,
+          });
+        } catch (err) {
+          console.error('[outbox] could not save the claim on this phone:', err);
+          toast.error('Could not save your claim on this phone. Your answers are still in the draft.');
+          model.onCompleting.add(preventComplete);
+          return;
+        }
+        // Same ending as a successful submit (below): the draft is now the queued claim.
+        model.onValueChanged.remove(handleSurveyValueChanged);
+        dispatch(clearDraft(collectionId));
+        sender.doComplete();
+        toast.success(
+          navigator.onLine === false
+            ? 'Saved on your phone. It sends when you are back online.'
+            : 'Saved. Sending now…',
+        );
+        markInstallMoment();
+        router.push(collectionUrl);
       }
 
       async function submitForm(sender: any) {
@@ -755,6 +817,9 @@ export default function CollectionForm({ entityDid, collectionId, formType, clai
             await onSign([message]);
             track(AnalyticsEvents.EditorFlowSubmitted, { ...submissionProps, claimId: response.data.cid as string });
             claimSubmissionReported = true;
+            // A good moment to offer the home-screen app. Only flags it; the sheet
+            // waits until the user has left this form (components/Pwa).
+            markInstallMoment();
             if (requiresBaseClaimRef.current && baseClaimCIDRef.current) {
               // Fire-and-forget: nudges the worker to refresh the new linkage's status against the chain
               refreshClaimStatus(baseClaimCIDRef.current);

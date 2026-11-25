@@ -2,6 +2,9 @@ import { Model, QuestionFileModel } from 'survey-core';
 import { uploadFile, getSurveyFilePreview } from '../lib/matrix/matrixClaims';
 import { uploadClaimFileToVfs } from '../lib/vfs/claimMedia';
 import { hasVfsSigner } from '@utils/ucanVfs';
+import { heldFilePreview, holdFile, isNetworkFailure } from '../lib/pwa/outbox/heldFiles';
+import { track } from '../lib/analytics/client';
+import { AnalyticsEvents } from '../lib/analytics/events';
 
 /**
  * Configures all file-type questions on the model for external upload:
@@ -58,6 +61,12 @@ export function createAttachUploadHandler(
      * sign) the upload falls back to the claims bot for this form.
      */
     ensureVfsSigner?: () => Promise<void>;
+    /**
+     * Keep a file on the phone when there is no connection to upload it, instead of failing
+     * (lib/pwa/outbox). Only for forms the offline queue can send: plain claims. The answer
+     * gets a placeholder that is uploaded before the claim is signed.
+     */
+    holdWhenOffline?: { address: string; onHeld?: () => void };
   } = {},
 ): (model: Model) => void {
   return (model: Model) => {
@@ -79,7 +88,10 @@ export function createAttachUploadHandler(
     model.onUploadFiles.add(async (_sender, options) => {
       try {
         const results: Array<{ file: File | Blob; content: string }> = [];
-        const useVfs = await vfsReady();
+        const hold = opts.holdWhenOffline;
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        // Offline: skip the signing-key check, which needs the chain, and hold every file.
+        const useVfs = hold && offline ? false : await vfsReady();
 
         for (const file of options.files) {
           let fileToUpload: File | Blob = file;
@@ -101,10 +113,23 @@ export function createAttachUploadHandler(
             }
           }
 
-          const result = useVfs
-            ? await uploadClaimFileToVfs(fileToUpload, collectionId, did)
-            : await uploadFile(fileToUpload, collectionId, did);
-          results.push(result);
+          if (hold && offline) {
+            results.push({ file, content: await holdFile(fileToUpload, hold.address, collectionId) });
+            track(AnalyticsEvents.PwaFileHeld, { collectionId });
+            hold.onHeld?.();
+            continue;
+          }
+          try {
+            const result = useVfs
+              ? await uploadClaimFileToVfs(fileToUpload, collectionId, did)
+              : await uploadFile(fileToUpload, collectionId, did);
+            results.push(result);
+          } catch (uploadErr) {
+            if (!hold || !isNetworkFailure(uploadErr)) throw uploadErr;
+            results.push({ file, content: await holdFile(fileToUpload, hold.address, collectionId) });
+            track(AnalyticsEvents.PwaFileHeld, { collectionId });
+            hold.onHeld?.();
+          }
         }
 
         options.callback(
@@ -128,6 +153,13 @@ export function createAttachDownloadHandler(did: string): (model: Model) => void
     model.onDownloadFile.add(async (_sender, options) => {
       try {
         const raw = options.content || options.fileValue;
+
+        // A file kept on the phone while offline (lib/pwa/outbox): preview it from there.
+        const held = await heldFilePreview(typeof raw === 'string' ? raw : raw?.content);
+        if (held) {
+          options.callback('success', held);
+          return;
+        }
 
         // If content is already a data URL (legacy storeDataAsText=true format),
         // return it directly — no need to fetch from claim bot

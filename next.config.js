@@ -44,7 +44,19 @@ const nextConfig = {
   // URL. The page removes it at once (lib/authHub/callbackUrl); this makes
   // sure no request from that page ever sends the URL as a referrer.
   async headers() {
-    return [{ source: '/auth/callback', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] }];
+    return [
+      { source: '/auth/callback', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] },
+      // The service worker and manifest must never be served from an HTTP
+      // cache, or installed apps would miss new deploys (docs/pwa.md).
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
+      {
+        source: '/manifest.webmanifest',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache' },
+          { key: 'Content-Type', value: 'application/manifest+json' },
+        ],
+      },
+    ];
   },
   swcMinify: false,
   experimental: {

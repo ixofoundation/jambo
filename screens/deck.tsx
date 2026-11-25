@@ -448,7 +448,8 @@ export default function Deck() {
                 Your saved cards, chats and credentials live in your Vault. Log out and back in to try again, or
                 continue without it — some things will be limited.
               </p>
-              <button className='btn btn--primary btn--block' onClick={() => void logout()}>
+              {/* The user signs straight back in: keep claims waiting to send (lib/pwa/outbox). */}
+              <button className='btn btn--primary btn--block' onClick={() => void logout({ keepQueuedClaims: true })}>
                 Log out &amp; try again
               </button>
               <button className='btn btn--ghost btn--block' style={{ marginTop: 10 }} onClick={continueWithoutVault}>

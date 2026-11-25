@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, ReactNode } from 'react';
+import { useState, useCallback, useEffect, useSyncExternalStore, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 
 import Header from '@components/Header/Header';
@@ -18,6 +18,7 @@ import {
 } from '@components/Icons/icons';
 import { openPinResetFlow } from 'lib/authHub/pinReset';
 import { useAuth } from '@hooks/useAuth';
+import { getOutboxState, getServerOutboxState, subscribeOutbox } from 'lib/pwa/outbox/claims';
 import useIsAdmin from '@hooks/useIsAdmin';
 import { secret } from '@utils/secrets';
 import { decryptEncryptedMnemonic } from '@utils/roomBotMnemonic';
@@ -38,6 +39,10 @@ function shorten(value: string, head = 8, tail = 5) {
 export default function SettingsScreen() {
   const router = useRouter();
   const { address, did, logout } = useAuth();
+  // Claims saved on this phone to send later: a logout deletes them, so it asks first.
+  const outbox = useSyncExternalStore(subscribeOutbox, getOutboxState, getServerOutboxState);
+  const waitingClaims = outbox.claims.filter((c) => c.address === address).length;
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const { isAdmin } = useIsAdmin();
 
   const userId = secret.userId;
@@ -241,13 +246,25 @@ export default function SettingsScreen() {
 
         <div style={{ flex: 1 }} />
 
+        {confirmLogout && (
+          <p role='alert' style={{ margin: '28px 4px 0', fontSize: 14, lineHeight: 1.5, color: 'var(--error-color)' }}>
+            You have {waitingClaims} claim{waitingClaims === 1 ? '' : 's'} waiting to send. Logging out deletes{' '}
+            {waitingClaims === 1 ? 'it' : 'them'} from this phone.
+          </p>
+        )}
         <button
-          onClick={() => void logout()}
+          onClick={() => {
+            if (waitingClaims > 0 && !confirmLogout) {
+              setConfirmLogout(true);
+              return;
+            }
+            void logout();
+          }}
           className='btn btn--ghost btn--block'
-          style={{ color: 'var(--error-color)', marginTop: 28, marginBottom: 8 }}
+          style={{ color: 'var(--error-color)', marginTop: confirmLogout ? 10 : 28, marginBottom: 8 }}
         >
           <LogOutIcon size={17} />
-          <span>Logout</span>
+          <span>{confirmLogout ? 'Log out and delete them' : 'Logout'}</span>
         </button>
       </main>
 
