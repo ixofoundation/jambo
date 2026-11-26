@@ -27,6 +27,8 @@ import { YOMA_SYNC_API_BASE } from './config';
 export interface YomaLinkResult {
   email: string | null;
   yomaId: string | null;
+  /** Which verified contact the worker bound this DID by (`phone` for an account without email); null when unbound or unknown. */
+  contact?: 'email' | 'phone' | null;
 }
 
 const EMAIL_DELEGATION_TTL_SECONDS = 240; // hub caps proof lifetime at 300s
@@ -69,10 +71,12 @@ async function linkAuthHeaders(userDid: string, workerDid: string): Promise<Reco
 }
 
 function parseLinkResult(body: unknown): YomaLinkResult {
-  const { email, yomaId } = (body ?? {}) as { email?: unknown; yomaId?: unknown };
+  const { email, yomaId, contact } = (body ?? {}) as { email?: unknown; yomaId?: unknown; contact?: unknown };
   return {
     email: typeof email === 'string' ? email : null,
     yomaId: typeof yomaId === 'string' ? yomaId : null,
+    // Only from the phone-matching worker; the worker on main never sends it.
+    contact: contact === 'email' || contact === 'phone' ? contact : null,
   };
 }
 
@@ -87,28 +91,33 @@ export async function getLinkStatus(userDid: string): Promise<YomaLinkResult> {
 }
 
 /**
- * The bind request body (POST /v1/link/bind):
+ * The bind request body (POST /v1/link/bind), exactly the fields the worker
+ * declares (its BindRequestSchema, on main and in its phone-matching version):
  *
- *   { delegation: string,        // always: `auth/user/email` (unchanged)
+ *   { delegation: string,        // always: `auth/user/email` (unchanged; main requires it)
  *     phoneDelegation?: string,  // direct-provider (Yoma) accounts only: `auth/user/phone`
- *     authProvider?: string }    // when known: 'workos' or the provider id
+ *     yref?: string }            // the Yoma hand-off marker, when this tab holds one
  *
  * Both delegations: one capability each, on `ixo:auth-hub:user:<address>`,
  * from the user's Ed25519 key, audience the worker's DID, a 240 s lifetime
  * (the hub refuses proofs longer than 300 s). `delegation` stays exactly what
  * every worker version checks (its first capability must be
- * `auth/user/email`); the other two fields are optional and extra, which the
- * current worker's schema ignores (a non-strict zod object) and a worker that
- * matches by verified phone can use when the account has no email. The phone
- * read is only delegated for a direct-provider account: the hub keeps a phone
- * number only for those, so a WorkOS account would only grant a read that
- * can never answer.
+ * `auth/user/email`). The worker on main ignores the two optional fields (a
+ * non-strict zod object strips them); the phone-matching worker reads the
+ * phone when the account has no email, and uses `yref` only to settle an
+ * ambiguous match, when the account's verified contact equals that Yoma
+ * profile's. The phone read is only delegated for a direct-provider account:
+ * the hub keeps a phone number only for those, so a WorkOS account would only
+ * grant a read that can never answer.
  */
 export interface BindRequestBody {
   delegation: string;
   phoneDelegation?: string;
-  authProvider?: string;
+  yref?: string;
 }
+
+/** The worker's limit for `yref` (1 to 128 characters); anything else is left out. */
+const YREF_MAX_LENGTH = 128;
 
 export function bindCapabilities(address: string): { email: Capability; phone: Capability } {
   const resource = `ixo:auth-hub:user:${address}` as const;
@@ -125,7 +134,10 @@ export function bindCapabilities(address: string): { email: Capability; phone: C
  * hub is consulted at most once per DID. The phone number itself never passes
  * through this app.
  */
-export async function bindLink(userDid: string, options?: { authProvider?: string | null }): Promise<YomaLinkResult> {
+export async function bindLink(
+  userDid: string,
+  options?: { authProvider?: string | null; yref?: string | null },
+): Promise<YomaLinkResult> {
   const workerDid = await fetchWorkerDid();
   const address = userDid.split(':').at(2) ?? '';
   const capabilities = bindCapabilities(address);
@@ -147,7 +159,8 @@ export async function bindLink(userDid: string, options?: { authProvider?: strin
       ttlSeconds: EMAIL_DELEGATION_TTL_SECONDS,
     });
   }
-  if (authProvider) body.authProvider = authProvider;
+  const yref = options?.yref;
+  if (typeof yref === 'string' && yref.length > 0 && yref.length <= YREF_MAX_LENGTH) body.yref = yref;
 
   const res = await fetch(`${YOMA_SYNC_API_BASE}/v1/link/bind`, {
     method: 'POST',

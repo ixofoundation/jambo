@@ -48,13 +48,13 @@ afterEach(() => {
 });
 
 describe('bindLink', () => {
-  it('a Yoma account: the unchanged email delegation, a phone delegation and the provider', async () => {
+  it('a Yoma account: the unchanged email delegation and a phone delegation, nothing else', async () => {
     const m = await load();
     const result = await m.bindLink(USER_DID, { authProvider: 'yoma' });
-    expect(result).toEqual({ email: null, yomaId: 'y-1' });
+    expect(result).toEqual({ email: null, yomaId: 'y-1', contact: null });
 
     const body = bindBody();
-    expect(Object.keys(body).sort()).toEqual(['authProvider', 'delegation', 'phoneDelegation']);
+    expect(Object.keys(body).sort()).toEqual(['delegation', 'phoneDelegation']);
     expect(JSON.parse(body.delegation as string)).toEqual({
       can: ['auth/user/email ixo:auth-hub:user:ixo1user'],
       audience: WORKER_DID,
@@ -65,16 +65,46 @@ describe('bindLink', () => {
       audience: WORKER_DID,
       ttlSeconds: 240,
     });
-    expect(body.authProvider).toBe('yoma');
   });
 
   it('a WorkOS account: no phone delegation', async () => {
     const m = await load();
     await m.bindLink(USER_DID, { authProvider: 'workos' });
-    expect(Object.keys(bindBody()).sort()).toEqual(['authProvider', 'delegation']);
+    expect(Object.keys(bindBody())).toEqual(['delegation']);
   });
 
-  it('an unknown provider (older session): exactly the request the current worker always got', async () => {
+  it('sends the yref hand-off marker when there is one, within the worker limit', async () => {
+    const m = await load();
+    await m.bindLink(USER_DID, { authProvider: 'yoma', yref: 'partner-user-42' });
+    const body = bindBody();
+    expect(Object.keys(body).sort()).toEqual(['delegation', 'phoneDelegation', 'yref']);
+    expect(body.yref).toBe('partner-user-42');
+
+    fetchMock.mockClear();
+    await m.bindLink(USER_DID, { authProvider: 'workos', yref: 'x'.repeat(129) });
+    expect(Object.keys(bindBody())).toEqual(['delegation']);
+    fetchMock.mockClear();
+    await m.bindLink(USER_DID, { yref: '' });
+    expect(Object.keys(bindBody())).toEqual(['delegation']);
+  });
+
+  it('reads the contact the phone-matching worker reports, and nothing else', async () => {
+    const m = await load();
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('/.well-known/did.json')
+        ? new Response(JSON.stringify({ id: WORKER_DID }), { status: 200 })
+        : new Response(JSON.stringify({ email: null, yomaId: null, contact: 'phone' }), { status: 200 }),
+    );
+    expect(await m.getLinkStatus(USER_DID)).toEqual({ email: null, yomaId: null, contact: 'phone' });
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('/.well-known/did.json')
+        ? new Response(JSON.stringify({ id: WORKER_DID }), { status: 200 })
+        : new Response(JSON.stringify({ email: null, yomaId: null, contact: '+15550000' }), { status: 200 }),
+    );
+    expect((await m.getLinkStatus(USER_DID)).contact).toBeNull();
+  });
+
+  it('an unknown provider and no yref (older session): exactly the request the worker always got', async () => {
     const m = await load();
     await m.bindLink(USER_DID);
     expect(Object.keys(bindBody())).toEqual(['delegation']);

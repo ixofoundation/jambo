@@ -68,12 +68,18 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
         let link: YomaLinkState | null = getCachedLink(did);
 
         // A completed link is permanent — only hit the network when we don't
-        // know of one yet. status is a cheap D1 read; bind (which costs one
-        // rate-limited auth-hub email read, once per DID ever) only runs
-        // while the worker has no verified email for this DID.
+        // know of one yet. status is a cheap D1 read; bind costs one
+        // rate-limited auth-hub read (email, or phone for a phone-only Yoma
+        // account) only while the worker has no verified contact for this DID.
         if (!link?.yomaId) {
-          link = await getLinkStatus(did);
-          if (!link.email) link = await bindLink(did, { authProvider });
+          const status = await getLinkStatus(did);
+          link = status;
+          // Bind while the worker has no verified contact for this DID (the
+          // hub is read only then), or to hand it the yref marker: on a DID
+          // already bound but unmatched, the worker uses it (D1 only) to settle
+          // a match its contact alone left ambiguous.
+          const bound = !!status.email || !!status.contact;
+          if (!bound || (yref && !status.yomaId)) link = await bindLink(did, { authProvider, yref });
           setCachedLink(did, link);
         }
         markCheckedThisSession(did);
