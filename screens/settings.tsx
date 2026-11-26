@@ -37,7 +37,7 @@ function shorten(value: string, head = 8, tail = 5) {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { address, did, logout } = useAuth();
+  const { address, did, email, authProvider, logout } = useAuth();
   const { isAdmin } = useIsAdmin();
 
   const userId = secret.userId;
@@ -199,10 +199,11 @@ export default function SettingsScreen() {
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>—</span>
             )}
           </Row>
-          {/* PIN reset lives on the auth hub: fresh email sign-in there, new
-              PIN chosen there — no old PIN needed (designer's "PIN Code" row). */}
+          {/* PIN reset lives on the auth hub: a fresh sign-in there (email
+              code, or Yoma for a Yoma account), new PIN chosen there — no old
+              PIN needed (designer's "PIN Code" row). */}
           <Row label='PIN Code' icon={<FingerprintIcon size={20} />}>
-            <ActionChip label='Reset' onClick={openPinResetFlow} />
+            <ActionChip label='Reset' onClick={() => openPinResetFlow(authProvider)} />
           </Row>
         </Group>
 
@@ -233,11 +234,14 @@ export default function SettingsScreen() {
           </div>
         </Group>
 
-        <Group title='Email Notifications'>
-          <div style={{ padding: '6px 4px' }}>
-            <EmailNotifier />
-          </div>
-        </Group>
+        {/* Only for an account with an email (not a phone-only Yoma account). */}
+        {email && (
+          <Group title='Email Notifications'>
+            <div style={{ padding: '6px 4px' }}>
+              <EmailNotifier />
+            </div>
+          </Group>
+        )}
 
         <div style={{ flex: 1 }} />
 

@@ -36,7 +36,7 @@ import {
  */
 
 export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
-  const { isLoggedIn, isLoading, did, logout } = useAuth();
+  const { isLoggedIn, isLoading, did, authProvider, logout } = useAuth();
   const router = useRouter();
   const [mismatch, setMismatch] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -73,7 +73,7 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
         // while the worker has no verified email for this DID.
         if (!link?.yomaId) {
           link = await getLinkStatus(did);
-          if (!link.email) link = await bindLink(did);
+          if (!link.email) link = await bindLink(did, { authProvider });
           setCachedLink(did, link);
         }
         markCheckedThisSession(did);
@@ -84,8 +84,9 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
             successToast('Yoma account connected');
             track(AnalyticsEvents.YomaAccountLinked);
           } else {
-            // Wrong account OR an email that matches no Yoma profile — either
-            // way this sign-in isn't the account the hand-off was for.
+            // Wrong account, or one that matches no Yoma profile (by email,
+            // or by phone for a phone-only Yoma account) — either way this
+            // sign-in isn't the account the hand-off was for.
             setMismatch(true);
             track(AnalyticsEvents.YomaAccountMismatchShown);
           }
@@ -98,7 +99,7 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
         runningRef.current = false;
       }
     })();
-  }, [isLoading, isLoggedIn, did, router.isReady]);
+  }, [isLoading, isLoggedIn, did, authProvider, router.isReady]);
 
   function handleContinue() {
     // The user owns the decision — drop the marker so it never nags again.
@@ -110,7 +111,8 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
     setLoggingOut(true);
     // preserveReturnTo keeps the deep link AND the yref marker, so after
     // signing in with the right account the user lands back here and the
-    // comparison re-runs (and connects).
+    // comparison re-runs (and connects). A Yoma account is signed out at the
+    // hub and at Yoma first, then sent to a fresh Yoma login (providers/auth).
     void logout({ preserveReturnTo: true });
   }
 
@@ -154,11 +156,11 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
                 margin: 0,
               }}
             >
-              Different Yoma account
+              Not the right account
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0, lineHeight: 1.5 }}>
-              You came here from Yoma, but the account you&apos;re signed in with uses a different email than your Yoma
-              account. To earn your Yoma reward, sign in with the same email you use on Yoma.
+              You came here from Yoma, but you&apos;re signed in with a different account from the Yoma account this
+              link was made for. To earn your Yoma reward, log out and sign in with that Yoma account.
             </p>
             <button
               onClick={handleSwitchAccount}

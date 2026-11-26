@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useAuth } from '@hooks/useAuth';
 import { openPinResetFlow } from 'lib/authHub/pinReset';
 
 const PIN_LENGTH = 6;
@@ -12,6 +13,8 @@ interface PinModalProps {
 }
 
 export default function PinModal({ onSuccess, onCancel, title = 'Data Store', helper = 'Enter your Data Store PIN' }: PinModalProps) {
+  // A Yoma account resets its PIN through Yoma, not an email code (lib/authHub/provider).
+  const { authProvider } = useAuth();
   const [digits, setDigits] = useState<string[]>(Array(PIN_LENGTH).fill(''));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -216,7 +219,7 @@ export default function PinModal({ onSuccess, onCancel, title = 'Data Store', he
 
         <button
           type='button'
-          onClick={openPinResetFlow}
+          onClick={() => openPinResetFlow(authProvider)}
           style={{
             display: 'block',
             margin: '4px auto 0',

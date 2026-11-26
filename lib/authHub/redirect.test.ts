@@ -55,17 +55,19 @@ describe('loginViaAuthHub', () => {
     expect(await m.codeChallengeS256(pending!.verifier!)).toBe(challenge);
   });
 
-  it('Login with IXO: no organisation or prompt, still state + S256', async () => {
+  it('Sign in with IXO (/ixo): no organisation, provider or prompt, still state + S256', async () => {
     const m = await loadRedirect({
       NEXT_PUBLIC_AUTH_HUB_ORGANIZATION_ID: ORG,
+      NEXT_PUBLIC_AUTH_HUB_SSO_PROVIDER: 'yoma',
       NEXT_PUBLIC_AUTH_HUB_SSO_PROMPT: 'inherit',
     });
-    await m.loginViaAuthHub({ viaOrganization: false });
+    await m.loginViaAuthHub({ viaYoma: false });
     const url = startUrl(browser);
 
     expect(url.searchParams.get('redirect_uri')).toBe('https://jambo.test/auth/callback');
     expect(url.searchParams.get('hide_mnemonic')).toBe('true');
     expect(url.searchParams.has('organization_id')).toBe(false);
+    expect(url.searchParams.has('sso_provider')).toBe(false);
     expect(url.searchParams.has('prompt')).toBe(false);
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     const pending = m.takePendingSignIn(url.searchParams.get('state'));
@@ -80,6 +82,60 @@ describe('loginViaAuthHub', () => {
     ).toBe(true);
     expect(href).toContain(`&hide_mnemonic=true&organization_id=${ORG}`);
     expect(new URL(href).searchParams.has('prompt')).toBe(false);
+  });
+
+  it('Login with Yoma, direct: sso_provider instead of the organisation, prompt kept', async () => {
+    const m = await loadRedirect({
+      NEXT_PUBLIC_AUTH_HUB_ORGANIZATION_ID: ORG,
+      NEXT_PUBLIC_AUTH_HUB_SSO_PROVIDER: 'yoma',
+      NEXT_PUBLIC_AUTH_HUB_SSO_PROMPT: 'inherit',
+    });
+    expect(m.YOMA_SSO_AVAILABLE).toBe(true);
+    await m.loginViaAuthHub();
+    const url = startUrl(browser);
+    expect(url.searchParams.get('sso_provider')).toBe('yoma');
+    expect(url.searchParams.has('organization_id')).toBe(false);
+    expect(url.searchParams.get('prompt')).toBe('inherit');
+    expect(url.searchParams.get('redirect_uri')).toBe('https://jambo.test/auth/callback');
+    expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+  });
+
+  it('Login with Yoma, direct only (no organisation configured) is still available', async () => {
+    const m = await loadRedirect({ NEXT_PUBLIC_AUTH_HUB_SSO_PROVIDER: 'yoma' });
+    expect(m.YOMA_SSO_AVAILABLE).toBe(true);
+    const url = new URL(await m.prepareAuthHubLogin());
+    expect(url.searchParams.get('sso_provider')).toBe('yoma');
+    expect(url.searchParams.has('prompt')).toBe(false);
+  });
+
+  it('an invalid provider value falls back to the organisation', async () => {
+    const m = await loadRedirect({
+      NEXT_PUBLIC_AUTH_HUB_ORGANIZATION_ID: ORG,
+      NEXT_PUBLIC_AUTH_HUB_SSO_PROVIDER: 'Yoma&x=1',
+    });
+    const url = new URL(await m.prepareAuthHubLogin());
+    expect(url.searchParams.has('sso_provider')).toBe(false);
+    expect(url.searchParams.get('organization_id')).toBe(ORG);
+  });
+
+  it('switch account: the old account provider with prompt=login, even over an inherit default', async () => {
+    const m = await loadRedirect({
+      NEXT_PUBLIC_AUTH_HUB_ORGANIZATION_ID: ORG,
+      NEXT_PUBLIC_AUTH_HUB_SSO_PROMPT: 'inherit',
+    });
+    const url = new URL(await m.prepareAuthHubLogin({ ssoProvider: 'yoma', prompt: 'login' }));
+    expect(url.searchParams.get('sso_provider')).toBe('yoma');
+    expect(url.searchParams.has('organization_id')).toBe(false);
+    expect(url.searchParams.get('prompt')).toBe('login');
+  });
+
+  it('no Yoma configured: neither provider, organisation nor prompt', async () => {
+    const m = await loadRedirect({ NEXT_PUBLIC_AUTH_HUB_SSO_PROMPT: 'inherit' });
+    expect(m.YOMA_SSO_AVAILABLE).toBe(false);
+    const url = new URL(await m.prepareAuthHubLogin());
+    expect(url.searchParams.has('sso_provider')).toBe(false);
+    expect(url.searchParams.has('organization_id')).toBe(false);
+    expect(url.searchParams.has('prompt')).toBe(false);
   });
 
   it('a fresh state and verifier on every start', async () => {
@@ -104,6 +160,23 @@ describe('loginViaAuthHub', () => {
     vi.stubGlobal('crypto', { getRandomValues: globalThis.crypto.getRandomValues.bind(globalThis.crypto) });
     await expect(m.loginViaAuthHub()).rejects.toThrow();
     expect(browser.window.location.href).toBe('https://jambo.test/auth');
+  });
+});
+
+describe('logoutViaAuthHub', () => {
+  it('a Yoma account: hub logout with sso_provider, back to the registered /auth/callback', async () => {
+    const m = await loadRedirect({});
+    m.logoutViaAuthHub('yoma');
+    const url = startUrl(browser);
+    expect(`${url.origin}${url.pathname}`).toBe(`${HUB}/api/auth/logout`);
+    expect(url.searchParams.get('redirect_uri')).toBe('https://jambo.test/auth/callback');
+    expect(url.searchParams.get('sso_provider')).toBe('yoma');
+  });
+
+  it('a WorkOS account: no sso_provider', async () => {
+    const m = await loadRedirect({});
+    m.logoutViaAuthHub('workos');
+    expect(startUrl(browser).searchParams.has('sso_provider')).toBe(false);
   });
 });
 

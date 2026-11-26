@@ -8,6 +8,8 @@ interface AccountState {
   displayName: string | null;
   /** Optional — sessions created before the auth hub returned it have none. */
   email?: string | null;
+  /** 'workos' or a direct provider id ('yoma'); absent for sessions from before the hub returned it. */
+  authProvider?: string | null;
   matrixUserId: string | null;
   matrixRoomId: string | null;
 }
@@ -19,6 +21,7 @@ const initialState: AccountState = {
   sessionAuthenticatorId: null,
   displayName: null,
   email: null,
+  authProvider: null,
   matrixUserId: null,
   matrixRoomId: null,
 };
@@ -36,6 +39,7 @@ const accountSlice = createSlice({
         sessionAuthenticatorId: string | null;
         displayName: string | null;
         email?: string | null;
+        authProvider?: string | null;
         matrixUserId: string | null;
         matrixRoomId: string | null;
       }>,
@@ -46,6 +50,7 @@ const accountSlice = createSlice({
       state.sessionAuthenticatorId = action.payload.sessionAuthenticatorId;
       state.displayName = action.payload.displayName;
       state.email = action.payload.email ?? null;
+      state.authProvider = action.payload.authProvider ?? null;
       state.matrixUserId = action.payload.matrixUserId;
       state.matrixRoomId = action.payload.matrixRoomId;
     },

@@ -20,7 +20,8 @@ export default function EmailNotifier() {
     return map;
   }, [subscription]);
 
-  // Hide the section entirely when the feature isn't configured for this build.
+  // Hide the section entirely when the feature isn't configured for this build,
+  // or the account has no email to send to.
   if (!configured) return null;
 
   const isActive = subscription?.status === 'active';

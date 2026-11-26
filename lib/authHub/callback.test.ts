@@ -142,6 +142,29 @@ describe('completeAuthHubCallback', () => {
     await expect(m.completeAuthHubCallback()).rejects.toMatchObject({ reason: 'cancelled' });
   });
 
+  it.each([
+    ['sso_access_denied', 'cancelled'],
+    ['sso_provider_unavailable', 'provider_unavailable'],
+    ['sso_provider_error', 'provider_unavailable'],
+    ['sso_session_expired', 'session_expired'],
+    ['sso_invalid_state', 'session_expired'],
+    ['rate_limited', 'rate_limited'],
+    ['sso_account_deleted', 'account_deleted'],
+  ])('the hub code %s is reported as %s', async (code, reason) => {
+    const m = await load();
+    landOnCallback(`error=${code}`);
+    await expect(m.completeAuthHubCallback()).rejects.toMatchObject({ reason });
+  });
+
+  it('hubErrorReason: unknown, inherited or malformed codes are hub_error', async () => {
+    const m = await load();
+    expect(m.hubErrorReason('sso_email_required')).toBe('hub_error');
+    expect(m.hubErrorReason('constructor')).toBe('hub_error');
+    expect(m.hubErrorReason('toString')).toBe('hub_error');
+    expect(m.hubErrorReason('SSO_SESSION_EXPIRED')).toBe('hub_error');
+    expect(m.hubErrorReason(null)).toBe('hub_error');
+  });
+
   it('an unexpected error code is not echoed', async () => {
     const m = await load();
     landOnCallback(`error=${encodeURIComponent('<b>Call us</b>')}`);

@@ -4,10 +4,47 @@ import { exchangeAuthCode, type AuthHubSessionData } from './redirect';
 
 export type AuthHubCallbackFailure =
   | 'cancelled'
+  | 'provider_unavailable'
+  | 'session_expired'
+  | 'rate_limited'
+  | 'account_deleted'
   | 'hub_error'
   | 'state_mismatch'
   | 'missing_verifier'
   | 'exchange_failed';
+
+/**
+ * The hub's error codes (its /auth-error page hands them back to the app,
+ * and /api/auth/login answers some directly), grouped by what the person
+ * can do about them. Every other code is `hub_error` (the generic line).
+ */
+const HUB_ERROR_REASONS: Record<string, AuthHubCallbackFailure> = {
+  // They (or the provider) stopped the sign-in.
+  access_denied: 'cancelled',
+  sso_access_denied: 'cancelled',
+  // The sign-in service (Yoma, WorkOS) could not be reached or failed.
+  sso_provider_unavailable: 'provider_unavailable',
+  sso_provider_error: 'provider_unavailable',
+  oauth_failed: 'provider_unavailable',
+  server_error: 'provider_unavailable',
+  temporarily_unavailable: 'provider_unavailable',
+  // The sign-in ran out, or finished in another tab or browser: start again.
+  sso_session_expired: 'session_expired',
+  sso_session_lost: 'session_expired',
+  sso_invalid_state: 'session_expired',
+  sso_nonce_mismatch: 'session_expired',
+  sso_login_required: 'session_expired',
+  code_expired: 'session_expired',
+  state_mismatch: 'session_expired',
+  rate_limited: 'rate_limited',
+  sso_account_deleted: 'account_deleted',
+};
+
+/** The reason for a hub error code; anything unknown or malformed is `hub_error`. */
+export function hubErrorReason(code: string | null | undefined): AuthHubCallbackFailure {
+  if (!code || !/^[a-z_]{1,64}$/.test(code)) return 'hub_error';
+  return Object.prototype.hasOwnProperty.call(HUB_ERROR_REASONS, code) ? HUB_ERROR_REASONS[code] : 'hub_error';
+}
 
 /** A callback this browser refuses or the hub refused. `message` never carries the code, verifier or hub text. */
 export class AuthHubCallbackError extends Error {
@@ -38,10 +75,7 @@ export async function completeAuthHubCallback(): Promise<AuthHubCallbackResult> 
 
   if (error) {
     const errorCode = /^[a-z_]{1,64}$/.test(error) ? error : 'unknown';
-    throw new AuthHubCallbackError(
-      errorCode === 'access_denied' ? 'cancelled' : 'hub_error',
-      `Auth hub returned an error (${errorCode})`,
-    );
+    throw new AuthHubCallbackError(hubErrorReason(errorCode), `Auth hub returned an error (${errorCode})`);
   }
   if (!code) return { kind: 'none' };
   if (!pending?.state || !state || state !== pending.state) {

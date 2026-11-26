@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@hooks/useAuth';
 import { AuthHubCallbackError, completeAuthHubCallback } from 'lib/authHub/callback';
 import { isDevBypass, getDevBypassSession } from 'lib/authHub/devBypass';
+import { lastSignInPage } from 'lib/authHub/signInFlow';
 import { takeReturnTo } from '@utils/returnTo';
 import { persistor } from '@store/index';
 import GradientBand from '@components/GradientBand/GradientBand';
@@ -16,6 +17,14 @@ function callbackErrorMessage(err: unknown): string {
     switch (err.reason) {
       case 'cancelled':
         return 'Sign-in was cancelled. Tap Try Again to sign in.';
+      case 'provider_unavailable':
+        return "We couldn't reach the sign-in service just now. Wait a moment, then tap Try Again.";
+      case 'session_expired':
+        return 'Your sign-in took too long or finished in another tab. Tap Try Again to sign in.';
+      case 'rate_limited':
+        return 'There were too many sign-in attempts. Wait a minute, then tap Try Again.';
+      case 'account_deleted':
+        return 'This account has been deleted, so you can no longer sign in with it.';
       case 'state_mismatch':
       case 'missing_verifier':
         return 'This sign-in was not started in this browser, or it was already used. Tap Try Again to sign in.';
@@ -131,7 +140,7 @@ export default function AuthCallbackPage() {
             </p>
             <button
               data-testid='auth-callback-restart'
-              onClick={() => router.push('/auth')}
+              onClick={() => router.push(lastSignInPage())}
               style={{
                 width: '100%',
                 padding: '12px 20px',

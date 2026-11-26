@@ -3,8 +3,9 @@ import { useRouter } from 'next/router';
 
 import GuestGuard from '@components/GuestGuard';
 import { LogInIcon } from '@components/Icons/icons';
-import { loginViaAuthHub, YOMA_SSO_AVAILABLE } from 'lib/authHub/redirect';
+import { loginViaAuthHub, YOMA_SSO_AVAILABLE, type AuthHubLoginOptions } from 'lib/authHub/redirect';
 import { isDevBypass } from 'lib/authHub/devBypass';
+import { rememberSignInPage, takeSwitchAccount } from 'lib/authHub/signInFlow';
 import { peekYref } from '@utils/yomaLink';
 import { saveReturnTo } from '@utils/returnTo';
 
@@ -36,13 +37,14 @@ export default function AuthPage() {
     if (typeof back === 'string') saveReturnTo(back);
   }, [router.isReady, router.query.returnTo]);
 
-  // Primary: through the Yoma organisation (YoID) when configured, else the
-  // hub's normal login. Secondary: always the hub's normal IXO login.
+  // The only sign-in here: through Yoma when configured, else the hub's normal
+  // login. IXO team accounts sign in on /ixo (not linked from the app).
   // A sign-in that cannot be secured (no WebCrypto / storage) does not start.
   const [startFailed, setStartFailed] = useState(false);
-  function startSignIn(options?: { viaOrganization?: boolean }) {
+  function startSignIn(options?: AuthHubLoginOptions) {
     setIsRedirecting(true);
     setStartFailed(false);
+    rememberSignInPage('/auth');
     loginViaAuthHub(options).catch(() => {
       setIsRedirecting(false);
       setStartFailed(true);
@@ -53,9 +55,14 @@ export default function AuthPage() {
     startSignIn();
   }
 
-  function handleIxoSignIn() {
-    startSignIn({ viaOrganization: false });
-  }
+  // Back from "Log out and switch account": the hub and Yoma signed the old
+  // account out, now Yoma must ask who is signing in (prompt=login). Read
+  // once, so a reload or the back button shows the page instead.
+  useEffect(() => {
+    const provider = takeSwitchAccount();
+    if (provider) startSignIn({ ssoProvider: provider, prompt: 'login' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleDevLogin() {
     router.push('/auth/callback?bypass=true');
@@ -146,11 +153,6 @@ export default function AuthPage() {
             <button className='btn btn--primary btn--block' onClick={handleSignIn} disabled={isRedirecting}>
               <LogInIcon size={18} /> {primaryLabel}
             </button>
-            {YOMA_SSO_AVAILABLE && (
-              <button className='btn btn--text btn--block' onClick={handleIxoSignIn} disabled={isRedirecting}>
-                Login with IXO
-              </button>
-            )}
             {isDevBypass() && (
               <button className='btn btn--light btn--block' onClick={handleDevLogin}>
                 Dev Login (bypass)
