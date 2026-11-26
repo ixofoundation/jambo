@@ -10,20 +10,25 @@ import {
   clearYref,
   getCachedLink,
   markCheckedThisSession,
-  peekYref,
-  saveYref,
+  markHandOffBound,
+  peekHandOff,
+  saveHandOff,
   setCachedLink,
+  takeHandOffFromUrl,
   wasCheckedThisSession,
+  wasHandOffBound,
   type YomaLinkState,
 } from '@utils/yomaLink';
 
 /**
  * Root-mounted DID ↔ Yoma link flow. Two responsibilities:
  *
- * 1. Capture the `?yref=<partnerUserId>` hand-off marker the yoma worker
- *    appends to its redirect — on ANY page, logged in or not — stash it in
- *    sessionStorage (it survives the auth-hub round trip) and strip it from
- *    the URL so a copied/shared link doesn't carry someone's marker.
+ * 1. Capture the hand-off the yoma worker appends to its redirect into the
+ *    entity page (`?yref=<partnerUserId>&ysig=…&yexp=…`, logged in or not):
+ *    stash the three together in sessionStorage (it survives the auth-hub
+ *    round trip), replacing any earlier hand-off whole. Only that route is
+ *    a hand-off; on every page the three are stripped from the URL so a
+ *    copied/shared link doesn't carry someone's marker.
  * 2. Once logged in: silently verify the account's email with the yoma
  *    worker (UCAN bind, once per DID ever — the worker caches it) and match
  *    it to a Yoma account. Then, if a hand-off marker is present, compare it
@@ -42,23 +47,21 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
   const [loggingOut, setLoggingOut] = useState(false);
   const runningRef = useRef(false);
 
-  // 1. Capture + strip the hand-off marker on every route change.
+  // 1. Capture (entry route only) + strip (everywhere) the hand-off on every route change.
   useEffect(() => {
     if (!router.isReady) return;
-    const url = new URL(window.location.href);
-    const yref = url.searchParams.get('yref');
-    if (!yref) return;
-    saveYref(yref);
-    url.searchParams.delete('yref');
-    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
-  }, [router.isReady, router.asPath]);
+    const { handOff, cleaned } = takeHandOffFromUrl(window.location.href, router.pathname);
+    if (handOff) saveHandOff(handOff);
+    if (cleaned !== null) window.history.replaceState(window.history.state, '', cleaned);
+  }, [router.isReady, router.asPath, router.pathname]);
 
   // 2. Silent link check after login (and on arrival with a live session).
   useEffect(() => {
     if (isLoading || !isLoggedIn || !did || !router.isReady) return;
     if (runningRef.current) return;
 
-    const yref = peekYref();
+    const handOff = peekHandOff();
+    const yref = handOff?.yref ?? null;
     // Once per browser session unless a hand-off marker demands a comparison.
     if (!yref && wasCheckedThisSession(did)) return;
 
@@ -75,11 +78,19 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
           const status = await getLinkStatus(did);
           link = status;
           // Bind while the worker has no verified contact for this DID (the
-          // hub is read only then), or to hand it the yref marker: on a DID
-          // already bound but unmatched, the worker uses it (D1 only) to settle
-          // a match its contact alone left ambiguous.
+          // hub is read only then), or to hand it the signed hand-off: on a
+          // DID already bound but unmatched, the worker uses it (D1 only) to
+          // settle a match its contact alone left ambiguous. The same
+          // hand-off is sent once per DID per tab: a `yomaId: null` answer
+          // (unsigned, expired or not this account) is not re-sent on every
+          // page load. Marked before the call, so a failing call is not
+          // retried in a loop either.
           const bound = !!status.email || !!status.contact;
-          if (!bound || (yref && !status.yomaId)) link = await bindLink(did, { authProvider, yref });
+          const handOffSent = !!handOff && wasHandOffBound(did, handOff);
+          if (!handOffSent && (!bound || (!!handOff && !status.yomaId))) {
+            if (handOff) markHandOffBound(did, handOff);
+            link = await bindLink(did, { authProvider, handOff });
+          }
           setCachedLink(did, link);
         }
         markCheckedThisSession(did);

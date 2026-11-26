@@ -73,18 +73,29 @@ describe('bindLink', () => {
     expect(Object.keys(bindBody())).toEqual(['delegation']);
   });
 
-  it('sends the yref hand-off marker when there is one, within the worker limit', async () => {
+  it('forwards a signed hand-off unchanged, all three together', async () => {
     const m = await load();
-    await m.bindLink(USER_DID, { authProvider: 'yoma', yref: 'partner-user-42' });
+    await m.bindLink(USER_DID, {
+      authProvider: 'yoma',
+      handOff: { yref: 'partner-user-42', ysig: 'c2ln_-+/=', yexp: '1795714015' },
+    });
     const body = bindBody();
-    expect(Object.keys(body).sort()).toEqual(['delegation', 'phoneDelegation', 'yref']);
-    expect(body.yref).toBe('partner-user-42');
+    expect(Object.keys(body).sort()).toEqual(['delegation', 'phoneDelegation', 'yexp', 'yref', 'ysig']);
+    expect(body).toMatchObject({ yref: 'partner-user-42', ysig: 'c2ln_-+/=', yexp: '1795714015' });
+  });
 
-    fetchMock.mockClear();
-    await m.bindLink(USER_DID, { authProvider: 'workos', yref: 'x'.repeat(129) });
-    expect(Object.keys(bindBody())).toEqual(['delegation']);
-    fetchMock.mockClear();
-    await m.bindLink(USER_DID, { yref: '' });
+  it('an older, unsigned hand-off: yref alone', async () => {
+    const m = await load();
+    await m.bindLink(USER_DID, {
+      authProvider: 'workos',
+      handOff: { yref: 'partner-user-42', ysig: null, yexp: null },
+    });
+    expect(Object.keys(bindBody()).sort()).toEqual(['delegation', 'yref']);
+  });
+
+  it('a yref outside the worker limit leaves the whole hand-off out', async () => {
+    const m = await load();
+    await m.bindLink(USER_DID, { handOff: { yref: 'x'.repeat(129), ysig: 'sig', yexp: '1' } });
     expect(Object.keys(bindBody())).toEqual(['delegation']);
   });
 

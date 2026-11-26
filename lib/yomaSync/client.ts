@@ -10,6 +10,7 @@ import authConstants from '@constants/auth';
 import { secureLoad } from '@utils/storage';
 import { mintDelegation } from '@utils/ucanDelegation';
 import { isDirectProvider, normalizeAuthProvider } from 'lib/authHub/provider';
+import type { YomaHandOff } from '@utils/yomaLink';
 import { YOMA_SYNC_API_BASE } from './config';
 
 /**
@@ -96,7 +97,9 @@ export async function getLinkStatus(userDid: string): Promise<YomaLinkResult> {
  *
  *   { delegation: string,        // always: `auth/user/email` (unchanged; main requires it)
  *     phoneDelegation?: string,  // direct-provider (Yoma) accounts only: `auth/user/phone`
- *     yref?: string }            // the Yoma hand-off marker, when this tab holds one
+ *     yref?: string,             // the Yoma hand-off marker, when this tab holds one
+ *     ysig?: string,             // with it, exactly as the worker's redirect sent them
+ *     yexp?: string }            //   (absent for an older, unsigned link)
  *
  * Both delegations: one capability each, on `ixo:auth-hub:user:<address>`,
  * from the user's Ed25519 key, audience the worker's DID, a 240 s lifetime
@@ -106,7 +109,9 @@ export async function getLinkStatus(userDid: string): Promise<YomaLinkResult> {
  * non-strict zod object strips them); the phone-matching worker reads the
  * phone when the account has no email, and uses `yref` only to settle an
  * ambiguous match, when the account's verified contact equals that Yoma
- * profile's. The phone read is only delegated for a direct-provider account:
+ * profile's and `ysig` verifies (it ignores an unsigned yref). The three
+ * hand-off fields come from one redirect (utils/yomaLink), unchanged: never
+ * built, edited or mixed here; `yexp` stays the query's text. The phone read is only delegated for a direct-provider account:
  * the hub keeps a phone number only for those, so a WorkOS account would only
  * grant a read that can never answer.
  */
@@ -114,9 +119,11 @@ export interface BindRequestBody {
   delegation: string;
   phoneDelegation?: string;
   yref?: string;
+  ysig?: string;
+  yexp?: string;
 }
 
-/** The worker's limit for `yref` (1 to 128 characters); anything else is left out. */
+/** The worker's limit for `yref` (1 to 128 characters); a hand-off outside it is left out whole. */
 const YREF_MAX_LENGTH = 128;
 
 export function bindCapabilities(address: string): { email: Capability; phone: Capability } {
@@ -136,7 +143,7 @@ export function bindCapabilities(address: string): { email: Capability; phone: C
  */
 export async function bindLink(
   userDid: string,
-  options?: { authProvider?: string | null; yref?: string | null },
+  options?: { authProvider?: string | null; handOff?: YomaHandOff | null },
 ): Promise<YomaLinkResult> {
   const workerDid = await fetchWorkerDid();
   const address = userDid.split(':').at(2) ?? '';
@@ -159,8 +166,12 @@ export async function bindLink(
       ttlSeconds: EMAIL_DELEGATION_TTL_SECONDS,
     });
   }
-  const yref = options?.yref;
-  if (typeof yref === 'string' && yref.length > 0 && yref.length <= YREF_MAX_LENGTH) body.yref = yref;
+  const handOff = options?.handOff;
+  if (handOff && handOff.yref.length > 0 && handOff.yref.length <= YREF_MAX_LENGTH) {
+    body.yref = handOff.yref;
+    if (handOff.ysig) body.ysig = handOff.ysig;
+    if (handOff.yexp) body.yexp = handOff.yexp;
+  }
 
   const res = await fetch(`${YOMA_SYNC_API_BASE}/v1/link/bind`, {
     method: 'POST',
