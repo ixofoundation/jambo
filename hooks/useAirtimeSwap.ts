@@ -366,6 +366,7 @@ export default function useAirtimeSwap() {
           'Swap vouchers for airtime',
           {
             memo: 'Airtime swap',
+            // Only if the simulation fails: a burn of several batches outgrows the fixed fallback.
             gas: swapBurnGas(fields.tokens.length),
             // After signing, BEFORE broadcast. If the hash cannot be saved, this throws and nothing is broadcast.
             onSigned: (txHash) => {
