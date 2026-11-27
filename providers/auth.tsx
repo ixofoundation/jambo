@@ -16,7 +16,9 @@ import { clearLandingCampaign } from 'lib/analytics/campaign';
 import { AnalyticsEvents } from 'lib/analytics/events';
 import { consumeFreshLogin, markFreshLogin } from 'lib/analytics/session';
 import { signAndBroadcastWithSessionKey } from 'lib/authHub/signAndBroadcast';
-import type { AuthHubSessionData } from 'lib/authHub/redirect';
+import { logoutViaAuthHub, YOMA_SSO_AVAILABLE, type AuthHubSessionData } from 'lib/authHub/redirect';
+import { isDirectProvider, normalizeAuthProvider, WORKOS_PROVIDER } from 'lib/authHub/provider';
+import { markSwitchAccount } from 'lib/authHub/signInFlow';
 import { store, persistor } from '@store/index';
 import { setAccount, clearAccount } from '@store/slices/accountSlice';
 import { clearEntities } from '@store/slices/entitiesSlice';
@@ -77,13 +79,14 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   const [did, setDid] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [authProvider, setAuthProvider] = useState<string | null>(null);
   const [sessionAuthenticatorId, setSessionAuthenticatorId] = useState<string | null>(null);
   const [matrixUserId, setMatrixUserId] = useState<string | null>(null);
   const [matrixRoomId, setMatrixRoomId] = useState<string | null>(null);
 
   // Refs for stable callback access
-  const stateRef = useRef({ address, sessionAuthenticatorId });
-  stateRef.current = { address, sessionAuthenticatorId };
+  const stateRef = useRef({ address, sessionAuthenticatorId, authProvider });
+  stateRef.current = { address, sessionAuthenticatorId, authProvider };
 
   function persistAuthState(data: AuthHubSessionData) {
     secureSave(authConstants.secretKey.ADDRESS, data.address);
@@ -132,6 +135,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     setDid(null);
     setDisplayName(null);
     setEmail(null);
+    setAuthProvider(null);
     setSessionAuthenticatorId(null);
     setMatrixUserId(null);
     setMatrixRoomId(null);
@@ -190,6 +194,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
       // Optional — sessions created before the auth hub returned an email
       // simply have none until the next login.
       setEmail(persistedAccount.email ?? null);
+      // Same for the sign-in provider: unknown until the next login.
+      setAuthProvider(normalizeAuthProvider(persistedAccount.authProvider));
       setSessionAuthenticatorId(persistedAccount.sessionAuthenticatorId ?? null);
       setMatrixUserId(persistedAccount.matrixUserId ?? null);
       setMatrixRoomId(persistedAccount.matrixRoomId ?? null);
@@ -229,10 +235,12 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
   }, []);
 
   const loginWithAuthHub = useCallback((data: AuthHubSessionData) => {
+    const provider = normalizeAuthProvider(data.authProvider);
     setAddress(data.address);
     setDid(data.did);
     setDisplayName(data.displayName);
     setEmail(data.email ?? null);
+    setAuthProvider(provider);
     setSessionAuthenticatorId(data.sessionAuthenticatorId);
     setMatrixUserId(data.matrixUserId);
     setMatrixRoomId(data.matrixRoomId);
@@ -246,6 +254,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
         sessionAuthenticatorId: data.sessionAuthenticatorId,
         displayName: data.displayName,
         email: data.email ?? null,
+        authProvider: provider,
         matrixUserId: data.matrixUserId,
         matrixRoomId: data.matrixRoomId,
       }),
@@ -333,6 +342,8 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
 
   const logout = useCallback(async (options?: { preserveReturnTo?: boolean }) => {
     const preserveReturnTo = options?.preserveReturnTo ?? false;
+    // Read before clearAllState() forgets it: it decides where logout ends.
+    const provider = stateRef.current.authProvider;
     if (preserveReturnTo) {
       // "Switch account" logout (Yoma wrong-account prompt): the next sign-in
       // SHOULD land back on this page, so save it explicitly and leave the
@@ -382,7 +393,21 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     // variant deliberately keeps its explicitly saved return path.
     if (!preserveReturnTo) clearReturnTo();
 
-    window.location.href = '/auth';
+    if (isDirectProvider(provider)) {
+      // A Yoma account: sign out at the hub AND at Yoma, or the next "Login
+      // with Yoma" silently hands back the same Yoma person. The hub returns
+      // to /auth/callback, which bounces to /auth. For a switch, /auth then
+      // starts a fresh Yoma sign-in (prompt=login); the deep link, the yref
+      // hand-off marker and the campaign stay in this tab's sessionStorage.
+      if (preserveReturnTo) markSwitchAccount(provider);
+      logoutViaAuthHub(provider);
+      return;
+    }
+    // WorkOS (IXO team) accounts and sessions from before the hub said which
+    // provider (at most 24 hours old): local sign-out, as before. An IXO
+    // account goes back to its own sign-in page, unless it is switching to
+    // the Yoma account a hand-off was for.
+    window.location.href = provider === WORKOS_PROVIDER && YOMA_SSO_AVAILABLE && !preserveReturnTo ? '/ixo' : '/auth';
   }, []);
 
   const value = {
@@ -392,6 +417,7 @@ export const AuthProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
     did,
     displayName,
     email,
+    authProvider,
     sessionAuthenticatorId,
     matrixUserId,
     matrixRoomId,

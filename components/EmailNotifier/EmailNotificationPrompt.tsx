@@ -41,14 +41,17 @@ function markPromptedToday(address: string): void {
 /**
  * App-level gate that, at most once per calendar day, offers a not-yet-subscribed
  * user the chance to activate email notifications. Mounted globally in `_app`;
- * renders nothing unless the feature is configured, the user is logged in, the
- * status check has completed, and they are not subscribed.
+ * renders nothing unless the feature is configured, the user is logged in with
+ * an account that has an email, the status check has completed, and they are
+ * not subscribed.
  */
 export default function EmailNotificationPrompt() {
-  const { isLoggedIn, address, did, onSign } = useAuth();
+  const { isLoggedIn, address, did, email, onSign } = useAuth();
   const dispatch = useAppDispatch();
   const { checked, subscribed } = useAppSelector((state) => state.emailSubscription);
-  const configured = !!EMAIL_NOTIFIER_URL;
+  // An account without an email (a Yoma account that signed in with a phone
+  // number) has nowhere to send updates: subscribing could only fail.
+  const configured = !!EMAIL_NOTIFIER_URL && !!email;
 
   const [open, setOpen] = useState(false);
   const [activating, setActivating] = useState(false);

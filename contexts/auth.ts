@@ -17,6 +17,12 @@ export interface AuthContextType {
   displayName: string | null;
   /** Auth-hub email (display only); null for sessions from before the hub returned it. */
   email: string | null;
+  /**
+   * How the account signs in: 'workos' (IXO sign-in) or a direct provider id
+   * ('yoma'); null for sessions from before the hub returned it. Decides the
+   * logout and the PIN reset (lib/authHub/provider).
+   */
+  authProvider: string | null;
   sessionAuthenticatorId: string | null;
   matrixUserId: string | null;
   matrixRoomId: string | null;
@@ -26,7 +32,11 @@ export interface AuthContextType {
    *  the tx hash after signing and BEFORE broadcast (lib/authHub/signAndBroadcast). Failures
    *  throw `SignBroadcastError` (its `stage` says whether anything may have moved). */
   onSign: (messages: any[], label?: string, options?: OnSignOptions) => Promise<DeliverTxResponse>;
-  /** `preserveReturnTo` = "switch account": keep the deep link + Yoma hand-off marker. */
+  /**
+   * `preserveReturnTo` = "switch account": keep the deep link + Yoma hand-off
+   * marker, and for a Yoma account start a fresh Yoma sign-in (`prompt=login`)
+   * after the hub and Yoma have signed the person out.
+   */
   logout: (options?: { preserveReturnTo?: boolean }) => Promise<void>;
 }
 
@@ -37,6 +47,7 @@ export const AuthContext = createContext<AuthContextType>({
   did: null,
   displayName: null,
   email: null,
+  authProvider: null,
   sessionAuthenticatorId: null,
   matrixUserId: null,
   matrixRoomId: null,

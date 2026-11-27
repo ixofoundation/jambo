@@ -10,20 +10,25 @@ import {
   clearYref,
   getCachedLink,
   markCheckedThisSession,
-  peekYref,
-  saveYref,
+  markHandOffBound,
+  peekHandOff,
+  saveHandOff,
   setCachedLink,
+  takeHandOffFromUrl,
   wasCheckedThisSession,
+  wasHandOffBound,
   type YomaLinkState,
 } from '@utils/yomaLink';
 
 /**
  * Root-mounted DID ↔ Yoma link flow. Two responsibilities:
  *
- * 1. Capture the `?yref=<partnerUserId>` hand-off marker the yoma worker
- *    appends to its redirect — on ANY page, logged in or not — stash it in
- *    sessionStorage (it survives the auth-hub round trip) and strip it from
- *    the URL so a copied/shared link doesn't carry someone's marker.
+ * 1. Capture the hand-off the yoma worker appends to its redirect into the
+ *    entity page (`?yref=<partnerUserId>&ysig=…&yexp=…`, logged in or not):
+ *    stash the three together in sessionStorage (it survives the auth-hub
+ *    round trip), replacing any earlier hand-off whole. Only that route is
+ *    a hand-off; on every page the three are stripped from the URL so a
+ *    copied/shared link doesn't carry someone's marker.
  * 2. Once logged in: silently verify the account's email with the yoma
  *    worker (UCAN bind, once per DID ever — the worker caches it) and match
  *    it to a Yoma account. Then, if a hand-off marker is present, compare it
@@ -36,29 +41,27 @@ import {
  */
 
 export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) => {
-  const { isLoggedIn, isLoading, did, logout } = useAuth();
+  const { isLoggedIn, isLoading, did, authProvider, logout } = useAuth();
   const router = useRouter();
   const [mismatch, setMismatch] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const runningRef = useRef(false);
 
-  // 1. Capture + strip the hand-off marker on every route change.
+  // 1. Capture (entry route only) + strip (everywhere) the hand-off on every route change.
   useEffect(() => {
     if (!router.isReady) return;
-    const url = new URL(window.location.href);
-    const yref = url.searchParams.get('yref');
-    if (!yref) return;
-    saveYref(yref);
-    url.searchParams.delete('yref');
-    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
-  }, [router.isReady, router.asPath]);
+    const { handOff, cleaned } = takeHandOffFromUrl(window.location.href, router.pathname);
+    if (handOff) saveHandOff(handOff);
+    if (cleaned !== null) window.history.replaceState(window.history.state, '', cleaned);
+  }, [router.isReady, router.asPath, router.pathname]);
 
   // 2. Silent link check after login (and on arrival with a live session).
   useEffect(() => {
     if (isLoading || !isLoggedIn || !did || !router.isReady) return;
     if (runningRef.current) return;
 
-    const yref = peekYref();
+    const handOff = peekHandOff();
+    const yref = handOff?.yref ?? null;
     // Once per browser session unless a hand-off marker demands a comparison.
     if (!yref && wasCheckedThisSession(did)) return;
 
@@ -68,12 +71,26 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
         let link: YomaLinkState | null = getCachedLink(did);
 
         // A completed link is permanent — only hit the network when we don't
-        // know of one yet. status is a cheap D1 read; bind (which costs one
-        // rate-limited auth-hub email read, once per DID ever) only runs
-        // while the worker has no verified email for this DID.
+        // know of one yet. status is a cheap D1 read; bind costs one
+        // rate-limited auth-hub read (email, or phone for a phone-only Yoma
+        // account) only while the worker has no verified contact for this DID.
         if (!link?.yomaId) {
-          link = await getLinkStatus(did);
-          if (!link.email) link = await bindLink(did);
+          const status = await getLinkStatus(did);
+          link = status;
+          // Bind while the worker has no verified contact for this DID (the
+          // hub is read only then), or to hand it the signed hand-off: on a
+          // DID already bound but unmatched, the worker uses it (D1 only) to
+          // settle a match its contact alone left ambiguous. The same
+          // hand-off is sent once per DID per tab: a `yomaId: null` answer
+          // (unsigned, expired or not this account) is not re-sent on every
+          // page load. Marked before the call, so a failing call is not
+          // retried in a loop either.
+          const bound = !!status.email || !!status.contact;
+          const handOffSent = !!handOff && wasHandOffBound(did, handOff);
+          if (!handOffSent && (!bound || (!!handOff && !status.yomaId))) {
+            if (handOff) markHandOffBound(did, handOff);
+            link = await bindLink(did, { authProvider, handOff });
+          }
           setCachedLink(did, link);
         }
         markCheckedThisSession(did);
@@ -84,8 +101,9 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
             successToast('Yoma account connected');
             track(AnalyticsEvents.YomaAccountLinked);
           } else {
-            // Wrong account OR an email that matches no Yoma profile — either
-            // way this sign-in isn't the account the hand-off was for.
+            // Wrong account, or one that matches no Yoma profile (by email,
+            // or by phone for a phone-only Yoma account) — either way this
+            // sign-in isn't the account the hand-off was for.
             setMismatch(true);
             track(AnalyticsEvents.YomaAccountMismatchShown);
           }
@@ -98,7 +116,7 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
         runningRef.current = false;
       }
     })();
-  }, [isLoading, isLoggedIn, did, router.isReady]);
+  }, [isLoading, isLoggedIn, did, authProvider, router.isReady]);
 
   function handleContinue() {
     // The user owns the decision — drop the marker so it never nags again.
@@ -110,7 +128,8 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
     setLoggingOut(true);
     // preserveReturnTo keeps the deep link AND the yref marker, so after
     // signing in with the right account the user lands back here and the
-    // comparison re-runs (and connects).
+    // comparison re-runs (and connects). A Yoma account is signed out at the
+    // hub and at Yoma first, then sent to a fresh Yoma login (providers/auth).
     void logout({ preserveReturnTo: true });
   }
 
@@ -154,11 +173,11 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
                 margin: 0,
               }}
             >
-              Different Yoma account
+              Not the right account
             </p>
             <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0, lineHeight: 1.5 }}>
-              You came here from Yoma, but the account you&apos;re signed in with uses a different email than your Yoma
-              account. To earn your Yoma reward, sign in with the same email you use on Yoma.
+              You came here from Yoma, but you&apos;re signed in with a different account from the Yoma account this
+              link was made for. To earn your Yoma reward, log out and sign in with that Yoma account.
             </p>
             <button
               onClick={handleSwitchAccount}

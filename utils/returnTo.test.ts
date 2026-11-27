@@ -43,8 +43,15 @@ describe('returnablePath', () => {
     expect(returnablePath('/entities/did:ixo:1', ORIGIN)).toBe('/entities/did:ixo:1');
   });
 
-  it.each(['/', '/auth', '/auth/callback', '/auth?returnTo=/x', '/entities/[entityId]'])('rejects %s', (path) => {
-    expect(returnablePath(path, ORIGIN)).toBeNull();
+  it.each(['/', '/auth', '/auth/callback', '/auth?returnTo=/x', '/ixo', '/ixo?returnTo=/x', '/entities/[entityId]'])(
+    'rejects %s',
+    (path) => {
+      expect(returnablePath(path, ORIGIN)).toBeNull();
+    },
+  );
+
+  it('keeps a path that only starts with the letters of /ixo', () => {
+    expect(returnablePath('/ixo-news', ORIGIN)).toBe('/ixo-news');
   });
 });
 
