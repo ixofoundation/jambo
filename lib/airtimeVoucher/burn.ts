@@ -119,8 +119,9 @@ export function checkSwapBurn({
 }
 
 /**
- * The gas limit for the burn. The app's default (one message) is too tight for
- * a burn of several batches, so the burn asks for its own: the figures the
+ * The gas limit for the burn if the chain cannot simulate it (the limit is
+ * normally simulated). The app's fixed fallback (one message) is too tight for
+ * a burn of several batches, so the burn brings its own: the figures the
  * worker's own test client uses for the same message.
  */
 export function swapBurnGas(batchCount: number): number {

@@ -1,11 +1,15 @@
-import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing';
-import { toHex } from '@cosmjs/encoding';
+import { pubkeyType } from '@cosmjs/amino';
+import { DirectSecp256k1HdWallet, encodePubkey, makeAuthInfoBytes } from '@cosmjs/proto-signing';
+import { toBase64, toHex } from '@cosmjs/encoding';
 import { cosmos, createSigningClient, createQueryClient, createRegistry, ixo } from '@ixo/impactxclient-sdk';
 import { assertIsDeliverTxSuccess, BroadcastTxError, DeliverTxResponse, GasPrice, StdFee } from '@cosmjs/stargate';
 import Long from 'long';
 
 import { CHAIN_RPC_URL } from '@constants/common';
+import { fallbackGas, feeForGas, gasFromSimulation } from './gasFee';
 import { SessionKeySigner } from './sessionSigner';
+
+type QueryClient = Awaited<ReturnType<typeof createQueryClient>>;
 
 type SignAndBroadcastParams = {
   address: string;
@@ -15,8 +19,10 @@ type SignAndBroadcastParams = {
   feegrantGranter?: string;
   memo?: string;
   /**
-   * Gas limit for the whole transaction, when the default (250,000 × 1.7 per
-   * message) does not fit the message. The fee follows from it at the same price.
+   * Gas limit to use ONLY if simulating the transaction fails (the limit is
+   * normally the simulated gas plus headroom). Without it the fallback is a
+   * fixed estimate per message. The fee follows from the limit at the app's
+   * gas price either way.
    */
   gas?: number;
   /**
@@ -69,9 +75,9 @@ export async function txHashOf(txBytes: Uint8Array): Promise<string> {
 /**
  * Find a valid feegrant granter for the given address.
  */
-async function findFeegrantGranter(userAddress: string): Promise<string | undefined> {
+async function findFeegrantGranter(queryClient: QueryClient | null, userAddress: string): Promise<string | undefined> {
+  if (!queryClient) return undefined;
   try {
-    const queryClient = await createQueryClient(CHAIN_RPC_URL);
     const resp = await queryClient.cosmos.feegrant.v1beta1.allowances({
       grantee: userAddress,
     });
@@ -108,16 +114,59 @@ async function findFeegrantGranter(userAddress: string): Promise<string | undefi
   }
 }
 
-const calculateGasFee = (messageCount: number, gasLimit?: number): StdFee => {
-  const gasUsed = messageCount * 250000;
-  const gas = gasLimit && gasLimit > 0 ? gasLimit : gasUsed * 1.7;
-  const gasPriceStep = 0.035;
-  const feeAmount = Math.round(gas * gasPriceStep);
-  return {
-    amount: [{ denom: 'uixo', amount: String(feeAmount) }],
-    gas: String(Math.round(gas)),
-  };
+/** The part of the query client the simulation uses (exported for the tests). */
+export type TxSimulator = {
+  cosmos: { tx: { v1beta1: { simulate: QueryClient['cosmos']['tx']['v1beta1']['simulate'] } } };
 };
+
+/**
+ * Simulate the EXACT transaction about to be signed — the encoded TxBody with
+ * the smart-account TxExtension, the session signer's pubkey and the account's
+ * sequence, an empty signature — and return the gas it used. The SDK's own
+ * `simulate` re-encodes the messages into a plain TxBody, which drops the
+ * TxExtension, so the request is built here from the body bytes. The chain's
+ * authenticators skip signature checks under simulation but still charge for
+ * them, so the figure includes the authenticator's own cost.
+ */
+export async function simulateGas(
+  queryClient: TxSimulator,
+  signer: Pick<SessionKeySigner, 'getAccounts'>,
+  txBodyBytes: Uint8Array,
+  sequence: number,
+): Promise<number> {
+  const [account] = await signer.getAccounts();
+  const pubkey = encodePubkey({ type: pubkeyType.secp256k1, value: toBase64(account.pubkey) });
+  const authInfoBytes = makeAuthInfoBytes([{ pubkey, sequence }], [], 0, undefined, undefined);
+  const txBytes = cosmos.tx.v1beta1.TxRaw.encode(
+    cosmos.tx.v1beta1.TxRaw.fromPartial({ bodyBytes: txBodyBytes, authInfoBytes, signatures: [new Uint8Array()] }),
+  ).finish();
+  const { gasInfo } = await queryClient.cosmos.tx.v1beta1.simulate({ txBytes });
+  if (!gasInfo) throw new Error('Simulation returned no gas info');
+  return Long.fromValue(gasInfo.gasUsed).toNumber();
+}
+
+/**
+ * The fee for the transaction: from a simulation of it when the chain answers,
+ * else (no query client, the simulation failed, or it reported nothing) from
+ * the caller's limit or the fixed per-message estimate.
+ */
+export async function estimateFee(
+  queryClient: TxSimulator | null,
+  signer: Pick<SessionKeySigner, 'getAccounts'>,
+  txBodyBytes: Uint8Array,
+  sequence: number,
+  messageCount: number,
+  gasLimit?: number,
+): Promise<StdFee> {
+  try {
+    if (!queryClient) throw new Error('No query client');
+    const gasUsed = await simulateGas(queryClient, signer, txBodyBytes, sequence);
+    return feeForGas(gasFromSimulation(gasUsed));
+  } catch (err) {
+    console.warn('signAndBroadcast: gas simulation failed, using the fixed estimate', err);
+    return feeForGas(fallbackGas(messageCount, gasLimit));
+  }
+}
 
 /**
  * Sign and broadcast a transaction using a session key mnemonic.
@@ -156,22 +205,30 @@ export async function signAndBroadcastWithSessionKey({
     ],
   });
 
-  // Calculate fee (chain can't simulate with nonCriticalExtensionOptions)
-  let fee: StdFee = calculateGasFee(messages.length, gas);
-
-  // Check for feegrant if not already provided
-  const granter = feegrantGranter ?? (await findFeegrantGranter(address));
-  if (granter) {
-    fee = { ...fee, granter };
-  }
-
   // Sign with the session key (txBodyBytes carry the TxExtension; messages empty), hash, let
   // the caller remember the hash, THEN broadcast — the same steps as the client's own
   // signAndBroadcast, split so nothing is broadcast before the hash is known.
   let txHash: string | null = null;
   let txBytes: Uint8Array;
   try {
-    const txRaw = await client.sign(address, [], fee, memo, undefined, txBodyBytes);
+    // The signer data is fetched once, so the simulation and the signature share one sequence.
+    // Without a query client (RPC down) the tx is still signed, on the fallback gas and without
+    // a granter — as before the simulation.
+    const [{ accountNumber, sequence }, chainId, queryClient] = await Promise.all([
+      client.getSequence(address),
+      client.getChainId(),
+      createQueryClient(CHAIN_RPC_URL).catch((err): null => {
+        console.warn('signAndBroadcast: no query client, skipping simulation and feegrant lookup', err);
+        return null;
+      }),
+    ]);
+    const [simulated, granter] = await Promise.all([
+      estimateFee(queryClient, signer, txBodyBytes, sequence, messages.length, gas),
+      feegrantGranter ?? findFeegrantGranter(queryClient, address),
+    ]);
+    const fee: StdFee = granter ? { ...simulated, granter } : simulated;
+
+    const txRaw = await client.sign(address, [], fee, memo, { accountNumber, sequence, chainId }, txBodyBytes);
     txBytes = cosmos.tx.v1beta1.TxRaw.encode(txRaw).finish();
     txHash = await txHashOf(txBytes);
     if (onSigned) await onSigned(txHash);
