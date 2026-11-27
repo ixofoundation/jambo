@@ -35,9 +35,10 @@ function errorMessage(err: unknown, fallback: string): string {
 }
 
 export default function useEmailNotifier(enabled: boolean) {
-  const { address, did, onSign } = useAuth();
+  const { address, did, email, onSign } = useAuth();
   const dispatch = useAppDispatch();
-  const configured = !!EMAIL_NOTIFIER_URL;
+  // No email on the account (a phone-only Yoma account): nothing to subscribe.
+  const configured = !!EMAIL_NOTIFIER_URL && !!email;
 
   const [events, setEvents] = useState<EmailNotifierEvent[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);

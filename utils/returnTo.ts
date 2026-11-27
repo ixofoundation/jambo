@@ -46,6 +46,9 @@ export function sameOriginPath(
   return rebuilt.startsWith('//') ? null : rebuilt;
 }
 
+/** The sign-in pages: /auth… and /ixo (IXO team sign-in), with or without a query. */
+const isSignInPage = (path: string): boolean => path.startsWith('/auth') || /^\/ixo(?:[/?#]|$)/.test(path);
+
 /**
  * A deep link worth landing on after sign-in, rebuilt (see sameOriginPath):
  * never another site, the home default, the auth pages themselves, or an
@@ -56,7 +59,7 @@ export function returnablePath(path: unknown, origin?: string): string | null {
   // in case the URL parser ever percent-encodes the brackets.
   if (typeof path === 'string' && path.includes('[')) return null;
   const safe = sameOriginPath(path, origin);
-  if (!safe || safe === '/' || safe.startsWith('/auth') || safe.includes('[')) return null;
+  if (!safe || safe === '/' || isSignInPage(safe) || safe.includes('[')) return null;
   return safe;
 }
 

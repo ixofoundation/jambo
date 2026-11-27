@@ -9,6 +9,7 @@ jambo-passkey-claims/
     _document.tsx           Custom HTML document
     index.tsx               Root redirect (auth or dashboard based on login state)
     profile.tsx             User profile page
+    ixo.tsx                 Sign-in for IXO team accounts (hub login without Yoma; not linked in the app)
     api/
       auth/
         initial-challenge.ts  Generate WebAuthn challenge
