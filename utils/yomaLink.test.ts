@@ -9,6 +9,7 @@ import {
   peekHandOff,
   peekYref,
   saveHandOff,
+  shouldBind,
   takeHandOffFromUrl,
   wasHandOffBound,
 } from './yomaLink';
@@ -118,5 +119,35 @@ describe('hand-off sent with a bind', () => {
     markHandOffBound(DID, handOff);
     clearLinkState();
     expect(wasHandOffBound(DID, handOff)).toBe(false);
+  });
+});
+
+describe('shouldBind', () => {
+  const handOff = { yref: 'pu-1', ysig: 'sig', yexp: '1900000000' };
+  const fresh = { handOff: null, handOffSent: false, checkedThisSession: false };
+
+  it('binds a DID that never bound', () => {
+    expect(shouldBind({ email: null, yomaId: null, contact: null }, fresh)).toBe(true);
+  });
+
+  it('does not bind an email-bound DID again without a hand-off', () => {
+    expect(shouldBind({ email: 'a@example.com', yomaId: null, contact: 'email' }, fresh)).toBe(false);
+  });
+
+  it('binds an unmatched DID once with a new hand-off, not again after sending it', () => {
+    const status = { email: 'a@example.com', yomaId: null, contact: 'email' as const };
+    expect(shouldBind(status, { ...fresh, handOff })).toBe(true);
+    expect(shouldBind(status, { ...fresh, handOff, handOffSent: true })).toBe(false);
+  });
+
+  it('re-binds an unlinked phone-only account once per session (the worker refreshes its phone)', () => {
+    const status = { email: null, yomaId: null, contact: 'phone' as const };
+    expect(shouldBind(status, fresh)).toBe(true);
+    expect(shouldBind(status, { ...fresh, checkedThisSession: true })).toBe(false);
+  });
+
+  it('never re-binds a linked account', () => {
+    expect(shouldBind({ email: null, yomaId: 'pu-1', contact: 'phone' }, fresh)).toBe(false);
+    expect(shouldBind({ email: 'a@example.com', yomaId: 'pu-1', contact: 'email' }, { ...fresh, handOff })).toBe(false);
   });
 });
