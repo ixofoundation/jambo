@@ -162,6 +162,25 @@ export function wasHandOffBound(did: string, handOff: YomaHandOff): boolean {
   }
 }
 
+/**
+ * Whether the link check calls bind (it costs auth-hub reads), given the
+ * worker's status answer:
+ *  - the DID never bound (no verified contact yet);
+ *  - a signed hand-off this tab has not sent yet, for a DID still unmatched;
+ *  - once per browser session, a DID bound by phone alone and not linked (a
+ *    phone-only Yoma account, which Yoma never hands off): the worker reports
+ *    its completions to Yoma by that phone and re-reads it from the hub on
+ *    every bind, so the number stays the one Yoma verified most recently.
+ */
+export function shouldBind(
+  status: { email: string | null; yomaId: string | null; contact?: 'email' | 'phone' | null },
+  options: { handOff: YomaHandOff | null; handOffSent: boolean; checkedThisSession: boolean },
+): boolean {
+  if (status.contact === 'phone' && !status.yomaId && !options.checkedThisSession) return true;
+  const bound = !!status.email || !!status.contact;
+  return !options.handOffSent && (!bound || (!!options.handOff && !status.yomaId));
+}
+
 export function markHandOffBound(did: string, handOff: YomaHandOff): void {
   try {
     sessionStorage.setItem(HANDOFF_BOUND_KEY, handOffKey(did, handOff));
