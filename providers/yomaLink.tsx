@@ -14,6 +14,7 @@ import {
   peekHandOff,
   saveHandOff,
   setCachedLink,
+  shouldBind,
   takeHandOffFromUrl,
   wasCheckedThisSession,
   wasHandOffBound,
@@ -62,8 +63,9 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
 
     const handOff = peekHandOff();
     const yref = handOff?.yref ?? null;
+    const checkedThisSession = wasCheckedThisSession(did);
     // Once per browser session unless a hand-off marker demands a comparison.
-    if (!yref && wasCheckedThisSession(did)) return;
+    if (!yref && checkedThisSession) return;
 
     runningRef.current = true;
     (async () => {
@@ -84,10 +86,11 @@ export const YomaLinkProvider = ({ children }: HTMLAttributes<HTMLDivElement>) =
           // hand-off is sent once per DID per tab: a `yomaId: null` answer
           // (unsigned, expired or not this account) is not re-sent on every
           // page load. Marked before the call, so a failing call is not
-          // retried in a loop either.
-          const bound = !!status.email || !!status.contact;
+          // retried in a loop either. A phone-only account that is not linked
+          // binds once per session as well (shouldBind): the worker reports
+          // it to Yoma by its phone and refreshes that phone from the hub.
           const handOffSent = !!handOff && wasHandOffBound(did, handOff);
-          if (!handOffSent && (!bound || (!!handOff && !status.yomaId))) {
+          if (shouldBind(status, { handOff, handOffSent, checkedThisSession })) {
             if (handOff) markHandOffBound(did, handOff);
             link = await bindLink(did, { authProvider, handOff });
           }
